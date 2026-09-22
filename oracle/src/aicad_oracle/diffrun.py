@@ -8,7 +8,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .compare import MATCH, ROBUSTNESS, SILENT_WRONG, Comparison, compare_reports
+from .compare import CODE_MISMATCH, MATCH, ROBUSTNESS, SILENT_WRONG, Comparison, compare_reports
 from .ir import METRICS_SCHEMA
 
 NO_REFERENCE = "NO_REFERENCE"
@@ -43,11 +43,20 @@ def resolve_forge_bin(forge_bin: str | None) -> Path | None:
     return Path(found) if found else None
 
 
+def rejected_report(code: str, message: str, engine: str = "forge") -> dict:
+    """Stand-in report for an engine that rejected the document (SPEC §0 [R-10]: exit code 2)."""
+    return {"schema": METRICS_SCHEMA, "engine": engine, "document": "", "status": "error",
+            "error": {"code": code, "message": message}, "features": []}
+
+
 def run_forge(forge_bin: Path, program: Path, timeout: float = 300.0) -> tuple[dict | None, str | None]:
     """Run `<forge-bin> eval <file> --format json` and parse the report from stdout.
 
-    A non-zero exit status is accepted as long as stdout carries a report (Forge may use the
-    exit code to signal `status: error`). Returns (report, problem).
+    * exit code 2 → the document was rejected (SPEC §0 [R-10]); stdout may or may not carry a
+      report, and stderr carries the diagnostics;
+    * any other exit code is accepted as long as stdout carries a report (Forge may signal
+      `status: error` through its exit code).
+    Returns (report, problem): report is None when Forge crashed or printed no report.
     """
     try:
         proc = subprocess.run(
@@ -60,9 +69,17 @@ def run_forge(forge_bin: Path, program: Path, timeout: float = 300.0) -> tuple[d
         return None, f"forge timed out after {timeout:.0f}s"
     except OSError as e:
         return None, f"cannot run forge: {e}"
+    report = None
     try:
         report = json.loads(proc.stdout)
     except json.JSONDecodeError:
+        pass
+    if proc.returncode == 2:
+        diag = " | ".join((proc.stderr or "").strip().splitlines()[-3:])
+        if isinstance(report, dict) and report.get("error"):
+            return {**report, "features": []}, None
+        return rejected_report("REJECTED", diag or "rejected (exit 2)"), None
+    if report is None:
         tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-3:]
         return None, f"forge exited {proc.returncode} without a JSON report: {' | '.join(tail)}"
     if not isinstance(report, dict) or report.get("schema") != METRICS_SCHEMA:
@@ -89,7 +106,10 @@ def diff_one(program: Path, oracle_report: dict, reference: dict | None, ref_nam
             return Row(program.stem, ref_name, ost, "crash", ROBUSTNESS, cmp)
         return Row(program.stem, "none", ost, "-", NO_REFERENCE)
     cmp = compare_reports(reference, oracle_report, ref_name, "oracle")
-    return Row(program.stem, ref_name, ost, reference.get("status", "?"), cmp.classification, cmp, list(cmp.notes))
+    rst = "rejected" if reference.get("error") and not reference.get("features") else reference.get("status", "?")
+    if oracle_report.get("error") and not oracle_report.get("features"):
+        ost = "rejected"
+    return Row(program.stem, ref_name, ost, rst, cmp.classification, cmp, list(cmp.notes))
 
 
 def render_table(rows: list[Row]) -> str:
@@ -109,7 +129,7 @@ def render_table(rows: list[Row]) -> str:
 
 
 def summary_counts(rows: list[Row]) -> dict[str, int]:
-    out = {MATCH: 0, ROBUSTNESS: 0, SILENT_WRONG: 0, NO_REFERENCE: 0}
+    out = {MATCH: 0, ROBUSTNESS: 0, CODE_MISMATCH: 0, SILENT_WRONG: 0, NO_REFERENCE: 0}
     for r in rows:
         out[r.classification] = out.get(r.classification, 0) + 1
     return out

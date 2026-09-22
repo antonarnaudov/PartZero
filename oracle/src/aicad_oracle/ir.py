@@ -275,7 +275,10 @@ def cross3(a: Vec3, b: Vec3) -> Vec3:
 
 
 def resolve_plane(p: PlaneSpec) -> ResolvedPlane:
-    """SPEC §2 — identical arithmetic to `PlaneSpec::resolve` in forge-ir."""
+    """SPEC §2 — identical arithmetic to `PlaneSpec::resolve` in forge-ir.
+
+    [R-14] n = normalize(normal); x = normalize(x_dir − (x_dir·n) n); y = n × x.
+    """
     if p == "XY":
         return ResolvedPlane((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
     if p == "XZ":
@@ -284,7 +287,9 @@ def resolve_plane(p: PlaneSpec) -> ResolvedPlane:
         return ResolvedPlane((0.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
     assert isinstance(p, Frame), p
     n = _norm3(p.normal)
-    x = _norm3(p.x_dir)
+    xd = p.x_dir
+    d = xd[0] * n[0] + xd[1] * n[1] + xd[2] * n[2]
+    x = _norm3((xd[0] - d * n[0], xd[1] - d * n[1], xd[2] - d * n[2]))
     return ResolvedPlane(p.origin, x, cross3(n, x), n)
 
 

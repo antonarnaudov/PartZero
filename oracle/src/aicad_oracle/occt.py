@@ -31,7 +31,7 @@ from OCP.BRepLib import BRepLib
 from OCP.BRepPrimAPI import BRepPrimAPI_MakePrism, BRepPrimAPI_MakeRevol
 from OCP.Bnd import Bnd_Box
 from OCP.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
-from OCP.Geom import Geom_Circle
+from OCP.Geom import Geom_Circle, Geom_Line
 from OCP.GProp import GProp_GProps
 from OCP.gp import (
     gp_Ax1,
@@ -56,7 +56,7 @@ from OCP.TopoDS import TopoDS, TopoDS_Shape, TopoDS_Vertex
 from OCP.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_IndexedMapOfShape
 
 from .ir import LINEAR_TOLERANCE, Arc, Circle, Curve, Line, ResolvedPlane, Vec2, Vec3
-from .sketch import Loop, LoopEdge, Region, arc_geometry
+from .sketch import Loop, LoopEdge, Region, arc_geometry, region_area
 
 #: Tolerance for recognising canonical geometry (angles are compared as |sin|/|cos|).
 CANON_TOL = 1e-9
@@ -196,7 +196,14 @@ def build_wire(curves: list[Curve], loop: Loop, pl: ResolvedPlane, want_ccw: boo
         c = curves[e.index]
         v_start, v_end = verts[k], verts[(k + 1) % n]
         if isinstance(c, Line):
-            mk = BRepBuilderAPI_MakeEdge(v_start, v_end)
+            # [R-6] the line runs exactly between its given end points; the (≤ tol) gap to the
+            # shared vertex is absorbed by the vertex tolerance.
+            a2, b2 = _ends2d(c, e.forward)
+            a3, b3 = pl.to3d(a2), pl.to3d(b2)
+            seg = (b3[0] - a3[0], b3[1] - a3[1], b3[2] - a3[2])
+            length = math.sqrt(seg[0] ** 2 + seg[1] ** 2 + seg[2] ** 2)
+            lin = Geom_Line(P(a3), D(seg))
+            mk = BRepBuilderAPI_MakeEdge(lin, v_start, v_end, 0.0, length)
         else:
             g, rev = arc_geometry(c)
             circ = Geom_Circle(gp_Ax2(P(pl.to3d(g.c)), D(pl.normal), D(pl.x)), g.r)
@@ -230,10 +237,11 @@ def build_face(curves: list[Curve], region: Region, pl: ResolvedPlane):
     face = mf.Face()
     # Self-check: the OCCT face must have the region's analytic area.
     fa = surface_props(face).Mass()
-    if abs(fa - region.area) > 1e-9 * max(1.0, abs(region.area)):
+    ra = region_area(curves, region)
+    if abs(fa - ra) > 1e-9 * max(1.0, abs(ra)):
         raise BuildError(
-            "ORACLE_INTERNAL",
-            f"face area {fa!r} != region area {region.area!r} for region {region.outer_curves}",
+            "OCCT_INTERNAL",
+            f"face area {fa!r} != region area {ra!r} for region {region.outer_curves}",
         )
     return face
 
@@ -383,11 +391,19 @@ def face_type(face) -> str:
     if t == _ST.GeomAbs_Cylinder:
         return "cylinder"
     if t == _ST.GeomAbs_Cone:
+        # SPEC §4.4 [R-8]: classification uses 1e-9 rad; a (numerically) degenerate cone is
+        # the cylinder / plane the profile line really is.
+        a = abs(ad.Cone().SemiAngle())
+        if a <= CANON_TOL:
+            return "cylinder"
+        if abs(math.pi / 2 - a) <= CANON_TOL:
+            return "plane"
         return "cone"
     if t == _ST.GeomAbs_Sphere:
         return "sphere"
     if t == _ST.GeomAbs_Torus:
-        return "torus"
+        # arc centre within tol of the axis → sphere; horn / spindle patches stay torus
+        return "sphere" if ad.Torus().MajorRadius() <= LINEAR_TOLERANCE else "torus"
     if t == _ST.GeomAbs_SurfaceOfRevolution:
         bc = ad.BasisCurve()
         return _classify_revolution(bc.GetType(), bc, ad.AxeOfRevolution())

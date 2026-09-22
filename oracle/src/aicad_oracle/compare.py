@@ -1,20 +1,24 @@
-"""SPEC §6 report comparison (`kernel-diff`) and mismatch classification.
+"""SPEC §6 [R-11] report comparison (`kernel-diff`) and mismatch classification.
 
 Pure functions over two `aicad.metrics/0` report dicts; no I/O, no OCCT.
 
-Classification (per feature, then the worst over the document):
-  * MATCH                   — every §6 rule holds;
-  * ROBUSTNESS              — one engine reports an error where the other does not (also used when
-                              both error with different codes, or an engine produced no report);
-  * POTENTIAL_SILENT_WRONG  — both engines report `ok` for the feature but its metrics differ.
-Severity: POTENTIAL_SILENT_WRONG > ROBUSTNESS > MATCH.
+Exact:     status, per-feature status, per-feature error code when BOTH codes are semantic,
+           region count / loops / outer_curves, body count, faces / edges / face_types /
+           edge_types.  (`valid` is NOT compared — [R-13].)
+Tolerance: rel(a,b) = |a−b| / max(|a|,|b|); abs(a,b) = |a−b|; s = max(1, diagA, diagB)
+           (s = 1 for regions); vectors per component.
+             volume              rel ≤ 1e-6 or abs ≤ 1e-9·s³
+             area, region area   rel ≤ 1e-6 or abs ≤ 1e-9·s²
+             centroid, bbox_*    each component abs ≤ 1e-6·s
 
-Interpretation choices where SPEC §6 is silent (documented in README):
-  * relative tolerances are relative to max(|a|, |b|);
-  * s = max(1, bbox diagonal) uses the larger diagonal of the two bodies;
-  * region areas have no body, so s = 1 for them (floor 1e-9 mm²);
-  * centroid / bbox tolerances apply per coordinate;
-  * histograms ignore zero-count entries.
+Classes:
+  MATCH                   all rules hold, or both engines rejected the document;
+  ROBUSTNESS              only one engine reported an error / rejected the document, or either
+                          engine reported an engine-prefixed internal error (OCCT_*, FORGE_*);
+  CODE_MISMATCH           both engines failed the same feature with different semantic codes;
+  POTENTIAL_SILENT_WRONG  both engines reported ok but exact or tolerance fields differ.
+A program's class is the most severe of its differences, in the order
+POTENTIAL_SILENT_WRONG > CODE_MISMATCH > ROBUSTNESS > MATCH (the spec does not rank them).
 """
 
 from __future__ import annotations
@@ -25,12 +29,21 @@ from typing import Any
 
 MATCH = "MATCH"
 ROBUSTNESS = "ROBUSTNESS"
+CODE_MISMATCH = "CODE_MISMATCH"
 SILENT_WRONG = "POTENTIAL_SILENT_WRONG"
-_SEVERITY = {MATCH: 0, ROBUSTNESS: 1, SILENT_WRONG: 2}
+CLASSES = (MATCH, ROBUSTNESS, CODE_MISMATCH, SILENT_WRONG)
+_SEVERITY = {MATCH: 0, ROBUSTNESS: 1, CODE_MISMATCH: 2, SILENT_WRONG: 3}
 
 REL_TOL = 1e-6
 ABS_FLOOR = 1e-9
 POS_TOL = 1e-6
+
+#: Engine prefixes that mark engine-internal (non-semantic) error codes (SPEC §4 [R-12]).
+ENGINE_PREFIXES = ("OCCT_", "FORGE_", "ORACLE_")
+
+
+def is_internal_code(code: str | None) -> bool:
+    return bool(code) and code.startswith(ENGINE_PREFIXES)
 
 
 def worst(*classes: str) -> str:
@@ -71,14 +84,15 @@ def _diag(body: dict) -> float:
 
 
 def scale(a_body: dict, b_body: dict) -> float:
+    """s = max(1, diagA, diagB)."""
     return max(1.0, _diag(a_body), _diag(b_body))
 
 
-def close_rel(a: Any, b: Any, floor: float) -> tuple[bool, float]:
-    """Relative REL_TOL with an absolute floor. Returns (ok, allowed)."""
+def close_rel(a: Any, b: Any, abs_floor: float) -> tuple[bool, float]:
+    """rel(a,b) ≤ 1e-6 or abs(a,b) ≤ abs_floor. Returns (ok, allowed |a−b|)."""
     if not (_is_num(a) and _is_num(b)):
         return False, float("nan")
-    allowed = max(REL_TOL * max(abs(a), abs(b)), floor)
+    allowed = max(REL_TOL * max(abs(a), abs(b)), abs_floor)
     return abs(a - b) <= allowed, allowed
 
 
@@ -95,13 +109,16 @@ def _hist(h: Any) -> dict:
 
 
 def _fmt(x: Any) -> str:
-    if isinstance(x, float):
-        return repr(x)
-    return str(x)
+    return repr(x) if isinstance(x, float) else str(x)
 
 
 def _feature_label(f: dict) -> str:
     return f"{f.get('part', '?')}/{f.get('feature', '?')}({f.get('type', '?')})"
+
+
+def is_rejected(report: dict) -> bool:
+    """A rejected document (SPEC §0 [R-10]): a top-level error and no evaluated features."""
+    return bool(report.get("error")) and not report.get("features")
 
 
 def compare_regions(ra: list, rb: list, path: str, cmp: Comparison, la: str, lb: str) -> None:
@@ -114,16 +131,13 @@ def compare_regions(ra: list, rb: list, path: str, cmp: Comparison, la: str, lb:
             cmp.add(p, f"outer_curves {la}={x.get('outer_curves')} {lb}={y.get('outer_curves')}", SILENT_WRONG)
         if x.get("loops") != y.get("loops"):
             cmp.add(p, f"loops {la}={x.get('loops')} {lb}={y.get('loops')}", SILENT_WRONG)
-        ok, allowed = close_rel(x.get("area"), y.get("area"), ABS_FLOOR * 1.0**2)
+        ok, allowed = close_rel(x.get("area"), y.get("area"), ABS_FLOOR * 1.0**2)  # regions: s = 1
         if not ok:
-            cmp.add(
-                p,
-                f"area {la}={_fmt(x.get('area'))} {lb}={_fmt(y.get('area'))} (allowed ±{allowed:.3g})",
-                SILENT_WRONG,
-            )
+            cmp.add(p, f"area {la}={_fmt(x.get('area'))} {lb}={_fmt(y.get('area'))} (allowed ±{allowed:.3g})",
+                    SILENT_WRONG)
 
 
-EXACT_BODY_FIELDS = ("faces", "edges", "valid")
+EXACT_BODY_FIELDS = ("faces", "edges")  # `valid` is not compared [R-13]
 
 
 def compare_bodies(ba: list, bb: list, path: str, cmp: Comparison, la: str, lb: str) -> None:
@@ -142,73 +156,72 @@ def compare_bodies(ba: list, bb: list, path: str, cmp: Comparison, la: str, lb: 
                 cmp.add(p, f"{k} {la}={hx} {lb}={hy}", SILENT_WRONG)
         ok, allowed = close_rel(x.get("volume"), y.get("volume"), ABS_FLOOR * s**3)
         if not ok:
-            cmp.add(
-                p,
-                f"volume {la}={_fmt(x.get('volume'))} {lb}={_fmt(y.get('volume'))} (allowed ±{allowed:.3g})",
-                SILENT_WRONG,
-            )
+            cmp.add(p, f"volume {la}={_fmt(x.get('volume'))} {lb}={_fmt(y.get('volume'))} (allowed ±{allowed:.3g})",
+                    SILENT_WRONG)
         ok, allowed = close_rel(x.get("area"), y.get("area"), ABS_FLOOR * s**2)
         if not ok:
-            cmp.add(
-                p,
-                f"area {la}={_fmt(x.get('area'))} {lb}={_fmt(y.get('area'))} (allowed ±{allowed:.3g})",
-                SILENT_WRONG,
-            )
+            cmp.add(p, f"area {la}={_fmt(x.get('area'))} {lb}={_fmt(y.get('area'))} (allowed ±{allowed:.3g})",
+                    SILENT_WRONG)
         for k in ("centroid", "bbox_min", "bbox_max"):
             if not close_abs_vec(x.get(k), y.get(k), POS_TOL * s):
-                cmp.add(
-                    p, f"{k} {la}={x.get(k)} {lb}={y.get(k)} (allowed ±{POS_TOL * s:.3g} per coordinate)",
-                    SILENT_WRONG,
-                )
+                cmp.add(p, f"{k} {la}={x.get(k)} {lb}={y.get(k)} (allowed ±{POS_TOL * s:.3g} per component)",
+                        SILENT_WRONG)
+        if x.get("valid") is not True or y.get("valid") is not True:
+            cmp.notes.append(f"{p}: valid {la}={x.get('valid')} {lb}={y.get('valid')} (not compared, [R-13])")
 
 
 def compare_features(fa: dict, fb: dict, path: str, cmp: Comparison, la: str, lb: str) -> None:
     sa, sb = fa.get("status"), fb.get("status")
     ca = (fa.get("error") or {}).get("code")
     cb = (fb.get("error") or {}).get("code")
+
+    def tagged(label, st, code):
+        return f"{label}={st}" + (f" [{code}]" if code else "")
+
     if sa != sb:
-        what = f"status {la}={sa}" + (f" [{ca}]" if ca else "") + f" {lb}={sb}" + (f" [{cb}]" if cb else "")
-        cmp.add(path, what, ROBUSTNESS)
+        cmp.add(path, f"status {tagged(la, sa, ca)} {tagged(lb, sb, cb)}", ROBUSTNESS)
         return
     if sa == "error":
-        if ca != cb:
-            cmp.add(path, f"error code {la}={ca} {lb}={cb}", ROBUSTNESS)
+        if is_internal_code(ca) or is_internal_code(cb):
+            cmp.add(path, f"engine-internal error {la}={ca} {lb}={cb}", ROBUSTNESS)
+        elif ca != cb:
+            cmp.add(path, f"error code {la}={ca} {lb}={cb}", CODE_MISMATCH)
         return
     compare_regions(fa.get("regions") or [], fb.get("regions") or [], path, cmp, la, lb)
     compare_bodies(fa.get("bodies") or [], fb.get("bodies") or [], path, cmp, la, lb)
 
 
 def compare_reports(a: dict, b: dict, label_a: str = "a", label_b: str = "b") -> Comparison:
-    """Compare two metrics reports per SPEC §6."""
+    """Compare two metrics reports per SPEC §6 [R-11]. By convention A = Forge, B = oracle."""
     cmp = Comparison()
     la, lb = label_a, label_b
-    if a.get("status") != b.get("status"):
-        cmp.add("status", f"document status {la}={a.get('status')} {lb}={b.get('status')}", ROBUSTNESS)
+    rej_a, rej_b = is_rejected(a), is_rejected(b)
     ea = (a.get("error") or {}).get("code")
     eb = (b.get("error") or {}).get("code")
-    if ea != eb:
-        cmp.notes.append(f"document-level error code {la}={ea} {lb}={eb} (not a §6 field)")
+    if rej_a and rej_b:
+        if ea != eb:
+            cmp.notes.append(f"both rejected; codes {la}={ea} {lb}={eb} (rejections are not compared)")
+        return cmp
+    if rej_a or rej_b:
+        who = la if rej_a else lb
+        cmp.add("document", f"only {who} rejected the document ({ea if rej_a else eb})", ROBUSTNESS)
+        return cmp
+    if a.get("status") != b.get("status"):
+        cmp.add("status", f"document status {la}={a.get('status')} {lb}={b.get('status')}", ROBUSTNESS)
     fa_list = a.get("features") or []
     fb_list = b.get("features") or []
-    n = max(len(fa_list), len(fb_list))
-    for i in range(n):
+    for i in range(max(len(fa_list), len(fb_list))):
         if i >= len(fa_list) or i >= len(fb_list):
             present = fa_list[i] if i < len(fa_list) else fb_list[i]
             missing_side = la if i >= len(fa_list) else lb
-            missing_doc = a if i >= len(fa_list) else b
-            cls = ROBUSTNESS if missing_doc.get("error") else SILENT_WRONG
-            cmp.add(f"features[{i}]", f"{_feature_label(present)} missing in {missing_side}", cls)
+            cmp.add(f"features[{i}]", f"{_feature_label(present)} missing in {missing_side}", SILENT_WRONG)
             continue
         fa, fb = fa_list[i], fb_list[i]
         key_a = (fa.get("part"), fa.get("feature"), fa.get("type"))
         key_b = (fb.get("part"), fb.get("feature"), fb.get("type"))
-        path = f"features[{i}] {_feature_label(fa)}"
         if key_a != key_b:
-            cmp.add(
-                f"features[{i}]",
-                f"feature identity {la}={_feature_label(fa)} {lb}={_feature_label(fb)}",
-                SILENT_WRONG if a.get("status") == b.get("status") == "ok" else ROBUSTNESS,
-            )
+            cmp.add(f"features[{i}]", f"feature identity {la}={_feature_label(fa)} {lb}={_feature_label(fb)}",
+                    SILENT_WRONG)
             continue
-        compare_features(fa, fb, path, cmp, la, lb)
+        compare_features(fa, fb, f"features[{i}] {_feature_label(fa)}", cmp, la, lb)
     return cmp

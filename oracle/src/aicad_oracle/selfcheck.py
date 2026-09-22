@@ -1,4 +1,4 @@
-"""Independent self-checks of oracle bodies (used by `oracle gen` and the tests).
+"""Independent self-checks of oracle bodies — a gate on every body the oracle reports.
 
 For every body the oracle builds with OCCT, predict from the 2D profile alone:
   * volume — extrude: area × distance; revolve: Pappus, angle × |∬ signed-distance dA|;
@@ -8,8 +8,10 @@ For every body the oracle builds with OCCT, predict from the 2D profile alone:
     (one face per non-axis profile curve, end caps when angle < 360, no seams, no degenerate
     edges, profile edges on the axis generate no faces);
   * bbox — cross-checked against OCCT's own BRepBndLib::AddOptimal.
-Any disagreement means the oracle (or OCCT, or the normalisation of OCCT conventions) does
-not follow the spec for that program.
+Any disagreement means OCCT (or the oracle's normalisation of OCCT conventions) did not
+produce the exact geometry the spec defines — e.g. BRepSweep_Rotation turns a profile line up
+to ~3e-4 rad off parallel into a cylinder. evaluate.py then fails the feature with the
+engine-prefixed code OCCT_SELF_CHECK_FAILED (SPEC §4 [R-12]; §6 classifies it as ROBUSTNESS).
 """
 
 from __future__ import annotations
@@ -17,11 +19,14 @@ from __future__ import annotations
 import math
 
 from .ir import LINEAR_TOLERANCE, Circle, Curve, ExtrudeFeature, Line, ResolvedPlane, RevolveFeature, Vec2
-from .sketch import Loop, Region, region_moments
+from .sketch import Loop, Region, region_area, region_moments
 
-#: Directions closer than this (|sin| or |cos|) are treated as parallel / perpendicular when
-#: predicting canonical surface types (SPEC gives no angular tolerance).
+#: SPEC §1: angular tolerance for classification (parallel / perpendicular), 1e-9 rad.
 ANGULAR_TOL = 1e-9
+#: Relative tolerance of the closed-form volume / area / centroid gate. 100× inside the §6 diff
+#: tolerance (1e-6) and ~300× above OCCT's measured integration noise (≤ 3.2e-11); allows the
+#: in-spec geometric snapping of lines within 1e-9 rad of parallel/perpendicular.
+METRIC_GATE = 1e-8
 
 
 def _loops(region: Region) -> list[Loop]:
@@ -123,11 +128,11 @@ def analytic_area(feat, curves: list[Curve], region: Region) -> float:
     loops = _loops(region)
     if isinstance(feat, ExtrudeFeature):
         per = sum(_curve_sd_integral(curves[e.index], (0.0, 0.0), (1.0, 0.0))[0] for lp in loops for e in lp.edges)
-        return 2 * region.area + per * feat.distance
+        return 2 * region_area(curves, region) + per * feat.distance
     L = math.hypot(*feat.axis_direction)
     d = (feat.axis_direction[0] / L, feat.axis_direction[1] / L)
     lateral = sum(abs(_curve_sd_integral(curves[e.index], feat.axis_origin, d)[1]) for lp in loops for e in lp.edges)
-    caps = 0.0 if feat.angle >= 360.0 else 2 * region.area
+    caps = 0.0 if feat.angle >= 360.0 else 2 * region_area(curves, region)
     return math.radians(feat.angle) * lateral + caps
 
 
@@ -154,13 +159,13 @@ def check_body(
         vol = math.radians(feat.angle) * abs(first)
         cen = None
     s = max(1.0, math.dist(metrics["bbox_min"], metrics["bbox_max"]))
-    if abs(metrics["volume"] - vol) > 1e-9 * max(abs(vol), 1e-9 * s**3):
+    if abs(metrics["volume"] - vol) > METRIC_GATE * max(abs(vol), 1e-9 * s**3):
         problems.append(f"volume {metrics['volume']!r} != analytic {vol!r}")
     area_exact = analytic_area(feat, curves, region)
-    if abs(metrics["area"] - area_exact) > 1e-9 * max(abs(area_exact), 1e-9 * s**2):
+    if abs(metrics["area"] - area_exact) > METRIC_GATE * max(abs(area_exact), 1e-9 * s**2):
         problems.append(f"area {metrics['area']!r} != analytic {area_exact!r}")
     if cen is not None:
-        if any(abs(metrics["centroid"][i] - cen[i]) > 1e-9 * s for i in range(3)):
+        if any(abs(metrics["centroid"][i] - cen[i]) > METRIC_GATE * s for i in range(3)):
             problems.append(f"centroid {metrics['centroid']} != analytic {cen}")
     for k in ("faces", "edges", "face_types", "edge_types"):
         if metrics[k] != exp[k]:

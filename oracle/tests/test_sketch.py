@@ -57,6 +57,15 @@ def test_endpoints_within_tolerance_are_coincident():
     assert len(ev(raw).loops) == 1
 
 
+def test_coincidence_is_inclusive_at_exactly_tol():
+    # the gap between c's end (0,0) and a's start (1e-6,0) is exactly 1e-6 in binary64 [R-3]
+    raw = [L("a", (1e-6, 0), (10, 0)), L("b", (10, 0), (0, 5)), L("c", (0, 5), (0, 0))]
+    assert math.hypot(1e-6, 0.0) == 1e-6
+    assert len(ev(raw).loops) == 1
+    raw[0]["start"] = [1.0000001e-6, 0]
+    assert code_of(raw) == "SKETCH_OPEN_LOOP"
+
+
 def test_two_curve_line_arc_loop_is_valid():
     raw = [A("arc", (5, 0), (-5, 0), (0, 0), True), L("chord", (-5, 0), (5, 0))]
     res = ev(raw)

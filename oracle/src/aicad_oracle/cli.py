@@ -48,6 +48,12 @@ def _cmd_eval(args) -> int:
         _write(Path(args.out), text)
     else:
         sys.stdout.write(text)
+    if report.get("error") and not report["features"]:
+        # SPEC §0 [R-10]: a rejected document exits 2 with its diagnostics (the JSON report with
+        # the top-level error is still written, for tooling).
+        e = report["error"]
+        print(f"oracle eval: document rejected: {e['code']}: {e['message']}", file=sys.stderr)
+        return 2
     if checks:
         print("oracle eval: self-check failures:", file=sys.stderr)
         for c in checks:
@@ -61,7 +67,7 @@ def _cmd_eval(args) -> int:
 # ---------------------------------------------------------------------------------------------
 
 def _cmd_diff(args) -> int:
-    from .compare import SILENT_WRONG, ROBUSTNESS, compare_reports
+    from .compare import CODE_MISMATCH, ROBUSTNESS, SILENT_WRONG, compare_reports
     from .diffrun import (
         default_golden_dir,
         diff_one,
@@ -93,7 +99,8 @@ def _cmd_diff(args) -> int:
             row = Row(Path(args.a).name + " vs " + Path(args.b).name, "b", a.get("status", "?"),
                       b.get("status", "?"), cmp.classification, cmp, list(cmp.notes))
             _write(Path(args.report), render_markdown([row], "Report diff", [f"a = `{args.a}`", f"b = `{args.b}`"]))
-        return 1 if cmp.classification == SILENT_WRONG or (args.fail_on_robustness and cmp.classification == ROBUSTNESS) else 0
+        failing = {SILENT_WRONG, CODE_MISMATCH} | ({ROBUSTNESS} if args.fail_on_robustness else set())
+        return 1 if cmp.classification in failing else 0
 
     if not args.target:
         print("oracle diff: give a program file/directory, or --a/--b", file=sys.stderr)
@@ -136,7 +143,8 @@ def _cmd_diff(args) -> int:
     if args.report:
         _write(Path(args.report), render_markdown(rows, "Forge vs OCCT oracle diff", notes))
         print(f"report written to {args.report}")
-    failed = counts.get(SILENT_WRONG, 0) > 0 or (args.fail_on_robustness and counts.get(ROBUSTNESS, 0) > 0)
+    failed = (counts.get(SILENT_WRONG, 0) + counts.get(CODE_MISMATCH, 0) > 0
+              or (args.fail_on_robustness and counts.get(ROBUSTNESS, 0) > 0))
     return 1 if failed else 0
 
 
@@ -224,7 +232,7 @@ def _cmd_gen(args) -> int:
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    rej = out / "rejected"
+    rej = out / "failed"
     tasks = [(args.seed, i, args.max_attempts) for i in range(args.count)]
     t0 = time.perf_counter()
     jobs = max(1, args.jobs)
@@ -249,7 +257,7 @@ def _cmd_gen(args) -> int:
             failure_kinds[f["kind"]] = failure_kinds.get(f["kind"], 0) + 1
             fname = f"{r['name']}_a{f['attempt']}.json"
             _write(rej / fname, json.dumps(f["doc"], indent=1) + "\n")
-            failure_list.append({"file": f"rejected/{fname}", "kind": f["kind"], "code": f["code"],
+            failure_list.append({"file": f"failed/{fname}", "kind": f["kind"], "code": f["code"],
                                  "message": f["message"][:500]})
         if r["doc"] is None:
             gave_up.append(r["name"])
@@ -291,7 +299,40 @@ def _cmd_gen(args) -> int:
         print(f"  {f['file']}: {f['kind']} {f['code']}: {f['message'][:200]}")
     if gave_up:
         print(f"gave up on {len(gave_up)} programs after {args.max_attempts} attempts: {gave_up[:10]}")
-    return 0 if not gave_up else 1
+    inv_ok = _gen_invalid(args, out)
+    return 0 if not gave_up and inv_ok else 1
+
+
+def _gen_invalid(args, out: Path) -> bool:
+    """Write the error corpus (programs with a known non-ok outcome) and check the oracle."""
+    if args.invalid_per_kind <= 0:
+        return True
+    from .evaluate import check_report, dumps_report, evaluate_data
+    from .invalidgen import check_case, generate_invalid
+
+    inv_dir = Path(args.invalid_out) if args.invalid_out else out / "invalid"
+    cases = generate_invalid(args.seed, args.invalid_per_kind)
+    by_kind: dict[str, int] = {}
+    mismatches = []
+    for c in cases:
+        by_kind[c.kind] = by_kind.get(c.kind, 0) + 1
+        name = c.doc["meta"]["name"]
+        _write(inv_dir / f"{name}.json", json.dumps(c.doc, indent=1) + "\n")
+        rep = evaluate_data(c.doc, name)
+        bad = check_report(rep)
+        if args.with_reports:
+            _write(inv_dir / f"{name}.metrics.json", dumps_report(rep))
+        problems = (bad and [f"report violates schema: {bad[:2]}"]) or check_case(c, rep)
+        if problems:
+            mismatches.append({"file": f"{name}.json", "kind": c.kind, "note": c.note, "problems": problems})
+    stats = {"seed": args.seed, "cases": len(cases), "by_kind": by_kind,
+             "expectation_mismatches": len(mismatches), "mismatch_details": mismatches}
+    _write(inv_dir / f"inv_s{args.seed}.stats.json", json.dumps(stats, indent=2) + "\n")
+    print(f"error corpus: {len(cases)} programs {by_kind} -> {inv_dir}; "
+          f"oracle vs expectation mismatches: {len(mismatches)}")
+    for m in mismatches[:20]:
+        print(f"  {m['file']} ({m['note']}): {'; '.join(m['problems'])[:300]}")
+    return not mismatches
 
 
 # ---------------------------------------------------------------------------------------------
@@ -309,11 +350,13 @@ def build_parser() -> argparse.ArgumentParser:
     pe.add_argument("file", help="IR v0 JSON document")
     pe.add_argument("--out", help="write the report here instead of stdout")
     pe.add_argument("--self-check", action="store_true",
-                    help="also run the analytic self-checks (volume/topology predictions); exit 4 on failure")
+                    help="print the self-check gate's findings (the gate always runs: a failing body "
+                         "is reported as OCCT_SELF_CHECK_FAILED) and exit 4 if there are any")
     pe.add_argument("--step", help="also write the bodies to this STEP file (debugging, via build123d)")
     pe.set_defaults(func=_cmd_eval)
 
-    pd = sub.add_parser("diff", help="compare Forge (or golden reports) against the oracle, per SPEC §6")
+    pd = sub.add_parser("diff", help="compare Forge (or golden reports) against the oracle, per SPEC §6; "
+                        "exit 1 on POTENTIAL_SILENT_WRONG or CODE_MISMATCH")
     pd.add_argument("target", nargs="?", help="IR program file or directory of programs")
     pd.add_argument("--forge-bin", help="Forge CLI; run as `<bin> eval <file> --format json`")
     pd.add_argument("--golden-dir", help="golden reports directory (default: <programs>/../golden)")
@@ -336,6 +379,10 @@ def build_parser() -> argparse.ArgumentParser:
     pn.add_argument("--jobs", type=int, default=os.cpu_count() or 1)
     pn.add_argument("--max-attempts", type=int, default=20)
     pn.add_argument("--with-reports", action="store_true", help="also write <name>.metrics.json oracle reports")
+    pn.add_argument("--invalid-per-kind", type=int, default=4,
+                    help="error-corpus programs per error kind (0 disables; some kinds use more to "
+                         "cover every variant)")
+    pn.add_argument("--invalid-out", help="error-corpus directory (default: <out>/invalid)")
     pn.set_defaults(func=_cmd_gen)
     return p
 

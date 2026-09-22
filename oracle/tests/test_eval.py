@@ -152,8 +152,10 @@ def test_failed_sketch_does_not_stop_evaluation():
     )
     assert rep["status"] == "error"
     assert feature(rep, "bad")["error"]["code"] == "SKETCH_OPEN_LOOP"
-    # the oracle propagates the sketch's code to consumers (SPEC does not say; see README)
-    assert feature(rep, "e_bad")["error"]["code"] == "SKETCH_OPEN_LOOP"
+    # [R-1] consumers of a failed sketch fail with DEPENDENCY_FAILED naming the sketch and its code
+    err = feature(rep, "e_bad")["error"]
+    assert err["code"] == "DEPENDENCY_FAILED"
+    assert "'bad'" in err["message"] and "SKETCH_OPEN_LOOP" in err["message"]
     assert feature(rep, "good")["status"] == "ok" and feature(rep, "e_good")["status"] == "ok"
 
 
@@ -248,3 +250,101 @@ def test_oracle_never_reports_an_occt_invalid_body_as_ok():
             assert f["error"]["code"] == "OCCT_INVALID_RESULT" and "bodies" not in f
             outcomes[angle] = f["error"]["code"]
     assert outcomes[360.0] == "ok"
+
+
+
+def test_frame_x_is_reorthogonalised_against_the_normal():
+    from aicad_oracle.ir import Frame, resolve_plane
+
+    pl = resolve_plane(Frame((0, 0, 0), (0.0, 0.0, 2.0), (3.0, 0.0, 2e-9)))  # |cos| < 1e-9 passes validation
+    assert pl.x == (1.0, 0.0, 0.0) and pl.y == (0.0, 1.0, 0.0) and pl.normal == (0.0, 0.0, 1.0)
+    pl = resolve_plane(Frame((0, 0, 0), (1.0, 1.0, 0.0), (1.0, -1.0, 1e-10)))
+    dot = sum(a * b for a, b in zip(pl.x, pl.normal))
+    assert abs(dot) < 1e-16
+
+
+def test_part_names_are_free_strings():
+    d = doc(sketch(rect("", 0, 0, 1, 1)), extrude(1))
+    d["parts"][0]["name"] = "part"  # reserved names do not apply to parts [R-15]
+    d["parts"].append({"id": "p2", "name": "Bracket #2 (left)", "features": [
+        sketch(rect("", 0, 0, 1, 1), fid="s2", name="sk2")]})
+    rep = evaluate_data(d, "t")
+    assert rep["status"] == "ok" and rep["features"][-1]["part"] == "Bracket #2 (left)"
+
+
+def test_profile_within_tolerance_past_the_axis_is_snapped_onto_it():
+    # [R-3]/[R-7]: 0.5·tol past the axis is not a crossing; the vertex is ON the axis (§4.4),
+    # so there is no ring edge and the body equals the exactly-on-axis one.
+    exact = body(run(sketch(rect("", 0, 0, 10, 30)), revolve(90)), "rv")
+    near = run(sketch(rect("", -5e-7, 0, 10, 30)), revolve(90), checks=(checks := []))
+    assert near["status"] == "ok" and checks == []
+    b = body(near, "rv")
+    assert (b["faces"], b["edges"], b["edge_types"]) == (exact["faces"], exact["edges"], exact["edge_types"])
+    assert b["volume"] == pytest.approx(exact["volume"], rel=1e-6)
+    crossing = run(sketch(rect("", -2e-6, 0, 10, 30)), revolve(90))
+    assert feature(crossing, "rv")["error"]["code"] == "REVOLVE_CROSSES_AXIS"
+
+
+def test_regions_on_opposite_sides_of_the_axis_are_each_valid():
+    rep = run(sketch(rect("a", 1, 0, 3, 2) + rect("b", -3, 0, -1, 2)), revolve(360))
+    assert rep["status"] == "ok" and len(feature(rep, "rv")["bodies"]) == 2
+
+
+def test_one_crossing_region_fails_the_whole_revolve():
+    rep = run(sketch(rect("a", 1, 0, 3, 2) + rect("b", -1, 5, 1, 7)), revolve(360))
+    f = feature(rep, "rv")
+    assert f["error"]["code"] == "REVOLVE_CROSSES_AXIS" and "bodies" not in f
+
+
+def test_degenerate_analytic_types_follow_the_spec_tolerances():
+    from OCP.BRepPrimAPI import BRepPrimAPI_MakeTorus
+    from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt
+    from OCP.TopAbs import TopAbs_FACE
+    from OCP.TopExp import TopExp_Explorer
+    from OCP.TopoDS import TopoDS
+
+    from aicad_oracle.occt import face_type
+
+    # a torus whose major radius is ≤ tol is the sphere of an arc centred on the axis [R-8]
+    shape = BRepPrimAPI_MakeTorus(gp_Ax2(gp_Pnt(0, 0, 0), gp_Dir(0, 0, 1)), 5e-7, 4.0, 1.0).Shape()
+    ex = TopExp_Explorer(shape, TopAbs_FACE)
+    types = set()
+    while ex.More():
+        types.add(face_type(TopoDS.Face_s(ex.Current())))
+        ex.Next()
+    assert "sphere" in types and "torus" not in types
+
+
+@pytest.mark.parametrize("angle, length", [(1e-5, 30.0), (1e-4, 0.3), (3e-4, 0.3)])
+def test_occt_snapping_a_slanted_line_to_a_cylinder_is_not_reported_as_ok(angle, length):
+    # §4.4: a line more than 1e-9 rad off parallel sweeps a CONE. OCCT's BRepSweep_Rotation
+    # builds a cylinder for lines up to ~3e-4 rad off parallel (inexact geometry). The oracle's
+    # gate must turn that into an engine-internal error rather than report wrong types/metrics.
+    dr = length * math.tan(angle)
+    prof = [L("b", (1, 0), (2, 0)), L("o", (2, 0), (2 + dr, length)), L("t", (2 + dr, length), (1, length)),
+            L("i", (1, length), (1, 0))]
+    f = feature(run(sketch(prof), revolve(360)), "rv")
+    if f["status"] == "ok":  # a future OCCT that keeps the cone is fine too
+        assert f["bodies"][0]["face_types"] == {"cone": 1, "cylinder": 1, "plane": 2}
+    else:
+        assert f["error"]["code"] == "OCCT_SELF_CHECK_FAILED" and "face_types" in f["error"]["message"]
+
+
+def test_slanted_line_well_off_parallel_is_a_cone():
+    prof = [L("b", (1, 0), (2, 0)), L("o", (2, 0), (2.3, 30)), L("t", (2.3, 30), (1, 30)), L("i", (1, 30), (1, 0))]
+    b = body(run(sketch(prof), revolve(360)), "rv")
+    assert b["face_types"] == {"cone": 1, "cylinder": 1, "plane": 2}
+
+
+def test_occt_full_turn_for_a_partial_horn_torus_is_caught():
+    # Found by `oracle gen --seed 3` (program 2600): OCCT 7.9.3 returns the FULL 360° torus for a
+    # 311.5° reverse revolve of a circle tangent to the axis (volume 4988.79 instead of 4317.30).
+    tube = C("c1", (-9.083420670524045, -19.403353315195183), 6.322496123800377)
+    axis = dict(origin=(-2.7609245467236683, -30.79718619088601), axis_dir=(-3.9239346628357354e-17, -0.6408271618507037))
+    rep = run(sketch([tube], plane="YZ"), revolve(311.54396644817473, direction="reverse", **axis))
+    f = feature(rep, "rv")
+    r, d = 6.322496123800377, 6.322496123800378
+    if f["status"] == "ok":
+        assert f["bodies"][0]["volume"] == pytest.approx(math.radians(311.54396644817473) * d * math.pi * r * r, rel=1e-8)
+    else:
+        assert f["error"]["code"] == "OCCT_SELF_CHECK_FAILED" and "volume" in f["error"]["message"]

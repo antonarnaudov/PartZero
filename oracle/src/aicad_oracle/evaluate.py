@@ -20,7 +20,7 @@ from .ir import (
     resolve_plane,
     schema_errors,
 )
-from .sketch import SketchError, SketchResult, evaluate_sketch, signed_extent
+from .sketch import SketchError, SketchResult, evaluate_sketch, signed_extent, snap_to_axis
 
 
 class FeatureError(Exception):
@@ -76,6 +76,8 @@ def _bodies_for(feat, sk: SketchFeature, res: SketchResult, checks: list | None,
 
     pl = resolve_plane(sk.plane)
     curves = list(sk.curves)
+    if isinstance(feat, RevolveFeature):
+        curves = snap_to_axis(curves, feat.axis_origin, feat.axis_direction)
     bodies: list[dict] = []
     for region in res.regions:
         face = occt.build_face(curves, region, pl)
@@ -88,9 +90,9 @@ def _bodies_for(feat, sk: SketchFeature, res: SketchResult, checks: list | None,
             solid = occt.revolve(face, o3, (d3[0] / n, d3[1] / n, d3[2] / n), feat.angle, feat.direction)
         m = occt.body_metrics(solid)
         if not m["valid"]:
-            # An OCCT result that OCCT itself rejects is not a reference: report the failure
-            # instead of metrics (a Forge disagreement then classifies as ROBUSTNESS, not as a
-            # potential silent-wrong). Seen for partial revolves of a circle tangent to the axis.
+            # SPEC §4 [R-12]: never report an invalid body as ok. The engine-prefixed code marks
+            # an engine-internal failure (§6 classifies a disagreement as ROBUSTNESS). Seen for
+            # partial revolves of a small circle tangent to the axis.
             raise occt.BuildError(
                 "OCCT_INVALID_RESULT",
                 f"BRepCheck_Analyzer rejects the OCCT solid for region {region.outer_curves} "
@@ -98,19 +100,26 @@ def _bodies_for(feat, sk: SketchFeature, res: SketchResult, checks: list | None,
             )
         if shapes is not None:
             shapes.append((feat.name, len(bodies), solid))
-        if checks is not None:
-            from .selfcheck import check_body
+        # Gate: the body must match the closed-form / §4.4 predictions (see selfcheck.py).
+        from .selfcheck import check_body
 
-            for problem in check_body(feat, curves, region, pl, m, solid):
-                checks.append(f"{feat.name} region {region.outer_curves}: {problem}")
+        problems = check_body(feat, curves, region, pl, m, solid)
+        if problems:
+            if checks is not None:
+                checks.extend(f"{feat.name} region {region.outer_curves}: {q}" for q in problems)
+            raise occt.BuildError(
+                "OCCT_SELF_CHECK_FAILED",
+                f"OCCT body for region {region.outer_curves} disagrees with the spec's closed-form "
+                f"prediction: {'; '.join(problems)}",
+            )
         bodies.append(m)
     return bodies
 
 
 def evaluate_document(doc: Document, name: str, checks: list | None = None, shapes: list | None = None) -> dict:
-    """Evaluate a validated document. If `checks` is a list, run the independent self-checks
-    (selfcheck.py) on every body and append any failures to it. If `shapes` is a list, append
-    (feature name, body index, TopoDS_Solid) for every body."""
+    """Evaluate a validated document. Every body passes the selfcheck.py gate or its feature fails
+    with OCCT_SELF_CHECK_FAILED; if `checks` is a list, the gate's findings are also appended to
+    it. If `shapes` is a list, append (feature name, body index, TopoDS_Solid) for every body."""
     features: list[dict] = []
     status = "ok"
     for part in doc.parts:
@@ -138,9 +147,12 @@ def evaluate_document(doc: Document, name: str, checks: list | None = None, shap
                     raise FeatureError("SKETCH_SUPPRESSED", f"sketch {feat.sketch!r} is suppressed")
                 if res is None:
                     assert sk_err is not None
-                    # SPEC gap: the code of a feature consuming a failed sketch is not specified.
-                    # The oracle propagates the sketch's own code (see README).
-                    raise FeatureError(sk_err["code"], f"sketch {feat.sketch!r} failed: {sk_err['message']}")
+                    # SPEC §4 [R-1]: consumers of a failed sketch fail with DEPENDENCY_FAILED;
+                    # the message names the failed sketch and its code.
+                    raise FeatureError(
+                        "DEPENDENCY_FAILED",
+                        f"sketch {feat.sketch!r} failed with {sk_err['code']}: {sk_err['message']}",
+                    )
                 if isinstance(feat, RevolveFeature):
                     _check_revolve_profile(feat, sk, res)
                 bodies = _bodies_for(feat, sk, res, checks, shapes)
@@ -148,8 +160,8 @@ def evaluate_document(doc: Document, name: str, checks: list | None = None, shap
             except (FeatureError, SketchError) as e:
                 features.append(_feature_entry(part.name, feat, "error", error=_err(e.code, e.message)))
                 status = "error"
-            except Exception as e:  # OCCT build failures and oracle bugs
-                code = getattr(e, "code", "ORACLE_EXCEPTION")
+            except Exception as e:  # OCCT build failures and oracle bugs → engine-prefixed codes
+                code = getattr(e, "code", "OCCT_EXCEPTION")
                 msg = getattr(e, "message", f"{type(e).__name__}: {e}")
                 features.append(_feature_entry(part.name, feat, "error", error=_err(code, msg)))
                 status = "error"

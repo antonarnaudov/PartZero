@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from aicad_oracle.compare import MATCH, ROBUSTNESS, SILENT_WRONG, compare_reports
+from aicad_oracle.compare import CODE_MISMATCH, MATCH, ROBUSTNESS, SILENT_WRONG, compare_reports
 
 BODY = {
     "volume": 1000.0, "area": 600.0, "centroid": [5.0, 5.0, 5.0],
@@ -51,6 +51,7 @@ def test_identical_reports_match_regardless_of_engine_and_document():
         lambda r: body(r)["bbox_max"].__setitem__(2, 10.0 + 1.5e-5),
         lambda r: r["features"][0]["regions"][0].update(area=100.0 * (1 + 0.9e-6)),
         lambda r: body(r).update(face_types={"plane": 6, "cone": 0}),  # zero counts ignored
+        lambda r: body(r).update(valid=False),  # [R-13] `valid` is not compared
     ],
 )
 def test_within_tolerance_matches(mutate):
@@ -68,7 +69,6 @@ def test_within_tolerance_matches(mutate):
         lambda r: body(r).update(edges=13),
         lambda r: body(r).update(face_types={"plane": 5, "cylinder": 1}),
         lambda r: body(r).update(edge_types={"line": 11, "circle": 1}),
-        lambda r: body(r).update(valid=False),
         lambda r: r["features"][1]["bodies"].append(copy.deepcopy(BODY)),
         lambda r: r["features"][0]["regions"][0].update(loops=2),
         lambda r: r["features"][0]["regions"][0].update(outer_curves=["a", "b", "c"]),
@@ -100,16 +100,39 @@ def test_both_erroring_same_code_matches_even_if_messages_differ():
     assert compare_reports(a, b).classification == MATCH
 
 
-def test_both_erroring_with_different_codes_is_robustness():
+def test_both_erroring_with_different_semantic_codes_is_code_mismatch():
     a = mutated(err("SKETCH_OPEN_LOOP"))
     b = mutated(err("SKETCH_BRANCHING"))
-    assert compare_reports(a, b).classification == ROBUSTNESS
+    assert compare_reports(a, b).classification == CODE_MISMATCH
 
 
-def test_document_level_error_is_robustness():
-    b = {"schema": "aicad.metrics/0", "engine": "x", "document": "d", "status": "error",
-         "error": {"code": "IR_SCHEMA_INVALID", "message": "m"}, "features": []}
-    assert cls(b) == ROBUSTNESS
+@pytest.mark.parametrize("ca, cb", [("OCCT_INVALID_RESULT", "INVALID_RESULT"), ("SKETCH_OPEN_LOOP", "FORGE_INTERNAL"),
+                                    ("OCCT_BUILD_FAILED", "OCCT_BUILD_FAILED")])
+def test_engine_prefixed_codes_are_robustness(ca, cb):
+    assert compare_reports(mutated(err(ca)), mutated(err(cb))).classification == ROBUSTNESS
+
+
+REJECTED = {"schema": "aicad.metrics/0", "engine": "x", "document": "d", "status": "error",
+            "error": {"code": "IR_SCHEMA_INVALID", "message": "m"}, "features": []}
+
+
+def test_one_engine_rejecting_is_robustness():
+    assert cls(REJECTED) == ROBUSTNESS
+    assert compare_reports(REJECTED, REPORT).classification == ROBUSTNESS
+
+
+def test_both_rejecting_is_match_even_with_different_codes():
+    other = dict(REJECTED, error={"code": "REJECTED", "message": "exit 2"})
+    cmp = compare_reports(REJECTED, other)
+    assert cmp.classification == MATCH and cmp.notes
+
+
+def test_severity_order_silent_wrong_over_code_mismatch_over_robustness():
+    from aicad_oracle.compare import worst
+
+    assert worst(MATCH, ROBUSTNESS, CODE_MISMATCH, SILENT_WRONG) == SILENT_WRONG
+    assert worst(ROBUSTNESS, CODE_MISMATCH) == CODE_MISMATCH
+    assert worst(MATCH, ROBUSTNESS) == ROBUSTNESS
 
 
 def test_silent_wrong_dominates_robustness():
@@ -184,8 +207,30 @@ def test_cli_with_forge_binary_classifies(tmp_path, capsys):
     assert _cli("diff", prog, "--forge-bin", wrong) == 1
     assert "POTENTIAL_SILENT_WRONG=1" in capsys.readouterr().out
 
+    (tmp_path / "r").mkdir()
+    rejects = _fake_forge(tmp_path / "r", "sys.stderr.write('rejected\\n'); sys.exit(2)")
+    assert _cli("diff", prog, "--forge-bin", rejects) == 0
+    assert "ROBUSTNESS=1" in capsys.readouterr().out  # only Forge rejected [R-10]
+
+    (tmp_path / "m").mkdir()
+    mismatch = _fake_forge(tmp_path / "m", "rep['status'] = 'error'; f = rep['features'][1]; f.pop('bodies'); "
+                                          "f.update(status='error', error={'code': 'SKETCH_OPEN_LOOP', 'message': 'x'})")
+    assert _cli("diff", prog, "--forge-bin", mismatch) == 0  # ok vs error → ROBUSTNESS
+    assert "ROBUSTNESS=1" in capsys.readouterr().out
+
     (tmp_path / "c").mkdir()
     crash = _fake_forge(tmp_path / "c", "sys.exit(101)")
     assert _cli("diff", prog, "--forge-bin", crash) == 0
     assert "ROBUSTNESS=1" in capsys.readouterr().out
     assert _cli("diff", prog, "--forge-bin", crash, "--fail-on-robustness") == 1
+
+
+def test_cli_both_rejecting_matches(tmp_path, capsys):
+    bad = tmp_path / "bad.json"
+    bad.write_text(json.dumps({"schema": "aicad.ir/0", "parts": [{"id": "p", "name": "x", "features": [
+        {"type": "sketch", "id": "s", "name": "extrude", "plane": "XY",
+         "curves": [{"kind": "circle", "id": "c", "center": [0, 0], "radius": 1}]}]}]}))
+    rejects = _fake_forge(tmp_path, "sys.exit(2)")
+    assert _cli("diff", bad, "--forge-bin", rejects) == 0
+    assert "MATCH=1" in capsys.readouterr().out
+    assert _cli("eval", bad) == 2  # [R-10]

@@ -4,12 +4,18 @@ Pure 2D math (no OCCT): the oracle decides sketch topology with its own simple, 
 and uses OCCT only for the 3D solids and their metrics. Every tolerance decision uses
 `LINEAR_TOLERANCE` from the spec.
 
-Error precedence (the spec lists the rules but not their priority; see README):
-  1. endpoints, scanned in curve order (start before end): first endpoint with 0 partners →
-     SKETCH_OPEN_LOOP, with >1 partners → SKETCH_BRANCHING;
-  2. crossings, scanned over curve pairs (i < j) in curve order → SKETCH_CURVES_CROSS;
-  3. zero-area loops → SKETCH_DEGENERATE_LOOP;
-  4. no regions → SKETCH_NO_REGIONS.
+Staged error precedence, SPEC §3.1 [R-2] (first failing stage wins; within a stage, first
+failing candidate in scan order wins):
+  1. endpoints, curve order, `start` before `end`: 0 coincident ends of other curves →
+     SKETCH_OPEN_LOOP, ≥ 2 → SKETCH_BRANCHING;
+  2. crossings, pairs (i, j), i < j, lexicographic → SKETCH_CURVES_CROSS [R-4];
+  3. loops with |area| ≤ tol² → SKETCH_DEGENERATE_LOOP [R-5];
+  4. no regions → SKETCH_NO_REGIONS (defensive).
+
+[R-4] "come within tol at a location more than 2·tol from every shared endpoint" is evaluated
+on the finite set of *contact points* of the pair: proper intersection points, tangency points
+(gap ≤ tol, located at the foot / on the centre line) and curve endpoints lying within tol of
+the other curve. Overlaps longer than tol always fail.
 """
 
 from __future__ import annotations
@@ -21,7 +27,7 @@ from .ir import LINEAR_TOLERANCE, Arc, Circle, Curve, Line, Vec2
 
 TOL = LINEAR_TOLERANCE
 TWO_PI = 2.0 * math.pi
-#: A loop whose |signed area| is at or below this is degenerate (SPEC §3.1 rule 4 gives no number).
+#: SPEC §3.1 [R-5]: a loop whose |area| is ≤ tol² is degenerate.
 DEGENERATE_AREA = LINEAR_TOLERANCE * LINEAR_TOLERANCE
 
 
@@ -339,8 +345,8 @@ def _endpoint(c: Curve, which: int) -> Vec2:
 
 
 def _coincident(a: Vec2, b: Vec2) -> bool:
-    # SPEC §1: "Points closer than this are coincident".
-    return _dist(a, b) < LINEAR_TOLERANCE
+    # SPEC §1 [R-3]: two points coincide when distance ≤ tol (inclusive).
+    return _dist(a, b) <= LINEAR_TOLERANCE
 
 
 def match_endpoints(curves: list[Curve]) -> dict[tuple[int, int], tuple[int, int]]:
@@ -615,8 +621,13 @@ def loop_moments(curves: list[Curve], loop: Loop) -> tuple[float, float]:
     return mx, my
 
 
+def region_area(curves: list[Curve], region: Region) -> float:
+    """Region area recomputed from `curves` (which may be a snapped copy of the sketch curves)."""
+    return abs(loop_signed_area(curves, region.outer)) - sum(abs(loop_signed_area(curves, h)) for h in region.holes)
+
+
 def region_moments(curves: list[Curve], region: Region) -> tuple[float, float, float]:
-    """(area, ∬x dA, ∬y dA) of a region (outer counted positive, holes negative)."""
+    """(area, ∬x dA, ∬y dA) of a region (outer counted positive, holes negative), from `curves`."""
     def oriented(lp: Loop, sign: float) -> tuple[float, float]:
         mx, my = loop_moments(curves, lp)
         s = sign if lp.signed_area > 0 else -sign
@@ -627,7 +638,7 @@ def region_moments(curves: list[Curve], region: Region) -> tuple[float, float, f
         hx, hy = oriented(h, -1.0)
         mx += hx
         my += hy
-    return region.area, mx, my
+    return region_area(curves, region), mx, my
 
 
 # ---------------------------------------------------------------------------------------------
@@ -656,3 +667,35 @@ def signed_extent(curves: list[Curve], loop: Loop, origin: Vec2, direction: Vec2
                 if g.contains_angle(t):
                     vals.append(sd(g.point(t)))
     return min(vals), max(vals)
+
+
+def snap_to_axis(curves: list[Curve], origin: Vec2, direction: Vec2) -> list[Curve]:
+    """Project curve end points and arc/circle centres within tol of the revolve axis onto it.
+
+    SPEC §1 [R-3] (inclusive tolerance) + §4.4: a profile vertex within tol of the axis IS on
+    the axis — it sweeps to a singular point, never to a ring edge of radius ≤ tol, and a
+    profile that reaches ≤ tol past the axis does not cross it [R-7]. OCCT has no such
+    tolerance (BRepPrimAPI_MakeRevol fails on a profile 5e-7 mm past the axis), so the oracle
+    snaps before building. Displacements are ≤ tol.
+    """
+    from dataclasses import replace
+
+    L = _norm(direction)
+    dh = (direction[0] / L, direction[1] / L)
+
+    def snap(q: Vec2) -> Vec2:
+        rel = _sub(q, origin)
+        if abs(_cross(dh, rel)) > LINEAR_TOLERANCE:
+            return q
+        t = _dot(rel, dh)
+        return (origin[0] + t * dh[0], origin[1] + t * dh[1])
+
+    out: list[Curve] = []
+    for c in curves:
+        if isinstance(c, Line):
+            out.append(replace(c, start=snap(c.start), end=snap(c.end)))
+        elif isinstance(c, Arc):
+            out.append(replace(c, start=snap(c.start), end=snap(c.end), center=snap(c.center)))
+        else:
+            out.append(replace(c, center=snap(c.center)))
+    return out

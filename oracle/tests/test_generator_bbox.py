@@ -101,3 +101,13 @@ def test_tight_bbox_of_tilted_tori_and_spheres(seed):
             # ... inside OCCT's own (possibly tolerance-enlarged) optimal box, and within 1e-6 of it
             assert olo[k] - 1e-12 <= lo[k] and hi[k] <= ohi[k] + 1e-12
             assert lo[k] - olo[k] <= 1e-6 and ohi[k] - hi[k] <= 1e-6
+
+
+def test_error_corpus_matches_its_expectations():
+    from aicad_oracle.invalidgen import KINDS, check_case, generate_invalid
+
+    cases = generate_invalid(7, 1)
+    assert {c.kind for c in cases} == set(KINDS)
+    for c in cases:
+        rep = evaluate_data(c.doc, c.doc["meta"]["name"])
+        assert check_case(c, rep) == [], (c.kind, c.note)
