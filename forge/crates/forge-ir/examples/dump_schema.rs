@@ -10,4 +10,13 @@ fn main() {
     };
     write("ir-v0.schema.json", forge_ir::document_schema());
     write("metrics-v0.schema.json", forge_ir::report_schema());
+    write(
+        "ir-v0.constants.json",
+        serde_json::json!({
+            "IR_SCHEMA": forge_ir::IR_SCHEMA,
+            "METRICS_SCHEMA": forge_ir::METRICS_SCHEMA,
+            "LINEAR_TOLERANCE": forge_ir::LINEAR_TOLERANCE,
+            "RESERVED_NAMES": forge_ir::RESERVED_NAMES,
+        }),
+    );
 }

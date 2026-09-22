@@ -1,0 +1,45 @@
+{
+  "name": "@aicad/cadscript",
+  "version": "0.0.1",
+  "description": "CadScript v0: a statically compiled TypeScript subset that compiles to (and prints from) the aicad Feature-Graph IR.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "cadscript": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./std": {
+      "types": "./std/index.d.ts"
+    },
+    "./std/index.d.ts": "./std/index.d.ts"
+  },
+  "files": [
+    "dist",
+    "std"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "generate": "vitest run test/generated-files.test.ts --update"
+  },
+  "dependencies": {
+    "@aicad/ir-types": "workspace:*",
+    "typescript": "~5.9.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "fast-check": "^4.3.0",
+    "vitest": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

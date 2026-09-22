@@ -6,7 +6,7 @@
 use std::collections::BTreeSet;
 
 use crate::doc::*;
-use crate::{IR_SCHEMA, LINEAR_TOLERANCE};
+use crate::{IR_SCHEMA, LINEAR_TOLERANCE, RESERVED_NAMES};
 
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 #[error("{code} at {path}: {message}")]
@@ -37,6 +37,10 @@ pub fn validate(doc: &Document) -> Result<(), Vec<ValidationError>> {
     }
     let mut part_ids = BTreeSet::new();
     let mut part_names = BTreeSet::new();
+    // Feature ids and names are unique across the WHOLE document: names are CadScript
+    // consts sharing one file scope, ids key spans/diagnostics document-wide.
+    let mut feature_ids = BTreeSet::new();
+    let mut feature_names = BTreeSet::new();
     for (pi, part) in doc.parts.iter().enumerate() {
         let pp = format!("/parts/{pi}");
         if !part_ids.insert(part.id.as_str()) {
@@ -45,14 +49,18 @@ pub fn validate(doc: &Document) -> Result<(), Vec<ValidationError>> {
         if !part_names.insert(part.name.as_str()) {
             errs.push(err("DUPLICATE_NAME", format!("{pp}/name"), format!("part {:?}", part.name)));
         }
-        validate_part(part, &pp, &mut errs);
+        validate_part(part, &pp, &mut feature_ids, &mut feature_names, &mut errs);
     }
     if errs.is_empty() { Ok(()) } else { Err(errs) }
 }
 
-fn validate_part(part: &PartStudio, pp: &str, errs: &mut Vec<ValidationError>) {
-    let mut ids = BTreeSet::new();
-    let mut names = BTreeSet::new();
+fn validate_part<'a>(
+    part: &'a PartStudio,
+    pp: &str,
+    ids: &mut BTreeSet<&'a str>,
+    names: &mut BTreeSet<&'a str>,
+    errs: &mut Vec<ValidationError>,
+) {
     // Names of sketch features seen so far (features may only reference earlier ones).
     let mut sketches_before: BTreeSet<&str> = BTreeSet::new();
     for (fi, f) in part.features.iter().enumerate() {
@@ -68,6 +76,12 @@ fn validate_part(part: &PartStudio, pp: &str, errs: &mut Vec<ValidationError>) {
                 "INVALID_NAME",
                 format!("{fp}/name"),
                 format!("{:?} must match [A-Za-z_][A-Za-z0-9_]* (it is a CadScript const)", f.name()),
+            ));
+        } else if RESERVED_NAMES.contains(&f.name()) {
+            errs.push(err(
+                "RESERVED_NAME",
+                format!("{fp}/name"),
+                format!("{:?} is a reserved word or CadScript builtin; pick another name", f.name()),
             ));
         }
         match f {
@@ -183,8 +197,10 @@ fn validate_sketch(s: &SketchFeature, fp: &str, errs: &mut Vec<ValidationError>)
                 }
             }
             SketchCurve::Circle { center, radius, .. } => {
-                if !(finite2(*center) && radius.is_finite()) || *radius <= LINEAR_TOLERANCE {
-                    errs.push(err("DEGENERATE_CURVE", &cp, "circle radius must be finite and > 0"));
+                if !(finite2(*center) && radius.is_finite()) {
+                    errs.push(err("NON_FINITE", &cp, "circle center and radius must be finite"));
+                } else if *radius <= LINEAR_TOLERANCE {
+                    errs.push(err("DEGENERATE_CURVE", &cp, "circle radius must be > 0"));
                 }
             }
         }

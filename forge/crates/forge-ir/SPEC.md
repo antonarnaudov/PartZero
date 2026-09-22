@@ -4,6 +4,12 @@ Two engines implement this spec independently: **Forge** (Rust) and the **oracle
 
 The types live in `src/doc.rs` and `src/metrics.rs`. The JSON Schemas generated from them are in `schema/`.
 
+## 0. Identity and canonical form
+- **Unique ids and names.** Feature `id`s and feature `name`s are unique across the whole **document**, not just within a part studio. This is because names are CadScript `const`s that share one file scope. Part ids and part names are unique among parts. Curve ids are unique within their sketch.
+- **Name syntax.** Feature names match `[A-Za-z_][A-Za-z0-9_]*`. They must not be a reserved word or a CadScript builtin (`RESERVED_NAMES` in `src/lib.rs`, also exported in `schema/ir-v0.constants.json`). A violation is reported as `RESERVED_NAME`.
+- **No unknown fields.** Unknown fields are rejected everywhere, including inside sketch curves.
+- **Canonical JSON.** Canonical JSON (`forge_ir::to_json`) omits fields that equal their defaults (`meta` when empty, `units`, `suppressed: false`, `regions: "all"`, `direction: "normal"`, `op: "new_body"`). Readers must accept both the explicit and the omitted form.
+
 ## 1. Units and tolerance
 - Lengths are in millimetres and angles are in degrees. v0 supports no other units.
 - `LINEAR_TOLERANCE = 1e-6` mm:
@@ -81,6 +87,9 @@ Each region of the referenced sketch (in canonical order) becomes **one new soli
 - With angle < 360 there are two planar end-cap faces.
 
 ## 5. Metrics (`aicad.metrics/0`)
+
+In `FeatureReport`, the `part` and `feature` fields hold the part **name** and the feature **name**. Both are unique across the document, per §0.
+
 Every quantity is computed on the **exact** geometry, never on a tessellation.
 
 | Field | Definition |

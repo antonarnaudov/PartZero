@@ -13,9 +13,11 @@ pub type P3 = [f64; 3];
 pub struct Document {
     /// Must equal [`crate::IR_SCHEMA`].
     pub schema: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Meta::is_empty")]
+    #[schemars(extend("default" = {}))]
     pub meta: Meta,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Units::is_default")]
+    #[schemars(extend("default" = { "length": "mm", "angle": "deg" }))]
     pub units: Units,
     pub parts: Vec<PartStudio>,
 }
@@ -24,8 +26,10 @@ pub struct Document {
 #[serde(deny_unknown_fields)]
 pub struct Meta {
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[schemars(extend("default" = ""))]
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[schemars(extend("default" = ""))]
     pub description: String,
 }
 
@@ -34,6 +38,18 @@ pub struct Meta {
 pub struct Units {
     pub length: LengthUnit,
     pub angle: AngleUnit,
+}
+
+impl Meta {
+    pub fn is_empty(&self) -> bool {
+        self.name.is_empty() && self.description.is_empty()
+    }
+}
+
+impl Units {
+    pub fn is_default(&self) -> bool {
+        *self == Units::default()
+    }
 }
 
 impl Default for Units {
@@ -108,9 +124,10 @@ impl Feature {
 #[serde(deny_unknown_fields)]
 pub struct SketchFeature {
     pub id: String,
-    /// Unique within the part studio; this is the CadScript `const` name.
+    /// Unique within the whole document; this is the CadScript `const` name.
     pub name: String,
     #[serde(default, skip_serializing_if = "is_false")]
+    #[schemars(extend("default" = false))]
     pub suppressed: bool,
     pub plane: PlaneSpec,
     pub curves: Vec<SketchCurve>,
@@ -169,7 +186,7 @@ impl PlaneSpec {
 /// A sketch curve. Every curve has an `id` unique within its sketch; ids are the
 /// stable handles used for naming the faces and edges the curve generates.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(tag = "kind", rename_all = "snake_case")]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum SketchCurve {
     Line {
         id: String,
@@ -238,16 +255,20 @@ pub struct ExtrudeFeature {
     pub id: String,
     pub name: String,
     #[serde(default, skip_serializing_if = "is_false")]
+    #[schemars(extend("default" = false))]
     pub suppressed: bool,
     /// Name of an earlier sketch feature in the same part studio.
     pub sketch: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
+    #[schemars(extend("default" = "all"))]
     pub regions: RegionSelection,
     /// Total extrusion distance in mm, > 0.
     pub distance: f64,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
+    #[schemars(extend("default" = "normal"))]
     pub direction: SweepDirection,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
+    #[schemars(extend("default" = "new_body"))]
     pub op: BodyOp,
 }
 
@@ -257,17 +278,21 @@ pub struct RevolveFeature {
     pub id: String,
     pub name: String,
     #[serde(default, skip_serializing_if = "is_false")]
+    #[schemars(extend("default" = false))]
     pub suppressed: bool,
     pub sketch: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
+    #[schemars(extend("default" = "all"))]
     pub regions: RegionSelection,
     /// Revolution axis, given in the sketch's 2D coordinates.
     pub axis: SketchAxis,
     /// Total sweep angle in degrees, in (0, 360].
     pub angle: f64,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
+    #[schemars(extend("default" = "normal"))]
     pub direction: SweepDirection,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
+    #[schemars(extend("default" = "new_body"))]
     pub op: BodyOp,
 }
 
@@ -280,6 +305,10 @@ pub struct SketchAxis {
 
 fn is_false(b: &bool) -> bool {
     !*b
+}
+
+fn is_default<T: Default + PartialEq>(v: &T) -> bool {
+    *v == T::default()
 }
 
 pub(crate) fn normalize(v: [f64; 3]) -> [f64; 3] {

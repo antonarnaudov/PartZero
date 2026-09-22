@@ -30,13 +30,14 @@
               "type": "string"
             },
             "name": {
-              "description": "Unique within the part studio; this is the CadScript `const` name.",
+              "description": "Unique within the whole document; this is the CadScript `const` name.",
               "type": "string"
             },
             "plane": {
               "$ref": "#/$defs/PlaneSpec"
             },
             "suppressed": {
+              "default": false,
               "type": "boolean"
             },
             "type": {
@@ -84,6 +85,7 @@
               "type": "string"
             },
             "suppressed": {
+              "default": false,
               "type": "boolean"
             },
             "type": {
@@ -134,6 +136,7 @@
               "type": "string"
             },
             "suppressed": {
+              "default": false,
               "type": "boolean"
             },
             "type": {
@@ -202,9 +205,11 @@
       "additionalProperties": false,
       "properties": {
         "description": {
+          "default": "",
           "type": "string"
         },
         "name": {
+          "default": "",
           "type": "string"
         }
       },
@@ -293,6 +298,7 @@
       "description": "A sketch curve. Every curve has an `id` unique within its sketch; ids are the\nstable handles used for naming the faces and edges the curve generates.",
       "oneOf": [
         {
+          "additionalProperties": false,
           "properties": {
             "end": {
               "items": {
@@ -329,6 +335,7 @@
           "type": "object"
         },
         {
+          "additionalProperties": false,
           "description": "Circular arc from `start` to `end` around `center`, counter-clockwise when\n`ccw` is true (viewed from the plane normal). |start−center| must equal\n|end−center| within the linear tolerance.",
           "properties": {
             "ccw": {
@@ -380,6 +387,7 @@
           "type": "object"
         },
         {
+          "additionalProperties": false,
           "properties": {
             "center": {
               "items": {

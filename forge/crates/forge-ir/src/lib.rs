@@ -25,6 +25,26 @@ pub const METRICS_SCHEMA: &str = "aicad.metrics/0";
 /// the same point; lengths at or below it are degenerate. Part of the normative spec.
 pub const LINEAR_TOLERANCE: f64 = 1e-6;
 
+/// Names a feature may not have: ECMAScript/TypeScript reserved words, globals CadScript
+/// refuses to shadow, and the CadScript v0 builtins. Mirrored by `@aicad/cadscript`
+/// (a TS test reads `schema/ir-v0.constants.json`, written by the `dump_schema` example).
+#[rustfmt::skip]
+pub const RESERVED_NAMES: &[&str] = &[
+    // ECMAScript reserved words
+    "break", "case", "catch", "class", "const", "continue", "debugger", "default", "delete", "do",
+    "else", "enum", "export", "extends", "false", "finally", "for", "function", "if", "import", "in",
+    "instanceof", "new", "null", "return", "super", "switch", "this", "throw", "true", "try",
+    "typeof", "var", "void", "while", "with",
+    // strict mode / module code
+    "implements", "interface", "let", "package", "private", "protected", "public", "static",
+    "yield", "await", "arguments", "eval",
+    // globals that must not be shadowed
+    "undefined", "NaN", "Infinity", "globalThis",
+    // CadScript v0 builtins
+    "doc", "part", "sketch", "line", "arc", "circle", "extrude", "revolve", "frame", "XY", "XZ",
+    "YZ",
+];
+
 /// Parse and validate an IR document from JSON text.
 pub fn from_json(text: &str) -> Result<Document, IrError> {
     let doc: Document = serde_json::from_str(text).map_err(IrError::Parse)?;
