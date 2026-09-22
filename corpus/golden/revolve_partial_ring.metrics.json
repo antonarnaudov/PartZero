@@ -1,0 +1,64 @@
+{
+  "schema": "aicad.metrics/0",
+  "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+  "document": "revolve_partial_ring",
+  "status": "ok",
+  "features": [
+    {
+      "part": "part",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+        {
+          "area": 72.0,
+          "loops": 1,
+          "outer_curves": [
+            "bottom",
+            "inner",
+            "outer",
+            "top"
+          ]
+        }
+      ]
+    },
+    {
+      "part": "part",
+      "feature": "quarter",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+        {
+          "volume": 2940.5307237600464,
+          "area": 1614.2653618800232,
+          "centroid": [
+            16.845938591880614,
+            16.845938591880614,
+            3.0
+          ],
+          "bbox_min": [
+            1.2246467991473533e-15,
+            0.0,
+            0.0
+          ],
+          "bbox_max": [
+            32.0,
+            32.0,
+            6.0
+          ],
+          "faces": 6,
+          "edges": 12,
+          "face_types": {
+            "cylinder": 2,
+            "plane": 4
+          },
+          "edge_types": {
+            "circle": 4,
+            "line": 8
+          },
+          "valid": true
+        }
+      ]
+    }
+  ]
+}

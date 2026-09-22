@@ -1,0 +1,62 @@
+{
+  "schema": "aicad.metrics/0",
+  "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+  "document": "extrude_box",
+  "status": "ok",
+  "features": [
+    {
+      "part": "part",
+      "feature": "base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+        {
+          "area": 4000.0,
+          "loops": 1,
+          "outer_curves": [
+            "bottom",
+            "left",
+            "right",
+            "top"
+          ]
+        }
+      ]
+    },
+    {
+      "part": "part",
+      "feature": "plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+        {
+          "volume": 31999.999999999996,
+          "area": 10079.999999999998,
+          "centroid": [
+            4.071469217351552e-17,
+            -7.115602791080501e-18,
+            4.0
+          ],
+          "bbox_min": [
+            -40.0,
+            -25.0,
+            0.0
+          ],
+          "bbox_max": [
+            40.0,
+            25.0,
+            8.0
+          ],
+          "faces": 6,
+          "edges": 12,
+          "face_types": {
+            "plane": 6
+          },
+          "edge_types": {
+            "line": 12
+          },
+          "valid": true
+        }
+      ]
+    }
+  ]
+}

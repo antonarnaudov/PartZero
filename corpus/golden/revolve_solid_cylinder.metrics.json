@@ -1,0 +1,63 @@
+{
+  "schema": "aicad.metrics/0",
+  "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+  "document": "revolve_solid_cylinder",
+  "status": "ok",
+  "features": [
+    {
+      "part": "part",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+        {
+          "area": 300.0,
+          "loops": 1,
+          "outer_curves": [
+            "axis_edge",
+            "base",
+            "lid",
+            "wall"
+          ]
+        }
+      ]
+    },
+    {
+      "part": "part",
+      "feature": "rod",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+        {
+          "volume": 9424.777960769381,
+          "area": 2513.2741228718346,
+          "centroid": [
+            0.0,
+            9.112758764909947e-17,
+            14.999999999999998
+          ],
+          "bbox_min": [
+            -10.0,
+            -10.0,
+            0.0
+          ],
+          "bbox_max": [
+            10.0,
+            10.0,
+            30.0
+          ],
+          "faces": 3,
+          "edges": 2,
+          "face_types": {
+            "cylinder": 1,
+            "plane": 2
+          },
+          "edge_types": {
+            "circle": 2
+          },
+          "valid": true
+        }
+      ]
+    }
+  ]
+}

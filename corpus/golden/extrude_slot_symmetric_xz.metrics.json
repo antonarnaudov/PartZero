@@ -1,0 +1,64 @@
+{
+  "schema": "aicad.metrics/0",
+  "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+  "document": "extrude_slot_symmetric_xz",
+  "status": "ok",
+  "features": [
+    {
+      "part": "part",
+      "feature": "slot",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+        {
+          "area": 593.0973355292326,
+          "loops": 1,
+          "outer_curves": [
+            "left_cap",
+            "lower",
+            "right_cap",
+            "upper"
+          ]
+        }
+      ]
+    },
+    {
+      "part": "part",
+      "feature": "bar",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+        {
+          "volume": 5930.973355292325,
+          "area": 2363.18578948924,
+          "centroid": [
+            -7.667330868729733e-17,
+            1.533466173745947e-16,
+            -3.565983157588262e-17
+          ],
+          "bbox_min": [
+            -26.0,
+            -5.0,
+            -6.0
+          ],
+          "bbox_max": [
+            26.0,
+            5.0,
+            6.0
+          ],
+          "faces": 6,
+          "edges": 12,
+          "face_types": {
+            "cylinder": 2,
+            "plane": 4
+          },
+          "edge_types": {
+            "circle": 4,
+            "line": 8
+          },
+          "valid": true
+        }
+      ]
+    }
+  ]
+}

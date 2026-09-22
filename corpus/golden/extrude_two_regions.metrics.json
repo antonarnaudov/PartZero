@@ -1,0 +1,96 @@
+{
+  "schema": "aicad.metrics/0",
+  "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+  "document": "extrude_two_regions",
+  "status": "ok",
+  "features": [
+    {
+      "part": "part",
+      "feature": "base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+        {
+          "area": 201.06192982974676,
+          "loops": 1,
+          "outer_curves": [
+            "disc"
+          ]
+        },
+        {
+          "area": 804.247719318987,
+          "loops": 2,
+          "outer_curves": [
+            "ring_outer"
+          ]
+        }
+      ]
+    },
+    {
+      "part": "part",
+      "feature": "pucks",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+        {
+          "volume": 603.1857894892402,
+          "area": 552.9203070318035,
+          "centroid": [
+            50.0,
+            3.4413018157132824e-16,
+            -1.4999999999999998
+          ],
+          "bbox_min": [
+            42.0,
+            -8.0,
+            -3.0
+          ],
+          "bbox_max": [
+            58.0,
+            8.0,
+            0.0
+          ],
+          "faces": 3,
+          "edges": 2,
+          "face_types": {
+            "cylinder": 1,
+            "plane": 2
+          },
+          "edge_types": {
+            "circle": 2
+          },
+          "valid": true
+        },
+        {
+          "volume": 2412.743157956961,
+          "area": 2211.681228127214,
+          "centroid": [
+            1.8847731445709728e-15,
+            1.1686299184275234e-15,
+            -1.5
+          ],
+          "bbox_min": [
+            -20.0,
+            -20.0,
+            -3.0
+          ],
+          "bbox_max": [
+            20.0,
+            20.0,
+            0.0
+          ],
+          "faces": 4,
+          "edges": 4,
+          "face_types": {
+            "cylinder": 2,
+            "plane": 2
+          },
+          "edge_types": {
+            "circle": 4
+          },
+          "valid": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "schema": "aicad.metrics/0",
+  "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+  "document": "revolve_cone_sphere",
+  "status": "ok",
+  "features": [
+    {
+      "part": "part",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+        {
+          "area": 178.53981633974485,
+          "loops": 1,
+          "outer_curves": [
+            "axis_seg",
+            "cap",
+            "cone"
+          ]
+        }
+      ]
+    },
+    {
+      "part": "part",
+      "feature": "spinner",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+        {
+          "volume": 4188.79020478639,
+          "area": 1330.8000038220312,
+          "centroid": [
+            -1.4113181306547449e-15,
+            1.8209609937223347e-16,
+            0.625
+          ],
+          "bbox_min": [
+            -10.0,
+            -10.0,
+            -10.0
+          ],
+          "bbox_max": [
+            10.0,
+            10.0,
+            20.0
+          ],
+          "faces": 2,
+          "edges": 1,
+          "face_types": {
+            "cone": 1,
+            "sphere": 1
+          },
+          "edge_types": {
+            "circle": 1
+          },
+          "valid": true
+        }
+      ]
+    }
+  ]
+}
