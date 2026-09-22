@@ -78,3 +78,20 @@ Parasolid shows the alternative works at industrial scale. It handles periodicit
 | OCCT-style seams and degenerate edges | Simpler algorithms on a rectangular domain and direct STEP compatibility. But the artefacts leak into naming, queries, agent tool output and counts, and degenerate edges violate the IR's tolerance rule. |
 | Split every periodic face into two half-faces (no seam, but two faces) | The arbitrary split doubles face counts, and "one design face" stops being one entity, which hurts naming and selection |
 | Keep seams internally but hide them from the API | Two topologies to keep consistent. Hidden seams still affect provenance, invariants and fillet behavior, and bugs would surface as "invisible" edges. |
+
+## Addendum (2026-09-23): conventions fixed while implementing forge-core
+
+**Cone parametrization.**
+- `u` is the angle about the axis.
+- `v` is the **height along the axis**, not the slant length. This matches the cylinder and STEP.
+- `R` is the radius at `v = 0` and may be 0. The half-angle α is in (0, π/2). The frame's z-axis points toward the widening end.
+- The apex sits at `v = −R / tan α`. It is a surface singularity, not an edge. `normal()` returns the limit value there.
+
+**Other surface conventions.**
+- Sphere: `v` is the latitude, in [−π/2, π/2].
+- Torus: `v` is measured around the tube, starting from the outer equator. Horn tori (minor = major) are allowed. Spindle tori are rejected.
+
+**Euler–Poincaré with ring edges.**
+- Each ring edge counts as one virtual vertex.
+- Each face contributes `2 − 2g − b`, where `b` is the number of its loops and `g = 1` only for a loop-less torus face.
+- A torus face *with* loops is currently assumed to be a planar domain. Telling a torus face with a hole apart from a planar domain needs pcurve winding numbers. This is tracked as an open issue in forge-core.
