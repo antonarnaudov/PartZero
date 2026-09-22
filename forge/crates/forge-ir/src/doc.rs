@@ -177,8 +177,14 @@ impl PlaneSpec {
                 ([0.0; 3], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0])
             }
             PlaneSpec::Frame(f) => {
+                // SPEC §2 [R-14]: re-orthogonalise x against the normal before y = n × x.
                 let n = normalize(f.normal);
-                let x = normalize(f.x_dir);
+                let d = f.x_dir[0] * n[0] + f.x_dir[1] * n[1] + f.x_dir[2] * n[2];
+                let x = normalize([
+                    f.x_dir[0] - d * n[0],
+                    f.x_dir[1] - d * n[1],
+                    f.x_dir[2] - d * n[2],
+                ]);
                 let y = cross(n, x);
                 (f.origin, x, y, n)
             }

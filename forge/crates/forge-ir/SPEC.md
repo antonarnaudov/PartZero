@@ -1,134 +1,224 @@
 # IR v0: normative semantics (`aicad.ir/0`)
 
-Two engines implement this spec independently: **Forge** (Rust) and the **oracle** (`oracle/`, OCCT through build123d/OCP). They must produce the same `aicad.metrics/0` report for every valid document. When the two engines disagree, the first step is to decide which one violates this spec. If the spec is ambiguous, fix the spec before touching either engine.
+Two engines implement this spec independently: **Forge** (Rust) and the **oracle** (`oracle/`, OCCT through build123d/OCP). For every valid document they must produce the same `aicad.metrics/0` report.
 
-The types live in `src/doc.rs` and `src/metrics.rs`. The JSON Schemas generated from them are in `schema/`.
+When the two engines disagree:
+1. Decide which one violates this spec.
+2. If the spec is ambiguous, fix the spec first. Then fix the engine.
+
+The types are defined in `src/doc.rs` and `src/metrics.rs`, and the JSON Schemas are in `schema/`.
+
+*Revision 2026-09-23b resolves the 15 ambiguities the oracle raised. Each rule it added carries an **[R-n]** tag.*
 
 ## 0. Identity and canonical form
-- **Unique ids and names.** Feature `id`s and feature `name`s are unique across the whole **document**, not just within a part studio. This is because names are CadScript `const`s that share one file scope. Part ids and part names are unique among parts. Curve ids are unique within their sketch.
-- **Name syntax.** Feature names match `[A-Za-z_][A-Za-z0-9_]*`. They must not be a reserved word or a CadScript builtin (`RESERVED_NAMES` in `src/lib.rs`, also exported in `schema/ir-v0.constants.json`). A violation is reported as `RESERVED_NAME`.
-- **No unknown fields.** Unknown fields are rejected everywhere, including inside sketch curves.
-- **Canonical JSON.** Canonical JSON (`forge_ir::to_json`) omits fields that equal their defaults (`meta` when empty, `units`, `suppressed: false`, `regions: "all"`, `direction: "normal"`, `op: "new_body"`). Readers must accept both the explicit and the omitted form.
+
+**Uniqueness.**
+- Feature `id`s and feature `name`s are unique across the whole **document**. Names are CadScript `const`s that share one file scope.
+- Part ids and part names are unique among parts.
+- Curve ids are unique within their sketch.
+
+**Feature names.**
+- A feature name matches `[A-Za-z_][A-Za-z0-9_]*`.
+- It must not appear in `RESERVED_NAMES` (see `src/lib.rs` and `schema/ir-v0.constants.json`). A reserved name is rejected with `RESERVED_NAME`.
+
+**Part names [R-15].**
+- A part name is any non-empty string. Parts are written as `part("…")` in CadScript.
+- Reserved names do not apply to part names.
+
+**Unknown fields.** Unknown fields are rejected everywhere, including inside sketch curves.
+
+**Canonical JSON.**
+- Canonical JSON (`forge_ir::to_json`) omits every field that holds its default: `meta` when empty, `units`, `suppressed: false`, `regions: "all"`, `direction: "normal"` and `op: "new_body"`.
+- Readers must accept both the explicit and the omitted form.
+
+**Rejected documents [R-10].**
+- A document that does not parse or fails structural validation is **rejected** and never evaluated.
+- The CLI exits with code 2 and prints its diagnostics.
+- In a diff, "both engines rejected" is `MATCH`. "Only one engine rejected" is `ROBUSTNESS`.
 
 ## 1. Units and tolerance
-- Lengths are in millimetres and angles are in degrees. v0 supports no other units.
-- `LINEAR_TOLERANCE = 1e-6` mm:
-  - Points closer than this are coincident.
-  - A length at or below this is degenerate.
+- Lengths are in millimetres and angles in degrees. No other units exist in v0.
+- `LINEAR_TOLERANCE = 1e-6` mm (written *tol* below). **[R-3]** Every comparison is inclusive:
+  - Two points **coincide** when `distance ≤ tol`.
+  - A length is **degenerate** when `length ≤ tol`.
+- The angular tolerance for classification is `1e-9` rad.
 
 ## 2. Planes
-- `"XY"` has x = +X, y = +Y, normal = +Z.
-- `"XZ"` has x = +X, y = +Z, normal = −Y.
-- `"YZ"` has x = +Y, y = +Z, normal = +X.
-- An explicit `Frame`:
-  - Fields are `origin`, `normal` and `x_dir`.
-  - `normal` and `x_dir` are normalised, and y = normal × x.
-  - `normal` and `x_dir` must be perpendicular (|cos| ≤ 1e-9).
-- A sketch point (u, v) maps to 3D as `origin + u·x + v·y`.
+**Named planes:**
+
+| Plane | x axis | y axis | normal |
+|---|---|---|---|
+| `"XY"` | +X | +Y | +Z |
+| `"XZ"` | +X | +Z | −Y |
+| `"YZ"` | +Y | +Z | +X |
+
+**Explicit `Frame`** (`origin`, `normal`, `x_dir`):
+1. `n = normalize(normal)`.
+2. **[R-14]** `x = normalize(x_dir − (x_dir·n) n)`. The x direction is re-orthogonalised against the normal. Validation already guarantees `|cos| ≤ 1e-9`, so this only removes rounding error.
+3. `y = n × x`.
+
+A sketch point (u, v) maps to 3D as `origin + u·x + v·y`.
 
 ## 3. Sketch curves, loops and regions
-Curves:
+
+**Curves:**
 - **`line`** runs from `start` to `end`.
 - **`arc`** has `start`, `end`, `center` and `ccw`.
-  - The radius is r = |start − center|.
-  - The arc runs from `start` to `end` counter-clockwise when `ccw` is true, and clockwise otherwise, as seen looking against the plane normal (i.e. in the standard orientation of the (u, v) plane).
-  - Its sweep is in (0, 360).
-- **`circle`** has `center` and `radius`. It is a closed loop by itself.
+  - It is traced counter-clockwise from `start` to `end` in the (u, v) plane when `ccw` is true, and clockwise otherwise.
+  - Its sweep is in (0°, 360°).
+  - **[R-6]** The carrier circle has centre `center` and radius r = |start − center|. The arc ends at the angle of `end − center`.
+  - Its topological end point is exactly the given `end`. Validation lets `end` sit up to *tol* off the circle, and that gap is absorbed by the vertex tolerance.
+- **`circle`** has a `center` and `radius`. It forms a closed loop by itself.
 
-### 3.1 Loop assembly
-1. **Endpoints.** Every endpoint of a line or arc must coincide, within tolerance, with the endpoint of exactly one other curve end.
-   - If an endpoint has no partner, the error is `SKETCH_OPEN_LOOP`.
-   - If it has more than one partner, the error is `SKETCH_BRANCHING`.
-2. **Loops.** The connected chains form closed loops, and each circle is its own loop.
-3. **No crossings.** Curves may only meet at shared endpoints. Any other intersection or touch between two curves, in the same loop or in different loops, is `SKETCH_CURVES_CROSS`. v0 has no automatic splitting.
-4. **No degenerate loops.** A loop must enclose non-zero area. A two-curve loop made of a line and an arc is fine. Zero-area loops are `SKETCH_DEGENERATE_LOOP`.
+### 3.1 Loop assembly and sketch errors
+A sketch is checked in **stages**. The first failing stage decides the error **[R-2]**. Within a stage, candidates are scanned in the order given, and the first one that fails is reported.
+
+1. **Endpoints.**
+   - Visit the curve ends in curve order, and within each curve `start` before `end`. Circles have no ends.
+   - For each end, count the ends of *other* curves that coincide with it.
+   - A count of 0 is `SKETCH_OPEN_LOOP`. A count of 2 or more is `SKETCH_BRANCHING`.
+   - The first failing end determines the code.
+2. **Crossings.**
+   - Visit curve pairs (i, j) with i < j in lexicographic index order.
+   - A pair fails with `SKETCH_CURVES_CROSS` when either of these holds **[R-4]**:
+     - The two curves come within *tol* of each other at a location more than 2·*tol* from every endpoint they share.
+     - They overlap along a length greater than *tol*.
+   - Meeting at shared endpoints is allowed. No automatic splitting happens in v0.
+3. **Degenerate loops.** A loop whose enclosed area is ≤ *tol*² is `SKETCH_DEGENERATE_LOOP` **[R-5]**. A loop of two curves, a line and an arc, is fine.
+4. **No regions.** `SKETCH_NO_REGIONS` is defensive only. It cannot happen for a sketch that passes validation.
+
+After these stages, the connected chains form closed loops, and each circle is its own loop.
 
 ### 3.2 Regions
-- **Nesting.** Each loop's *depth* is the number of other loops that strictly contain it.
-- **Region shape.** A region is a loop at even depth (its outer boundary) plus every loop at depth + 1 directly inside it (its holes).
-- **Region name.** A region is named by the **sorted list of the curve ids in its outer loop** (`outer_curves`).
-- **Canonical region order.** Regions are sorted by `outer_curves`, compared lexicographically as lists of strings. Every region-ordered output uses this order.
-- **No regions.** If a sketch yields no regions, the error is `SKETCH_NO_REGIONS`.
+- **Depth.** A loop's depth is the number of other loops that strictly contain it.
+- **Region.** A region is a loop at even depth (its outer boundary) plus every loop at depth + 1 directly inside it (its holes).
+- **Name.** A region is named by the **sorted list of the curve ids in its outer loop** (`outer_curves`).
+- **Canonical order.** Regions sort by `outer_curves`, comparing the lists lexicographically.
 
 ## 4. Features
-- **Timeline.** Features evaluate in timeline order.
-- **Suppressed features.** A suppressed feature is skipped and produces no report entry.
-- **References.** A feature that references a suppressed sketch fails with `SKETCH_SUPPRESSED`.
-- **Failures.** A failed feature reports its error. Evaluation continues with the next feature, and the document `status` becomes `error`.
+
+**Evaluation.**
+- Features evaluate in timeline order. A suppressed feature is skipped and produces no report entry.
+- A failed feature reports its error, and evaluation continues with the next feature. Any failure sets the document `status` to `error`.
+
+**Dependency errors.**
+- A feature that references a suppressed sketch fails with `SKETCH_SUPPRESSED`.
+- **[R-1]** A feature that references a sketch that *failed* fails with `DEPENDENCY_FAILED`. Its message names the failed sketch and that sketch's code.
+
+**Invalid results [R-12].**
+- An engine must never report an invalid body as `ok`. If its own validity check fails on a body it produced, the feature fails.
+- The feature then reports either the standard code `INVALID_RESULT` or an engine-prefixed internal code (e.g. `OCCT_INVALID_RESULT`, `FORGE_INTERNAL`).
+- Engine-prefixed codes mark engine-internal failures. They are never compared as semantic codes (see §6).
 
 ### 4.1 `sketch`
-Produces regions only; no bodies. The report lists `regions` in canonical order, with `area`, `loops` (1 + number of holes) and `outer_curves`.
+- A sketch produces regions and no bodies.
+- Its report lists `regions` in canonical order. Each entry has `area`, `loops` (1 + the number of holes) and `outer_curves`.
 
 ### 4.2 `extrude`
-Each region of the referenced sketch (in canonical order) becomes **one new solid body**: the region swept along the plane normal n.
-- `normal` sweeps from 0 to +distance·n.
-- `reverse` sweeps from 0 to −distance·n.
-- `symmetric` sweeps from −distance/2·n to +distance/2·n.
+Each region, in canonical order, becomes **one new solid body**: the region swept along the plane normal n.
+
+| `direction` | Sweep range |
+|---|---|
+| `normal` | 0 → +distance·n |
+| `reverse` | 0 → −distance·n |
+| `symmetric` | −distance/2·n → +distance/2·n |
 
 ### 4.3 `revolve`
 **Axis.**
-- The axis origin in 3D is `plane.origin + o_u·x + o_v·y`.
-- The axis direction in 3D is `d_u·x + d_v·y`, normalised.
+- The axis origin is `plane.origin + o_u·x + o_v·y`.
+- The axis direction is `normalize(d_u·x + d_v·y)`.
 
 **Rotation.**
-- `normal` rotates by +angle, right-hand rule about the axis direction.
-- `reverse` rotates by −angle.
-- `symmetric` rotates over [−angle/2, +angle/2].
 
-**Profile rules.**
-- Every region must lie in one closed half-plane of the sketch bounded by the axis line.
-- Regions may touch the axis, at points or along whole edges. A region that touches the axis only at isolated points is still valid.
-- A region with points strictly on both sides of the axis is `REVOLVE_CROSSES_AXIS`.
-- Profile edges that lie on the axis generate no faces.
+| `direction` | Rotation |
+|---|---|
+| `normal` | +angle, right-hand rule about the axis direction |
+| `reverse` | −angle |
+| `symmetric` | [−angle/2, +angle/2] |
+
+**Crossing the axis [R-7].**
+- Let the signed distance of a point from the axis line (in the sketch plane) be *d*.
+- A region **crosses the axis** when some of its points have *d* > *tol* and others have *d* < −*tol*.
+- Each region is judged on its own. Different regions may lie on opposite sides of the axis.
+- If any region crosses, the whole feature fails with `REVOLVE_CROSSES_AXIS` and produces no bodies.
 
 **Result.**
 - Each region becomes one new solid body.
-- With angle = 360 the body has no end caps.
-- With angle < 360 there are two planar end-cap faces.
+- At 360° the body has no end caps. Below 360° it has two planar end-cap faces.
+
+### 4.4 Generated topology and surface types (normative for counts and types) [R-8, R-9]
+
+**Faces.**
+- **Every sketch curve generates its own side face**, even where adjacent curves meet tangentially. Tangent faces are never merged.
+- Extrude side faces:
+  - a line gives a `plane`;
+  - an arc or circle gives a `cylinder`.
+- Revolve side faces are classified by how the profile curve sits relative to the axis (*tol* and 1e-9 rad as in §1):
+
+| Profile curve | Surface |
+|---|---|
+| Line parallel to the axis, not on it | `cylinder` |
+| Line perpendicular to the axis | `plane` |
+| Line lying on the axis | no face |
+| Any other line | `cone` |
+| Arc whose centre is within *tol* of the axis | `sphere` |
+| Any other arc or circle | `torus`, including horn tori (minor = major) and spindle-torus patches (minor > major) |
+
+**Edges, vertices and singular points.**
+- **Profile vertices on the axis** sweep to singular points. They create no edge and no vertex, and the surface simply has a singularity there (cone apex, sphere pole).
+- **A profile edge lying on the axis:**
+  - below 360°, it becomes **one** line edge shared by the two end caps;
+  - at 360°, it produces nothing.
+- **Profile vertices off the axis** sweep to circular edges: full circles (ring edges) at 360°, arcs below 360°.
+- **Engines without seams.** Forge represents periodic faces without seam edges. Engines that do use seams (OCCT) exclude seam and degenerate edges from every count (§5).
 
 ## 5. Metrics (`aicad.metrics/0`)
-
-In `FeatureReport`, the `part` and `feature` fields hold the part **name** and the feature **name**. Both are unique across the document, per §0.
-
-Every quantity is computed on the **exact** geometry, never on a tessellation.
+- In each `FeatureReport`, `part` and `feature` are **names**, which are unique per §0.
+- Every quantity is computed on the **exact** geometry, never on a tessellation.
 
 | Field | Definition |
 |---|---|
 | `volume` | Solid volume, mm³ (> 0). |
 | `area` | Sum of face areas, mm². |
-| `centroid` | Centre of mass at uniform density. |
-| `bbox_min` / `bbox_max` | Tight axis-aligned box of the exact geometry. Not enlarged by tolerances. |
+| `centroid` | Centre of mass assuming uniform density. |
+| `bbox_min` / `bbox_max` | Tight axis-aligned box of the exact geometry, not enlarged by tolerances. |
 | `faces` | Number of faces. |
-| `edges` | Number of edges, **excluding seam edges and degenerate edges** (such as OCCT's degenerated edges at cone apexes and sphere poles). Forge has neither kind. |
-| `face_types` | Histogram of the **canonical** surface type of each face: `plane`, `cylinder`, `cone`, `sphere`, `torus`, `bspline` or `other`. A surface of revolution or extrusion that is exactly one of the analytic types is reported as that type. |
-| `edge_types` | Histogram of the canonical curve type of each counted edge: `line`, `circle`, `ellipse`, `bspline` or `other`. |
-| `valid` | The engine's own validity check: closed, consistently oriented, no self-intersections. |
+| `edges` | Number of edges, excluding seam edges and degenerate edges. |
+| `face_types` | Histogram of canonical surface types per face: `plane`, `cylinder`, `cone`, `sphere`, `torus`, `bspline` or `other`. Classified per §4.4. |
+| `edge_types` | Histogram of canonical curve types per counted edge: `line`, `circle`, `ellipse`, `bspline` or `other`. |
+| `valid` | Always `true` in an `ok` feature, per §4 [R-12]. Kept for diagnostics. **[R-13]** It is not compared (see §6), because engines differ in what their checkers cover. |
 
-**Engine identifier.** `engine` is free text, e.g. `forge 0.0.1` or `occt 7.8.1 / build123d 0.9.1`.
+`engine` is free text, for example `forge 0.0.1` or `occt 7.9.3 / build123d 0.12.0`.
 
-## 6. Diff rules (`kernel-diff`)
+## 6. Diff rules (`kernel-diff`) [R-11]
 
-Two reports match when all of the following hold.
+**Reports A (Forge) and B (oracle) match when every rule below holds.**
 
-**Must match exactly:**
+**Exact matches:**
 - `status`
-- the per-feature `status` and error `code` (messages may differ)
-- region count
-- `loops` and `outer_curves`
+- per-feature `status`
+- per-feature error `code`, when both engines report a **semantic** code. A semantic code is one without an engine prefix.
+- region count, `loops`, `outer_curves`
 - body count
 - `faces`, `edges`, `face_types`, `edge_types`
-- `valid`
 
-**Must match within tolerance** (s = max(1, bbox diagonal of the body)):
+**Tolerance matches:**
+- Relative difference: `rel(a, b) = |a − b| / max(|a|, |b|)`.
+- Absolute difference: `abs(a, b) = |a − b|`.
+- Scale: `s = max(1, diagA, diagB)`, where `diag` is the length of that engine's bbox diagonal. For regions, `s = 1`.
+- Vectors are compared **per component**.
 
-| Quantity | Tolerance |
+| Quantity | Match when |
 |---|---|
-| `volume` | Relative 1e-6 (absolute floor 1e-9·s³) |
-| `area` | Relative 1e-6 (absolute floor 1e-9·s²) |
-| region `area` | Relative 1e-6 (absolute floor 1e-9·s²) |
-| `centroid` | Absolute 1e-6·s |
-| `bbox_min` / `bbox_max` | Absolute 1e-6·s |
+| `volume` | `rel ≤ 1e-6` or `abs ≤ 1e-9·s³` |
+| `area`, region `area` | `rel ≤ 1e-6` or `abs ≤ 1e-9·s²` |
+| `centroid`, `bbox_min`, `bbox_max` | each component `abs ≤ 1e-6·s` |
 
-**Classifying a mismatch:**
-- A difference where one engine reports an error the other doesn't is a **robustness difference**.
-- A metric difference where both engines report `ok` is a **potential silent-wrong result**. The oracle is not presumed correct, so every such case must be investigated.
+**Classification of each program:**
+
+| Class | Meaning |
+|---|---|
+| `MATCH` | All rules hold, or both engines rejected the document. |
+| `ROBUSTNESS` | Only one engine reported an error or rejected the document, or either engine reported an engine-prefixed internal error. |
+| `CODE_MISMATCH` | Both engines failed the same feature with different **semantic** codes. The spec is ambiguous or one engine is wrong; always investigate. |
+| `POTENTIAL_SILENT_WRONG` | Both engines reported `ok`, but exact or tolerance fields differ. The oracle is not presumed correct, and every case must be investigated. A release requires zero of these. |
