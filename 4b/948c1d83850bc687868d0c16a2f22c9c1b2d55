@@ -1,0 +1,69 @@
+docs/adr/0001-open-core-licensing.md
+  s_59c0dd2af30db2::t_bcb38be4b16902 1-61
+docs/adr/0009-model-agnostic-llm-gateway.md
+  s_59c0dd2af30db2::t_1f21ad581925d3 1-60
+docs/adr/0004-feature-graph-ir.md
+  s_59c0dd2af30db2::t_f4a0744c427bb7 1-62
+docs/VISION.md
+  s_59c0dd2af30db2::t_5cee165b28d9cf 1-104
+docs/RESEARCH.md
+  s_59c0dd2af30db2::t_7249b414642bed 1-91,93-175
+  s_59c0dd2af30db2::t_deee5f7f40d669 92
+docs/adr/0011-native-freeform.md
+  s_59c0dd2af30db2::t_167f18fdbca318 1-43
+docs/adr/0008-own-solvers.md
+  s_59c0dd2af30db2::t_d7ec09c4701f48 1-59
+docs/adr/adr-template.md
+  s_59c0dd2af30db2::t_22b0a55a15bda9 3
+  s_59c0dd2af30db2::t_93f6849129f9dc 1-2,4-25
+docs/adr/0002-languages-by-purpose.md
+  s_59c0dd2af30db2::t_4ca6d6a9cd1fb5 47-49,51,65
+  s_59c0dd2af30db2::t_3fb4381694b2b2 1-46,50,52-64,66-75,77-85
+  s_59c0dd2af30db2::t_ac61b0a3e60020 76,86
+docs/adr/0010-local-first.md
+  s_59c0dd2af30db2::t_8aba9c91329ff2 1-48
+docs/spikes/README.md
+  s_59c0dd2af30db2::t_a6d5a7bca7f893 1-69
+docs/adr/0000-own-the-core.md
+  s_59c0dd2af30db2::t_395b376dcac758 73
+  s_59c0dd2af30db2::t_1f329026cd403f 1-72,74-76
+docs/adr/README.md
+  s_59c0dd2af30db2::t_a9c36c2688b713 41
+  s_59c0dd2af30db2::t_1bb664491986cb 1-40,42
+docs/adr/0007-own-renderer-wgpu.md
+  s_59c0dd2af30db2::t_7d1a5cfc6c0a40 1-62
+docs/adr/0005-cadscript.md
+  s_59c0dd2af30db2::t_3b4ed6741ba552 1-48
+docs/adr/0006-native-persistent-naming.md
+  s_59c0dd2af30db2::t_6ac97054b6ceb4 1-55
+docs/ROADMAP.md
+  s_59c0dd2af30db2::t_432237c9fda938 1-276
+docs/ARCHITECTURE.md
+  s_59c0dd2af30db2::t_3ea22521a9e87e 1-484
+docs/adr/0003-forge-kernel-with-occt-oracle.md
+  s_59c0dd2af30db2::t_8ee114f2b31ddc 1-43
+docs/FORGE.md
+  s_59c0dd2af30db2::t_730040e1fce17e 1-84,86-88,94-105,107-142,144-217
+  s_59c0dd2af30db2::t_d3f0147119d8ef 106
+  s_59c0dd2af30db2::t_dc29afda5046ce 143
+  s_59c0dd2af30db2::t_7d6f1816a0bfff 85,89-93
+docs/adr/0012-no-seam-edges.md
+  s_59c0dd2af30db2::t_e8610af0db4135 1-70,72-80
+  s_59c0dd2af30db2::t_8a34536e0c28a2 71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4b948c1d83850bc687868d0c16a2f22c9c1b2d55",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
