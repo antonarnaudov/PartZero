@@ -1,0 +1,58 @@
+oracle/src/aicad_oracle/invalidgen.py
+  s_59c0dd2af30db2::t_d364a6dfc49c03 264-265
+  s_59c0dd2af30db2::t_cb52b260ffc0c1 149
+  s_59c0dd2af30db2::t_1d7f81ceb059fd 1-148,150-263,266-341
+oracle/tests/test_eval.py
+  s_59c0dd2af30db2::t_aa618c333be485 337-350
+  s_59c0dd2af30db2::t_4cd4da1f940e97 155-158,253-315
+  s_59c0dd2af30db2::t_014335164297ab 316-336
+oracle/tests/test_compare.py
+  s_59c0dd2af30db2::t_4cd4da1f940e97 10,54,103,106,109-135,210-220,226-236
+oracle/src/aicad_oracle/evaluate.py
+  s_59c0dd2af30db2::t_2ce41c6ac32f7d 23,79-80
+  s_59c0dd2af30db2::t_674481c5b20ed7 103-104,106-114,120-122
+  s_59c0dd2af30db2::t_c7a89a9cfbb36d 93-95,150-155,163-164
+oracle/README.md
+  s_59c0dd2af30db2::t_6c71c3d7b4efa6 8-9,16,35-39,42-44,46,48-59,65-66,68-69,71,73-76,78-82,87,89-96,98-113,115-128,132-136,138,140-143,147-192,194-196,200-214
+oracle/tests/test_sketch.py
+  s_59c0dd2af30db2::t_62fb41385c98b1 61-63,65-66
+  s_59c0dd2af30db2::t_4cd4da1f940e97 60,64,67-68
+oracle/src/aicad_oracle/diffrun.py
+  s_59c0dd2af30db2::t_eaf49d35615399 11,46-51,55-59,72,76-82,109-112,132
+oracle/src/aicad_oracle/compare.py
+  s_59c0dd2af30db2::t_db47df5f257a74 1,5-21,32,34-35,41-47,87,91-92,95,112,119-123,134,136-137,140,159-160,163-164,167-170,177-180,182,185-188,195,198,201-210,213,217,223-224,226
+oracle/src/aicad_oracle/selfcheck.py
+  s_59c0dd2af30db2::t_2ce41c6ac32f7d 22,131,135
+  s_59c0dd2af30db2::t_674481c5b20ed7 1,11-14,24,26-29,162,165,168
+oracle/src/aicad_oracle/occt.py
+  s_59c0dd2af30db2::t_2eaa82b611b445 34,199-206,394-400,405-406
+  s_59c0dd2af30db2::t_c7a89a9cfbb36d 243
+  s_59c0dd2af30db2::t_2ce41c6ac32f7d 59,240-241,244
+oracle/src/aicad_oracle/cli.py
+  s_59c0dd2af30db2::t_eaf49d35615399 51-56,70,102-103,146-147,358-359
+  s_59c0dd2af30db2::t_d364a6dfc49c03 235,260,302-335,382-385
+  s_59c0dd2af30db2::t_014335164297ab 353-354
+oracle/src/aicad_oracle/ir.py
+  s_59c0dd2af30db2::t_1d7b135d990139 278-281,290-292
+oracle/src/aicad_oracle/sketch.py
+  s_59c0dd2af30db2::t_2ce41c6ac32f7d 624-628,630,641,670-701
+  s_59c0dd2af30db2::t_1d7b135d990139 7-18,30,348-349
+oracle/tests/test_generator_bbox.py
+  s_59c0dd2af30db2::t_4cd4da1f940e97 104-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "17b236581b279f1bb9f2231b551eb84f8cd91f1b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
