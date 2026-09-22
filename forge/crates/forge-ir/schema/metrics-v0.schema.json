@@ -1,0 +1,240 @@
+{
+  "$defs": {
+    "BodyMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "area": {
+          "description": "mm² — exact geometry.",
+          "format": "double",
+          "type": "number"
+        },
+        "bbox_max": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "bbox_min": {
+          "description": "Tight axis-aligned bounding box of the exact geometry.",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "centroid": {
+          "description": "Centre of mass (uniform density), mm.",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "edge_types": {
+          "additionalProperties": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": "Canonical curve types of non-seam edges → count (`line`, `circle`, `ellipse`,\n`bspline`, `other`).",
+          "type": "object"
+        },
+        "edges": {
+          "description": "Edge count EXCLUDING seam edges (Forge has none; OCCT seams are not counted).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "face_types": {
+          "additionalProperties": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": "Canonical surface types → count (`plane`, `cylinder`, `cone`, `sphere`, `torus`,\n`bspline`, `other`).",
+          "type": "object"
+        },
+        "faces": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "valid": {
+          "description": "Engine's own validity check (closed, oriented, no self-intersection).",
+          "type": "boolean"
+        },
+        "volume": {
+          "description": "mm³ — computed on the exact geometry, not on a tessellation.",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "volume",
+        "area",
+        "centroid",
+        "bbox_min",
+        "bbox_max",
+        "faces",
+        "edges",
+        "face_types",
+        "edge_types",
+        "valid"
+      ],
+      "type": "object"
+    },
+    "FeatureReport": {
+      "additionalProperties": false,
+      "properties": {
+        "bodies": {
+          "description": "Body-creating features: the bodies created, in canonical region order.",
+          "items": {
+            "$ref": "#/$defs/BodyMetrics"
+          },
+          "type": "array"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReportError"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "feature": {
+          "type": "string"
+        },
+        "part": {
+          "type": "string"
+        },
+        "regions": {
+          "description": "Sketch features: the regions found, in canonical region order.",
+          "items": {
+            "$ref": "#/$defs/RegionMetrics"
+          },
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "part",
+        "feature",
+        "type",
+        "status"
+      ],
+      "type": "object"
+    },
+    "RegionMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "area": {
+          "description": "Area in mm².",
+          "format": "double",
+          "type": "number"
+        },
+        "loops": {
+          "description": "Number of boundary loops (1 outer + holes).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "outer_curves": {
+          "description": "Sorted ids of the curves forming the outer loop (the region's stable name).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "area",
+        "loops",
+        "outer_curves"
+      ],
+      "type": "object"
+    },
+    "ReportError": {
+      "additionalProperties": false,
+      "description": "A machine-readable error. `code` values are stable (SCREAMING_SNAKE_CASE) and\nshared between engines where the failure is semantic (e.g. `SKETCH_OPEN_LOOP`).",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "ok",
+        "error"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "document": {
+      "description": "Document name (meta.name, or the file stem).",
+      "type": "string"
+    },
+    "engine": {
+      "description": "Engine identifier, e.g. `forge 0.0.1` or `occt 7.8.1 (build123d 0.9)`.",
+      "type": "string"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReportError"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "features": {
+      "description": "One entry per non-suppressed feature, in timeline order (all part studios, in order).",
+      "items": {
+        "$ref": "#/$defs/FeatureReport"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "description": "Must equal [`crate::METRICS_SCHEMA`].",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/Status"
+    }
+  },
+  "required": [
+    "schema",
+    "engine",
+    "document",
+    "status",
+    "features"
+  ],
+  "title": "EvalReport",
+  "type": "object"
+}

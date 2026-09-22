@@ -1,0 +1,14 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": { "name": "revolve_partial_ring", "description": "Offset rectangle revolved 90 deg -> quarter ring with planar end caps" },
+  "parts": [{ "id": "p1", "name": "part", "features": [
+    { "type": "sketch", "id": "s1", "name": "profile", "plane": "XZ", "curves": [
+      { "kind": "line", "id": "inner", "start": [20, 0], "end": [20, 6] },
+      { "kind": "line", "id": "top",   "start": [20, 6], "end": [32, 6] },
+      { "kind": "line", "id": "outer", "start": [32, 6], "end": [32, 0] },
+      { "kind": "line", "id": "bottom","start": [32, 0], "end": [20, 0] }
+    ]},
+    { "type": "revolve", "id": "r1", "name": "quarter", "sketch": "profile",
+      "axis": { "origin": [0, 0], "direction": [0, 1] }, "angle": 90 }
+  ]}]
+}

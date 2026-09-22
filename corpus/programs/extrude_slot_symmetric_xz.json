@@ -1,0 +1,13 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": { "name": "extrude_slot_symmetric_xz", "description": "Obround slot on XZ, extruded symmetrically" },
+  "parts": [{ "id": "p1", "name": "part", "features": [
+    { "type": "sketch", "id": "s1", "name": "slot", "plane": "XZ", "curves": [
+      { "kind": "line", "id": "lower", "start": [-20, -6], "end": [20, -6] },
+      { "kind": "arc",  "id": "right_cap", "start": [20, -6], "end": [20, 6], "center": [20, 0], "ccw": true },
+      { "kind": "line", "id": "upper", "start": [20, 6], "end": [-20, 6] },
+      { "kind": "arc",  "id": "left_cap", "start": [-20, 6], "end": [-20, -6], "center": [-20, 0], "ccw": true }
+    ]},
+    { "type": "extrude", "id": "e1", "name": "bar", "sketch": "slot", "distance": 10, "direction": "symmetric" }
+  ]}]
+}

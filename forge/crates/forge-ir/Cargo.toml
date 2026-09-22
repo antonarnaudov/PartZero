@@ -1,0 +1,17 @@
+[package]
+name = "forge-ir"
+description = "Feature-Graph IR: the typed source of truth shared by Forge, the TS app and the oracle"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "Apache-2.0"
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,41 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.92"
+license = "MPL-2.0"
+repository = "https://github.com/TBD/aicad"
+publish = false
+
+[workspace.dependencies]
+forge-core = { path = "crates/forge-core" }
+forge-ir = { path = "crates/forge-ir" }
+forge-ops = { path = "crates/forge-ops" }
+forge-mesh = { path = "crates/forge-mesh" }
+forge-check = { path = "crates/forge-check" }
+forge-io = { path = "crates/forge-io" }
+forge-regen = { path = "crates/forge-regen" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = "1"
+thiserror = "2"
+indexmap = { version = "2", features = ["serde"] }
+smallvec = "1"
+clap = { version = "4", features = ["derive"] }
+proptest = "1"
+libm = "0.2"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+float_cmp = "warn"
+dbg_macro = "warn"
+
+[profile.release]
+opt-level = 3
+codegen-units = 1

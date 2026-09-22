@@ -1,0 +1,32 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  forge:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults: { run: { working-directory: forge } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with: { toolchain: "1.92", components: "rustfmt, clippy", targets: wasm32-unknown-unknown }
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+      - run: cargo build --workspace --target wasm32-unknown-unknown --exclude forge-cli
+
+  oracle-diff:
+    runs-on: ubuntu-latest
+    needs: forge
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with: { toolchain: "1.92" }
+      - uses: astral-sh/setup-uv@v6
+      - name: Forge vs OCCT differential run over the corpus
+        working-directory: oracle
+        run: uv run oracle diff ../corpus/programs --forge-bin ../forge/target/debug/aicad

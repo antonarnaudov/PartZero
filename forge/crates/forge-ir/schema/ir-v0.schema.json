@@ -1,0 +1,483 @@
+{
+  "$defs": {
+    "AngleUnit": {
+      "enum": [
+        "deg"
+      ],
+      "type": "string"
+    },
+    "BodyOp": {
+      "description": "What a body-creating feature does with its result. v0: always new bodies.",
+      "enum": [
+        "new_body"
+      ],
+      "type": "string"
+    },
+    "Feature": {
+      "description": "A feature in the timeline. `type` selects the variant.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "A 2D sketch on a plane. Curves form closed loops; loops nest into regions.",
+          "properties": {
+            "curves": {
+              "items": {
+                "$ref": "#/$defs/SketchCurve"
+              },
+              "type": "array"
+            },
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "description": "Unique within the part studio; this is the CadScript `const` name.",
+              "type": "string"
+            },
+            "plane": {
+              "$ref": "#/$defs/PlaneSpec"
+            },
+            "suppressed": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "sketch",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "plane",
+            "curves"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "direction": {
+              "$ref": "#/$defs/SweepDirection",
+              "default": "normal"
+            },
+            "distance": {
+              "description": "Total extrusion distance in mm, > 0.",
+              "format": "double",
+              "type": "number"
+            },
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "op": {
+              "$ref": "#/$defs/BodyOp",
+              "default": "new_body"
+            },
+            "regions": {
+              "$ref": "#/$defs/RegionSelection",
+              "default": "all"
+            },
+            "sketch": {
+              "description": "Name of an earlier sketch feature in the same part studio.",
+              "type": "string"
+            },
+            "suppressed": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "extrude",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "sketch",
+            "distance"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "angle": {
+              "description": "Total sweep angle in degrees, in (0, 360].",
+              "format": "double",
+              "type": "number"
+            },
+            "axis": {
+              "$ref": "#/$defs/SketchAxis",
+              "description": "Revolution axis, given in the sketch's 2D coordinates."
+            },
+            "direction": {
+              "$ref": "#/$defs/SweepDirection",
+              "default": "normal"
+            },
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "op": {
+              "$ref": "#/$defs/BodyOp",
+              "default": "new_body"
+            },
+            "regions": {
+              "$ref": "#/$defs/RegionSelection",
+              "default": "all"
+            },
+            "sketch": {
+              "type": "string"
+            },
+            "suppressed": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "revolve",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "sketch",
+            "axis",
+            "angle"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Frame": {
+      "additionalProperties": false,
+      "description": "An explicit right-handed frame. `y = normal × x_dir`. Vectors need not be unit\nlength but must be non-zero and mutually perpendicular (tolerance: see SPEC.md).",
+      "properties": {
+        "normal": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "origin": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "x_dir": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        }
+      },
+      "required": [
+        "origin",
+        "normal",
+        "x_dir"
+      ],
+      "type": "object"
+    },
+    "LengthUnit": {
+      "enum": [
+        "mm"
+      ],
+      "type": "string"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "NamedPlane": {
+      "description": "Named datum planes. Frames (x axis, y axis, normal):\n`XY` = (+X, +Y, +Z), `XZ` = (+X, +Z, −Y), `YZ` = (+Y, +Z, +X).",
+      "enum": [
+        "XY",
+        "XZ",
+        "YZ"
+      ],
+      "type": "string"
+    },
+    "PartStudio": {
+      "additionalProperties": false,
+      "description": "An ordered feature timeline that produces a set of bodies.",
+      "properties": {
+        "features": {
+          "items": {
+            "$ref": "#/$defs/Feature"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "features"
+      ],
+      "type": "object"
+    },
+    "PlaneSpec": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NamedPlane"
+        },
+        {
+          "$ref": "#/$defs/Frame"
+        }
+      ],
+      "description": "Sketch plane: a named datum plane or an explicit frame."
+    },
+    "RegionSelection": {
+      "description": "Which regions of the referenced sketch a feature consumes. v0: all regions.",
+      "enum": [
+        "all"
+      ],
+      "type": "string"
+    },
+    "SketchAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "origin": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        }
+      },
+      "required": [
+        "origin",
+        "direction"
+      ],
+      "type": "object"
+    },
+    "SketchCurve": {
+      "description": "A sketch curve. Every curve has an `id` unique within its sketch; ids are the\nstable handles used for naming the faces and edges the curve generates.",
+      "oneOf": [
+        {
+          "properties": {
+            "end": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "line",
+              "type": "string"
+            },
+            "start": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "start",
+            "end"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "Circular arc from `start` to `end` around `center`, counter-clockwise when\n`ccw` is true (viewed from the plane normal). |start−center| must equal\n|end−center| within the linear tolerance.",
+          "properties": {
+            "ccw": {
+              "type": "boolean"
+            },
+            "center": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "end": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "arc",
+              "type": "string"
+            },
+            "start": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "start",
+            "end",
+            "center",
+            "ccw"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "center": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "circle",
+              "type": "string"
+            },
+            "radius": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "center",
+            "radius"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "SweepDirection": {
+      "description": "Direction of a sweep relative to the sketch normal (extrude) or the axis (revolve).",
+      "oneOf": [
+        {
+          "const": "normal",
+          "description": "Along +normal (extrude) / right-hand rule about the axis (revolve).",
+          "type": "string"
+        },
+        {
+          "const": "reverse",
+          "description": "Along −normal / negative rotation.",
+          "type": "string"
+        },
+        {
+          "const": "symmetric",
+          "description": "Half of the extent on each side.",
+          "type": "string"
+        }
+      ]
+    },
+    "Units": {
+      "additionalProperties": false,
+      "properties": {
+        "angle": {
+          "$ref": "#/$defs/AngleUnit"
+        },
+        "length": {
+          "$ref": "#/$defs/LengthUnit"
+        }
+      },
+      "required": [
+        "length",
+        "angle"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "$ref": "#/$defs/Meta",
+      "default": {}
+    },
+    "parts": {
+      "items": {
+        "$ref": "#/$defs/PartStudio"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "description": "Must equal [`crate::IR_SCHEMA`].",
+      "type": "string"
+    },
+    "units": {
+      "$ref": "#/$defs/Units",
+      "default": {
+        "angle": "deg",
+        "length": "mm"
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "parts"
+  ],
+  "title": "Document",
+  "type": "object"
+}
