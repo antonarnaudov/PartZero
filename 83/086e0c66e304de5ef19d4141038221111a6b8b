@@ -1,0 +1,164 @@
+forge/crates/forge-ir/src/lib.rs
+  s_59c0dd2af30db2::t_9983f317989f0d 31
+  s_59c0dd2af30db2::t_29a41f0440a1d8 28-30,32-47
+corpus/cadscript/extrude_slot_symmetric_xz.cad.ts
+  s_59c0dd2af30db2::t_bb0f83e94f6f25 1-12
+packages/cadscript/src/generated/std-dts.ts
+  s_59c0dd2af30db2::t_aae39069086343 1-8
+packages/cadscript/test/diagnostics.test.ts
+  s_59c0dd2af30db2::t_cdd27ceb9c97f5 88-91
+  s_59c0dd2af30db2::t_621aec6dd481b0 195-202
+  s_59c0dd2af30db2::t_74fae65bda7a8a 1-36,38-75,77-87,92-97,103-125,127-186,188-194,203-212,214-277,279-285,287-289
+  s_59c0dd2af30db2::t_3e60df75ca4bb6 37,76,126,187,213,278,286
+  s_59c0dd2af30db2::t_79ca04f254d616 98-102
+packages/cadscript/src/identity.ts
+  s_59c0dd2af30db2::t_73161e9de9ccdf 1-132
+packages/cadscript/test/splice.test.ts
+  s_59c0dd2af30db2::t_5104f90d00f7d8 1-117
+packages/ir-types/src/generated/constants.ts
+  s_59c0dd2af30db2::t_7b43fdd86c903c 15
+  s_59c0dd2af30db2::t_6218bad1213171 1-14
+packages/cadscript/src/trivia.ts
+  s_59c0dd2af30db2::t_9053de2e722af6 1-69
+packages/ir-types/test/generated.test.ts
+  s_59c0dd2af30db2::t_dd5bf8811578ad 1-18
+packages/cadscript/test/typecheck.test.ts
+  s_59c0dd2af30db2::t_de8f934edcc322 1-37,39-56
+  s_59c0dd2af30db2::t_3e60df75ca4bb6 38
+corpus/cadscript/revolve_partial_ring.cad.ts
+  s_59c0dd2af30db2::t_bb0f83e94f6f25 1-12
+packages/cadscript/std/index.d.ts
+  s_59c0dd2af30db2::t_a928394f5b5b97 1-330
+packages/cadscript/src/splice.ts
+  s_59c0dd2af30db2::t_0811e6d566385e 1-260
+packages/cadscript/src/compile.ts
+  s_59c0dd2af30db2::t_c49cae9350d74d 162-163,300,305-307,360,366,785,1160-1161,1180
+  s_59c0dd2af30db2::t_338d120ac78c48 1-161,164-299,301-304,308-359,361-365,367-784,786-888,890-935,937-971,973-1044,1046-1137,1140-1159,1181-1232,1234-1276
+  s_59c0dd2af30db2::t_1457364c718495 889,972,1233
+  s_59c0dd2af30db2::t_ab4fa9c643dcf6 936,1138-1139
+  s_59c0dd2af30db2::t_cdd27ceb9c97f5 1162-1179
+  s_59c0dd2af30db2::t_621aec6dd481b0 1045
+forge/crates/forge-ir/SPEC.md
+  s_59c0dd2af30db2::t_9f93325703c2cf 7-12,90-92
+packages/cadscript/src/typecheck.ts
+  s_59c0dd2af30db2::t_7efa17e196a70b 1-123
+packages/ir-types/tsconfig.json
+  s_59c0dd2af30db2::t_335dcdd06125ed 1-9
+forge/crates/forge-ir/examples/dump_schema.rs
+  s_59c0dd2af30db2::t_29a41f0440a1d8 13-21
+corpus/cadscript/revolve_torus.cad.ts
+  s_59c0dd2af30db2::t_bb0f83e94f6f25 1-9
+packages/ir-types/scripts/generate.ts
+  s_59c0dd2af30db2::t_d1616816eaf4ce 1-47,50-300,302-303,305-327,329-353,359-378,385-387,393-408
+  s_59c0dd2af30db2::t_dfef86c6e8b289 48-49,304,354-358,379-384,388-392
+  s_59c0dd2af30db2::t_8f0ab995ad2eb5 301
+  s_59c0dd2af30db2::t_6218bad1213171 328
+packages/ir-types/src/generated/metrics-v0.ts
+  s_59c0dd2af30db2::t_6218bad1213171 1-100,102-113,115-140
+  s_59c0dd2af30db2::t_7b43fdd86c903c 101,114
+packages/cadscript/test/print.test.ts
+  s_59c0dd2af30db2::t_224022a3422d4e 1-155
+packages/cadscript/package.json
+  s_59c0dd2af30db2::t_392c6aa0b315f6 1-30,32-45
+  s_59c0dd2af30db2::t_b33f23e6d9a824 31
+packages/cadscript/test/cli.test.ts
+  s_59c0dd2af30db2::t_3e60df75ca4bb6 53
+  s_59c0dd2af30db2::t_8021b4facc26bd 1-52,54-81
+forge/crates/forge-ir/src/validate.rs
+  s_59c0dd2af30db2::t_29a41f0440a1d8 9,40-43,52,57-63,80-85,200-203
+packages/cadscript/src/diagnostics.ts
+  s_59c0dd2af30db2::t_f4a1d8cfc44646 1-52,54-60,63-81
+  s_59c0dd2af30db2::t_621aec6dd481b0 53,61-62
+packages/ir-types/test/parse.test.ts
+  s_59c0dd2af30db2::t_a7cdab34d35bbf 51
+  s_59c0dd2af30db2::t_754289368e8247 1-50,52-161
+packages/cadscript/test/property.test.ts
+  s_59c0dd2af30db2::t_9cc3d88a631db4 6
+  s_59c0dd2af30db2::t_bce5d0b51e6c14 1-5,7-92
+packages/cadscript/src/print.ts
+  s_59c0dd2af30db2::t_1d8d4e359ee428 1-171
+corpus/cadscript/tsconfig.json
+  s_59c0dd2af30db2::t_4d8b91a5b0abd8 1-16
+packages/cadscript/src/index.ts
+  s_59c0dd2af30db2::t_6299ae219ad640 1-36
+packages/cadscript/test/arbitraries.ts
+  s_59c0dd2af30db2::t_905d5b6ceb85c5 1-298
+forge/crates/forge-ir/src/doc.rs
+  s_59c0dd2af30db2::t_e1e01f40fcdb7a 17,20,29,32,130,258,263,268,271,281,285,292,295
+  s_59c0dd2af30db2::t_a7b61afc5b8f65 16,19,43-54,127,189,262,267,270,284,291,294,310-312
+  s_59c0dd2af30db2::t_125b7c3f1edddf 313
+corpus/cadscript/revolve_solid_cylinder.cad.ts
+  s_59c0dd2af30db2::t_bb0f83e94f6f25 1-12
+packages/ir-types/package.json
+  s_59c0dd2af30db2::t_9ea6fbd57663e1 1-25,27-36
+  s_59c0dd2af30db2::t_7b43fdd86c903c 26
+packages/cadscript/src/cli-main.ts
+  s_59c0dd2af30db2::t_c994a6821a0887 1-75,83-128
+  s_59c0dd2af30db2::t_aae39069086343 76-82
+packages/cadscript/test/generated-files.test.ts
+  s_59c0dd2af30db2::t_621aec6dd481b0 42-53
+  s_59c0dd2af30db2::t_5e6576e079b226 1-35,39-41
+  s_59c0dd2af30db2::t_bb0f83e94f6f25 36-38
+packages/ir-types/src/generated/ir-v0.ts
+  s_59c0dd2af30db2::t_c5bdf76d2d194b 28,50,195,217
+  s_59c0dd2af30db2::t_7b43fdd86c903c 275-278,288-291
+  s_59c0dd2af30db2::t_6218bad1213171 1-27,29-49,51-87,89,91,93,95-128,130,132,134,136-194,196-216,218-220,222-239,241,243-274,279-282,284,286-287,292-302,310-336
+  s_59c0dd2af30db2::t_e1e01f40fcdb7a 88,90,92,94,129,131,133,135,221,240,242,283,285,303-309
+corpus/cadscript/revolve_cone_sphere.cad.ts
+  s_59c0dd2af30db2::t_bb0f83e94f6f25 1-11
+packages/cadscript/src/cli.ts
+  s_59c0dd2af30db2::t_8af894ecb36cf3 1-10
+forge/crates/forge-ir/tests/roundtrip.rs
+  s_59c0dd2af30db2::t_9983f317989f0d 58-99
+packages/cadscript/test/corpus.test.ts
+  s_59c0dd2af30db2::t_b4811a77692e7a 1-54
+corpus/cadscript/extrude_box.cad.ts
+  s_59c0dd2af30db2::t_bb0f83e94f6f25 1-12
+packages/cadscript/src/syntax.ts
+  s_59c0dd2af30db2::t_3e60df75ca4bb6 85,87,90-93,96
+  s_59c0dd2af30db2::t_897686aabbb12b 51-56
+  s_59c0dd2af30db2::t_5060835d1c344a 1-50,57-84,86,88-89,94-95,97-111
+packages/cadscript/vitest.config.ts
+  s_59c0dd2af30db2::t_aae39069086343 1-15
+packages/ir-types/src/index.ts
+  s_59c0dd2af30db2::t_e1927c3d072aa5 1-82
+packages/ir-types/tsconfig.build.json
+  s_59c0dd2af30db2::t_b8e714c751b085 1-9
+packages/cadscript/tsconfig.build.json
+  s_59c0dd2af30db2::t_aae39069086343 1-9
+packages/cadscript/src/validate.ts
+  s_59c0dd2af30db2::t_78011cc26b0767 1-9,11-34,38-43,45-50,52-61,64-138,143-153,158-162
+  s_59c0dd2af30db2::t_897686aabbb12b 10,35-37,44,51,62-63,139-142
+  s_59c0dd2af30db2::t_b9b620a223dc20 154-157
+packages/cadscript/tsconfig.json
+  s_59c0dd2af30db2::t_aae39069086343 1-9
+packages/cadscript/test/helpers.ts
+  s_59c0dd2af30db2::t_ab65390a90903a 1-26
+corpus/cadscript/extrude_plate_with_holes.cad.ts
+  s_59c0dd2af30db2::t_bb0f83e94f6f25 1-16
+corpus/cadscript/extrude_two_regions.cad.ts
+  s_59c0dd2af30db2::t_bb0f83e94f6f25 1-11
+forge/crates/forge-ir/schema/ir-v0.constants.json
+  s_59c0dd2af30db2::t_9983f317989f0d 1-71
+forge/crates/forge-ir/schema/ir-v0.schema.json
+  s_59c0dd2af30db2::t_9983f317989f0d 33,301,338,390
+  s_59c0dd2af30db2::t_e1e01f40fcdb7a 40,88,139,208,212
+pnpm-lock.yaml
+  s_59c0dd2af30db2::t_4cf9e3d9b10175 1-828
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "83086e0c66e304de5ef19d4141038221111a6b8b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
