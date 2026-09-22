@@ -28,6 +28,10 @@ smallvec = "1"
 clap = { version = "4", features = ["derive"] }
 proptest = "1"
 libm = "0.2"
+# Test-only exact arithmetic oracles (forge-core predicate tests). MIT/Apache-2.0.
+num-bigint = "0.4"
+num-rational = "0.4"
+num-traits = "0.2"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

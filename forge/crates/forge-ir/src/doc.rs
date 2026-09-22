@@ -54,7 +54,10 @@ impl Units {
 
 impl Default for Units {
     fn default() -> Self {
-        Self { length: LengthUnit::Mm, angle: AngleUnit::Deg }
+        Self {
+            length: LengthUnit::Mm,
+            angle: AngleUnit::Deg,
+        }
     }
 }
 
@@ -317,5 +320,9 @@ pub(crate) fn normalize(v: [f64; 3]) -> [f64; 3] {
 }
 
 pub(crate) fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
 }

@@ -10,6 +10,9 @@ fn committed_schemas_match_types() {
         let committed = std::fs::read_to_string(dir.join(file))
             .unwrap_or_else(|_| panic!("missing schema/{file}; run the dump_schema example"));
         let committed: serde_json::Value = serde_json::from_str(&committed).unwrap();
-        assert_eq!(committed, schema, "schema/{file} is stale; run the dump_schema example");
+        assert_eq!(
+            committed, schema,
+            "schema/{file} is stale; run the dump_schema example"
+        );
     }
 }

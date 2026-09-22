@@ -19,7 +19,11 @@ pub struct ValidationError {
 }
 
 fn err(code: &'static str, path: impl Into<String>, message: impl Into<String>) -> ValidationError {
-    ValidationError { code, path: path.into(), message: message.into() }
+    ValidationError {
+        code,
+        path: path.into(),
+        message: message.into(),
+    }
 }
 
 /// Validate a document. Returns every problem found (not just the first).
@@ -33,7 +37,11 @@ pub fn validate(doc: &Document) -> Result<(), Vec<ValidationError>> {
         ));
     }
     if doc.parts.is_empty() {
-        errs.push(err("NO_PARTS", "/parts", "a document needs at least one part studio"));
+        errs.push(err(
+            "NO_PARTS",
+            "/parts",
+            "a document needs at least one part studio",
+        ));
     }
     let mut part_ids = BTreeSet::new();
     let mut part_names = BTreeSet::new();
@@ -44,10 +52,18 @@ pub fn validate(doc: &Document) -> Result<(), Vec<ValidationError>> {
     for (pi, part) in doc.parts.iter().enumerate() {
         let pp = format!("/parts/{pi}");
         if !part_ids.insert(part.id.as_str()) {
-            errs.push(err("DUPLICATE_ID", format!("{pp}/id"), format!("part id {:?}", part.id)));
+            errs.push(err(
+                "DUPLICATE_ID",
+                format!("{pp}/id"),
+                format!("part id {:?}", part.id),
+            ));
         }
         if !part_names.insert(part.name.as_str()) {
-            errs.push(err("DUPLICATE_NAME", format!("{pp}/name"), format!("part {:?}", part.name)));
+            errs.push(err(
+                "DUPLICATE_NAME",
+                format!("{pp}/name"),
+                format!("part {:?}", part.name),
+            ));
         }
         validate_part(part, &pp, &mut feature_ids, &mut feature_names, &mut errs);
     }
@@ -66,22 +82,36 @@ fn validate_part<'a>(
     for (fi, f) in part.features.iter().enumerate() {
         let fp = format!("{pp}/features/{fi}");
         if !ids.insert(f.id()) {
-            errs.push(err("DUPLICATE_ID", format!("{fp}/id"), format!("feature id {:?}", f.id())));
+            errs.push(err(
+                "DUPLICATE_ID",
+                format!("{fp}/id"),
+                format!("feature id {:?}", f.id()),
+            ));
         }
         if !names.insert(f.name()) {
-            errs.push(err("DUPLICATE_NAME", format!("{fp}/name"), format!("{:?}", f.name())));
+            errs.push(err(
+                "DUPLICATE_NAME",
+                format!("{fp}/name"),
+                format!("{:?}", f.name()),
+            ));
         }
         if !is_identifier(f.name()) {
             errs.push(err(
                 "INVALID_NAME",
                 format!("{fp}/name"),
-                format!("{:?} must match [A-Za-z_][A-Za-z0-9_]* (it is a CadScript const)", f.name()),
+                format!(
+                    "{:?} must match [A-Za-z_][A-Za-z0-9_]* (it is a CadScript const)",
+                    f.name()
+                ),
             ));
         } else if RESERVED_NAMES.contains(&f.name()) {
             errs.push(err(
                 "RESERVED_NAME",
                 format!("{fp}/name"),
-                format!("{:?} is a reserved word or CadScript builtin; pick another name", f.name()),
+                format!(
+                    "{:?} is a reserved word or CadScript builtin; pick another name",
+                    f.name()
+                ),
             ));
         }
         match f {
@@ -95,7 +125,10 @@ fn validate_part<'a>(
                     errs.push(err(
                         "INVALID_DISTANCE",
                         format!("{fp}/distance"),
-                        format!("must be finite and > {LINEAR_TOLERANCE} mm, got {}", e.distance),
+                        format!(
+                            "must be finite and > {LINEAR_TOLERANCE} mm, got {}",
+                            e.distance
+                        ),
                     ));
                 }
             }
@@ -109,7 +142,8 @@ fn validate_part<'a>(
                     ));
                 }
                 let d = r.axis.direction;
-                if !(finite2(r.axis.origin) && finite2(d)) || (d[0] * d[0] + d[1] * d[1]).sqrt() <= LINEAR_TOLERANCE
+                if !(finite2(r.axis.origin) && finite2(d))
+                    || (d[0] * d[0] + d[1] * d[1]).sqrt() <= LINEAR_TOLERANCE
                 {
                     errs.push(err(
                         "INVALID_AXIS",
@@ -141,12 +175,22 @@ fn validate_sketch(s: &SketchFeature, fp: &str, errs: &mut Vec<ValidationError>)
     if let PlaneSpec::Frame(f) = &s.plane {
         let n = len3(f.normal);
         let x = len3(f.x_dir);
-        let finite = f.origin.iter().chain(&f.normal).chain(&f.x_dir).all(|v| v.is_finite());
+        let finite = f
+            .origin
+            .iter()
+            .chain(&f.normal)
+            .chain(&f.x_dir)
+            .all(|v| v.is_finite());
         if !finite || n <= LINEAR_TOLERANCE || x <= LINEAR_TOLERANCE {
-            errs.push(err("INVALID_PLANE", format!("{fp}/plane"), "degenerate frame"));
+            errs.push(err(
+                "INVALID_PLANE",
+                format!("{fp}/plane"),
+                "degenerate frame",
+            ));
         } else {
-            let dot = (f.normal[0] * f.x_dir[0] + f.normal[1] * f.x_dir[1] + f.normal[2] * f.x_dir[2])
-                / (n * x);
+            let dot =
+                (f.normal[0] * f.x_dir[0] + f.normal[1] * f.x_dir[1] + f.normal[2] * f.x_dir[2])
+                    / (n * x);
             if dot.abs() > 1e-9 {
                 errs.push(err(
                     "INVALID_PLANE",
@@ -157,13 +201,21 @@ fn validate_sketch(s: &SketchFeature, fp: &str, errs: &mut Vec<ValidationError>)
         }
     }
     if s.curves.is_empty() {
-        errs.push(err("EMPTY_SKETCH", format!("{fp}/curves"), "a sketch needs at least one curve"));
+        errs.push(err(
+            "EMPTY_SKETCH",
+            format!("{fp}/curves"),
+            "a sketch needs at least one curve",
+        ));
     }
     let mut ids = BTreeSet::new();
     for (ci, c) in s.curves.iter().enumerate() {
         let cp = format!("{fp}/curves/{ci}");
         if !ids.insert(c.id()) {
-            errs.push(err("DUPLICATE_ID", format!("{cp}/id"), format!("curve id {:?}", c.id())));
+            errs.push(err(
+                "DUPLICATE_ID",
+                format!("{cp}/id"),
+                format!("curve id {:?}", c.id()),
+            ));
         }
         match c {
             SketchCurve::Line { start, end, .. } => {
@@ -173,7 +225,9 @@ fn validate_sketch(s: &SketchFeature, fp: &str, errs: &mut Vec<ValidationError>)
                     errs.push(err("DEGENERATE_CURVE", &cp, "zero-length line"));
                 }
             }
-            SketchCurve::Arc { start, end, center, .. } => {
+            SketchCurve::Arc {
+                start, end, center, ..
+            } => {
                 if !(finite2(*start) && finite2(*end) && finite2(*center)) {
                     errs.push(err("NON_FINITE", &cp, "arc points must be finite"));
                     continue;
@@ -198,7 +252,11 @@ fn validate_sketch(s: &SketchFeature, fp: &str, errs: &mut Vec<ValidationError>)
             }
             SketchCurve::Circle { center, radius, .. } => {
                 if !(finite2(*center) && radius.is_finite()) {
-                    errs.push(err("NON_FINITE", &cp, "circle center and radius must be finite"));
+                    errs.push(err(
+                        "NON_FINITE",
+                        &cp,
+                        "circle center and radius must be finite",
+                    ));
                 } else if *radius <= LINEAR_TOLERANCE {
                     errs.push(err("DEGENERATE_CURVE", &cp, "circle radius must be > 0"));
                 }
