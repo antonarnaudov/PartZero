@@ -56,7 +56,10 @@ pub use entities::{
     Vertex, VertexId,
 };
 pub use names::{EntityNames, entity_name, scrub_arena_ids, shell_name};
-pub use provenance::{Provenance, RESERVED_NAME_CHARS, Role};
+pub use provenance::{
+    KEY_ESCAPED_CHARS, KeyParseError, KeyParts, KeyRoleArg, Provenance, RESERVED_NAME_CHARS, Role,
+    escape_key_id, parse_key, unescape_key_id,
+};
 pub use validate::{
     EntityRef, EulerSummary, IssueCode, Severity, TopoIssue, ValidateOptions, euler_summary,
     has_errors, validate, validate_with,

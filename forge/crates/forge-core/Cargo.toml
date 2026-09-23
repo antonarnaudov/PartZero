@@ -13,12 +13,19 @@ smallvec.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-proptest.workspace = true
 num-bigint.workspace = true
 num-rational.workspace = true
 num-traits.workspace = true
 # Only used to assert that `Tolerance::IR_DEFAULT` matches the IR's normative constant.
 forge-ir.workspace = true
+
+# proptest only on native targets, as in forge-solve: its default `fork`/`timeout` features
+# pull in `wait-timeout`, which does not build for wasm32-wasip1. The determinism golden
+# (`tests/determinism_golden.rs`, no proptest) must build and pass there (audit M4):
+#   cargo test -p forge-core --target wasm32-wasip1 --test determinism_golden
+# The proptest-based test files are native-only.
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+proptest.workspace = true
 
 [lints]
 workspace = true

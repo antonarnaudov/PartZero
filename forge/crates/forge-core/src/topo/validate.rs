@@ -4,15 +4,39 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
-use super::Provenance;
 use super::entities::{
     Body, CoedgeId, Edge, EdgeId, Face, FaceId, Loop, LoopId, ShellId, VertexId,
 };
-use crate::geom::Surface;
+use super::{Provenance, Role};
+use crate::geom::{Curve3, Plane, Surface};
 use crate::linalg::Vec2;
 use crate::math;
 use crate::predicates::orient2d;
 use crate::tolerance::is_within;
+
+/// Error of one plane coordinate of a vertex as this check computes it, in ulps
+/// (`f64::EPSILON`) of `|p|∞ + |o|∞` (vertex and plane origin). `(p − o)·x` rounds once
+/// per difference and three times in the dot product, each by half an ulp of a term of at
+/// most `|p|∞ + |o|∞` (`|x_k| ≤ 1`, three terms): at most `2·3 = 6` ulps; 8 with margin.
+const PROJECTION_ROUNDOFF_ULPS: f64 = 8.0;
+
+/// Error of one plane coordinate of a vertex of a **sketch-region loop** (see
+/// [`is_sketch_region_loop`]) relative to the sketch's exact 2D data, in ulps of the
+/// body's coordinate scale `M` (the largest |coordinate| of its vertices, surface frame
+/// origins and circle centres, see `Validator::coordinate_scale`).
+///
+/// The vertex was lifted from 2D to 3D (`o + x·u + y·v + z·w`: 4-term sums whose terms
+/// are at most `‖(u, v, w)‖₂ ≤ 2√3·M`, ≤ 11 ulps of `M` in the plane), maybe moved
+/// rigidly (an extrude lifts its far cap directly; a revolve rotates its end cap about an
+/// axis through circle centres of the body, ≤ 12 more), and is projected back here (≤ 7);
+/// the frame axes are unit and orthogonal to within ~3 ulps, which moves
+/// `(x·u + y·v + z·w)·x` off `u` by ≤ 6·3 = 18 ulps of `M`. Worst cases added: 48; 64
+/// with margin. The round trips of forge-ops' extrude and revolve caps measure below one
+/// ulp (0.63 at most over 2 000 random planes, regions and sweeps: forge-check
+/// `tests/degenerate_loop.rs`, `sketch_region_round_trip_is_within_the_allowance`, which
+/// fails above 16). Only used to leave sketch-region loops within round-off of the tol²
+/// limit to the sketch stage (SPEC §3.1 [R-5]).
+const SKETCH_LOOP_ROUNDOFF_ULPS: f64 = 64.0;
 
 /// How bad an issue is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -94,8 +118,13 @@ pub enum IssueCode {
     /// A loop of a planar face winds the wrong way for its role (outer/inner) and the
     /// face sense (decided with an exact orientation predicate).
     LoopOrientation,
-    /// A loop of a planar face encloses an area of at most `tolerance²` (the largest
-    /// tolerance of its edges), the sketch's degeneracy rule (SPEC §3.1).
+    /// A loop of a planar face does not enclose more than `tolerance²` (the largest
+    /// tolerance of its edges), the sketch's degeneracy rule (SPEC §3.1). The area is
+    /// exact for loops of lines and circular arcs (sampled otherwise) and must exceed the
+    /// limit by more than its round-off. Only a loop the sketch stage decided (a cap of a
+    /// swept sketch region whose edges are all the sweep's own) that may enclose more
+    /// than `tolerance²` (the least tolerance of its edges) and clearly encloses
+    /// something is left to the sketch, which decided it on exact 2D data ([R-5]).
     LoopDegenerate,
     /// The Euler–Poincaré characteristic of a closed shell is impossible.
     EulerCharacteristic,
@@ -312,6 +341,7 @@ pub fn validate_with(body: &Body, opts: &ValidateOptions) -> Vec<TopoIssue> {
         seen_coedges: BTreeSet::new(),
         shell_of_edge: BTreeMap::new(),
         seen_vertices: BTreeSet::new(),
+        scale: None,
     };
     v.run();
     v.out
@@ -326,6 +356,8 @@ struct Validator<'a> {
     seen_coedges: BTreeSet<CoedgeId>,
     shell_of_edge: BTreeMap<EdgeId, ShellId>,
     seen_vertices: BTreeSet<VertexId>,
+    /// The body's coordinate scale, computed on first use (see `coordinate_scale`).
+    scale: Option<f64>,
 }
 
 impl<'a> Validator<'a> {
@@ -758,8 +790,11 @@ impl<'a> Validator<'a> {
             return;
         };
         let mut pts: Vec<Vec2> = Vec::new();
-        // Linear tolerance of the loop: the largest tolerance recorded on its edges.
+        // Linear tolerance of the loop: the largest tolerance recorded on its edges. The
+        // smallest is the one closest to the tolerance the sketch used (operations only
+        // ever raise an edge's tolerance above the document's: see below).
         let mut tol = 0.0f64;
+        let mut tol_least = f64::INFINITY;
         for &cid in &lp.coedges {
             let (Some(c), Some(e)) = (
                 body.coedge(cid),
@@ -768,6 +803,7 @@ impl<'a> Validator<'a> {
                 return;
             };
             tol = math::max(tol, e.tolerance);
+            tol_least = math::min(tol_least, e.tolerance);
             let mut ts = self.sample_params(e);
             if !c.forward {
                 ts.reverse();
@@ -789,19 +825,60 @@ impl<'a> Validator<'a> {
             return;
         }
         // SPEC §3.1 (the sketch's rule): a loop must enclose more than tol².
+        //
+        // The enclosed area is exact for loops of lines and circular arcs (the polygon of
+        // their vertices plus each arc's circular segment: the sketch stage's own formula)
+        // and otherwise that of the sampled polygon (which cuts the chords of the other
+        // curves). A loop must provably enclose more than tol²: its exact area must exceed
+        // the limit by more than the round-off of computing it (`err`). This is stricter
+        // than `area ≤ tol²` by that round-off (≲ 1e-5·tol² for µm loops): a loop within
+        // round-off of the limit that no sketch decided is rejected (loudly), never
+        // guessed valid.
+        //
+        // One exception: a loop the sketch stage decided ([R-5], `is_sketch_region_loop`).
+        // The sketch decided it on exact 2D data, the body only holds it after a 3D round
+        // trip, so its area is known only to within the round-off of that trip (`err_s`):
+        // a hole of area 1.000000001·tol² passes the sketch and must not fail here. Such a
+        // loop is left to the sketch when it may enclose more than tol² (`a + err_s > tol²`)
+        // and provably encloses something (`a > err_s`); together these imply `a > tol²/2`,
+        // so a loop collapsed or shrunk by a construction bug is still caught. Its tol is
+        // the least of its edges' tolerances, the closest to the document tolerance the
+        // sketch used (a boolean may have raised some of them). Every other loop
+        // (body-op and boolean section loops, imports, any face no sketch produced) gets
+        // the strict rule.
         let area = 0.5 * polygon_twice_signed_area(&pts);
         let min_area = tol * tol;
-        if pts.len() < 3 || is_within(area.abs(), min_area) {
+        let exact = self.exact_loop_area(plane, lp);
+        let (enclosed, err, limit, degenerate) = match &exact {
+            Some(x) => {
+                let a = x.area.abs();
+                let err = x.error(x.projection_delta, false);
+                // Written so that a NaN bound leaves the loop degenerate.
+                if a > min_area + err {
+                    (a, err, min_area, false)
+                } else if is_sketch_region_loop(body, face, lp) {
+                    let delta = SKETCH_LOOP_ROUNDOFF_ULPS * f64::EPSILON * self.coordinate_scale();
+                    let err_s = x.error(delta, true);
+                    let limit = tol_least * tol_least;
+                    // A NaN bound fails both comparisons: the loop stays degenerate.
+                    (a, err_s, limit, !(a > err_s && a + err_s > limit))
+                } else {
+                    (a, err, min_area, true)
+                }
+            }
+            None => (area.abs(), 0.0, min_area, is_within(area.abs(), min_area)),
+        };
+        if pts.len() < 3 || degenerate {
             self.push(
                 IssueCode::LoopDegenerate,
                 Severity::Error,
                 lent,
                 vec![EntityRef::Face(fid)],
-                Some(area.abs()),
-                Some(min_area),
+                Some(enclosed),
+                Some(limit),
                 format!(
-                    "loop encloses area {:e}, at most tolerance² = {min_area:e}",
-                    area.abs()
+                    "loop encloses area {enclosed:e} (± {err:e}), not provably more than \
+                     tolerance² = {limit:e}"
                 ),
             );
             return;
@@ -819,6 +896,124 @@ impl<'a> Validator<'a> {
                 format!("{role} loop winds the wrong way (signed area {area} in plane coordinates, face sense {})", face.sense),
             );
         }
+    }
+
+    /// The exact area of loop `lp` in `plane` coordinates when all its edges are lines or
+    /// circular arcs (`None` otherwise, or if it is not finite): the shoelace polygon of
+    /// its vertices plus, for every arc, the circular segment between the arc and its
+    /// chord, `±½·r²·(θ − sin θ)·cos φ` (`θ = t1 − t0` the arc's sweep, `φ` the angle
+    /// between its axis and the plane normal: the projection scales every area by
+    /// `cos φ`; the sign is the arc's turning direction in the plane). A ring edge is a
+    /// whole circle, `π·r²·cos φ`. This is the sketch stage's formula
+    /// (forge-ops `sketch::signed_area`), so a loop the sketch built is measured the same.
+    fn exact_loop_area(&self, plane: &Plane, lp: &Loop) -> Option<LoopArea> {
+        let body = self.body();
+        let eps = f64::EPSILON;
+        let normal = plane.frame().z();
+        let origin_scale = plane.frame().origin().max_abs_component();
+        let mut verts: Vec<Vec2> = Vec::with_capacity(lp.coedges.len());
+        let mut reach = 0.0f64;
+        let (mut segments, mut eval_err, mut arc_sensitivity) = (0.0, 0.0, 0.0);
+        for &cid in &lp.coedges {
+            let c = body.coedge(cid)?;
+            let e = body.edge(c.edge)?;
+            match &e.curve {
+                Curve3::Line(_) => {}
+                Curve3::Circle(circle) => {
+                    let (t0, t1) = e.t_range;
+                    let theta = t1 - t0;
+                    let r = circle.radius();
+                    let cos_phi = circle.frame().z().dot(normal);
+                    let dir = if c.forward { 1.0 } else { -1.0 };
+                    let (s, co) = math::sin_cos(theta);
+                    let half_r2 = 0.5 * r * r;
+                    let segment = half_r2 * (theta - s);
+                    segments += dir * cos_phi * segment;
+                    // Evaluation: `sin` within an ulp, `θ` within an ulp of its ends each
+                    // (moves the segment by ½r²·(1 − cos θ) per radian), products and
+                    // `cos φ` within a few ulps of the segment.
+                    eval_err += half_r2 * eps * (s.abs() + (1.0 - co) * (t0.abs() + t1.abs()))
+                        + 8.0 * eps * segment.abs();
+                    // Sensitivity to a history round-off `δ` per plane coordinate (points
+                    // off by ≤ √2·δ): a radius taken from rounded points (off by ≤ 3δ)
+                    // moves the segment by `r·(θ − sin θ)` per unit, a sweep taken from
+                    // rounded endpoints (off by ≤ 3δ/r) by `½r²·(1 − cos θ)` per radian.
+                    arc_sensitivity += 3.0 * r * ((theta - s).abs() + 0.5 * (1.0 - co));
+                }
+                _ => return None,
+            }
+            if e.is_ring() {
+                continue;
+            }
+            let v = if c.forward { e.start } else { e.end };
+            let p = body.vertex(v?)?.point;
+            reach = math::max(reach, p.max_abs_component());
+            let (u, w, _) = plane.project(p);
+            verts.push(Vec2::new(u, w));
+        }
+        let n = verts.len();
+        // Σ ‖p_{i+1} − p_{i−1}‖₁ (first-order sensitivity of the shoelace area to vertex
+        // moves) and Σ |a_x·b_y| + |a_y·b_x| (its evaluation round-off).
+        let (mut spread, mut terms) = (0.0, 0.0);
+        if let Some(&p0) = verts.first() {
+            for i in 0..n {
+                let d = verts[(i + 1) % n] - verts[(i + n - 1) % n];
+                spread += d.x.abs() + d.y.abs();
+                let (a, b) = (verts[i] - p0, verts[(i + 1) % n] - p0);
+                terms += (a.x * b.y).abs() + (a.y * b.x).abs();
+            }
+        }
+        let area = 0.5 * polygon_twice_signed_area(&verts) + segments;
+        let nf = n as f64;
+        // The shoelace sum relative to `p0` rounds at most `n + 4` times per term.
+        eval_err += 0.5 * (nf + 4.0) * eps * terms;
+        area.is_finite().then_some(LoopArea {
+            area,
+            vertices: n,
+            spread,
+            eval_err,
+            arc_sensitivity,
+            projection_delta: PROJECTION_ROUNDOFF_ULPS * eps * (origin_scale + reach),
+        })
+    }
+
+    /// The body's coordinate scale `M`: the largest |coordinate| of its vertices, surface
+    /// frame origins and circle and ellipse centres (computed once). Every coordinate an
+    /// operation rounded while building the body is at most a small multiple of it.
+    fn coordinate_scale(&mut self) -> f64 {
+        if let Some(m) = self.scale {
+            return m;
+        }
+        let body = self.body();
+        let mut m = 0.0f64;
+        for (_, v) in body.vertices.iter() {
+            m = math::max(m, v.point.max_abs_component());
+        }
+        for (_, f) in body.faces.iter() {
+            let origin = match &f.surface {
+                Surface::Plane(s) => Some(s.frame().origin()),
+                Surface::Cylinder(s) => Some(s.frame().origin()),
+                Surface::Cone(s) => Some(s.frame().origin()),
+                Surface::Sphere(s) => Some(s.frame().origin()),
+                Surface::Torus(s) => Some(s.frame().origin()),
+                Surface::BSpline(_) => None,
+            };
+            if let Some(o) = origin {
+                m = math::max(m, o.max_abs_component());
+            }
+        }
+        for (_, e) in body.edges.iter() {
+            let centre = match &e.curve {
+                Curve3::Circle(c) => Some(c.frame().origin()),
+                Curve3::Ellipse(c) => Some(c.frame().origin()),
+                Curve3::Line(_) | Curve3::BSpline(_) => None,
+            };
+            if let Some(o) = centre {
+                m = math::max(m, o.max_abs_component());
+            }
+        }
+        self.scale = Some(m);
+        m
     }
 
     fn check_edge_uses(&mut self, sid: ShellId, closed: bool, eid: EdgeId, cs: &[CoedgeId]) {
@@ -955,10 +1150,127 @@ impl<'a> Validator<'a> {
     }
 }
 
+/// The exact area of a planar loop of lines and circular arcs (see
+/// `Validator::exact_loop_area`) with what its error bound needs.
+struct LoopArea {
+    /// Signed area in plane coordinates (positive counter-clockwise).
+    area: f64,
+    /// Number of vertices of the chord polygon.
+    vertices: usize,
+    /// `Σ ‖p_{i+1} − p_{i−1}‖₁` over the chord polygon: moving every vertex by at most `δ`
+    /// per coordinate moves its area by at most `½·δ·spread + n·δ²`.
+    spread: f64,
+    /// Round-off of evaluating the formula itself (shoelace sum, circular segments).
+    eval_err: f64,
+    /// How much the arcs' segments move per unit of history round-off `δ` (radius and
+    /// sweep taken from rounded points).
+    arc_sensitivity: f64,
+    /// Error of the plane coordinates as projected here, per coordinate
+    /// ([`PROJECTION_ROUNDOFF_ULPS`]).
+    projection_delta: f64,
+}
+
+impl LoopArea {
+    /// An upper bound on `|area − A|`, where `A` is the area of the loop whose vertices
+    /// are each within `delta` per plane coordinate of the ones used here; `history`
+    /// adds the arcs' sensitivity to radii and sweeps derived from such points.
+    fn error(&self, delta: f64, history: bool) -> f64 {
+        let n = self.vertices as f64;
+        let arcs = if history {
+            self.arc_sensitivity * delta
+        } else {
+            0.0
+        };
+        0.5 * delta * self.spread + n * delta * delta + self.eval_err + arcs
+    }
+}
+
+/// `true` if loop `lp` of `face` is a loop the **sketch stage decided** (SPEC §3.1
+/// [R-5]): `face` is a cap of a swept sketch region (an extrude's caps, a revolve's end
+/// caps: congruent copies of the region) and every edge of the loop is an edge the sweep
+/// itself made on that cap's boundary: `F/edge:{A|B}` of the cap's own feature `F`
+/// whose two faces are the cap and **another face of `F`'s sweep** (a side `F/side…` or,
+/// for a revolve's profile line on the axis, the other end cap). So the loop is the
+/// image of a loop of the region's sketch curves.
+///
+/// Not sketch-decided, so they get the strict rule:
+/// - section edges of a body op (SPEC §5.2: `G/edge:{A|B}`, `G` the operation's feature
+///   id). A standalone `boolean`, a hole or a pattern has its own id `G ≠ F`; an extrude
+///   or revolve with `op: join/cut/intersect` **is** `F`, but its section edges join the
+///   cap to a face of a target (`F/edge:{F/cap:end|T/side:x}`), never to another face of
+///   `F`'s sweep, so one such edge makes the loop non-sketch;
+/// - edges of later operations on the cap (fillet, chamfer, shell: their own ids);
+/// - imported faces and any face or loop no sketch produced.
+///
+/// Pieces of the sweep's own edges keep their provenance through booleans (split pieces
+/// share the key); a loop made only of them is one of the region's loops (the region's
+/// loops are disjoint simple closed curves), never a smaller one.
+///
+/// **Assumption:** a cap loop keeps the geometry the sweep gave it as long as its keys
+/// are unchanged. An operation that moves a cap loop's edges while keeping their keys —
+/// SPEC §5.2 `draft` keeps the keys of the faces it tilts (not implemented; optional in
+/// v1) — must not reach this relaxation: it has to re-establish the loop's area itself
+/// or give its edges new keys.
+fn is_sketch_region_loop(body: &Body, face: &Face, lp: &Loop) -> bool {
+    let fp = &face.provenance;
+    if !is_sweep_cap_role(&fp.role) {
+        return false;
+    }
+    let name = fp.name();
+    lp.coedges.iter().all(|&cid| {
+        body.coedge(cid)
+            .and_then(|c| body.edge(c.edge))
+            .is_some_and(|e| {
+                let p = &e.provenance;
+                let other = match p.sources.as_slice() {
+                    [a, b] if *a == name => b,
+                    [a, b] if *b == name => a,
+                    _ => return false,
+                };
+                p.role == Role::EdgeBetween
+                    && p.feature == fp.feature
+                    && *other != name
+                    && is_sweep_face_name(&fp.feature, other)
+            })
+    })
+}
+
+/// The cap roles of a sweep: an extrude's caps, a revolve's end caps.
+fn is_sweep_cap_role(role: &Role) -> bool {
+    matches!(
+        role,
+        Role::CapStart | Role::CapEnd | Role::EndCapStart | Role::EndCapEnd
+    )
+}
+
+/// `true` if `name` (a rendered [`Provenance::name`]) names a face of the sweep
+/// `feature`: `feature/side[:leaves]` or one of its caps, maybe with an instance index
+/// `#k`. Feature names and leaves contain no reserved character, so the name parses
+/// uniquely (`polyx/side:a` is not a face of `poly`, `poly/blend:{…}` is no sweep face).
+fn is_sweep_face_name(feature: &str, name: &str) -> bool {
+    let Some(rest) = name.strip_prefix(feature).and_then(|r| r.strip_prefix('/')) else {
+        return false;
+    };
+    let role = match rest.split_once('#') {
+        Some((role, k)) if !k.is_empty() && k.bytes().all(|b| b.is_ascii_digit()) => role,
+        Some(_) => return false,
+        None => rest,
+    };
+    match role {
+        "side" | "cap:start" | "cap:end" | "endcap:start" | "endcap:end" => true,
+        _ => role
+            .strip_prefix("side:")
+            .is_some_and(|leaves| !leaves.is_empty() && !leaves.contains(RESERVED_LEAF_CHARS)),
+    }
+}
+
+/// Characters a rendered `leaves` part never contains (`+` joins the leaves).
+const RESERVED_LEAF_CHARS: &[char] = &['/', ':', '{', '}', '|', '#'];
+
 /// Twice the signed area of a closed polygon (shoelace; positive if counter-clockwise),
 /// summed relative to the first point: a small loop far from the plane origin keeps its
-/// accuracy (the differences of nearby coordinates are exact). Used for the
-/// degeneracy check of planar loops, which samples curved edges.
+/// accuracy (the differences of nearby coordinates are exact). Used for the sampled
+/// polygon of a planar loop and the chord polygon of its exact area.
 fn polygon_twice_signed_area(pts: &[Vec2]) -> f64 {
     let n = pts.len();
     let Some(&o) = pts.first() else {
@@ -1144,5 +1456,60 @@ mod tests {
         assert!((a - 0.5).abs() < 1e-15, "{a}");
         assert_eq!(polygon_orientation(&spike, a), 1);
         assert_eq!(polygon_orientation(&spike, -a), -1);
+    }
+
+    /// The sweep-face names of `is_sketch_region_loop` (review finding: a body op's
+    /// section edge on its own cap names a target's face, never one of the sweep's).
+    #[test]
+    fn sweep_face_names_parse_exactly() {
+        let f = "poly";
+        let own = [
+            Provenance::cap_start(f),
+            Provenance::cap_end(f),
+            Provenance::end_cap_start(f),
+            Provenance::end_cap_end(f),
+            Provenance::new(f, Role::Side),
+            Provenance::side(f, "s0"),
+            Provenance::side(f, "outline.bottom"),
+            Provenance::new(f, Role::Side).with_sources(["b", "a"]),
+            Provenance::side(f, "s1").with_index(3),
+            Provenance::cap_end(f).with_index(12).with_qualifier("m"),
+        ];
+        for p in &own {
+            assert!(is_sweep_face_name(f, &p.name()), "{}", p.name());
+        }
+        let not_own = [
+            // Another feature, also one whose id starts with `poly`.
+            Provenance::side("target", "c0"),
+            Provenance::side("polyx", "s0"),
+            Provenance::cap_end("po"),
+            // A face of `poly` no sweep makes, and non-face names.
+            Provenance::new(f, Role::Other("wall".into())).with_sources(["s0"]),
+            Provenance::new(f, Role::Other("sidewall".into())),
+            Provenance::new(f, Role::Imported).with_sources(["f1"]),
+            Provenance::edge_between(f, "poly/cap:end", "poly/side:s0"),
+            Provenance::vertex_at(f, ["poly/cap:end"]),
+        ];
+        for p in &not_own {
+            assert!(!is_sweep_face_name(f, &p.name()), "{}", p.name());
+        }
+        for bad in [
+            "",
+            "poly",
+            "poly/",
+            "poly/side:",
+            "poly/side:a/b",
+            "poly/side:{a}",
+            "poly/cap:end#",
+            "poly/cap:end#x",
+            "poly/cap:end#1#2",
+            "poly/side:a:b",
+            "poly/cap:ends",
+            "poly/sides",
+            "xpoly/side:a",
+            "poly//side:a",
+        ] {
+            assert!(!is_sweep_face_name(f, bad), "{bad:?}");
+        }
     }
 }

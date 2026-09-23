@@ -14,6 +14,9 @@ forge-ops.workspace = true
 forge-regen.workspace = true
 forge-mesh.workspace = true
 forge-check.workspace = true
+# IR v1 resolution (the v1 harness mode, `harness::v1`).
+forge-refs = { path = "../forge-refs" }
+serde_json.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true

@@ -14,6 +14,7 @@ pub mod models;
 pub mod mutate;
 pub mod report;
 pub mod truth;
+pub mod v1;
 
 use std::collections::BTreeMap;
 

@@ -1,0 +1,2473 @@
+[
+  {
+    "error": null,
+    "name": "exact-side",
+    "report": {
+      "field": "/face",
+      "members": [
+        {
+          "key": "e1/side:ring",
+          "name": "slab/side:ring",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              1.8369701987210297e-16,
+              1.0,
+              0.0
+            ],
+            "point": [
+              10.0,
+              -3.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "named"
+        }
+      ],
+      "status": "exact"
+    },
+    "warnings": []
+  },
+  {
+    "error": null,
+    "name": "exact-planes-some",
+    "report": {
+      "field": "/faces",
+      "members": [
+        {
+          "key": "e1/cap:end@bottom",
+          "name": "slab/cap:end",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "point": [
+              -0.3663780424013553,
+              2.989921373344298e-17,
+              5.0
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/cap:start@bottom",
+          "name": "slab/cap:start",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              0.0,
+              -1.0
+            ],
+            "point": [
+              -0.366378042401356,
+              1.2889480514196053e-16,
+              0.0
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:bottom",
+          "name": "slab/side:bottom",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              -1.0,
+              0.0
+            ],
+            "point": [
+              0.0,
+              -10.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:left",
+          "name": "slab/side:left",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              -1.0,
+              0.0,
+              0.0
+            ],
+            "point": [
+              -20.0,
+              0.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:right",
+          "name": "slab/side:right",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "point": [
+              20.0,
+              0.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:top",
+          "name": "slab/side:top",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "point": [
+              0.0,
+              10.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        }
+      ],
+      "status": "exact"
+    },
+    "warnings": []
+  },
+  {
+    "error": null,
+    "name": "repaired-cap",
+    "report": {
+      "field": "",
+      "members": [
+        {
+          "key": "e1/cap:end@left",
+          "name": "slab/cap:end",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "point": [
+              -0.3663780424013553,
+              2.989921373344298e-17,
+              5.0
+            ]
+          },
+          "status": "repaired",
+          "via": "named"
+        }
+      ],
+      "proposal": {
+        "capture": {
+          "members": [
+            {
+              "geom": {
+                "bbox": [
+                  [
+                    -20.0,
+                    -10.0,
+                    5.0
+                  ],
+                  [
+                    20.0,
+                    10.0,
+                    5.0
+                  ]
+                ],
+                "body_center": [
+                  0.0,
+                  0.0,
+                  2.5
+                ],
+                "carrier": {
+                  "plane": {
+                    "normal": [
+                      0.0,
+                      0.0,
+                      1.0
+                    ],
+                    "offset": 5.0
+                  }
+                },
+                "centroid": [
+                  -0.3663780424013553,
+                  2.989921373344298e-17,
+                  5.0
+                ],
+                "local": [
+                  0.49084054893996615,
+                  0.5,
+                  1.0
+                ],
+                "neighbors": 0,
+                "size": 771.725666117692,
+                "type": "plane"
+              },
+              "key": "e1/cap:end@left",
+              "via": "named"
+            }
+          ]
+        },
+        "kind": "face",
+        "q": {
+          "end": "end",
+          "feature": "e1",
+          "op": "cap"
+        }
+      },
+      "status": "accepted"
+    },
+    "warnings": [
+      {
+        "code": "REF_REPAIRED",
+        "details": {
+          "field": "",
+          "into": "e1/cap:end@left",
+          "key": "e1/cap:end@bottom",
+          "proposal": {
+            "capture": {
+              "members": [
+                {
+                  "geom": {
+                    "bbox": [
+                      [
+                        -20.0,
+                        -10.0,
+                        5.0
+                      ],
+                      [
+                        20.0,
+                        10.0,
+                        5.0
+                      ]
+                    ],
+                    "body_center": [
+                      0.0,
+                      0.0,
+                      2.5
+                    ],
+                    "carrier": {
+                      "plane": {
+                        "normal": [
+                          0.0,
+                          0.0,
+                          1.0
+                        ],
+                        "offset": 5.0
+                      }
+                    },
+                    "centroid": [
+                      -0.3663780424013553,
+                      2.989921373344298e-17,
+                      5.0
+                    ],
+                    "local": [
+                      0.49084054893996615,
+                      0.5,
+                      1.0
+                    ],
+                    "neighbors": 0,
+                    "size": 771.725666117692,
+                    "type": "plane"
+                  },
+                  "key": "e1/cap:end@left",
+                  "via": "named"
+                }
+              ]
+            },
+            "kind": "face",
+            "q": {
+              "end": "end",
+              "feature": "e1",
+              "op": "cap"
+            }
+          }
+        },
+        "message": "e1/cap:end@bottom is gone; e1/cap:end@left has identical geometry and is used (confidence 0.99)",
+        "severity": "info"
+      }
+    ]
+  },
+  {
+    "error": {
+      "code": "REF_UNCERTAIN",
+      "details": {
+        "field": "",
+        "unresolved": [
+          {
+            "candidates": [
+              {
+                "confidence": 0.726034593344896,
+                "key": "e1/cap:end@left",
+                "name": "slab/cap:end",
+                "probe": {
+                  "kind": "face",
+                  "normal": [
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "point": [
+                    -0.3663780424013553,
+                    2.989921373344298e-17,
+                    5.5
+                  ]
+                },
+                "query": {
+                  "end": "end",
+                  "feature": "e1",
+                  "op": "cap"
+                },
+                "reason": "plausible"
+              }
+            ],
+            "key": "e1/cap:end@bottom",
+            "name": "slab/cap:end@bottom",
+            "reason": "name-not-found"
+          }
+        ]
+      },
+      "message": "reference slab/cap:end@bottom has no exact match; 1 candidate(s) need confirmation"
+    },
+    "name": "uncertain-cap",
+    "report": {
+      "code": "REF_UNCERTAIN",
+      "field": "",
+      "members": [
+        {
+          "key": "e1/cap:end@left",
+          "name": "slab/cap:end",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "point": [
+              -0.3663780424013553,
+              2.989921373344298e-17,
+              5.5
+            ]
+          },
+          "status": "exact",
+          "via": "named"
+        }
+      ],
+      "status": "failed",
+      "unresolved": [
+        {
+          "candidates": [
+            {
+              "confidence": 0.726034593344896,
+              "key": "e1/cap:end@left",
+              "name": "slab/cap:end",
+              "probe": {
+                "kind": "face",
+                "normal": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "point": [
+                  -0.3663780424013553,
+                  2.989921373344298e-17,
+                  5.5
+                ]
+              },
+              "query": {
+                "end": "end",
+                "feature": "e1",
+                "op": "cap"
+              },
+              "reason": "plausible"
+            }
+          ],
+          "key": "e1/cap:end@bottom",
+          "name": "slab/cap:end@bottom",
+          "reason": "name-not-found"
+        }
+      ]
+    },
+    "warnings": []
+  },
+  {
+    "error": {
+      "code": "REF_MISSING",
+      "details": {
+        "field": "",
+        "unresolved": [
+          {
+            "candidates": [],
+            "key": "e1/cap:end@bottom",
+            "name": "slab/cap:end@bottom",
+            "reason": "no-plausible-match"
+          }
+        ]
+      },
+      "message": "reference slab/cap:end@bottom resolves to nothing"
+    },
+    "name": "missing-cap",
+    "report": {
+      "code": "REF_MISSING",
+      "field": "",
+      "members": [
+        {
+          "key": "e1/cap:end@left",
+          "name": "slab/cap:end",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "point": [
+              -0.3663780424013553,
+              2.989921373344298e-17,
+              50.0
+            ]
+          },
+          "status": "exact",
+          "via": "named"
+        }
+      ],
+      "status": "failed",
+      "unresolved": [
+        {
+          "candidates": [],
+          "key": "e1/cap:end@bottom",
+          "name": "slab/cap:end@bottom",
+          "reason": "no-plausible-match"
+        }
+      ]
+    },
+    "warnings": []
+  },
+  {
+    "error": {
+      "code": "REF_AMBIGUOUS",
+      "details": {
+        "field": "",
+        "unresolved": [
+          {
+            "candidates": [
+              {
+                "confidence": 0.0,
+                "key": "e1/cap:end@bottom",
+                "name": "slab/cap:end",
+                "probe": {
+                  "kind": "face",
+                  "normal": [
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "point": [
+                    -0.3663780424013553,
+                    2.989921373344298e-17,
+                    5.0
+                  ]
+                },
+                "query": {
+                  "end": "end",
+                  "feature": "e1",
+                  "op": "cap"
+                },
+                "reason": "tie"
+              },
+              {
+                "confidence": 0.0,
+                "key": "e1/cap:start@bottom",
+                "name": "slab/cap:start",
+                "probe": {
+                  "kind": "face",
+                  "normal": [
+                    0.0,
+                    0.0,
+                    -1.0
+                  ],
+                  "point": [
+                    -0.366378042401356,
+                    1.2889480514196053e-16,
+                    0.0
+                  ]
+                },
+                "query": {
+                  "end": "start",
+                  "feature": "e1",
+                  "op": "cap"
+                },
+                "reason": "tie"
+              },
+              {
+                "confidence": 0.0,
+                "key": "e1/side:bottom",
+                "name": "slab/side:bottom",
+                "probe": {
+                  "kind": "face",
+                  "normal": [
+                    0.0,
+                    -1.0,
+                    0.0
+                  ],
+                  "point": [
+                    0.0,
+                    -10.0,
+                    2.5
+                  ]
+                },
+                "query": {
+                  "curve": "bottom",
+                  "feature": "e1",
+                  "op": "side"
+                },
+                "reason": "tie"
+              },
+              {
+                "confidence": 0.0,
+                "key": "e1/side:left",
+                "name": "slab/side:left",
+                "probe": {
+                  "kind": "face",
+                  "normal": [
+                    -1.0,
+                    0.0,
+                    0.0
+                  ],
+                  "point": [
+                    -20.0,
+                    0.0,
+                    2.5
+                  ]
+                },
+                "query": {
+                  "curve": "left",
+                  "feature": "e1",
+                  "op": "side"
+                },
+                "reason": "tie"
+              },
+              {
+                "confidence": 0.0,
+                "key": "e1/side:right",
+                "name": "slab/side:right",
+                "probe": {
+                  "kind": "face",
+                  "normal": [
+                    1.0,
+                    0.0,
+                    0.0
+                  ],
+                  "point": [
+                    20.0,
+                    0.0,
+                    2.5
+                  ]
+                },
+                "query": {
+                  "curve": "right",
+                  "feature": "e1",
+                  "op": "side"
+                },
+                "reason": "tie"
+              },
+              {
+                "confidence": 0.0,
+                "key": "e1/side:top",
+                "name": "slab/side:top",
+                "probe": {
+                  "kind": "face",
+                  "normal": [
+                    0.0,
+                    1.0,
+                    0.0
+                  ],
+                  "point": [
+                    0.0,
+                    10.0,
+                    2.5
+                  ]
+                },
+                "query": {
+                  "curve": "top",
+                  "feature": "e1",
+                  "op": "side"
+                },
+                "reason": "tie"
+              }
+            ],
+            "key": "",
+            "name": "",
+            "reason": "tie"
+          }
+        ]
+      },
+      "message": "reference is ambiguous (6 candidates)"
+    },
+    "name": "ambiguous-planes",
+    "report": {
+      "code": "REF_AMBIGUOUS",
+      "field": "",
+      "members": [
+        {
+          "key": "e1/cap:end@bottom",
+          "name": "slab/cap:end",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "point": [
+              -0.3663780424013553,
+              2.989921373344298e-17,
+              5.0
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/cap:start@bottom",
+          "name": "slab/cap:start",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              0.0,
+              -1.0
+            ],
+            "point": [
+              -0.366378042401356,
+              1.2889480514196053e-16,
+              0.0
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:bottom",
+          "name": "slab/side:bottom",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              -1.0,
+              0.0
+            ],
+            "point": [
+              0.0,
+              -10.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:left",
+          "name": "slab/side:left",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              -1.0,
+              0.0,
+              0.0
+            ],
+            "point": [
+              -20.0,
+              0.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:right",
+          "name": "slab/side:right",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "point": [
+              20.0,
+              0.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:top",
+          "name": "slab/side:top",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "point": [
+              0.0,
+              10.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        }
+      ],
+      "status": "failed",
+      "unresolved": [
+        {
+          "candidates": [
+            {
+              "confidence": 0.0,
+              "key": "e1/cap:end@bottom",
+              "name": "slab/cap:end",
+              "probe": {
+                "kind": "face",
+                "normal": [
+                  0.0,
+                  0.0,
+                  1.0
+                ],
+                "point": [
+                  -0.3663780424013553,
+                  2.989921373344298e-17,
+                  5.0
+                ]
+              },
+              "query": {
+                "end": "end",
+                "feature": "e1",
+                "op": "cap"
+              },
+              "reason": "tie"
+            },
+            {
+              "confidence": 0.0,
+              "key": "e1/cap:start@bottom",
+              "name": "slab/cap:start",
+              "probe": {
+                "kind": "face",
+                "normal": [
+                  0.0,
+                  0.0,
+                  -1.0
+                ],
+                "point": [
+                  -0.366378042401356,
+                  1.2889480514196053e-16,
+                  0.0
+                ]
+              },
+              "query": {
+                "end": "start",
+                "feature": "e1",
+                "op": "cap"
+              },
+              "reason": "tie"
+            },
+            {
+              "confidence": 0.0,
+              "key": "e1/side:bottom",
+              "name": "slab/side:bottom",
+              "probe": {
+                "kind": "face",
+                "normal": [
+                  0.0,
+                  -1.0,
+                  0.0
+                ],
+                "point": [
+                  0.0,
+                  -10.0,
+                  2.5
+                ]
+              },
+              "query": {
+                "curve": "bottom",
+                "feature": "e1",
+                "op": "side"
+              },
+              "reason": "tie"
+            },
+            {
+              "confidence": 0.0,
+              "key": "e1/side:left",
+              "name": "slab/side:left",
+              "probe": {
+                "kind": "face",
+                "normal": [
+                  -1.0,
+                  0.0,
+                  0.0
+                ],
+                "point": [
+                  -20.0,
+                  0.0,
+                  2.5
+                ]
+              },
+              "query": {
+                "curve": "left",
+                "feature": "e1",
+                "op": "side"
+              },
+              "reason": "tie"
+            },
+            {
+              "confidence": 0.0,
+              "key": "e1/side:right",
+              "name": "slab/side:right",
+              "probe": {
+                "kind": "face",
+                "normal": [
+                  1.0,
+                  0.0,
+                  0.0
+                ],
+                "point": [
+                  20.0,
+                  0.0,
+                  2.5
+                ]
+              },
+              "query": {
+                "curve": "right",
+                "feature": "e1",
+                "op": "side"
+              },
+              "reason": "tie"
+            },
+            {
+              "confidence": 0.0,
+              "key": "e1/side:top",
+              "name": "slab/side:top",
+              "probe": {
+                "kind": "face",
+                "normal": [
+                  0.0,
+                  1.0,
+                  0.0
+                ],
+                "point": [
+                  0.0,
+                  10.0,
+                  2.5
+                ]
+              },
+              "query": {
+                "curve": "top",
+                "feature": "e1",
+                "op": "side"
+              },
+              "reason": "tie"
+            }
+          ],
+          "key": "",
+          "name": "",
+          "reason": "tie"
+        }
+      ]
+    },
+    "warnings": []
+  },
+  {
+    "error": {
+      "code": "REF_CARDINALITY",
+      "details": {
+        "expected": 3,
+        "field": "",
+        "found": 6
+      },
+      "message": "reference resolves to 6 entities"
+    },
+    "name": "cardinality-planes",
+    "report": {
+      "code": "REF_CARDINALITY",
+      "field": "",
+      "members": [
+        {
+          "key": "e1/cap:end@bottom",
+          "name": "slab/cap:end",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "point": [
+              -0.3663780424013553,
+              2.989921373344298e-17,
+              5.0
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/cap:start@bottom",
+          "name": "slab/cap:start",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              0.0,
+              -1.0
+            ],
+            "point": [
+              -0.366378042401356,
+              1.2889480514196053e-16,
+              0.0
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:bottom",
+          "name": "slab/side:bottom",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              -1.0,
+              0.0
+            ],
+            "point": [
+              0.0,
+              -10.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:left",
+          "name": "slab/side:left",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              -1.0,
+              0.0,
+              0.0
+            ],
+            "point": [
+              -20.0,
+              0.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:right",
+          "name": "slab/side:right",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "point": [
+              20.0,
+              0.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:top",
+          "name": "slab/side:top",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "point": [
+              0.0,
+              10.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        }
+      ],
+      "status": "failed"
+    },
+    "warnings": []
+  },
+  {
+    "error": {
+      "code": "REF_SPLIT",
+      "details": {
+        "field": "",
+        "unresolved": [
+          {
+            "candidates": [
+              {
+                "confidence": 0.0,
+                "key": "e1/side:bottom",
+                "name": "slab/side:bottom#1",
+                "probe": {
+                  "kind": "face",
+                  "normal": [
+                    0.0,
+                    -1.0,
+                    0.0
+                  ],
+                  "point": [
+                    10.0,
+                    -10.0,
+                    2.5
+                  ]
+                },
+                "query": {
+                  "dir": "+X",
+                  "of": {
+                    "curve": "bottom",
+                    "feature": "e1",
+                    "op": "side"
+                  },
+                  "op": "extreme",
+                  "which": "max"
+                },
+                "reason": "split-piece"
+              },
+              {
+                "confidence": 0.0,
+                "key": "e1/side:bottom",
+                "name": "slab/side:bottom#0",
+                "probe": {
+                  "kind": "face",
+                  "normal": [
+                    0.0,
+                    -1.0,
+                    0.0
+                  ],
+                  "point": [
+                    -10.0,
+                    -10.0,
+                    2.5
+                  ]
+                },
+                "query": {
+                  "dir": "-X",
+                  "of": {
+                    "curve": "bottom",
+                    "feature": "e1",
+                    "op": "side"
+                  },
+                  "op": "extreme",
+                  "which": "max"
+                },
+                "reason": "split-piece"
+              }
+            ],
+            "key": "e1/side:bottom",
+            "name": "slab/side:bottom",
+            "reason": "split"
+          }
+        ]
+      },
+      "message": "reference slab/side:bottom was split into pieces"
+    },
+    "name": "split-one",
+    "report": {
+      "code": "REF_SPLIT",
+      "field": "",
+      "members": [],
+      "status": "failed",
+      "unresolved": [
+        {
+          "candidates": [
+            {
+              "confidence": 0.0,
+              "key": "e1/side:bottom",
+              "name": "slab/side:bottom#1",
+              "probe": {
+                "kind": "face",
+                "normal": [
+                  0.0,
+                  -1.0,
+                  0.0
+                ],
+                "point": [
+                  10.0,
+                  -10.0,
+                  2.5
+                ]
+              },
+              "query": {
+                "dir": "+X",
+                "of": {
+                  "curve": "bottom",
+                  "feature": "e1",
+                  "op": "side"
+                },
+                "op": "extreme",
+                "which": "max"
+              },
+              "reason": "split-piece"
+            },
+            {
+              "confidence": 0.0,
+              "key": "e1/side:bottom",
+              "name": "slab/side:bottom#0",
+              "probe": {
+                "kind": "face",
+                "normal": [
+                  0.0,
+                  -1.0,
+                  0.0
+                ],
+                "point": [
+                  -10.0,
+                  -10.0,
+                  2.5
+                ]
+              },
+              "query": {
+                "dir": "-X",
+                "of": {
+                  "curve": "bottom",
+                  "feature": "e1",
+                  "op": "side"
+                },
+                "op": "extreme",
+                "which": "max"
+              },
+              "reason": "split-piece"
+            }
+          ],
+          "key": "e1/side:bottom",
+          "name": "slab/side:bottom",
+          "reason": "split"
+        }
+      ]
+    },
+    "warnings": []
+  },
+  {
+    "error": null,
+    "name": "split-accepted",
+    "report": {
+      "field": "",
+      "members": [
+        {
+          "key": "e1/side:bottom",
+          "name": "slab/side:bottom#0",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              -1.0,
+              0.0
+            ],
+            "point": [
+              -10.0,
+              -10.0,
+              2.5
+            ]
+          },
+          "status": "split",
+          "via": "named"
+        },
+        {
+          "key": "e1/side:bottom",
+          "name": "slab/side:bottom#1",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              -1.0,
+              0.0
+            ],
+            "point": [
+              10.0,
+              -10.0,
+              2.5
+            ]
+          },
+          "status": "split",
+          "via": "named"
+        }
+      ],
+      "status": "accepted"
+    },
+    "warnings": [
+      {
+        "code": "REF_SPLIT_ACCEPTED",
+        "details": {
+          "field": "",
+          "key": "e1/side:bottom",
+          "pieces": [
+            {
+              "key": "e1/side:bottom",
+              "name": "slab/side:bottom#0",
+              "probe": {
+                "kind": "face",
+                "normal": [
+                  0.0,
+                  -1.0,
+                  0.0
+                ],
+                "point": [
+                  -10.0,
+                  -10.0,
+                  2.5
+                ]
+              }
+            },
+            {
+              "key": "e1/side:bottom",
+              "name": "slab/side:bottom#1",
+              "probe": {
+                "kind": "face",
+                "normal": [
+                  0.0,
+                  -1.0,
+                  0.0
+                ],
+                "point": [
+                  10.0,
+                  -10.0,
+                  2.5
+                ]
+              }
+            }
+          ]
+        },
+        "message": "e1/side:bottom was split into 2 pieces; all are used",
+        "severity": "info"
+      }
+    ]
+  },
+  {
+    "error": null,
+    "name": "set-changed",
+    "report": {
+      "added": [
+        "e1/side:ring2"
+      ],
+      "field": "",
+      "members": [
+        {
+          "key": "e1/side:bottom",
+          "name": "slab/side:bottom",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              -1.0,
+              0.0
+            ],
+            "point": [
+              0.0,
+              -10.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:left",
+          "name": "slab/side:left",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              -1.0,
+              0.0,
+              0.0
+            ],
+            "point": [
+              -20.0,
+              0.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:right",
+          "name": "slab/side:right",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "point": [
+              20.0,
+              0.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:ring",
+          "name": "slab/side:ring",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              1.8369701987210297e-16,
+              1.0,
+              0.0
+            ],
+            "point": [
+              10.0,
+              -3.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:ring2",
+          "name": "slab/side:ring2",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              -6.123233995736766e-17,
+              -1.0,
+              0.0
+            ],
+            "point": [
+              -10.0,
+              2.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e1/side:top",
+          "name": "slab/side:top",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "point": [
+              0.0,
+              10.0,
+              2.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        }
+      ],
+      "proposal": {
+        "capture": {
+          "members": [
+            {
+              "geom": {
+                "bbox": [
+                  [
+                    -20.0,
+                    -10.0,
+                    0.0
+                  ],
+                  [
+                    20.0,
+                    -10.0,
+                    5.0
+                  ]
+                ],
+                "body_center": [
+                  0.0,
+                  0.0,
+                  2.5
+                ],
+                "carrier": {
+                  "plane": {
+                    "normal": [
+                      0.0,
+                      -1.0,
+                      0.0
+                    ],
+                    "offset": 10.0
+                  }
+                },
+                "centroid": [
+                  1.1368683772161601e-15,
+                  -10.0,
+                  2.5
+                ],
+                "local": [
+                  0.5,
+                  0.0,
+                  0.5
+                ],
+                "neighbors": 0,
+                "size": 200.00000000000003,
+                "type": "plane"
+              },
+              "key": "e1/side:bottom",
+              "via": "broad"
+            },
+            {
+              "geom": {
+                "bbox": [
+                  [
+                    -20.0,
+                    -10.0,
+                    0.0
+                  ],
+                  [
+                    -20.0,
+                    10.0,
+                    5.0
+                  ]
+                ],
+                "body_center": [
+                  0.0,
+                  0.0,
+                  2.5
+                ],
+                "carrier": {
+                  "plane": {
+                    "normal": [
+                      -1.0,
+                      0.0,
+                      0.0
+                    ],
+                    "offset": 20.0
+                  }
+                },
+                "centroid": [
+                  -20.0,
+                  -5.684341886080801e-16,
+                  2.5
+                ],
+                "local": [
+                  0.0,
+                  0.5,
+                  0.5
+                ],
+                "neighbors": 0,
+                "size": 100.00000000000001,
+                "type": "plane"
+              },
+              "key": "e1/side:left",
+              "via": "broad"
+            },
+            {
+              "geom": {
+                "bbox": [
+                  [
+                    20.0,
+                    -10.0,
+                    0.0
+                  ],
+                  [
+                    20.0,
+                    10.0,
+                    5.0
+                  ]
+                ],
+                "body_center": [
+                  0.0,
+                  0.0,
+                  2.5
+                ],
+                "carrier": {
+                  "plane": {
+                    "normal": [
+                      1.0,
+                      0.0,
+                      0.0
+                    ],
+                    "offset": 20.0
+                  }
+                },
+                "centroid": [
+                  20.0,
+                  5.684341886080801e-16,
+                  2.5
+                ],
+                "local": [
+                  1.0,
+                  0.5,
+                  0.5
+                ],
+                "neighbors": 0,
+                "size": 100.00000000000001,
+                "type": "plane"
+              },
+              "key": "e1/side:right",
+              "via": "broad"
+            },
+            {
+              "geom": {
+                "bbox": [
+                  [
+                    7.0,
+                    -3.0,
+                    0.0
+                  ],
+                  [
+                    13.0,
+                    3.0,
+                    5.0
+                  ]
+                ],
+                "body_center": [
+                  0.0,
+                  0.0,
+                  2.5
+                ],
+                "carrier": {
+                  "cylinder": {
+                    "axis": [
+                      0.0,
+                      0.0,
+                      1.0
+                    ],
+                    "point": [
+                      10.0,
+                      0.0,
+                      0.0
+                    ],
+                    "radius": 3.0
+                  }
+                },
+                "centroid": [
+                  10.0,
+                  -5.653353119356558e-16,
+                  2.5
+                ],
+                "local": [
+                  0.75,
+                  0.5,
+                  0.5
+                ],
+                "neighbors": 0,
+                "size": 94.24777960769401,
+                "type": "cylinder"
+              },
+              "key": "e1/side:ring",
+              "via": "broad"
+            },
+            {
+              "geom": {
+                "bbox": [
+                  [
+                    -12.0,
+                    -2.0,
+                    0.0
+                  ],
+                  [
+                    -8.0,
+                    2.0,
+                    5.0
+                  ]
+                ],
+                "body_center": [
+                  0.0,
+                  0.0,
+                  2.5
+                ],
+                "carrier": {
+                  "cylinder": {
+                    "axis": [
+                      0.0,
+                      0.0,
+                      1.0
+                    ],
+                    "point": [
+                      -10.0,
+                      0.0,
+                      0.0
+                    ],
+                    "radius": 2.0
+                  }
+                },
+                "centroid": [
+                  -10.0,
+                  8.20862476200253e-17,
+                  2.5
+                ],
+                "local": [
+                  0.25,
+                  0.5,
+                  0.5
+                ],
+                "neighbors": 0,
+                "size": 62.83185307179585,
+                "type": "cylinder"
+              },
+              "key": "e1/side:ring2",
+              "via": "broad"
+            },
+            {
+              "geom": {
+                "bbox": [
+                  [
+                    -20.0,
+                    10.0,
+                    0.0
+                  ],
+                  [
+                    20.0,
+                    10.0,
+                    5.0
+                  ]
+                ],
+                "body_center": [
+                  0.0,
+                  0.0,
+                  2.5
+                ],
+                "carrier": {
+                  "plane": {
+                    "normal": [
+                      0.0,
+                      1.0,
+                      0.0
+                    ],
+                    "offset": 10.0
+                  }
+                },
+                "centroid": [
+                  -1.1368683772161601e-15,
+                  10.0,
+                  2.5
+                ],
+                "local": [
+                  0.5,
+                  1.0,
+                  0.5
+                ],
+                "neighbors": 0,
+                "size": 200.00000000000003,
+                "type": "plane"
+              },
+              "key": "e1/side:top",
+              "via": "broad"
+            }
+          ]
+        },
+        "card": "some",
+        "kind": "face",
+        "q": {
+          "feature": "e1",
+          "op": "sides"
+        }
+      },
+      "status": "accepted"
+    },
+    "warnings": [
+      {
+        "code": "REF_SET_CHANGED",
+        "details": {
+          "added": [
+            "e1/side:ring2"
+          ],
+          "field": "",
+          "proposal": {
+            "capture": {
+              "members": [
+                {
+                  "geom": {
+                    "bbox": [
+                      [
+                        -20.0,
+                        -10.0,
+                        0.0
+                      ],
+                      [
+                        20.0,
+                        -10.0,
+                        5.0
+                      ]
+                    ],
+                    "body_center": [
+                      0.0,
+                      0.0,
+                      2.5
+                    ],
+                    "carrier": {
+                      "plane": {
+                        "normal": [
+                          0.0,
+                          -1.0,
+                          0.0
+                        ],
+                        "offset": 10.0
+                      }
+                    },
+                    "centroid": [
+                      1.1368683772161601e-15,
+                      -10.0,
+                      2.5
+                    ],
+                    "local": [
+                      0.5,
+                      0.0,
+                      0.5
+                    ],
+                    "neighbors": 0,
+                    "size": 200.00000000000003,
+                    "type": "plane"
+                  },
+                  "key": "e1/side:bottom",
+                  "via": "broad"
+                },
+                {
+                  "geom": {
+                    "bbox": [
+                      [
+                        -20.0,
+                        -10.0,
+                        0.0
+                      ],
+                      [
+                        -20.0,
+                        10.0,
+                        5.0
+                      ]
+                    ],
+                    "body_center": [
+                      0.0,
+                      0.0,
+                      2.5
+                    ],
+                    "carrier": {
+                      "plane": {
+                        "normal": [
+                          -1.0,
+                          0.0,
+                          0.0
+                        ],
+                        "offset": 20.0
+                      }
+                    },
+                    "centroid": [
+                      -20.0,
+                      -5.684341886080801e-16,
+                      2.5
+                    ],
+                    "local": [
+                      0.0,
+                      0.5,
+                      0.5
+                    ],
+                    "neighbors": 0,
+                    "size": 100.00000000000001,
+                    "type": "plane"
+                  },
+                  "key": "e1/side:left",
+                  "via": "broad"
+                },
+                {
+                  "geom": {
+                    "bbox": [
+                      [
+                        20.0,
+                        -10.0,
+                        0.0
+                      ],
+                      [
+                        20.0,
+                        10.0,
+                        5.0
+                      ]
+                    ],
+                    "body_center": [
+                      0.0,
+                      0.0,
+                      2.5
+                    ],
+                    "carrier": {
+                      "plane": {
+                        "normal": [
+                          1.0,
+                          0.0,
+                          0.0
+                        ],
+                        "offset": 20.0
+                      }
+                    },
+                    "centroid": [
+                      20.0,
+                      5.684341886080801e-16,
+                      2.5
+                    ],
+                    "local": [
+                      1.0,
+                      0.5,
+                      0.5
+                    ],
+                    "neighbors": 0,
+                    "size": 100.00000000000001,
+                    "type": "plane"
+                  },
+                  "key": "e1/side:right",
+                  "via": "broad"
+                },
+                {
+                  "geom": {
+                    "bbox": [
+                      [
+                        7.0,
+                        -3.0,
+                        0.0
+                      ],
+                      [
+                        13.0,
+                        3.0,
+                        5.0
+                      ]
+                    ],
+                    "body_center": [
+                      0.0,
+                      0.0,
+                      2.5
+                    ],
+                    "carrier": {
+                      "cylinder": {
+                        "axis": [
+                          0.0,
+                          0.0,
+                          1.0
+                        ],
+                        "point": [
+                          10.0,
+                          0.0,
+                          0.0
+                        ],
+                        "radius": 3.0
+                      }
+                    },
+                    "centroid": [
+                      10.0,
+                      -5.653353119356558e-16,
+                      2.5
+                    ],
+                    "local": [
+                      0.75,
+                      0.5,
+                      0.5
+                    ],
+                    "neighbors": 0,
+                    "size": 94.24777960769401,
+                    "type": "cylinder"
+                  },
+                  "key": "e1/side:ring",
+                  "via": "broad"
+                },
+                {
+                  "geom": {
+                    "bbox": [
+                      [
+                        -12.0,
+                        -2.0,
+                        0.0
+                      ],
+                      [
+                        -8.0,
+                        2.0,
+                        5.0
+                      ]
+                    ],
+                    "body_center": [
+                      0.0,
+                      0.0,
+                      2.5
+                    ],
+                    "carrier": {
+                      "cylinder": {
+                        "axis": [
+                          0.0,
+                          0.0,
+                          1.0
+                        ],
+                        "point": [
+                          -10.0,
+                          0.0,
+                          0.0
+                        ],
+                        "radius": 2.0
+                      }
+                    },
+                    "centroid": [
+                      -10.0,
+                      8.20862476200253e-17,
+                      2.5
+                    ],
+                    "local": [
+                      0.25,
+                      0.5,
+                      0.5
+                    ],
+                    "neighbors": 0,
+                    "size": 62.83185307179585,
+                    "type": "cylinder"
+                  },
+                  "key": "e1/side:ring2",
+                  "via": "broad"
+                },
+                {
+                  "geom": {
+                    "bbox": [
+                      [
+                        -20.0,
+                        10.0,
+                        0.0
+                      ],
+                      [
+                        20.0,
+                        10.0,
+                        5.0
+                      ]
+                    ],
+                    "body_center": [
+                      0.0,
+                      0.0,
+                      2.5
+                    ],
+                    "carrier": {
+                      "plane": {
+                        "normal": [
+                          0.0,
+                          1.0,
+                          0.0
+                        ],
+                        "offset": 10.0
+                      }
+                    },
+                    "centroid": [
+                      -1.1368683772161601e-15,
+                      10.0,
+                      2.5
+                    ],
+                    "local": [
+                      0.5,
+                      1.0,
+                      0.5
+                    ],
+                    "neighbors": 0,
+                    "size": 200.00000000000003,
+                    "type": "plane"
+                  },
+                  "key": "e1/side:top",
+                  "via": "broad"
+                }
+              ]
+            },
+            "card": "some",
+            "kind": "face",
+            "q": {
+              "feature": "e1",
+              "op": "sides"
+            }
+          },
+          "removed": []
+        },
+        "message": "1 member(s) added and 0 removed since the reference was captured",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "error": {
+      "code": "QUERY_UNKNOWN_CURVE",
+      "details": {
+        "curve": "bottom",
+        "feature": "e1",
+        "similar": []
+      },
+      "message": "\"bottom\" is not a profile curve of the sketch consumed by \"e1\""
+    },
+    "name": "rejected-unknown-curve",
+    "report": {
+      "code": "QUERY_UNKNOWN_CURVE",
+      "field": "",
+      "members": [],
+      "status": "failed",
+      "unresolved": [
+        {
+          "candidates": [
+            {
+              "confidence": 0.0,
+              "key": "e1/side:b_a",
+              "name": "slab/side:b_a",
+              "probe": {
+                "kind": "face",
+                "normal": [
+                  0.0,
+                  -1.0,
+                  0.0
+                ],
+                "point": [
+                  -10.0,
+                  -10.0,
+                  2.5
+                ]
+              },
+              "query": {
+                "curve": "b_a",
+                "feature": "e1",
+                "op": "side"
+              },
+              "reason": "split-piece"
+            },
+            {
+              "confidence": 0.0,
+              "key": "e1/side:b_b",
+              "name": "slab/side:b_b",
+              "probe": {
+                "kind": "face",
+                "normal": [
+                  0.0,
+                  -1.0,
+                  0.0
+                ],
+                "point": [
+                  10.0,
+                  -10.0,
+                  2.5
+                ]
+              },
+              "query": {
+                "curve": "b_b",
+                "feature": "e1",
+                "op": "side"
+              },
+              "reason": "split-piece"
+            }
+          ],
+          "key": "e1/side:bottom",
+          "name": "slab/side:bottom",
+          "reason": "split"
+        }
+      ]
+    },
+    "warnings": []
+  },
+  {
+    "error": null,
+    "name": "junction-edge",
+    "report": {
+      "field": "",
+      "members": [
+        {
+          "key": "e2/edge:{e2/side:bow|e2/side:flat}@bow.end",
+          "name": "dee/edge:{dee/side:bow|dee/side:flat}@bow.end",
+          "probe": {
+            "kind": "edge",
+            "point": [
+              3.0,
+              -4.0,
+              2.0
+            ]
+          },
+          "status": "exact",
+          "via": "named"
+        }
+      ],
+      "status": "exact"
+    },
+    "warnings": []
+  },
+  {
+    "error": {
+      "code": "REF_AMBIGUOUS",
+      "details": {
+        "field": "",
+        "unresolved": [
+          {
+            "candidates": [
+              {
+                "confidence": 0.0,
+                "key": "e2/edge:{e2/side:bow|e2/side:flat}@bow.start",
+                "name": "dee/edge:{dee/side:bow|dee/side:flat}@bow.start",
+                "probe": {
+                  "kind": "edge",
+                  "point": [
+                    3.0,
+                    -4.0,
+                    2.0
+                  ]
+                },
+                "query": {
+                  "curve": "bow",
+                  "end": "start",
+                  "feature": "e2",
+                  "op": "edge_at"
+                },
+                "reason": "identical"
+              },
+              {
+                "confidence": 0.0,
+                "key": "e2/edge:{e2/side:bow|e2/side:flat}@bow.end",
+                "name": "dee/edge:{dee/side:bow|dee/side:flat}@bow.end",
+                "probe": {
+                  "kind": "edge",
+                  "point": [
+                    3.0,
+                    4.0,
+                    2.0
+                  ]
+                },
+                "query": {
+                  "curve": "bow",
+                  "end": "end",
+                  "feature": "e2",
+                  "op": "edge_at"
+                },
+                "reason": "tie"
+              }
+            ],
+            "key": "e2/edge:{e2/side:bow|e2/side:flat}@bow.end",
+            "name": "dee/edge:{dee/side:bow|dee/side:flat}@bow.end",
+            "reason": "tie"
+          }
+        ]
+      },
+      "message": "reference dee/edge:{dee/side:bow|dee/side:flat}@bow.end is ambiguous (2 candidates)"
+    },
+    "name": "junction-swap",
+    "report": {
+      "code": "REF_AMBIGUOUS",
+      "field": "",
+      "members": [],
+      "status": "failed",
+      "unresolved": [
+        {
+          "candidates": [
+            {
+              "confidence": 0.0,
+              "key": "e2/edge:{e2/side:bow|e2/side:flat}@bow.start",
+              "name": "dee/edge:{dee/side:bow|dee/side:flat}@bow.start",
+              "probe": {
+                "kind": "edge",
+                "point": [
+                  3.0,
+                  -4.0,
+                  2.0
+                ]
+              },
+              "query": {
+                "curve": "bow",
+                "end": "start",
+                "feature": "e2",
+                "op": "edge_at"
+              },
+              "reason": "identical"
+            },
+            {
+              "confidence": 0.0,
+              "key": "e2/edge:{e2/side:bow|e2/side:flat}@bow.end",
+              "name": "dee/edge:{dee/side:bow|dee/side:flat}@bow.end",
+              "probe": {
+                "kind": "edge",
+                "point": [
+                  3.0,
+                  4.0,
+                  2.0
+                ]
+              },
+              "query": {
+                "curve": "bow",
+                "end": "end",
+                "feature": "e2",
+                "op": "edge_at"
+              },
+              "reason": "tie"
+            }
+          ],
+          "key": "e2/edge:{e2/side:bow|e2/side:flat}@bow.end",
+          "name": "dee/edge:{dee/side:bow|dee/side:flat}@bow.end",
+          "reason": "tie"
+        }
+      ]
+    },
+    "warnings": []
+  },
+  {
+    "error": null,
+    "name": "merged",
+    "report": {
+      "field": "",
+      "members": [
+        {
+          "key": "e1/side:rightm",
+          "name": "slab/side:rightm",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "point": [
+              20.0,
+              0.0,
+              2.5
+            ]
+          },
+          "status": "merged",
+          "via": "named"
+        }
+      ],
+      "status": "accepted"
+    },
+    "warnings": [
+      {
+        "code": "REF_MERGED",
+        "details": {
+          "field": "",
+          "into": "e1/side:rightm",
+          "key": "e1/side:right"
+        },
+        "message": "e1/side:right was merged into e1/side:rightm",
+        "severity": "info"
+      }
+    ]
+  },
+  {
+    "error": null,
+    "name": "revolve-endcap",
+    "report": {
+      "field": "",
+      "members": [
+        {
+          "key": "r1/endcap:end@a",
+          "name": "cone/endcap:end",
+          "probe": {
+            "kind": "face",
+            "normal": [
+              0.0,
+              -1.0,
+              0.0
+            ],
+            "point": [
+              -1.3333333333333335,
+              0.0,
+              2.0
+            ]
+          },
+          "status": "exact",
+          "via": "named"
+        }
+      ],
+      "status": "exact"
+    },
+    "warnings": []
+  },
+  {
+    "error": null,
+    "name": "revolve-body",
+    "report": {
+      "field": "",
+      "members": [
+        {
+          "key": "r1/body:a",
+          "name": "cone/body:a",
+          "probe": {
+            "kind": "body",
+            "normal": [
+              0.0,
+              -1.0,
+              0.0
+            ],
+            "point": [
+              -1.3333333333333335,
+              0.0,
+              2.0
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        }
+      ],
+      "status": "exact"
+    },
+    "warnings": []
+  },
+  {
+    "error": null,
+    "name": "smooth-edges",
+    "report": {
+      "field": "",
+      "members": [
+        {
+          "key": "e4/edge:{e4/side:al|e4/side:hi}@al.start",
+          "name": "stad/edge:{stad/side:al|stad/side:hi}",
+          "probe": {
+            "kind": "edge",
+            "point": [
+              0.0,
+              4.0,
+              1.0
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e4/edge:{e4/side:al|e4/side:lo}@al.end",
+          "name": "stad/edge:{stad/side:al|stad/side:lo}",
+          "probe": {
+            "kind": "edge",
+            "point": [
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e4/edge:{e4/side:ar|e4/side:hi}@ar.end",
+          "name": "stad/edge:{stad/side:ar|stad/side:hi}",
+          "probe": {
+            "kind": "edge",
+            "point": [
+              10.0,
+              4.0,
+              1.0
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e4/edge:{e4/side:ar|e4/side:lo}@ar.start",
+          "name": "stad/edge:{stad/side:ar|stad/side:lo}",
+          "probe": {
+            "kind": "edge",
+            "point": [
+              10.0,
+              0.0,
+              1.0
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        }
+      ],
+      "status": "exact"
+    },
+    "warnings": []
+  },
+  {
+    "error": null,
+    "name": "concave-edge",
+    "report": {
+      "field": "",
+      "members": [
+        {
+          "key": "e3/edge:{e3/side:l3|e3/side:l4}@l3.end",
+          "name": "ell/edge:{ell/side:l3|ell/side:l4}",
+          "probe": {
+            "kind": "edge",
+            "point": [
+              4.0,
+              4.0,
+              1.5
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        }
+      ],
+      "status": "exact"
+    },
+    "warnings": []
+  },
+  {
+    "error": null,
+    "name": "junction-vertices",
+    "report": {
+      "field": "",
+      "members": [
+        {
+          "key": "e3/vertex:{e3/cap:end@l1|e3/side:l3|e3/side:l4}@l3.end",
+          "name": "ell/vertex:{ell/cap:end|ell/side:l3|ell/side:l4}",
+          "probe": {
+            "kind": "vertex",
+            "point": [
+              4.0,
+              4.0,
+              3.0
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        },
+        {
+          "key": "e3/vertex:{e3/cap:start@l1|e3/side:l3|e3/side:l4}@l3.end",
+          "name": "ell/vertex:{ell/cap:start|ell/side:l3|ell/side:l4}",
+          "probe": {
+            "kind": "vertex",
+            "point": [
+              4.0,
+              4.0,
+              0.0
+            ]
+          },
+          "status": "exact",
+          "via": "broad"
+        }
+      ],
+      "status": "exact"
+    },
+    "warnings": []
+  }
+]

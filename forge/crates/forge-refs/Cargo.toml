@@ -1,0 +1,27 @@
+[package]
+name = "forge-refs"
+description = "Forge IR v1 references: provenance keys, the query evaluator, the resolver (SPEC-v1 §5.7), fingerprints, probes, plane and axis references (interface I3)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MPL-2.0"
+publish.workspace = true
+
+[dependencies]
+forge-core.workspace = true
+forge-ir.workspace = true
+forge-check.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+forge-ops.workspace = true
+# Not `proptest.workspace = true`: the default `fork`/`timeout` features pull in rusty-fork →
+# wait-timeout, which has no WASI implementation, and the W3 determinism check runs this
+# crate's tests on wasm32-wasip1 (`--test golden`, and the whole suite). No test uses `fork`
+# or `timeout`. Revert to the workspace entry once forge/Cargo.toml drops those features
+# (the audit-M4 note in .github/workflows/ci.yml).
+proptest = { version = "1", default-features = false, features = ["std", "bit-set"] }
+
+[lints]
+workspace = true
