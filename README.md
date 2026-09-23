@@ -1,6 +1,8 @@
-# AI-Native 3D CAD (working title)
+# Bozzetto
 
-An AI-native, cross-platform 3D CAD application. You chat with an in-app agent that builds sketches, parts, assemblies and drawings using the app's own tools, with professional engineering guidance. You can also model everything by hand or tweak whatever the agent made.
+*An AI-native 3D CAD app. In sculpture, a **bozzetto** is the quick preparatory model an artist shapes to capture an idea before the final work. Here you describe the idea, and the agent shapes a precise, parametric model you can keep refining by hand or by chat.*
+
+It runs on desktop first (macOS, Windows, Linux), then web and iPad. You chat with an in-app agent that builds sketches, parts, assemblies and drawings using the app's own tools, with professional engineering guidance. You can also model everything by hand or tweak whatever the agent made.
 
 It is built on **Forge**, our own AI-native geometry kernel, written in Rust and compiled to native code and WebAssembly. Forge has these properties:
 
@@ -12,7 +14,7 @@ It is built on **Forge**, our own AI-native geometry kernel, written in Rust and
 
 > **Status:** Phase 0 (foundations and spikes). Nothing here is usable yet. See [docs/ROADMAP.md](docs/ROADMAP.md).
 >
-> **Names are working codenames.** "Forge" (the kernel) and "aicad" (the CLI and package scope) are placeholders until a naming and trademark review.
+> **Naming.** **Bozzetto** is the product name. As of 2026-09-24 a web search found no software or CAD product using it, and it is free on GitHub, npm and crates.io; a formal trademark search is still needed before launch. "Forge" (the kernel) and "aicad" (the CLI and package scope) are internal codenames.
 
 ## Repository map
 

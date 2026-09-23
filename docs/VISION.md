@@ -1,6 +1,6 @@
 # Vision
 
-> Working title. "Forge" and "aicad" are codenames; see the [naming note](#naming-note).
+> Product name: **Bozzetto**. "Forge" and "aicad" are internal codenames; see the [naming note](#naming-note).
 
 ## The product in one paragraph
 
@@ -97,7 +97,19 @@ It does **not** mean a chatbot bolted onto a CAD app. Concretely:
 
 ## Naming note
 
-"Forge" and "aicad" are working codenames pending a naming and trademark review:
+**Bozzetto** (chosen 2026-09-24) is the product name. In sculpture, a *bozzetto* is the quick preparatory model an artist makes to capture an idea before the final work. That is the product's promise: describe the idea, get a precise model, then refine it.
+
+The name was checked informally:
+- A web search found no software or CAD product using it.
+- It is free as a GitHub repository name, an npm package name and a crates.io crate name.
+
+A formal trademark search is required before the public launch. Candidates rejected on the way:
+- Partwright and Kerf: existing AI and CAD projects.
+- Formwright: a React form engine.
+- Maquette: a JavaScript library.
+- Brokkr: crowded on npm, crates.io and GitHub.
+
+"Forge" and "aicad" remain internal codenames, pending the same review:
 - "acad" was avoided because it is AutoCAD's executable name.
 - "Forge" was Autodesk's former platform brand, so a review is required before public launch.
 

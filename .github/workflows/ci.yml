@@ -1,7 +1,13 @@
 name: ci
+# Cost note (private repository): GitHub bills macOS minutes at 10x and Windows at 2x against
+# the plan's included Actions minutes. Pushes and pull requests therefore run the Linux legs
+# only; the full three-OS matrix (cross-OS bit-identity) runs on demand via "Run workflow"
+# (workflow_dispatch). When the repository goes public (free minutes), restore the matrix on
+# every push by changing FULL_MATRIX below.
 on:
   push: { branches: [main] }
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -23,7 +29,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # FULL_MATRIX: all three desktop OSes on manual runs; Linux only otherwise.
+        os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
     defaults: { run: { working-directory: forge } }
     steps:
       - uses: actions/checkout@v4
