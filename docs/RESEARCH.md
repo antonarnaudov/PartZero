@@ -158,7 +158,7 @@ The Onshape and Autodesk servers expose existing kernels and command sets to ext
 | Benchmarks | CADGenBench (huggingface/cadgenbench); Text2CAD-Bench (arXiv 2605.18430); OmniCAD (2608.22637); Hephaestus-CCX (2605.17448) |
 | Agents and verification | CADSmith (2603.26512); CADTests (2605.07807); ProCAD; Vision2CAD (2609.22688); AssemCAD (2607.05123) |
 | Training and generation | AutoConstrain (2504.13178); cadrille (2505.22914); CAD-Recode (2412.14042); ArtisanCAD (2607.05750); CADIR (2608.00891) |
-| Datasets | DeepCAD; Fusion 360 Gallery; ABC. Check each licence before use and record it in `corpus/external/SOURCES.md`. |
+| Datasets | DeepCAD; Fusion 360 Gallery; ABC. Check each licence before use and record it in `corpus/EXTERNAL_SOURCES.md`. |
 | Products | Zoo Zookeeper; Onshape FeatureScript MCP; Autodesk Fusion MCP |
 
 Numbers in parentheses are arXiv identifiers.

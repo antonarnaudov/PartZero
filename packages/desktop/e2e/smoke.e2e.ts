@@ -8,9 +8,11 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from "@playwright/test";
+import { screenshotPath as screenshotTarget } from "./screenshots.js";
 
 const desktopRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const screenshotPath = process.env["AICAD_E2E_SCREENSHOT"] ?? join(desktopRoot, "..", "..", "docs", "spikes", "assets", "app-shell.png");
+/** test-results/app-shell.png; docs/spikes/assets/ only with AICAD_UPDATE_DOC_SCREENSHOTS=1 (see screenshots.ts). */
+const screenshotPath = screenshotTarget("app-shell.png", "AICAD_E2E_SCREENSHOT");
 /** `fallback`: the app was built without forge-web (see scripts/e2e-fallback.mjs). */
 const expectFallback = process.env["AICAD_E2E_EXPECT"] === "fallback";
 

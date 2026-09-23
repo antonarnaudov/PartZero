@@ -13,10 +13,12 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from "@playwright/test";
+import { screenshotPath as screenshotTarget } from "./screenshots.js";
 
 const desktopRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const script = join(desktopRoot, "e2e", "fixtures", "nema17-thicker.script.json");
-const screenshotPath = process.env["AICAD_E2E_AGENT_SCREENSHOT"] ?? join(desktopRoot, "..", "..", "docs", "spikes", "assets", "agent-proposal.png");
+/** test-results/agent-proposal.png; docs/spikes/assets/ only with AICAD_UPDATE_DOC_SCREENSHOTS=1 (see screenshots.ts). */
+const screenshotPath = screenshotTarget("agent-proposal.png", "AICAD_E2E_AGENT_SCREENSHOT");
 /** Extra review screenshots (gitignored). */
 const artifacts = join(desktopRoot, "test-results");
 

@@ -132,7 +132,7 @@ The verification machine is built **before** the features. It is our answer to t
   - Fusion 360 Gallery reconstruction sequences;
   - ABC STEP models (1M) for import, tessellation and mass-property checks.
 
-  Every dataset licence is checked and recorded in `corpus/external/SOURCES.md` before use.
+  Every dataset licence is checked and recorded in `corpus/EXTERNAL_SOURCES.md` before use.
 
 ### Other layers
 
@@ -149,6 +149,14 @@ The verification machine is built **before** the features. It is our answer to t
 - Forge **fails loudly** with a structured diagnostic. It never silently returns wrong geometry.
 - A release gate requires **0 silent-wrong results**, as measured by the oracle.
 - A failed feature passes its input through, so one regeneration reports every error.
+
+### Degenerate loops (SPEC-v1 §3.1 [R-5])
+
+- **The sketch stage decides** whether a loop encloses more than tol², on the exact 2D data (`SKETCH_DEGENERATE_LOOP`; the consuming feature is `DEPENDENCY_FAILED`).
+- **The body check** (`LOOP_DEGENERATE` in `forge_core::topo::validate`, run after every operation and by `forge_check::validate`) measures planar loops of lines and arcs exactly. A loop must **provably** enclose more than tol²: its area must exceed tol² by more than the round-off of measuring it. This is stricter than the literal `area ≤ tol²` by that round-off (≲ 1e-5·tol² for µm loops): a loop within round-off of the limit is rejected loudly (`INVALID_RESULT`, `FORGE_BOOLEAN_INVALID_RESULT`), never guessed valid. It applies to every loop no sketch decided: body-op and boolean section loops, imports, loops of later operations.
+- **Sketch-region loops are left to the sketch.** A loop of an extrude's or revolve's cap whose edges are all the sweep's own cap edges (by provenance: `F/edge:{cap|F/side…}`, or the revolve's profile line on the axis) passes when it may enclose more than tol² within its 3D round trip's round-off and provably encloses something (so never below tol²/2). It is measured against the least tolerance of its edges, the closest to the document tolerance the sketch used (booleans only raise edge tolerances). A body op's section edge on its own cap (`F/edge:{F/cap…|T/…}`, SPEC §5.2 names it after the operation, which for `op: cut` is `F` itself) makes the loop non-sketch.
+- **Assumption:** a cap loop keeps the geometry the sweep gave it as long as its keys are unchanged. An operation that moves a cap's edges but keeps their keys (SPEC §5.2: `draft` keeps the keys of the faces it tilts; not implemented yet) must re-establish the loop's area or give its edges new keys.
+- **Known limitations (loud, never silent):** a pattern copy of a cap (renamed `P/copy:{…}`) gets the strict rule, so a hole within round-off of tol² can fail after the copy's transform; a sketch-region loop whose every edge had its tolerance raised by a boolean is measured against the raised tolerance.
 
 ---
 
