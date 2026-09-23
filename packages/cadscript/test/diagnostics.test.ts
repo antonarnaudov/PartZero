@@ -244,6 +244,11 @@ const cases: Record<DiagnosticCode, () => Diagnostic | void> = {
 };
 
 describe("diagnostics", () => {
+  it("INVALID_NAME: empty part name (SPEC §0 R-15, mirrors forge-ir)", () => {
+    const ir = { ...irWith([]), parts: [{ id: "p", name: "", features: [] }] };
+    expect(validateIr(ir).map((e) => [e.code, e.path])).toEqual([["INVALID_NAME", "/parts/0/name"]]);
+  });
+
   it("every diagnostic code has a test", () => {
     expect(Object.keys(cases).sort()).toEqual(Object.keys(DIAGNOSTIC_CODES).sort());
   });

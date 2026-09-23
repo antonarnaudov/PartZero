@@ -181,7 +181,7 @@ const metaText = fc.oneof(fc.string({ maxLength: 12 }), fc.string({ unit: "binar
 export const irDocument: fc.Arbitrary<IrDocument> = fc
   .record({
     parts: fc.array(fc.array(featureSpec, { maxLength: 5 }), { minLength: 1, maxLength: 3 }),
-    partNames: fc.uniqueArray(fc.oneof(identifier, fc.string({ unit: "binary", maxLength: 6 })), { minLength: 3, maxLength: 3 }),
+    partNames: fc.uniqueArray(fc.oneof(identifier, fc.string({ unit: "binary", minLength: 1, maxLength: 6 })), { minLength: 3, maxLength: 3 }),
     featureNames: fc.uniqueArray(identifier, { minLength: 15, maxLength: 15 }),
     ids: fc.uniqueArray(fc.string({ minLength: 1, maxLength: 6 }), { minLength: 18, maxLength: 18 }),
     meta: maybe(fc.record({ name: maybe(metaText), description: maybe(metaText) })),

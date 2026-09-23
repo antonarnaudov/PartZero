@@ -39,7 +39,8 @@ export function validateIr(doc: IrDocument): IrValidationError[] {
     const pp = `/parts/${pi}`;
     if (partIds.has(part.id)) err("DUPLICATE_ID", `${pp}/id`, `part id ${dbg(part.id)}`);
     partIds.add(part.id);
-    if (partNames.has(part.name)) err("DUPLICATE_NAME", `${pp}/name`, `part ${dbg(part.name)}`);
+    if (part.name === "") err("INVALID_NAME", `${pp}/name`, "part names must be non-empty");
+    else if (partNames.has(part.name)) err("DUPLICATE_NAME", `${pp}/name`, `part ${dbg(part.name)}`);
     partNames.add(part.name);
     validatePart(part, pp, featureIds, featureNames, err);
   });

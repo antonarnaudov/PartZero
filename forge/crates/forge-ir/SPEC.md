@@ -8,7 +8,7 @@ When the two engines disagree:
 
 The types are defined in `src/doc.rs` and `src/metrics.rs`, and the JSON Schemas are in `schema/`.
 
-*Revision 2026-09-23b resolves the 15 ambiguities the oracle raised. Each rule it added carries an **[R-n]** tag.*
+*Revision 2026-09-23b resolves the 15 ambiguities the oracle raised. Each rule it added carries an **[R-n]** tag. Revision 2026-09-23c rewords R-4 in terms of contact points, requires part names to be non-empty, and adds R-16 (tolerance rules for revolve) and R-17 (one diff class per program).*
 
 ## 0. Identity and canonical form
 
@@ -22,7 +22,8 @@ The types are defined in `src/doc.rs` and `src/metrics.rs`, and the JSON Schemas
 - It must not appear in `RESERVED_NAMES` (see `src/lib.rs` and `schema/ir-v0.constants.json`). A reserved name is rejected with `RESERVED_NAME`.
 
 **Part names [R-15].**
-- A part name is any non-empty string. Parts are written as `part("…")` in CadScript.
+- A part name is any **non-empty** string. An empty part name is `INVALID_NAME`.
+- Parts are written as `part("…")` in CadScript.
 - Reserved names do not apply to part names.
 
 **Unknown fields.** Unknown fields are rejected everywhere, including inside sketch curves.
@@ -80,10 +81,15 @@ A sketch is checked in **stages**. The first failing stage decides the error **[
    - The first failing end determines the code.
 2. **Crossings.**
    - Visit curve pairs (i, j) with i < j in lexicographic index order.
-   - A pair fails with `SKETCH_CURVES_CROSS` when either of these holds **[R-4]**:
-     - The two curves come within *tol* of each other at a location more than 2·*tol* from every endpoint they share.
-     - They overlap along a length greater than *tol*.
-   - Meeting at shared endpoints is allowed. No automatic splitting happens in v0.
+   - **[R-4, revised 2026-09-23c]** Judge each pair by its **contact points**. A contact point is any of:
+     - a proper intersection point of the two curves;
+     - a tangency point where the gap between the curves is ≤ *tol*;
+     - an endpoint of one curve that lies within *tol* of the other curve.
+   - The pair fails with `SKETCH_CURVES_CROSS` if either holds:
+     - they have a contact point farther than 2·*tol* from every endpoint the two curves share;
+     - they overlap (are collinear or co-circular) along a length greater than *tol*.
+   - Distance between the curves alone is **not** a criterion. Curves that meet at a shared endpoint tangentially, or at a small angle, stay close to each other for a while, and that is allowed.
+   - v0 never splits curves automatically.
 3. **Degenerate loops.** A loop whose enclosed area is ≤ *tol*² is `SKETCH_DEGENERATE_LOOP` **[R-5]**. A loop of two curves, a line and an arc, is fine.
 4. **No regions.** `SKETCH_NO_REGIONS` is defensive only. It cannot happen for a sketch that passes validation.
 
@@ -164,6 +170,18 @@ Each region, in canonical order, becomes **one new solid body**: the region swep
 | Arc whose centre is within *tol* of the axis | `sphere` |
 | Any other arc or circle | `torus`, including horn tori (minor = major) and spindle-torus patches (minor > major) |
 
+**Tolerance rules for revolve [R-16].**
+- A point is **on the axis** when its distance to the axis line is ≤ *tol*. Engines snap such points exactly onto the axis before sweeping.
+- When a curve is classified only by tolerance, its surface is defined as follows:
+
+| Classified as | Because | Surface used |
+|---|---|---|
+| Cylinder | Line within 1e-9 rad of parallel to the axis | Radius = distance of the line's midpoint from the axis |
+| Plane | Line within 1e-9 rad of perpendicular to the axis | Plane through the line's midpoint, perpendicular to the axis |
+| Sphere | Arc centre within *tol* of the axis | Centre = projection of the arc's centre onto the axis; radius = distance from that centre to the arc's `start` |
+
+- The resulting metric differences are about 1e-9 × size, far inside the §6 tolerances.
+
 **Edges, vertices and singular points.**
 - **Profile vertices on the axis** sweep to singular points. They create no edge and no vertex, and the surface simply has a singularity there (cone apex, sphere pole).
 - **A profile edge lying on the axis:**
@@ -221,4 +239,8 @@ Each region, in canonical order, becomes **one new solid body**: the region swep
 | `MATCH` | All rules hold, or both engines rejected the document. |
 | `ROBUSTNESS` | Only one engine reported an error or rejected the document, or either engine reported an engine-prefixed internal error. |
 | `CODE_MISMATCH` | Both engines failed the same feature with different **semantic** codes. The spec is ambiguous or one engine is wrong; always investigate. |
-| `POTENTIAL_SILENT_WRONG` | Both engines reported `ok`, but exact or tolerance fields differ. The oracle is not presumed correct, and every case must be investigated. A release requires zero of these. |
+| `POTENTIAL_SILENT_WRONG` | Both engines reported `ok`, but exact or tolerance fields differ. Also used when the feature lists differ in content or order: an entry is missing, extra, or out of order. The oracle is not presumed correct, and every case must be investigated. A release requires zero of these. |
+
+**One class per program [R-17].**
+- A program receives the most severe class that applies.
+- Severity order, most severe first: `POTENTIAL_SILENT_WRONG`, `CODE_MISMATCH`, `ROBUSTNESS`, `MATCH`.
