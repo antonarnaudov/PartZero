@@ -1,6 +1,6 @@
-# DemiCAD
+# PartZero
 
-*An AI-native 3D CAD app. The name comes from the **Demiurge**, Plato's divine craftsman who shapes the physical world from ideas. Here you describe the idea, and the agent shapes a precise, parametric model you can keep refining by hand or by chat.*
+*An AI-native 3D CAD app. In CNC machining, **part zero** is the origin every dimension of a job is measured from. PartZero takes you from zero to a real part: describe what you need, and the agent builds a precise, parametric model you can keep refining by hand or by chat.*
 
 It runs on desktop first (macOS, Windows, Linux), then web and iPad. You chat with an in-app agent that builds sketches, parts, assemblies and drawings using the app's own tools, with professional engineering guidance. You can also model everything by hand or tweak whatever the agent made.
 
@@ -14,7 +14,7 @@ It is built on **Forge**, our own AI-native geometry kernel, written in Rust and
 
 > **Status:** Phase 0 (foundations and spikes). Nothing here is usable yet. See [docs/ROADMAP.md](docs/ROADMAP.md).
 >
-> **Naming.** **DemiCAD** is the product name (chosen 2026-09-24). It is free on GitHub, npm and crates.io, and `demicad.ai` / `demicad.io` were unregistered at the time. A formal trademark search is still required before launch; see [VISION.md](docs/VISION.md#naming-note) for the known risks. "Forge" (the kernel) and "aicad" (the CLI and package scope) are internal codenames.
+> **Naming.** **PartZero** is the product name (chosen 2026-09-24 after a 90-name screening sweep). It is free on GitHub, npm and crates.io, and `partzero.ai` was unregistered at the time. A formal trademark search is still required before launch; see [VISION.md](docs/VISION.md#naming-note). "Forge" (the kernel) and "aicad" (the CLI and package scope) are internal codenames.
 
 ## Repository map
 

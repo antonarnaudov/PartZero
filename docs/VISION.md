@@ -1,6 +1,6 @@
 # Vision
 
-> Product name: **DemiCAD**. "Forge" and "aicad" are internal codenames; see the [naming note](#naming-note).
+> Product name: **PartZero**. "Forge" and "aicad" are internal codenames; see the [naming note](#naming-note).
 
 ## The product in one paragraph
 
@@ -97,29 +97,38 @@ It does **not** mean a chatbot bolted onto a CAD app. Concretely:
 
 ## Naming note
 
-**DemiCAD** (chosen 2026-09-24) is the product name. It comes from the **Demiurge**: in Plato's *Timaeus*, the divine craftsman who shapes the physical world after ideal forms. That is the product's promise: describe the idea, get a precise physical model, then refine it.
+**PartZero** (chosen 2026-09-24) is the product name.
+- **Meaning.** In CNC machining, *part zero* is the work origin, the (0,0,0) every dimension and toolpath of a job is measured from. It also reads as "from zero to a real part", which is the product's promise.
+- **How it was chosen.** A 90-name sweep: five naming angles, automated registry, domain and web-conflict screening, and three independent judges scoring against the owner's taste profile ("fresh, not heavy, like Fusion 360 / SolidWorks but with AI").
 
 **What was checked, informally:**
 - The name is free as a GitHub repository name, an npm package name and a crates.io crate name.
-- `demicad.ai` and `demicad.io` looked unregistered. `demicad.com`, `.app` and `.dev` are registered.
+- `partzero.ai`, `getpartzero.com` and `partzero3d.com` looked unregistered.
+- `partzero.com` is parked and may be purchasable. `.io`, `.app` and `.dev` are registered.
+- A web search found no product or company named PartZero.
 
-**Known risks, which a formal trademark search must resolve before launch:**
-- `demicad.com` belongs to DEMICAD ("Diseño de Equipo y Maquinaria Industrial"), a Mexican industrial-machinery design firm. It is a services company, not software, but it works in the adjacent engineering-design space.
-- In English and French, "demi" also means "half" (as in demitasse). The Demiurge story has to carry the name.
+**Risks to resolve in the formal US and EU trademark search before launch:**
+- **CADZero** (cadzero.dev) is an AI-native parametric CAD tool with the same "…Zero" pattern. The first word differs, but the category is the same.
+- **PlayerZero** is an AI engineering platform with a similar pattern, in a different field.
 
 **Names rejected along the way:**
 
 | Name | Why it was rejected |
 |---|---|
-| Bozzetto | The owner didn't like it |
+| Bozzetto | Owner's feedback: "annoying" |
+| DemiCAD | Owner's feedback: too heavy |
+| Arges, Hardforge, Vulkar, Ironhold | Owner's feedback: too heavy / mythic |
+| SynthCAD, TensorForm, BrepMind, Kinemind | Owner's feedback: random, or too close to TensorFlow |
 | CortexCAD, MindCAD | Existing AI-CAD products |
-| Daedalus | An AI precision-manufacturing company |
-| Hephaestus | Hestus, a YC AI-CAD startup |
+| Daedalus | An AI manufacturing company |
+| Hephaestus | Hestus, an AI-CAD startup |
 | Vitruvius | ICON's AI home-design tool |
-| Partwright, Kerf | Existing AI and CAD projects |
-| Formwright, Maquette | Existing libraries |
-| Iron… names | IronCAD's AI features |
-| Brokkr, Mechanist and others | Crowded, or too close to competitors |
+| ProtoForge | An AI prototyping tool for makers |
+| SparkForge | Several AI businesses |
+| ArcForge | A CAD design service |
+| ShapeFlow | A CAD viewer |
+| AlloyCAD | Confusable with AllyCAD |
+| Partwright, Kerf, Formwright, Maquette, Brokkr, Mechanist | Existing projects, crowded, or too close to competitors |
 
 "Forge" and "aicad" remain internal codenames, pending the same review:
 - "acad" was avoided because it is AutoCAD's executable name.
