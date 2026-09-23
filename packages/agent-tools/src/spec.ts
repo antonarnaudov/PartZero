@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import { CHECKS, evaluateTests, measure, testProblems, type CheckContext, type HiddenTest, type Subject, type TestResult } from "@aicad/evals";
-import { num, vec } from "./format.js";
+import { num, oneLine, vec } from "./format.js";
 
 const BODY_CONDITION_CHECKS = ["volume", "area", "centroid", "bbox_size", "bbox_sorted", "bbox_min", "bbox_max", "face_count", "edge_count", "valid"] as const;
 
@@ -33,15 +33,23 @@ const params = {
   axis: z.enum(["x", "y", "z"]).optional().describe("Pick one component of a vector measure."),
 };
 
-export const bodyConditionSchema = z.object({
+export const bodyConditionSchema = z.strictObject({
   check: z.enum(BODY_CONDITION_CHECKS),
   ...comparators,
   ...params,
 });
 
-export const specTestSchema = z.object({
-  id: z.string().describe("Unique snake_case id, e.g. outer_size."),
-  description: z.string().describe("What it verifies in plain words, starting with the requirement id, e.g. 'R1: 7 mm across and 1 mm thick'."),
+/** Spec test ids: snake_case identifiers (they are matched exactly and printed into prompts). */
+export const SPEC_TEST_ID = /^[A-Za-z][A-Za-z0-9_]*$/;
+export const MAX_SPEC_TEST_ID_CHARS = 48;
+export const MAX_SPEC_TEST_DESCRIPTION_CHARS = 240;
+
+export const specTestSchema = z.strictObject({
+  id: z.string().min(1).max(MAX_SPEC_TEST_ID_CHARS).regex(SPEC_TEST_ID).describe("Unique snake_case id, e.g. outer_size."),
+  description: z
+    .string()
+    .max(MAX_SPEC_TEST_DESCRIPTION_CHARS)
+    .describe("What it verifies in plain words (one line), starting with the requirement id, e.g. 'R1: 7 mm across and 1 mm thick'."),
   check: z.enum(CHECKS).describe("The measurement (see the check reference in your instructions)."),
   ...comparators,
   ...params,
@@ -64,14 +72,14 @@ export const specTestSchema = z.object({
 
 export type SpecTest = z.infer<typeof specTestSchema>;
 
-export const designSpecSchema = z.object({
+export const designSpecSchema = z.strictObject({
   summary: z.string().describe("One or two sentences: what is being made and for what."),
   requirements: z
-    .array(z.object({ id: z.string().describe("R1, R2, …"), text: z.string().describe("One verifiable requirement.") }))
+    .array(z.strictObject({ id: z.string().describe("R1, R2, …"), text: z.string().describe("One verifiable requirement.") }))
     .describe("Every requirement the request states or clearly implies."),
   assumptions: z
     .array(
-      z.object({
+      z.strictObject({
         id: z.string().describe("A1, A2, …"),
         text: z.string().describe("What was not specified."),
         default: z.string().describe("The value chosen (an editable parameter chip)."),
@@ -79,7 +87,7 @@ export const designSpecSchema = z.object({
     )
     .describe("Unstated choices with the default taken."),
   key_dimensions: z
-    .array(z.object({ name: z.string(), value: z.number(), unit: z.string().describe("mm, deg, mm², mm³") }))
+    .array(z.strictObject({ name: z.string(), value: z.number(), unit: z.string().describe("mm, deg, mm², mm³") }))
     .describe("The numbers the design hinges on."),
 });
 
@@ -155,7 +163,7 @@ export function runSpecTests(tests: readonly HiddenTest[], candidate: Subject, c
 function fmtActual(v: unknown): string {
   if (typeof v === "number") return num(v);
   if (Array.isArray(v) && v.every((x) => typeof x === "number")) return vec(v as number[]);
-  return JSON.stringify(v);
+  return oneLine(JSON.stringify(v) ?? String(v), 300);
 }
 
 /** One line per test: `✓ id: expectation — actual X (margin m)` / `✗ … off by …`. */
@@ -163,8 +171,8 @@ export function formatTestResult(r: SpecTestResult): string {
   const mark = r.pass ? "✓" : "✗";
   const actual = r.actual === undefined ? "" : ` — actual ${fmtActual(r.actual)}`;
   const margin = r.margin === undefined ? "" : r.pass ? ` (margin ${num(r.margin)})` : ` (outside by ${num(-r.margin)})`;
-  const msg = !r.pass && r.message ? `; ${r.message}` : "";
-  return `${mark} ${r.id}: ${r.expected}${actual}${margin}${msg}`;
+  const msg = !r.pass && r.message ? `; ${oneLine(r.message, 300)}` : "";
+  return `${mark} ${r.id}: ${oneLine(r.expected, 200)}${actual}${margin}${msg}`;
 }
 
 export function summarizeTests(results: readonly SpecTestResult[]): { passed: number; total: number; failing: string[] } {

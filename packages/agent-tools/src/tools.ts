@@ -8,15 +8,41 @@
  */
 import { z } from "zod";
 import type { FeatureReport } from "@aicad/ir-types";
-import { capList, clip, num, plural } from "./format.js";
+import { capList, clip, ident, num, oneLine, plural } from "./format.js";
 import { defineTool, ToolRegistry, type AgentTool, type ToolOutput } from "./registry.js";
 import type { ApplyOutcome, DesignSession, Verification } from "./session.js";
 import { patchSource, PatchError, featureConstNames } from "./source.js";
 import { designSpecSchema, formatTestResult, specTestProblems, specTestSchema, summarizeTests, toHiddenTests, type SpecTestResult } from "./spec.js";
 import { featureResultText, irSummary, measureText, modelTotals, totalsText } from "./summaries.js";
 
+/**
+ * What a clarification question is about: a closed set of labels. The independent spec writer sees
+ * only this label and the user's answer, never the designer's question text (audit M19).
+ */
+export const CLARIFICATION_TOPICS = ["units", "overall_size", "thickness", "hole_size", "count", "position", "fit", "shape", "material_process", "other"] as const;
+export type ClarificationTopic = (typeof CLARIFICATION_TOPICS)[number];
+
+/** A readable label for a clarification topic (unknown or missing → "other"). */
+export function clarificationTopicLabel(topic: string | undefined): string {
+  const labels: Record<ClarificationTopic, string> = {
+    units: "units",
+    overall_size: "overall size",
+    thickness: "thickness or height",
+    hole_size: "hole or fastener size",
+    count: "number of features",
+    position: "position or spacing",
+    fit: "fit or clearance",
+    shape: "shape",
+    material_process: "material or process",
+    other: "other",
+  };
+  return (CLARIFICATION_TOPICS as readonly string[]).includes(topic ?? "") ? labels[topic as ClarificationTopic] : labels.other;
+}
+
 export interface UserQuestion {
   id: string;
+  /** What the question is about (default `other`). */
+  topic?: ClarificationTopic | undefined;
   question: string;
   options?: string[] | undefined;
   default: string;
@@ -34,11 +60,16 @@ export interface Proposal {
   summary: string;
   assumptions: string[];
   known_issues: string[];
+  /** Ids of failing spec tests the designer is certain contradict the request (exact ids). */
+  acknowledged_tests?: string[];
 }
 
 export const DESIGNER_TOOLS = ["apply_cadscript", "ask_user", "checkpoint", "get_code", "ir_summary", "measure", "propose", "rollback", "run_tests"] as const;
 export const SPEC_WRITER_TOOLS = ["set_spec_tests", "submit_spec"] as const;
 export const READ_ONLY_TOOLS = ["get_code", "ir_summary", "measure", "run_tests"] as const;
+
+/** Most spec tests one `set_spec_tests` call may set (keeps every test listing inside the result cap). */
+export const MAX_SPEC_TESTS = 12;
 
 const LEVEL_NAMES = ["compile", "kernel", "expectations", "spec tests"] as const;
 
@@ -72,29 +103,29 @@ export function formatVerification(v: Verification, previous?: readonly FeatureR
   if (errors.length > 0) {
     lines.push(`L0 compile: ${plural(errors.length, "error")}`);
     for (const d of errors.slice(0, 6)) {
-      lines.push(`  ✗ ${d.line}:${d.col} ${d.code}${d.feature ? ` in ${d.feature}` : ""}: ${d.message}`);
-      if (d.excerpt) lines.push(`    > ${d.excerpt}`);
-      lines.push(`    fix: ${d.hint}`);
+      lines.push(`  ✗ ${d.line}:${d.col} ${d.code}${d.feature ? ` in ${ident(d.feature)}` : ""}: ${oneLine(d.message)}`);
+      if (d.excerpt) lines.push(`    > ${oneLine(d.excerpt)}`);
+      lines.push(`    fix: ${oneLine(d.hint)}`);
     }
     if (errors.length > 6) lines.push(`  … ${errors.length - 6} more errors (fix these first)`);
   } else {
     lines.push("L0 compile + typecheck: ok");
   }
-  for (const d of warnings.slice(0, 2)) lines.push(`  note ${d.code}${d.feature ? ` in ${d.feature}` : ""}: ${d.message}`);
+  for (const d of warnings.slice(0, 2)) lines.push(`  note ${d.code}${d.feature ? ` in ${ident(d.feature)}` : ""}: ${oneLine(d.message)}`);
 
   if (v.engineError) {
-    lines.push(`L1 kernel: engine error ${v.engineError.code}: ${v.engineError.message}`, `  fix: ${v.engineError.hint}`);
+    lines.push(`L1 kernel: engine error ${ident(v.engineError.code)}: ${oneLine(v.engineError.message)}`, `  fix: ${oneLine(v.engineError.hint)}`);
   }
   const k = v.kernel;
   if (k) {
     const failed = k.features.filter((f) => f.status !== "ok");
-    lines.push(`L1 kernel (${k.engine}): ${k.status}${failed.length > 0 ? `, ${plural(failed.length, "feature")} failed` : ""}`);
-    if (k.documentError) lines.push(`  ✗ document ${k.documentError.code}: ${k.documentError.message}`, `    fix: ${k.documentError.hint}`);
+    lines.push(`L1 kernel (${oneLine(k.engine, 80)}): ${k.status}${failed.length > 0 ? `, ${plural(failed.length, "feature")} failed` : ""}`);
+    if (k.documentError) lines.push(`  ✗ document ${ident(k.documentError.code)}: ${oneLine(k.documentError.message)}`, `    fix: ${oneLine(k.documentError.hint)}`);
     // Root causes first: a DEPENDENCY_FAILED consumer repeats its sketch's error.
     const ordered = [...failed].sort((a, b) => Number(a.code === "DEPENDENCY_FAILED") - Number(b.code === "DEPENDENCY_FAILED"));
     for (const f of ordered.slice(0, 6)) {
-      lines.push(`  ✗ ${f.feature} (${f.type}) ${f.code}: ${f.message}`);
-      lines.push(`    fix: ${f.hint}`);
+      lines.push(`  ✗ ${ident(f.feature)} (${ident(f.type)}) ${ident(f.code ?? "UNKNOWN")}: ${oneLine(f.message ?? "")}`);
+      lines.push(`    fix: ${oneLine(f.hint ?? "")}`);
     }
     if (ordered.length > 6) lines.push(`  … ${ordered.length - 6} more failed features`);
     const prevByName = new Map((previous ?? []).map((f) => [f.feature, f] as const));
@@ -104,7 +135,7 @@ export function formatVerification(v: Verification, previous?: readonly FeatureR
       ...capList(
         okChanged,
         8,
-        (f) => `  ✓ ${f.feature} (${f.type}): ${featureResultText(f as FeatureReport)}`,
+        (f) => `  ✓ ${ident(f.feature)} (${ident(f.type)}): ${featureResultText(f as FeatureReport)}`,
         (n) => `  … ${n} more changed features (measure lists all)`,
       ),
     );
@@ -112,7 +143,7 @@ export function formatVerification(v: Verification, previous?: readonly FeatureR
   }
   if (v.expectations.length > 0) {
     lines.push(
-      `L2 expect: ${v.expectations.map((x) => `${x.pass ? "✓" : "✗"} ${x.feature}.${x.check} ${x.expected}${x.pass ? "" : ` — actual ${x.actual}`}`).join("; ")}`,
+      `L2 expect: ${v.expectations.map((x) => `${x.pass ? "✓" : "✗"} ${ident(x.feature)}.${x.check} ${x.expected}${x.pass ? "" : ` — actual ${x.actual}`}`).join("; ")}`,
     );
   }
   if (v.tests) lines.push(...testsLine(v.tests));
@@ -137,7 +168,9 @@ export function formatApply(o: ApplyOutcome, notes: readonly string[] = []): str
 
 // ─── Tools ───────────────────────────────────────────────────────────────────────────────────
 
-const expectationSchema = z.object({
+// Every tool input is a strict object: unknown keys are errors (the advertised JSON Schema says
+// `additionalProperties: false`, so silently stripping them would hide a model's mistake).
+const expectationSchema = z.strictObject({
   feature: z.string().describe("Feature const name."),
   bodies: z.number().int().optional().describe("Exact number of bodies it creates."),
   regions: z.number().int().optional().describe("Sketch: exact number of regions."),
@@ -146,7 +179,7 @@ const expectationSchema = z.object({
   bbox_size: z.array(z.number()).optional().describe("Axis-aligned size [x, y, z] of its bodies, mm (±0.05)."),
 });
 
-const patchSchema = z.object({
+const patchSchema = z.strictObject({
   feature: z.string().describe("Const name of the feature to replace or delete, or the name of a new feature to insert."),
   code: z.string().describe("The complete replacement statement(s), e.g. `const plate = extrude(base, { distance: 8 });`. Empty string deletes the feature."),
   after: z.string().optional().describe("New features only: insert after this feature const (default: end of file)."),
@@ -156,7 +189,7 @@ const getCode = defineTool({
   name: "get_code",
   readOnly: true,
   description: "Read the current CadScript file, or only one feature's `const` statement (with the comments above it and its line numbers).",
-  input: z.object({ feature: z.string().optional().describe("Feature const name; omit for the whole file.") }),
+  input: z.strictObject({ feature: z.string().optional().describe("Feature const name; omit for the whole file.") }),
   run(input, { session }: DesignToolContext) {
     const feature = input.feature;
     if (feature !== undefined) {
@@ -176,7 +209,7 @@ const applyCadscript = defineTool({
     "Change the design, then verify it: L0 compile + typecheck, L1 kernel evaluation, L2 your `expect` checks, L3 the spec tests. " +
     "Give EITHER `source` (the complete file: first version or big rewrites) OR `patches` (edit features by const name: replace, delete, or insert new ones). " +
     "The result is a short delta: errors with a concrete fix, bodies of changed features, spec test status. Build in small steps (1–3 features per call).",
-  input: z.object({
+  input: z.strictObject({
     source: z.string().optional().describe("The COMPLETE new CadScript file."),
     patches: z.array(patchSchema).optional().describe("Targeted edits, applied in order. Prefer this for small changes."),
     expect: z.array(expectationSchema).optional().describe("L2 checks for this step, e.g. [{ feature: 'plate', bodies: 1, bbox_size: [80, 50, 8] }]."),
@@ -186,12 +219,19 @@ const applyCadscript = defineTool({
     if (readOnly) return readOnlyRefusal("apply_cadscript");
     const source = input.source;
     const patches = input.patches;
-    if ((source === undefined) === (patches === undefined || patches.length === 0)) {
+    if (source !== undefined && patches !== undefined) {
+      return {
+        text: "Give either `source` (whole file) or `patches`, not both (omit the one you do not use; an empty `patches` list counts as given). Nothing was applied.",
+        isError: true,
+        data: { kind: "bad_input" },
+      };
+    }
+    if (source === undefined && !patches?.length) {
       return { text: "Give exactly one of `source` (whole file) or `patches` (non-empty list). Nothing was applied.", isError: true, data: { kind: "bad_input" } };
     }
     let next = source ?? "";
     let notes: string[] = [];
-    if (patches) {
+    if (patches?.length) {
       try {
         const r = patchSource(session.source, patches);
         next = r.source;
@@ -226,7 +266,7 @@ const irSummaryTool = defineTool({
   name: "ir_summary",
   readOnly: true,
   description: "Compact list of every feature with its key parameters (plane, curves, distances, axis) and its latest result (regions, bodies, errors).",
-  input: z.object({}),
+  input: z.strictObject({}),
   run(_input, { session }: DesignToolContext) {
     if (session.ir) return { text: irSummary(session.ir, session.report) };
     if (session.source.trim() === "") return { text: "Nothing has been applied yet." };
@@ -244,7 +284,7 @@ const measureTool = defineTool({
   readOnly: true,
   description:
     "Metrics from the latest evaluation. Without arguments: every feature briefly plus model totals. With `feature`: bodies in detail (volume, area, centroid, bbox, face/edge counts by type) or sketch regions (area, loops, holes, outer curves).",
-  input: z.object({
+  input: z.strictObject({
     feature: z.string().optional().describe("Feature const name."),
     body: z.number().int().optional().describe("With feature: only this body index."),
   }),
@@ -259,9 +299,14 @@ const setSpecTests = defineTool({
   name: "set_spec_tests",
   description:
     "Set the executable spec tests (replaces any previous set). Each test is one measurement plus one expectation in the check DSL. Returns the problems if any test is invalid; fix them and call again.",
-  input: z.object({ tests: z.array(specTestSchema).describe("3–12 tests covering the requirements.") }),
+  input: z.strictObject({ tests: z.array(specTestSchema).max(MAX_SPEC_TESTS).describe("3–12 tests covering the requirements.") }),
   run(input, { session }: DesignToolContext) {
-    if (session.testsFrozen) return { text: "The spec tests are frozen. The builder cannot change them; list a test you believe is wrong under known_issues when you propose.", isError: true };
+    if (session.testsFrozen) {
+      return {
+        text: "The spec tests are frozen. The builder cannot change them; if you are certain a test contradicts the request, put its exact id in acknowledged_tests when you propose and say why in known_issues.",
+        isError: true,
+      };
+    }
     const tests = toHiddenTests(input.tests);
     if (tests.length === 0) return { text: "Give at least one test.", isError: true };
     const problems = specTestProblems(tests, session.context !== undefined);
@@ -289,7 +334,7 @@ const runTests = defineTool({
   name: "run_tests",
   readOnly: true,
   description: "Run the frozen spec tests on the current model. Every result has its margin: the slack left (passing) or how far outside the tolerance (failing).",
-  input: z.object({}),
+  input: z.strictObject({}),
   run(_input, { session }: DesignToolContext) {
     if (session.tests.length === 0) return { text: "There are no spec tests for this task; verify against the request with measure." };
     const results = session.runTests();
@@ -302,7 +347,7 @@ const runTests = defineTool({
 const checkpointTool = defineTool({
   name: "checkpoint",
   description: "Save the current state under a label, to roll back to later. (A checkpoint is also taken automatically after every successful apply.)",
-  input: z.object({ label: z.string().describe("Short label, e.g. 'base plate ok'.") }),
+  input: z.strictObject({ label: z.string().max(80).describe("Short label, e.g. 'base plate ok'.") }),
   run(input, { session, readOnly }: DesignToolContext) {
     if (readOnly) return readOnlyRefusal("checkpoint");
     const cp = session.checkpoint(input.label);
@@ -313,7 +358,7 @@ const checkpointTool = defineTool({
 const rollbackTool = defineTool({
   name: "rollback",
   description: "Restore a checkpoint (by id like cp3, or by label). The file, IR and report return to that state; use it when an approach is not working.",
-  input: z.object({ to: z.string().describe("Checkpoint id (cp3) or label.") }),
+  input: z.strictObject({ to: z.string().describe("Checkpoint id (cp3) or label.") }),
   run(input, { session, readOnly }: DesignToolContext) {
     if (readOnly) return readOnlyRefusal("rollback");
     let cp;
@@ -332,11 +377,15 @@ const askUser = defineTool({
   name: "ask_user",
   description:
     "Ask the user up to 3 short questions — only when an ambiguity changes topology or interfaces, the units are unclear or requirements conflict, AND there is no safe default. Every question carries the default you will use if unanswered. Otherwise state the assumption and proceed.",
-  input: z.object({
+  input: z.strictObject({
     questions: z
       .array(
-        z.object({
+        z.strictObject({
           id: z.string().describe("q1, q2, …"),
+          topic: z
+            .enum(CLARIFICATION_TOPICS)
+            .optional()
+            .describe("What the question is about (default other). The spec writer sees only this label and the user's answer, not your question."),
           question: z.string(),
           options: z.array(z.string()).optional().describe("2–4 multiple-choice answers."),
           default: z.string().describe("The answer you will assume."),
@@ -359,16 +408,21 @@ const propose = defineTool({
   name: "propose",
   description:
     "Finish the task: hand the current model to the user as a proposal. Call it once the model verifies and the spec tests pass (or you cannot make progress). List every assumption you made and every known issue honestly.",
-  input: z.object({
+  input: z.strictObject({
     summary: z.string().describe("2–4 sentences: what was built and how it meets the request."),
     assumptions: z.array(z.string()).describe("Each unstated choice with its value, e.g. 'wall 2 mm (not specified)'."),
     known_issues: z.array(z.string()).describe("Anything that does not meet the request or a test; empty if none."),
+    acknowledged_tests: z
+      .array(z.string())
+      .optional()
+      .describe("Exact ids of failing spec tests you are certain contradict the request (say why in known_issues). Omit when every test passes."),
   }),
   run(input, { session }: DesignToolContext) {
     const proposal: Proposal = {
       summary: input.summary,
       assumptions: input.assumptions,
       known_issues: input.known_issues,
+      ...(input.acknowledged_tests === undefined ? {} : { acknowledged_tests: input.acknowledged_tests }),
     };
     const v = session.verification;
     return { text: `Proposal recorded (${v.ok ? "model verified" : "model NOT verified"}).`, data: { kind: "propose", proposal } };
@@ -395,20 +449,24 @@ export function specWriterRegistry(): ToolRegistry<DesignToolContext> {
   return designRegistry().subset([...SPEC_WRITER_TOOLS]);
 }
 
-/** Eval-mode answers: the task's recorded defaults, else "use your best judgement" with the question's default. */
+/**
+ * Eval-mode answers: the task's recorded defaults, else "use your best judgement". The answer never
+ * repeats the question's text or default: answers reach the independent spec writer, which must not
+ * see the designer's free text.
+ */
 export function evalModeAnswers(recordedDefaults?: string): (questions: readonly UserQuestion[]) => string[] {
   return (questions) =>
-    questions.map((q) =>
+    questions.map(() =>
       recordedDefaults !== undefined && recordedDefaults.trim() !== ""
-        ? `The user is not available. Recorded defaults for this request: ${recordedDefaults.trim()} For anything not covered, use your best judgement (your default "${q.default}" is fine).`
-        : `The user is not available: use your best judgement (your default "${q.default}" is fine) and list it as an assumption.`,
+        ? `The user is not available. Recorded defaults for this request: ${recordedDefaults.trim()} For anything not covered, use your best judgement (your default is fine).`
+        : "The user is not available: use your best judgement (your default is fine) and list it as an assumption.",
     );
 }
 
 /** A one-line verdict for traces. */
 export function verificationLine(v: Verification): string {
   if (v.ok) return `ok${v.tests ? ` (tests ${summarizeTests(v.tests).passed}/${v.tests.length})` : ""}`;
-  return `failed at L${v.failedAt ?? 0}: ${v.errorSignature.slice(0, 160)}`;
+  return `failed at L${v.failedAt ?? 0}: ${oneLine(v.errorSignature.slice(0, 160))}`;
 }
 
 export { num };

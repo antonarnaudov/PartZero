@@ -263,8 +263,17 @@ export class DesignSession {
 
   async #evaluate(source: string, expect: readonly Expectation[]): Promise<DesignState> {
     const base = this.#state?.ir ?? this.#lastIr ?? undefined;
-    const c = compile(source, { base: base ?? undefined, fileName: `${this.name}.cad.ts` });
-    const diagnostics = this.#diagnostics(source, c);
+    let c: CompileResult;
+    let diagnostics: DiagnosticInfo[];
+    try {
+      c = compile(source, { base: base ?? undefined, fileName: `${this.name}.cad.ts` });
+      diagnostics = this.#diagnostics(source, c);
+    } catch (e) {
+      // The front end (or tsc) can throw on pathological input, e.g. a stack overflow on thousands of
+      // nested brackets. That is an L0 failure of this source, not a failure of the session.
+      c = failedCompile();
+      diagnostics = [compilerFailure(e)];
+    }
     const v: Verification = { ...emptyVerification(), compileOk: c.ok && c.ir !== null, diagnostics };
     const failL0 = (): DesignState => {
       v.failedAt = 0;
@@ -390,6 +399,25 @@ export class DesignSession {
     const s = findFeature(this.#state.source, name);
     return s ? { text: this.#state.source.slice(s.attachedStart, s.end), line: s.line, endLine: s.endLine } : undefined;
   }
+}
+
+function failedCompile(): CompileResult {
+  return { ok: false, ir: null, diagnostics: [], spans: {}, curveSpans: {}, partSpans: {}, pathSpans: {}, comments: {} };
+}
+
+/** An L0 diagnostic for a compiler exception: `CS_TOO_COMPLEX` for a stack overflow, else `CS_COMPILER_ERROR`. */
+function compilerFailure(e: unknown): DiagnosticInfo {
+  const tooComplex = e instanceof RangeError;
+  const code = tooComplex ? "CS_TOO_COMPLEX" : "CS_COMPILER_ERROR";
+  const detail = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+  return {
+    code,
+    severity: "error",
+    message: tooComplex ? `the source is nested too deeply to compile (${detail})` : `the compiler failed on this source (${detail})`,
+    hint: repairHint(code),
+    line: 1,
+    col: 1,
+  };
 }
 
 /** A computed playbook hint beats the compiler's hint; the compiler's (specific) hint beats the static playbook text. */

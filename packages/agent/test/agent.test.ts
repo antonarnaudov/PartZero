@@ -56,7 +56,8 @@ describe("design loop: mistake → playbook hint → fix → spec tests pass →
     expect(broken.content).toContain("✗ outline (sketch) SKETCH_OPEN_LOOP: the end of curve 'o_right' at (45, 35) meets no other curve end");
     expect(broken.content).toContain("fix: 'o_right'.end (45, 35) has no partner; the nearest curve end is 'o_top'.start (45, 36), 1 mm away");
     expect(broken.content).toContain("set 'o_top'.start to [45, 35]");
-    expect(seen[0]!.userText).toContain("[orchestrator] REPAIR 1/2");
+    // Orchestrator notes carry the run's nonce, so text from the user's file cannot pass for one.
+    expect(seen[0]!.userText).toMatch(/^\[orchestrator [0-9a-f]{16}\] REPAIR 1\/2/);
     // …and the fix verified with every spec test passing.
     expect(seen[1]!.toolResults[0]!.content).toMatch(/^apply #2: OK \(L0–L2 pass; spec tests 5\/5\)/);
 
@@ -109,7 +110,7 @@ describe("stop rules", () => {
     );
     const r = await agent.run({ prompt: "Make the plate 10 mm thick.", context: PLATE_OK, name: "plate" });
     const note = seen[0]!.userText;
-    expect(note).toContain('[orchestrator] 2 repairs failed, so the design was rolled back to cp1 "start". REPLAN');
+    expect(note).toMatch(/^\[orchestrator [0-9a-f]{16}\] 2 repairs failed, so the design was rolled back to cp1 "start"\. REPLAN/);
     expect(note).toContain("slab: extrude base 8 mm → 1 body");
     expect(r.status, r.message).toBe("proposed");
     expect(r.cadscript).toBe(PLATE_THICK);
@@ -142,7 +143,7 @@ describe("stop rules", () => {
     const big = { input: 1500, output: 5000 }; // $0.106 per Opus 5.5 call
     const { transport, agent } = setup(
       { designer: [{ ...apply({ patches: [SLAB_10] }), usage: big }, { ...apply({ source: PLATE_OK }), usage: big }, propose("never reached")] },
-      { kind: "quick_edit", budgetUsd: 0.25, limits: { projectionOutputTokens: 100 } },
+      { kind: "quick_edit", budgetUsd: 0.25 },
     );
     const r = await agent.run({ prompt: "Make the plate 10 mm thick.", context: PLATE_OK, name: "plate" });
     expect(r.stopReason).toBe("budget");
@@ -178,7 +179,7 @@ describe("stop rules", () => {
 });
 
 describe("PROPOSE gate", () => {
-  it("sends a proposal back while spec tests fail (REFINE), then accepts it with the failing test named", async () => {
+  it("sends a proposal back while spec tests fail (REFINE), then accepts it with the failing tests acknowledged by id", async () => {
     const seen: ScriptedCall[] = [];
     const { agent } = setup({
       triage: [triage("design")],
@@ -188,18 +189,20 @@ describe("PROPOSE gate", () => {
         propose("A washer."),
         (call) => {
           seen.push(call);
-          return propose("A washer without the hole.", [], ["bore and volume: the hole is missing on purpose"]);
+          return propose("A washer without the hole.", [], ["bore and volume: the hole is missing on purpose"], ["bore", "volume"]);
         },
       ],
     });
     const r = await agent.run({ prompt: WASHER_PROMPT, name: "washer" });
     const refine = seen[0]!.toolResults[0]!;
     expect(refine.isError).toBe(true);
-    expect(refine.content).toMatch(/^Not accepted \(REFINE 1\/2\): 2 of 5 spec tests fail:/);
+    expect(refine.content).toMatch(/^\[orchestrator [0-9a-f]{16}\] Not accepted \(REFINE 1\/2\): 2 of 5 spec tests fail:/);
     expect(refine.content).toMatch(/✗ volume: ≈ 30.44 ±1% — actual 38.48\d* \(outside by 7.7\d*\)/);
     expect(r.status).toBe("proposed");
     expect(r.trace.refines).toBe(1);
-    expect(r.proposal!.known_issues).toEqual(["bore and volume: the hole is missing on purpose"]);
+    // The designer's explanation, plus every failing test on record.
+    expect(r.proposal!.known_issues[0]).toBe("bore and volume: the hole is missing on purpose");
+    expect(r.proposal!.known_issues.slice(1).map((k) => k.split(":")[0])).toEqual(["spec test bore fails", "spec test volume fails"]);
   });
 
   it("does not accept an unverified model; a second propose hands back the last verified checkpoint", async () => {
@@ -262,7 +265,7 @@ describe("spec writer isolation and the cached prefix", () => {
     const build = designerCalls(transport)[1]!;
     expect((build.payload["messages"] as unknown[]).length).toBe(1);
     expect(build.allText).not.toContain(SECRET);
-    expect(build.allText).toContain("<spec_tests frozen=\"true\">");
+    expect(build.allText).toMatch(/<spec_tests nonce="[0-9a-f]{16}">/);
     expect(build.allText).toContain("- volume — R1+R2: π/4·(7² − 3.2²)·1 ≈ 30.44 mm³ [volume ≈ 30.44 ±1%]");
   });
 

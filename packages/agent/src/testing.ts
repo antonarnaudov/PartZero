@@ -5,7 +5,9 @@
  *
  * Calls are routed to a script by the tools they offer: `classify` → triage, `submit_spec` →
  * spec writer, `apply_cadscript` → designer. A step is a fixed turn or a function of the call (to
- * react to tool results, e.g. assert that a repair hint arrived before sending the fix).
+ * react to tool results, e.g. assert that a repair hint arrived before sending the fix). Like a real
+ * provider, a turn whose scripted output exceeds the request's `max_tokens` is cut off there: it is
+ * billed at `max_tokens` and ends with stop reason `max_tokens`.
  */
 import type { ProviderTransport, TransportCall } from "@aicad/llm-gateway";
 import { LLMGateway, type GatewayOptions } from "@aicad/llm-gateway";
@@ -74,10 +76,12 @@ export function describeCall(payload: Json, role: ScriptRole, index: number): Sc
 
 let idCounter = 0;
 
-function events(turn: ScriptTurn, model: string, n: number): unknown[] {
+function events(turn: ScriptTurn, model: string, n: number, maxTokens: number | undefined): unknown[] {
   const usage = turn.usage ?? {};
   const input = usage.input ?? 1500;
-  const output = usage.output ?? 300;
+  // A provider never bills (or emits) more output than the request's max_tokens: the turn is cut off.
+  const truncated = maxTokens !== undefined && (usage.output ?? 300) > maxTokens;
+  const output = truncated ? maxTokens : (usage.output ?? 300);
   const out: unknown[] = [
     {
       type: "message_start",
@@ -107,7 +111,7 @@ function events(turn: ScriptTurn, model: string, n: number): unknown[] {
     out.push({ type: "content_block_stop", index });
     index++;
   }
-  const stop = turn.stop ?? ((turn.tools ?? []).length > 0 ? "tool_use" : "end_turn");
+  const stop = truncated ? "max_tokens" : (turn.stop ?? ((turn.tools ?? []).length > 0 ? "tool_use" : "end_turn"));
   out.push({
     type: "message_delta",
     delta: { stop_reason: stop, stop_sequence: null, ...(stop === "refusal" ? { stop_details: { type: "refusal", ...(turn.refusal ?? { category: "cyber", explanation: "scripted refusal" }) } } : {}) },
@@ -137,7 +141,7 @@ export class ScriptedTransport implements ProviderTransport {
     };
   }
 
-  #next(call: TransportCall): { turn: ScriptTurn; model: string } {
+  #next(call: TransportCall): { turn: ScriptTurn; model: string; maxTokens: number | undefined } {
     if (call.operation !== "anthropic.messages.create") throw new Error(`ScriptedTransport speaks the Anthropic format only (got ${call.operation})`);
     const role = roleOf(call.payload);
     const index = this.#cursor[role]++;
@@ -145,7 +149,8 @@ export class ScriptedTransport implements ProviderTransport {
     if (step === undefined) throw new Error(`ScriptedTransport: no scripted ${role} turn #${index + 1}`);
     const described = describeCall(call.payload, role, index);
     this.calls.push(described);
-    return { turn: typeof step === "function" ? step(described) : step, model: String(call.payload["model"]) };
+    const maxTokens = call.payload["max_tokens"];
+    return { turn: typeof step === "function" ? step(described) : step, model: String(call.payload["model"]), maxTokens: typeof maxTokens === "number" ? maxTokens : undefined };
   }
 
   async send(): Promise<unknown> {
@@ -153,8 +158,8 @@ export class ScriptedTransport implements ProviderTransport {
   }
 
   async *stream(call: TransportCall): AsyncIterable<unknown> {
-    const { turn, model } = this.#next(call);
-    yield* events(turn, model, ++this.#n);
+    const { turn, model, maxTokens } = this.#next(call);
+    yield* events(turn, model, ++this.#n, maxTokens);
   }
 }
 

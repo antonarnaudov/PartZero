@@ -5,18 +5,18 @@
  */
 import type { BodyMetrics, EvalReport, FeatureReport, IrDocument, PlaneSpec, RegionMetrics, SketchCurve } from "@aicad/ir-types";
 import { curveChanges, featureChanges, type IrChange } from "@aicad/evals";
-import { capList, CHARS_PER_TOKEN, clip, dims, histogram, num, plural, vec } from "./format.js";
+import { capList, CHARS_PER_TOKEN, clip, dims, histogram, ident, jsonQuote, num, oneLine, plural, quoteText, vec } from "./format.js";
 import { arcRadius } from "./sketch-geom.js";
 
 export function planeText(p: PlaneSpec): string {
-  if (typeof p === "string") return p;
+  if (typeof p === "string") return ident(p);
   return `frame(origin ${vec(p.origin)}, normal ${vec(p.normal)}, xDir ${vec(p.x_dir)})`;
 }
 
 export function curveText(c: SketchCurve): string {
-  if (c.kind === "line") return `${c.id}: line ${vec(c.start)}→${vec(c.end)}`;
-  if (c.kind === "circle") return `${c.id}: circle c${vec(c.center)} r${num(c.radius)}`;
-  return `${c.id}: arc ${vec(c.start)}→${vec(c.end)} c${vec(c.center)} r${num(arcRadius(c))} ${c.ccw ? "ccw" : "cw"}`;
+  if (c.kind === "line") return `${ident(c.id)}: line ${vec(c.start)}→${vec(c.end)}`;
+  if (c.kind === "circle") return `${ident(c.id)}: circle c${vec(c.center)} r${num(c.radius)}`;
+  return `${ident(c.id)}: arc ${vec(c.start)}→${vec(c.end)} c${vec(c.center)} r${num(arcRadius(c))} ${c.ccw ? "ccw" : "cw"}`;
 }
 
 export function bboxSize(b: Pick<BodyMetrics, "bbox_min" | "bbox_max">): number[] {
@@ -31,7 +31,7 @@ export function bodyText(b: BodyMetrics): string {
 
 export function regionText(r: RegionMetrics): string {
   const holes = r.loops - 1;
-  return `area ${num(r.area)} mm²${holes > 0 ? `, ${plural(holes, "hole")}` : ""} [outer: ${r.outer_curves.join(", ")}]`;
+  return `area ${num(r.area)} mm²${holes > 0 ? `, ${plural(holes, "hole")}` : ""} [outer: ${r.outer_curves.map(ident).join(", ")}]`;
 }
 
 /** One line for a successful feature: bodies or regions. */
@@ -83,7 +83,7 @@ export function changesText(before: IrDocument | null, after: IrDocument | null)
     const [name, id] = [c.path.slice(0, c.path.indexOf(".")), c.path.slice(c.path.indexOf(".") + 1)];
     const sign = c.what === "added" ? "+" : c.what === "removed" ? "−" : "~";
     const list = byFeature.get(name) ?? [];
-    list.push(`${sign}${id}`);
+    list.push(`${sign}${ident(id)}`);
     byFeature.set(name, list);
   }
   const parts: string[] = [];
@@ -92,11 +92,11 @@ export function changesText(before: IrDocument | null, after: IrDocument | null)
     seen.add(f.path);
     const sign = f.what === "added" ? "+" : f.what === "removed" ? "−" : "~";
     const cs = f.what === "modified" ? byFeature.get(f.path) : undefined;
-    parts.push(`${sign}${f.path}${cs ? ` (curves ${capList(cs, 8, (x) => x).join(" ")})` : ""}`);
+    parts.push(`${sign}${ident(f.path)}${cs ? ` (curves ${capList(cs, 8, (x) => x).join(" ")})` : ""}`);
   }
   for (const [name, cs] of byFeature) {
     if (seen.has(name)) continue;
-    parts.push(`~${name} (curves ${capList(cs, 8, (x) => x).join(" ")})`);
+    parts.push(`~${ident(name)} (curves ${capList(cs, 8, (x) => x).join(" ")})`);
   }
   return { text: parts.length > 0 ? parts.join(", ") : "no IR changes", changes: [...feats, ...curves] };
 }
@@ -114,25 +114,26 @@ export function irSummary(ir: IrDocument, report?: EvalReport | null, options: I
   const byName = new Map<string, FeatureReport>();
   for (const f of report?.features ?? []) byName.set(f.feature, f);
   const featureCount = ir.parts.reduce((n, p) => n + p.features.length, 0);
-  const name = ir.meta?.name ? `"${ir.meta.name}"` : "(unnamed)";
+  const name = ir.meta?.name ? quoteText(ir.meta.name, 120) : "(unnamed)";
   const lines: string[] = [`doc ${name}: ${plural(ir.parts.length, "part")}, ${plural(featureCount, "feature")}${report ? `, status ${report.status}` : ""}`];
-  if (ir.meta?.description) lines.push(`  intent: ${ir.meta.description}`);
+  // Doc text and names are the file's words, not instructions: always quoted, one line.
+  if (ir.meta?.description) lines.push(`  intent: ${quoteText(ir.meta.description)}`);
   for (const part of ir.parts) {
-    lines.push(`part "${part.name}"`);
+    lines.push(`part ${quoteText(part.name, 120)}`);
     for (const f of part.features) {
       const r = byName.get(f.name);
-      const status = f.suppressed ? " [suppressed]" : !r ? "" : r.status === "ok" ? ` → ${featureResultText(r)}` : ` → ✗ ${r.error?.code ?? "ERROR"}`;
+      const status = f.suppressed ? " [suppressed]" : !r ? "" : r.status === "ok" ? ` → ${featureResultText(r)}` : ` → ✗ ${ident(r.error?.code ?? "ERROR")}`;
       if (f.type === "sketch") {
         const kinds: Record<string, number> = {};
         for (const c of f.curves) kinds[c.kind] = (kinds[c.kind] ?? 0) + 1;
-        lines.push(`  ${f.name}: sketch on ${planeText(f.plane)}, ${plural(f.curves.length, "curve")} (${histogram(kinds)})${status}`);
+        lines.push(`  ${ident(f.name)}: sketch on ${planeText(f.plane)}, ${plural(f.curves.length, "curve")} (${histogram(kinds)})${status}`);
         if (f.curves.length <= maxCurves) for (const c of f.curves) lines.push(`    ${curveText(c)}`);
-        else lines.push(`    ids: ${capList(f.curves, 40, (c) => c.id).join(", ")}`);
+        else lines.push(`    ids: ${capList(f.curves, 40, (c) => ident(c.id)).join(", ")}`);
       } else if (f.type === "extrude") {
-        lines.push(`  ${f.name}: extrude ${f.sketch} ${num(f.distance)} mm${f.direction && f.direction !== "normal" ? ` (${f.direction})` : ""}${status}`);
+        lines.push(`  ${ident(f.name)}: extrude ${ident(f.sketch)} ${num(f.distance)} mm${f.direction && f.direction !== "normal" ? ` (${f.direction})` : ""}${status}`);
       } else {
         lines.push(
-          `  ${f.name}: revolve ${f.sketch} ${num(f.angle)}° about origin ${vec(f.axis.origin)} dir ${vec(f.axis.direction)}${f.direction && f.direction !== "normal" ? ` (${f.direction})` : ""}${status}`,
+          `  ${ident(f.name)}: revolve ${ident(f.sketch)} ${num(f.angle)}° about origin ${vec(f.axis.origin)} dir ${vec(f.axis.direction)}${f.direction && f.direction !== "normal" ? ` (${f.direction})` : ""}${status}`,
         );
       }
     }
@@ -152,14 +153,14 @@ export function bodyDetail(b: BodyMetrics): string[] {
 
 /** The `measure` view: one feature in detail, or every feature briefly plus model totals. */
 export function measureText(report: EvalReport, options: { feature?: string | undefined; body?: number | undefined } = {}): string {
-  const lines: string[] = [`report: ${report.engine}, status ${report.status}`];
+  const lines: string[] = [`report: ${oneLine(report.engine, 80)}, status ${report.status}`];
   if (options.feature !== undefined) {
     const f = report.features.find((x) => x.feature === options.feature);
     if (!f) {
-      const names = report.features.map((x) => x.feature).join(", ");
-      return `no feature "${options.feature}" in the latest report (evaluated features: ${names || "none"}; suppressed features are not evaluated)`;
+      const names = report.features.map((x) => ident(x.feature)).join(", ");
+      return `no feature ${jsonQuote(options.feature)} in the latest report (evaluated features: ${names || "none"}; suppressed features are not evaluated)`;
     }
-    lines.push(`${f.feature} (${f.type}, part "${f.part}"): ${f.status}${f.error ? ` ${f.error.code}: ${f.error.message}` : ""}`);
+    lines.push(`${ident(f.feature)} (${ident(f.type)}, part ${quoteText(f.part, 120)}): ${f.status}${f.error ? ` ${ident(f.error.code)}: ${oneLine(f.error.message)}` : ""}`);
     if (f.regions) {
       lines.push(`${plural(f.regions.length, "region")}, ${plural(f.regions.reduce((n, r) => n + r.loops, 0), "loop")} in total:`);
       f.regions.slice(0, 20).forEach((r, i) => lines.push(`  region ${i}: loops ${r.loops}, ${regionText(r)}`));
@@ -176,10 +177,10 @@ export function measureText(report: EvalReport, options: { feature?: string | un
     return clip(lines.join("\n"));
   }
   for (const f of report.features) {
-    if (f.status !== "ok") lines.push(`✗ ${f.feature} (${f.type}): ${f.error?.code ?? "ERROR"}`);
-    else lines.push(`${f.feature} (${f.type}): ${featureResultText(f)}`);
+    if (f.status !== "ok") lines.push(`✗ ${ident(f.feature)} (${ident(f.type)}): ${ident(f.error?.code ?? "ERROR")}`);
+    else lines.push(`${ident(f.feature)} (${ident(f.type)}): ${featureResultText(f)}`);
   }
-  if (report.error) lines.push(`document error ${report.error.code}: ${report.error.message}`);
+  if (report.error) lines.push(`document error ${ident(report.error.code)}: ${oneLine(report.error.message)}`);
   lines.push(`model: ${totalsText(modelTotals(report))}`);
   return clip(lines.join("\n"), undefined, "pass feature: <name> for one feature");
 }

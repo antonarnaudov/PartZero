@@ -21,7 +21,7 @@ export interface TriageResult {
   source: "model" | "fallback" | "forced";
 }
 
-export const classifySchema = z.object({
+export const classifySchema = z.strictObject({
   kind: z.enum(["ask", "quick_edit", "design"]).describe("ask = question only; quick_edit = small local change to the open model; design = new part or bigger change."),
   complexity: z.enum(["T1", "T2", "T3"]).describe("T1 simple single-profile part; T2 several features/bodies; T3 assembly."),
   needs_clarification: z.boolean().describe("True only if an ambiguity changes topology/interfaces (or units are unclear, or requirements conflict) and no safe default exists."),

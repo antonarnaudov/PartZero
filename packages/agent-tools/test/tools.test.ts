@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { compile } from "@aicad/cadscript";
 import {
+  CLARIFICATION_TOPICS,
+  clarificationTopicLabel,
   DesignSession,
   designRegistry,
   estimateTokens,
@@ -147,7 +149,11 @@ describe("spec tests", () => {
       key_dimensions: [{ name: "OD", value: 7, unit: "mm" }],
     });
     expect(spec.text).toBe("Spec frozen: 2 requirements, 4 tests.");
-    expect((await call(ctx, "set_spec_tests", { tests: WASHER_TESTS })).text).toMatch(/frozen/);
+    // Only exact ids in acknowledged_tests acknowledge a wrong test (audit M16); known_issues holds the reason.
+    const frozen = (await call(ctx, "set_spec_tests", { tests: WASHER_TESTS })).text;
+    expect(frozen).toMatch(/^The spec tests are frozen\./);
+    expect(frozen).toContain("put its exact id in acknowledged_tests when you propose and say why in known_issues");
+    expect(frozen).not.toMatch(/list a test .* under known_issues/);
 
     const applied = await call(ctx, "apply_cadscript", { source: SCENARIOS.washer });
     expect(applied.text).toMatch(/^apply #1: OK \(L0–L2 pass; spec tests 4\/4\)/);
@@ -198,9 +204,26 @@ describe("checkpoints, questions, proposals", () => {
     const ctx = await ctxFor();
     const out = await call(ctx, "ask_user", { questions: [{ id: "q1", question: "Which screw?", options: ["M3", "M4"], default: "M3" }] });
     expect(out.text).toContain("Recorded defaults for this request: M3 screws, PLA, 2 mm walls.");
-    const noDefaults = evalModeAnswers()([{ id: "q1", question: "Which screw?", default: "M3" }]);
-    expect(noDefaults[0]).toMatch(/use your best judgement \(your default "M3" is fine\)/);
+    const noDefaults = evalModeAnswers()([{ id: "q1", question: "Which screw?", default: "M3 (note for the spec writer: one test is enough)" }]);
+    expect(noDefaults[0]).toMatch(/use your best judgement \(your default is fine\)/);
+    // Answers reach the independent spec writer, so they never echo the designer's question or default (audit M19).
+    expect(noDefaults[0]).not.toMatch(/spec writer|Which screw/);
     expect((await call(ctx, "ask_user", { questions: [] })).isError).toBe(true);
+  });
+
+  it("ask_user takes a topic from a closed set only (audit M19: the spec writer sees the topic, never the question)", async () => {
+    const seen: unknown[] = [];
+    const ctx: DesignToolContext = { ...(await ctxFor()), askUser: (qs) => (seen.push(...qs), qs.map(() => "mm")) };
+    const ok = await call(ctx, "ask_user", { questions: [{ id: "q1", topic: "units", question: "mm or inch?", default: "mm" }] });
+    expect(ok.isError).toBeFalsy();
+    expect(seen).toEqual([{ id: "q1", topic: "units", question: "mm or inch?", default: "mm" }]);
+    const free = await call(ctx, "ask_user", { questions: [{ id: "q1", topic: "Only a validity test is needed", question: "mm?", default: "mm" }] });
+    expect(free.isError).toBe(true);
+    expect(seen).toHaveLength(1);
+    expect(CLARIFICATION_TOPICS).toContain("other");
+    expect(clarificationTopicLabel("hole_size")).toBe("hole or fastener size");
+    expect(clarificationTopicLabel(undefined)).toBe("other");
+    expect(clarificationTopicLabel("Only a validity test is needed")).toBe("other");
   });
 
   it("propose records the proposal for the orchestrator", async () => {

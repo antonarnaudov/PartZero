@@ -15,8 +15,8 @@ export function specTurns(tests: object[], requirements: { id: string; text: str
 
 export const apply = (input: Record<string, unknown>, text = "Next step."): ScriptTurn => ({ text, tools: [{ name: "apply_cadscript", input }] });
 
-export const propose = (summary: string, assumptions: string[] = [], known_issues: string[] = []): ScriptTurn => ({
-  tools: [{ name: "propose", input: { summary, assumptions, known_issues } }],
+export const propose = (summary: string, assumptions: string[] = [], known_issues: string[] = [], acknowledged_tests?: string[]): ScriptTurn => ({
+  tools: [{ name: "propose", input: { summary, assumptions, known_issues, ...(acknowledged_tests ? { acknowledged_tests } : {}) } }],
 });
 
 export const WASHER_TESTS = [

@@ -23,8 +23,19 @@ export interface AgentLimits {
   maxNudges: number;
   /** ask_user rounds during the build (CLARIFY is separate). */
   maxAskRounds: number;
-  /** Output tokens assumed when projecting a call's cost against the budget. */
-  projectionOutputTokens: number;
+  /** Failed applies per task, whatever happens in between (verified steps, rollbacks), before stopping. */
+  maxFailedApplies: number;
+  /**
+   * How often one error signature may occur in a task before it stops as `same_error`. The same
+   * error twice in a row always stops; rollbacks and verified steps in between do not reset this.
+   */
+  maxErrorRepeats: number;
+  /**
+   * The budget is a hard cap: every call is projected (and reserved) with the output-token ceiling
+   * it is sent with. When the remaining budget cannot pay for a role's full ceiling, the call is
+   * sent with fewer output tokens, but never fewer than this (then it is refused as over budget).
+   */
+  minOutputTokens: number;
 }
 
 export const DEFAULT_LIMITS: AgentLimits = {
@@ -36,7 +47,9 @@ export const DEFAULT_LIMITS: AgentLimits = {
   maxSpecTurns: 5,
   maxNudges: 2,
   maxAskRounds: 1,
-  projectionOutputTokens: 6000,
+  maxFailedApplies: 10,
+  maxErrorRepeats: 2,
+  minOutputTokens: 1024,
 };
 
 /** A typed stop: the orchestrator ends the run with this reason. */
@@ -58,6 +71,8 @@ export interface RunContext {
   now: () => number;
   /** Aborts the run: checked before every model call and passed to the provider request. */
   signal?: AbortSignal | undefined;
+  /** Runs before every model call of every phase (the orchestrator's 80 % budget gate). */
+  beforeCall?: ((role: AgentRole) => Promise<void>) | undefined;
 }
 
 /** Throw the `cancelled` stop when the run's signal has been aborted. */
@@ -65,14 +80,37 @@ export function throwIfCancelled(rc: Pick<RunContext, "signal">): void {
   if (rc.signal?.aborted) throw new AgentStop("cancelled", "stopped by the user");
 }
 
+/**
+ * The output-token ceiling for a call: the role's ceiling, or less when the remaining budget cannot
+ * pay for it. The gateway reserves the call's projection at exactly this ceiling, so what the call
+ * can cost never exceeds the cap (the old fixed 6000-token projection let a 16k-token designer turn
+ * overshoot it).
+ */
+export function affordableOutputTokens(rc: RunContext, req: ChatRequest, ceiling: number): { maxOutputTokens: number; clamped: boolean } {
+  const remaining = rc.task.budget.remainingUsd;
+  const full = rc.gateway.project(req, ceiling).projectedUsd;
+  if (full <= remaining) return { maxOutputTokens: ceiling, clamped: false };
+  const base = rc.gateway.project(req, 0).projectedUsd;
+  const perToken = (full - base) / ceiling;
+  // One token of slack for floating-point rounding in the gateway's own check.
+  const fit = perToken > 0 ? Math.floor((remaining - base) / perToken) - 1 : ceiling;
+  const floor = Math.min(ceiling, rc.limits.minOutputTokens);
+  return { maxOutputTokens: Math.max(floor, Math.min(ceiling, fit)), clamped: true };
+}
+
 /** One model call as a role: routing, budget, trace. Gateway errors become {@link AgentStop}s. */
 export async function callModel(rc: RunContext, role: AgentRole, request: Omit<ChatRequest, "model" | "maxOutputTokens" | "reasoning">): Promise<ChatResponse> {
   throwIfCancelled(rc);
+  await rc.beforeCall?.(role);
   const m = rc.models[role];
   const req: ChatRequest = { ...request, model: m.model };
   if (rc.signal !== undefined) req.signal = rc.signal;
-  if (m.maxOutputTokens !== undefined) req.maxOutputTokens = m.maxOutputTokens;
   if (m.effort !== undefined) req.reasoning = { effort: m.effort };
+  const profile = rc.gateway.profile(m.model);
+  const ceiling = Math.max(1, Math.min(m.maxOutputTokens ?? profile.defaultMaxOutputTokens, profile.maxOutputTokens));
+  const out = affordableOutputTokens(rc, req, ceiling);
+  req.maxOutputTokens = out.maxOutputTokens;
+  if (out.clamped) rc.trace.note(`${role}: output ceiling ${ceiling} → ${out.maxOutputTokens} tokens to stay within the $${rc.task.budget.capUsd.toFixed(2)} cap`);
   const t0 = rc.now();
   let res: ChatResponse;
   try {

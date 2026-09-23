@@ -11,7 +11,7 @@
 import ts from "typescript";
 import { DIAGNOSTIC_CODES, type Span } from "@aicad/cadscript";
 import type { Feature, IrDocument, RevolveFeature, SketchCurve, SketchFeature } from "@aicad/ir-types";
-import { num, vec } from "./format.js";
+import { ident, num, quoteId, vec } from "./format.js";
 import {
   arcRadius,
   describeAxis,
@@ -65,6 +65,8 @@ export const PLAYBOOK: Readonly<Record<string, string>> = {
   CS_RESERVED_NAME: "Rename the const (builtin and reserved names such as part, sketch, line cannot name features).",
   CS_UNRESOLVED_SKETCH: "extrude/revolve take the name of a sketch const declared earlier in the same part; declare the sketch first or fix the name.",
   CS_RENAME_DETECTED: "Informational: the feature was matched to its previous version as a rename; nothing to fix.",
+  CS_TOO_COMPLEX: "The source is nested too deeply for the compiler (thousands of brackets or a very long expression). CadScript needs flat literal arguments: write each value out, one curve per property.",
+  CS_COMPILER_ERROR: "The compiler failed on this source (an internal error, not a rule you broke). Rewrite the last change more simply; if it persists, report it under known_issues.",
   // ── IR validation (forge-ir validate.rs mirrors) ──
   UNSUPPORTED_SCHEMA: 'The IR schema must be "aicad.ir/0"; this comes from the compiler — write plain CadScript.',
   NO_PARTS: 'A file needs at least one part("name") with features.',
@@ -150,13 +152,13 @@ function pt(p: readonly number[]): string {
 }
 
 function endName(e: CurveEnd): string {
-  return `'${e.curve}'.${e.which}`;
+  return `${quoteId(e.curve)}.${e.which}`;
 }
 
 function describeCurve(c: SketchCurve): string {
-  if (c.kind === "line") return `line '${c.id}' ${pt(c.start)}→${pt(c.end)}`;
-  if (c.kind === "circle") return `circle '${c.id}' c=${pt(c.center)} r=${num(c.radius)}`;
-  return `arc '${c.id}' ${pt(c.start)}→${pt(c.end)} c=${pt(c.center)} r=${num(arcRadius(c))}`;
+  if (c.kind === "line") return `line ${quoteId(c.id)} ${pt(c.start)}→${pt(c.end)}`;
+  if (c.kind === "circle") return `circle ${quoteId(c.id)} c=${pt(c.center)} r=${num(c.radius)}`;
+  return `arc ${quoteId(c.id)} ${pt(c.start)}→${pt(c.end)} c=${pt(c.center)} r=${num(arcRadius(c))}`;
 }
 
 function findFeatureIn(ir: IrDocument | null | undefined, name: string | undefined): Feature | undefined {
@@ -209,7 +211,7 @@ function crossingHint(sk: SketchFeature): string | undefined {
   const other = circle === x.a ? x.b : x.a;
   if (circle) {
     const d = distanceToCurve(circle.center, other);
-    extra = ` The circle's center is ${num(d)} mm from '${other.id}' but its radius is ${num(circle.radius)}: move it so the distance exceeds the radius by at least a wall thickness (e.g. ≥ ${num(circle.radius + 1)} mm), or reduce the radius.`;
+    extra = ` The circle's center is ${num(d)} mm from ${quoteId(other.id)} but its radius is ${num(circle.radius)}: move it so the distance exceeds the radius by at least a wall thickness (e.g. ≥ ${num(circle.radius + 1)} mm), or reduce the radius.`;
   } else {
     extra = " Curves may only meet end-to-end: split the shape at that point into curves that share endpoints, or move one curve.";
   }
@@ -245,9 +247,9 @@ function revolveHint(ir: IrDocument | null | undefined, feature: string | undefi
   const rightSide = wrongIsNeg ? ax.positiveSide : ax.negativeSide;
   const offenders = ext
     .filter((x) => (wrongIsNeg ? x.e.min < -tol : x.e.max > tol))
-    .map((x) => `'${x.c.id}' (reaches ${pt(wrongIsNeg ? x.e.argmin : x.e.argmax)}, ${num(wrongIsNeg ? -x.e.min : x.e.max)} mm across)`);
+    .map((x) => `${quoteId(x.c.id)} (reaches ${pt(wrongIsNeg ? x.e.argmin : x.e.argmax)}, ${num(wrongIsNeg ? -x.e.min : x.e.max)} mm across)`);
   return (
-    `Axis = ${ax.line} in sketch '${sk.name}' coordinates. The profile${ids ? ` region [${ids.join(", ")}]` : ""} lies mostly on the ${rightSide} side (up to ${num(wrongIsNeg ? pos : neg)} mm) but ${offenders.slice(0, 4).join(", ")}${offenders.length > 4 ? ", …" : ""} ` +
+    `Axis = ${ax.line} in sketch ${quoteId(sk.name)} coordinates. The profile${ids ? ` region [${ids.map(ident).join(", ")}]` : ""} lies mostly on the ${rightSide} side (up to ${num(wrongIsNeg ? pos : neg)} mm) but ${offenders.slice(0, 4).join(", ")}${offenders.length > 4 ? ", …" : ""} ` +
     `cross${offenders.length === 1 ? "es" : ""} to the ${wrongSide} side. Move those points onto the axis or to the ${rightSide} side (touching the axis is fine), or move the axis so the whole region is on one side.`
   );
 }
@@ -256,7 +258,7 @@ function dependencyHint(ir: IrDocument | null | undefined, feature: string | und
   const f = findFeatureIn(ir, feature);
   if (!f || f.type === "sketch") return undefined;
   const code = message?.match(/failed with ([A-Z_]+)/)?.[1];
-  return `'${f.name}' consumes sketch '${f.sketch}', which failed${code ? ` with ${code}` : ""}. Fix '${f.sketch}' (see its own error and hint); '${f.name}' recovers automatically.`;
+  return `${quoteId(f.name)} consumes sketch ${quoteId(f.sketch)}, which failed${code ? ` with ${code}` : ""}. Fix ${quoteId(f.sketch)} (see its own error and hint); ${quoteId(f.name)} recovers automatically.`;
 }
 
 // ── Compile-diagnostic helpers: read literal values at a span ──
@@ -346,7 +348,7 @@ export function repairHint(code: string, ctx: HintContext = {}): string {
         break;
       case "SKETCH_SUPPRESSED": {
         const f = findFeatureIn(ctx.ir, ctx.feature);
-        if (f && f.type !== "sketch") computed = `Sketch '${f.sketch}' is suppressed: remove \`suppressed: true\` from '${f.sketch}', or delete '${f.name}'.`;
+        if (f && f.type !== "sketch") computed = `Sketch ${quoteId(f.sketch)} is suppressed: remove \`suppressed: true\` from ${quoteId(f.sketch)}, or delete ${quoteId(f.name)}.`;
         break;
       }
       case "INCONSISTENT_ARC":

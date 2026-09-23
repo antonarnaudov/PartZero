@@ -70,6 +70,59 @@ export function clip(text: string, maxChars = MAX_RESULT_CHARS, how = "narrow th
   return `${text.slice(0, cut)}\n… [clipped ${dropped} chars to stay under ~${MAX_RESULT_TOKENS} tokens; ${how}]`;
 }
 
+// ─── Untrusted text ──────────────────────────────────────────────────────────────────────────
+//
+// Names, ids, doc text and engine/compiler messages come from the user's file (or are derived
+// from it). Placed raw into a prompt they could start a new line that imitates an orchestrator
+// note, or close a tag or fence. Every tool and prompt string routes them through these helpers.
+
+/** Plain ids (`h1`, `outer_top`, `R2.a`) are shown as-is; anything else is JSON-quoted. */
+const PLAIN_ID = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$/;
+
+/** Clip `text` to `max` characters with an ellipsis marker. */
+export function clipText(text: string, max: number): string {
+  return text.length <= max ? text : `${text.slice(0, Math.max(0, max - 1))}…`;
+}
+
+/** An identifier from the file: as-is when it is a plain id, else a JSON string (escaped, ≤ 80 chars). */
+export function ident(id: string): string {
+  return PLAIN_ID.test(id) ? id : jsonQuote(clipText(id, 80));
+}
+
+/** Like {@link ident}, but plain ids are single-quoted (`'h1'`) as hints name curves. */
+export function quoteId(id: string): string {
+  return PLAIN_ID.test(id) ? `'${id}'` : jsonQuote(clipText(id, 80));
+}
+
+/** Free text from the file (doc name/description, part names): always a JSON string, clipped. */
+export function quoteText(text: string, max = 300): string {
+  return jsonQuote(clipText(text, max));
+}
+
+/** `JSON.stringify` of a string, also escaping U+2028/U+2029 (which JSON leaves raw). */
+export function jsonQuote(text: string): string {
+  return JSON.stringify(text).replace(/[\u2028\u2029]/g, escapeControl);
+}
+
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\u0000-\u001f\u007f\u2028\u2029]/g;
+
+function escapeControl(c: string): string {
+  if (c === "\n") return "\\n";
+  if (c === "\r") return "\\r";
+  if (c === "\t") return "\\t";
+  return `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`;
+}
+
+/**
+ * One line of untrusted text (engine or compiler messages): control characters, line and
+ * paragraph separators are escaped (a newline becomes the two characters `\n`), so the text can
+ * never start a new line of the prompt.
+ */
+export function oneLine(text: string, max = 600): string {
+  return clipText(text.replace(CONTROL_CHARS, escapeControl), max);
+}
+
 /** Indent every line. */
 export function indent(text: string, by = "  "): string {
   return text
