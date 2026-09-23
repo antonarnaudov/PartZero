@@ -1,0 +1,194 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "errors_dependencies",
+    "description": "dependencies by id and references: SKETCH_SUPPRESSED, DEPENDENCY_FAILED (sketch, datum, query source), REF_MISSING, REF_CARDINALITY; a region selected by its outer member"
+  },
+  "params": [],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s0",
+          "name": "s0",
+          "plane": "XY",
+          "suppressed": true,
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "c",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 3
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e0",
+          "name": "e0",
+          "sketch": "s0",
+          "distance": 2
+        },
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "s1",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "a",
+              "start": [
+                0,
+                0
+              ],
+              "end": [
+                10,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "b",
+              "start": [
+                10,
+                0
+              ],
+              "end": [
+                10,
+                10
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "e1",
+          "sketch": "s1",
+          "distance": 2
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "s2",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "outer",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 10
+            },
+            {
+              "kind": "circle",
+              "id": "inner",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 4
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e2",
+          "name": "e2",
+          "sketch": "s2",
+          "distance": 3,
+          "regions": [
+            "outer"
+          ]
+        },
+        {
+          "type": "datum_plane",
+          "id": "d1",
+          "name": "d1",
+          "mode": "midplane",
+          "a": "XY",
+          "b": "YZ"
+        },
+        {
+          "type": "sketch",
+          "id": "s3",
+          "name": "s3",
+          "plane": {
+            "datum": "d1"
+          },
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                0,
+                0
+              ],
+              "w": 4,
+              "h": 4
+            }
+          ]
+        },
+        {
+          "type": "tag",
+          "id": "t1",
+          "name": "t1",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "cap",
+              "feature": "e1",
+              "end": "end"
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "t2",
+          "name": "t2",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "filter",
+              "of": {
+                "op": "faces",
+                "of": {
+                  "op": "body",
+                  "feature": "e2"
+                }
+              },
+              "where": {
+                "type": "sphere"
+              }
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "t3",
+          "name": "t3",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "faces",
+              "of": {
+                "op": "body",
+                "feature": "e2"
+              }
+            },
+            "card": 3
+          }
+        }
+      ]
+    }
+  ]
+}

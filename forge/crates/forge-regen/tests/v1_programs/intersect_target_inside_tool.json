@@ -1,0 +1,90 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "intersect_target_inside_tool",
+    "description": "an intersect whose tool contains its target: the target is its own intersection and is listed as modified (4x4x4 = 64), no FORGE_BOOLEAN_NO_CHANGE note (SPEC-v1 \u00a76.0.3 intersects every target)"
+  },
+  "params": [],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "s1",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "a",
+              "center": [
+                0,
+                0
+              ],
+              "w": 4,
+              "h": 4
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "e1",
+          "sketch": "s1",
+          "distance": 4
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "s2",
+          "plane": {
+            "origin": [
+              0,
+              0,
+              -3
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "x_dir": [
+              1,
+              0,
+              0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "big",
+              "center": [
+                0,
+                0
+              ],
+              "w": 20,
+              "h": 20
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e2",
+          "name": "e2",
+          "sketch": "s2",
+          "distance": 10,
+          "op": "intersect",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

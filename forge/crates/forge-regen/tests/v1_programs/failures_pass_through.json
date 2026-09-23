@@ -1,0 +1,102 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "failures_pass_through",
+    "description": "expression range check, reference cardinality, detached join: each fails loudly and later features still run"
+  },
+  "params": [
+    {
+      "name": "t",
+      "unit": "mm",
+      "value": 8
+    }
+  ],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "s1",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                0,
+                0
+              ],
+              "w": 10,
+              "h": 10
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "e1",
+          "sketch": "s1",
+          "distance": "t - 10"
+        },
+        {
+          "type": "extrude",
+          "id": "e2",
+          "name": "e2",
+          "sketch": "s1",
+          "distance": "t"
+        },
+        {
+          "type": "tag",
+          "id": "t1",
+          "name": "t1",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "cap",
+              "feature": "e2",
+              "end": "end"
+            },
+            "card": 2
+          }
+        },
+        {
+          "type": "sketch",
+          "id": "s3",
+          "name": "s3",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                50,
+                0
+              ],
+              "w": 5,
+              "h": 5
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e3",
+          "name": "e3",
+          "sketch": "s3",
+          "distance": 2,
+          "op": "join",
+          "targets": "all"
+        },
+        {
+          "type": "extrude",
+          "id": "e4",
+          "name": "e4",
+          "sketch": "s3",
+          "distance": 2
+        }
+      ]
+    }
+  ]
+}

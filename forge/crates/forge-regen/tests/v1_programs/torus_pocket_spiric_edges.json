@@ -1,0 +1,218 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "torus_pocket_spiric_edges",
+    "description": "gen1_s11_01829 (seed 11) reduced to the ring and the pocket: the pocket's side walls (vertical planes off the axis) cut the ring's inner fillet torus in 6 spiric sections, which are not conics, so Forge reports them as bspline; the horizontal pocket floor and top cut the torus and cylinder in circles. Regression for the oracle's curve recognition (SPEC-v1 \u00a78.3 rule 3), which at 1e-7 s recognizes some of the short spiric arcs as circles"
+  },
+  "params": [
+    {
+      "name": "r_in",
+      "unit": "mm",
+      "value": 2.498
+    },
+    {
+      "name": "ring_w",
+      "unit": "mm",
+      "value": 12.287
+    },
+    {
+      "name": "ring_h",
+      "unit": "mm",
+      "value": 13.632
+    },
+    {
+      "name": "sweep",
+      "unit": "deg",
+      "value": 360.0
+    },
+    {
+      "name": "width",
+      "unit": "mm",
+      "value": 117.459,
+      "min": 10.0
+    },
+    {
+      "name": "depth",
+      "unit": "mm",
+      "value": 29.651
+    },
+    {
+      "name": "thick",
+      "unit": "mm",
+      "value": 13.399,
+      "min": 0.5
+    },
+    {
+      "name": "holes",
+      "unit": "count",
+      "value": 1.0
+    },
+    {
+      "name": "hole_d",
+      "unit": "mm",
+      "value": 2.438
+    },
+    {
+      "name": "spread",
+      "unit": "ratio",
+      "value": 0.41
+    },
+    {
+      "name": "pocket_w",
+      "unit": "mm",
+      "value": 4.706
+    },
+    {
+      "name": "angle",
+      "unit": "deg",
+      "value": 16.212517963499003
+    },
+    {
+      "name": "rad",
+      "unit": "mm",
+      "value": 10.20991584954365
+    }
+  ],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part_1",
+      "params": [
+        {
+          "name": "margin",
+          "unit": "mm",
+          "value": "min(width, depth) / 5"
+        }
+      ],
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "prof_sk",
+          "plane": "YZ",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "prof",
+              "corner": [
+                "r_in",
+                2.685
+              ],
+              "w": "ring_w",
+              "h": "ring_h",
+              "r": "min(ring_w, ring_h) / 4"
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "r1",
+          "name": "ring",
+          "sketch": "s1",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": "sweep",
+          "direction": "symmetric"
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "plate_sk",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "outline",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "w": "width",
+              "h": "depth",
+              "r": "min(width, depth) / 10"
+            },
+            {
+              "kind": "circle",
+              "id": "h0",
+              "center": [
+                "(width / 2 - margin) * spread",
+                "(depth / 2 - margin) * 1"
+              ],
+              "radius": "hole_d / 2"
+            },
+            {
+              "kind": "circle",
+              "id": "h1",
+              "center": [
+                "(width / 2 - margin) * spread",
+                "(depth / 2 - margin) * -1"
+              ],
+              "radius": "hole_d / 2"
+            },
+            {
+              "kind": "circle",
+              "id": "hc",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "radius": "hole_d / 2 * max(1, holes / 4)"
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "plate",
+          "sketch": "s2",
+          "distance": "thick"
+        },
+        {
+          "type": "sketch",
+          "id": "s3",
+          "name": "pocket_sk",
+          "plane": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "end"
+              }
+            }
+          },
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "pocket",
+              "center": [
+                0.277,
+                -0.248
+              ],
+              "w": "pocket_w",
+              "h": "pocket_w * 0.75"
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e2",
+          "name": "pocket",
+          "sketch": "s3",
+          "distance": "0.25 mm",
+          "direction": "reverse",
+          "op": "cut",
+          "targets": "all"
+        }
+      ]
+    }
+  ]
+}

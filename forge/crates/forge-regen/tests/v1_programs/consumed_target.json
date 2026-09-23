@@ -1,0 +1,74 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "consumed_target",
+    "description": "a cut removes its whole target (BOOLEAN_BODY_CONSUMED)"
+  },
+  "params": [],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "sa",
+          "name": "sa",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                0,
+                0
+              ],
+              "w": 4,
+              "h": 4
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "ea",
+          "name": "ea",
+          "sketch": "sa",
+          "distance": 4
+        },
+        {
+          "type": "sketch",
+          "id": "sb",
+          "name": "sb",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                0,
+                0
+              ],
+              "w": 10,
+              "h": 10
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "eb",
+          "name": "eb",
+          "sketch": "sb",
+          "distance": 10,
+          "op": "cut",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "ea"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

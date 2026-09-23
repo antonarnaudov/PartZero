@@ -1,0 +1,95 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "split_then_pocket",
+    "description": "a slot splits a bar into two pieces (BOOLEAN_SPLIT); a pocket then modifies one piece only"
+  },
+  "params": [],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "sa",
+          "name": "sa",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                0,
+                0
+              ],
+              "w": 40,
+              "h": 10
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "ea",
+          "name": "ea",
+          "sketch": "sa",
+          "distance": 10
+        },
+        {
+          "type": "sketch",
+          "id": "sb",
+          "name": "sb",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                0,
+                0
+              ],
+              "w": 4,
+              "h": 20
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "eb",
+          "name": "eb",
+          "sketch": "sb",
+          "distance": 10,
+          "op": "cut",
+          "targets": "all"
+        },
+        {
+          "type": "sketch",
+          "id": "sc",
+          "name": "sc",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                12,
+                0
+              ],
+              "w": 2,
+              "h": 2
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "ec",
+          "name": "ec",
+          "sketch": "sc",
+          "distance": 10,
+          "op": "cut",
+          "targets": "all"
+        }
+      ]
+    }
+  ]
+}

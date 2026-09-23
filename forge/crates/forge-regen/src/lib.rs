@@ -17,6 +17,13 @@
 //! entities by provenance, never by arena id: forge-check and forge-ops name them with
 //! [`forge_core::topo::EntityNames`] while the body exists, and every message still passes
 //! [`forge_core::topo::scrub_arena_ids`] as a backstop.
+//!
+//! IR v1 (`aicad.ir/1`, SPEC-v1) is evaluated by [`v1`] ([`v1::evaluate`], [`v1::report`]:
+//! the `aicad.metrics/1` report). The v0 functions of this module stay the evaluator of v0
+//! documents with the `aicad.metrics/0` report, unchanged byte for byte; [`v1::load`]
+//! migrates a v0 document for engines that want its v1 report (SPEC-v1 §0.2 rule 4).
+
+pub mod v1;
 
 use std::collections::BTreeMap;
 
@@ -99,7 +106,7 @@ fn with_sketch<'a>(
 }
 
 /// SPEC §4 [R-12]: a produced body must pass Forge's own validity check.
-fn checked(body: Body) -> Result<Body, OpError> {
+pub(crate) fn checked(body: Body) -> Result<Body, OpError> {
     let issues: Vec<String> = validate(&body)
         .iter()
         .filter(|i| i.severity == Severity::Error)

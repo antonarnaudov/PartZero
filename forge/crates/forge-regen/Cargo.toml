@@ -12,9 +12,19 @@ forge-core.workspace = true
 forge-ir.workspace = true
 forge-ops.workspace = true
 forge-check.workspace = true
+# IR v1 evaluation (SPEC-v1): parameters and expressions (W1), sketches (W2), references (W3).
+# Path entries: these crates are not in `[workspace.dependencies]` (forge/Cargo.toml).
+forge-params = { path = "../forge-params" }
+forge-sketch = { path = "../forge-sketch" }
+forge-refs = { path = "../forge-refs" }
+serde_json.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+
+# proptest (and its process-fork/timeout helpers) only on native targets, as in forge-solve:
+# the v1 golden (`tests/v1_golden_hash.rs`) also runs on wasm32-wasip1.
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
 proptest.workspace = true
 
 [lints]

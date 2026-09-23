@@ -1,0 +1,73 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "seam_notch_in_disk",
+    "description": "a blind notch cut into the bottom rim of a disk (r 10, 5 thick; notch x in [-2, 2], y in [-10, -6], z in [0, 2]): 7 faces (6 plane, 1 cylinder), 13 edges (10 line, 3 circle: top circle, bottom rim arc, notch arc). Volume 500 pi - 2 (2 sqrt 96 + 100 asin 0.2 - 24). Regression for the oracle's seam re-merge (SPEC-v1 \u00a78.3 rule 1): the bottom rim arc passes OCCT's cylinder seam at +x, which splits it in two"
+  },
+  "params": [],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "s1",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "c",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 10
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "e1",
+          "sketch": "s1",
+          "distance": 5
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "s2",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "n",
+              "center": [
+                0,
+                -10
+              ],
+              "w": 4,
+              "h": 8
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e2",
+          "name": "e2",
+          "sketch": "s2",
+          "distance": 2,
+          "op": "cut",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

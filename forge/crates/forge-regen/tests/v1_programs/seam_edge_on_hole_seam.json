@@ -1,0 +1,83 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "seam_edge_on_hole_seam",
+    "description": "a through notch (x in [3, 8], y in [0, 3]) cut from a through hole (r 5) of a 40x40x10 plate: its wall y = 0 meets the hole wall along the line x = 5, y = 0, exactly OCCT's cylinder seam; 10 faces (9 plane, 1 cylinder), 24 edges (22 line, 2 circle). Regression for the oracle's seam normalization (SPEC-v1 \u00a78.3 rule 1, v0 seam rule): a real edge lying on a seam line must be counted"
+  },
+  "params": [],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "s1",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                0,
+                0
+              ],
+              "w": 40,
+              "h": 40
+            },
+            {
+              "kind": "circle",
+              "id": "hc",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 5
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "e1",
+          "sketch": "s1",
+          "distance": 10
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "s2",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "n",
+              "center": [
+                5.5,
+                1.5
+              ],
+              "w": 5,
+              "h": 3
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e2",
+          "name": "e2",
+          "sketch": "s2",
+          "distance": 10,
+          "op": "cut",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

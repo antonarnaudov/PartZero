@@ -1,0 +1,98 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "seam_boss_over_hole",
+    "description": "a boss joined over the edge of a through hole: the hole's top circle and the boss's bottom circle split each other into two arcs; 10 faces (8 plane, 2 cylinder), 18 edges (12 line, 6 circle). Regression for the oracle's seam re-merge (SPEC-v1 §8.3 rule 1): OCCT splits two of the arcs at the cylinder seams"
+  },
+  "params": [],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "s1",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                0,
+                0
+              ],
+              "w": 40,
+              "h": 40
+            },
+            {
+              "kind": "circle",
+              "id": "hc",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 3
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "e1",
+          "sketch": "s1",
+          "distance": 10
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "s2",
+          "plane": {
+            "origin": [
+              0,
+              0,
+              10
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "x_dir": [
+              1,
+              0,
+              0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "ring",
+              "center": [
+                4,
+                0
+              ],
+              "radius": 3
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e2",
+          "name": "e2",
+          "sketch": "s2",
+          "distance": 5,
+          "op": "join",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -7,12 +7,12 @@
  *               `{ id, ok: false, error: { code, message } }`.
  */
 import { evaluate, init, transferables } from "./engine.js";
-import type { InitInput, IrInput, TessellationOptions } from "./types.js";
+import type { EvaluateOptions, InitInput, IrInput } from "./types.js";
 
 interface Request {
   id: number;
   ir: IrInput;
-  options?: TessellationOptions;
+  options?: EvaluateOptions;
   wasm?: InitInput;
 }
 

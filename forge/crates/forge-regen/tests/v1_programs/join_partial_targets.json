@@ -1,0 +1,109 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "join_partial_targets",
+    "description": "a join with targets: all whose tool reaches only the first of two boxes: that box is modified (10x10x10 + 4x4x3 = 1048, 11 faces, 24 edges), the other is untouched: in neither bodies nor removed, named by the FORGE_BOOLEAN_NO_CHANGE note (SPEC-v1 \u00a76.0.5; both engines leave it out of bodies)"
+  },
+  "params": [],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "s1",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "a",
+              "center": [
+                0,
+                0
+              ],
+              "w": 10,
+              "h": 10
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "e1",
+          "sketch": "s1",
+          "distance": 10
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "s2",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "b",
+              "center": [
+                30,
+                0
+              ],
+              "w": 10,
+              "h": 10
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e2",
+          "name": "e2",
+          "sketch": "s2",
+          "distance": 10
+        },
+        {
+          "type": "sketch",
+          "id": "s3",
+          "name": "s3",
+          "plane": {
+            "origin": [
+              0,
+              0,
+              8
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "x_dir": [
+              1,
+              0,
+              0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "t",
+              "center": [
+                0,
+                0
+              ],
+              "w": 4,
+              "h": 4
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e3",
+          "name": "e3",
+          "sketch": "s3",
+          "distance": 5,
+          "op": "join",
+          "targets": "all"
+        }
+      ]
+    }
+  ]
+}

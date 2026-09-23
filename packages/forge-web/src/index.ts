@@ -14,7 +14,17 @@
  *
  * See README.md for the full contract.
  */
-export { engineVersion, evaluate, exportMesh, init, transferables, wasmModule } from "./engine.js";
+export {
+  engineVersion,
+  evaluate,
+  exportMesh,
+  init,
+  migrate,
+  params,
+  transferables,
+  wasmModule,
+  writeBack,
+} from "./engine.js";
 export { createEvaluator, createSharedEvaluator, type Evaluator, type EvaluatorOptions } from "./evaluator.js";
 export { Viewport } from "./viewport.js";
 export type * from "./types.js";

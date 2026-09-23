@@ -398,16 +398,44 @@ dependencies = [
  "forge-ir",
  "forge-mesh",
  "forge-ops",
+ "forge-refs",
  "forge-regen",
  "proptest",
+ "serde_json",
 ]
 
 [[package]]
 name = "forge-ops"
 version = "0.0.1"
 dependencies = [
+ "forge-check",
  "forge-core",
  "forge-ir",
+ "forge-ssi",
+ "proptest",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "forge-params"
+version = "0.0.1"
+dependencies = [
+ "forge-core",
+ "forge-ir",
+ "proptest",
+ "serde_json",
+]
+
+[[package]]
+name = "forge-refs"
+version = "0.0.1"
+dependencies = [
+ "forge-check",
+ "forge-core",
+ "forge-ir",
+ "forge-ops",
  "proptest",
  "serde_json",
  "thiserror",
@@ -421,6 +449,9 @@ dependencies = [
  "forge-core",
  "forge-ir",
  "forge-ops",
+ "forge-params",
+ "forge-refs",
+ "forge-sketch",
  "proptest",
  "serde_json",
 ]
@@ -438,6 +469,20 @@ dependencies = [
  "miniz_oxide",
  "thiserror",
  "wgpu",
+]
+
+[[package]]
+name = "forge-sketch"
+version = "0.0.1"
+dependencies = [
+ "forge-check",
+ "forge-core",
+ "forge-ir",
+ "forge-ops",
+ "forge-solve",
+ "proptest",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]

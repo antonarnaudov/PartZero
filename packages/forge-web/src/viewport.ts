@@ -12,6 +12,7 @@ import type {
   DisplayOptions,
   EntityRef,
   ForgeError,
+  EvaluateOptions,
   IrInput,
   LoadResult,
   PickResult,
@@ -19,7 +20,6 @@ import type {
   RenderBody,
   SectionPlane,
   StandardView,
-  TessellationOptions,
   ViewportEvent,
   ViewportOptions,
   ViewportStats,
@@ -343,11 +343,16 @@ export class Viewport {
    * Evaluate + tessellate + upload in one call on this thread, without copying meshes
    * through JS (the fastest path for interactive edits). Additive to the core contract.
    */
-  loadIr(ir: IrInput, options: TessellationOptions = {}): LoadResult {
+  loadIr(ir: IrInput, options: EvaluateOptions = {}): LoadResult {
     this.#live();
     let r: LoadResult;
     try {
-      r = this.#raw.loadIr(irText(ir), options.chordalDeflection, options.angularDeflection) as LoadResult;
+      r = this.#raw.loadIr(
+        irText(ir),
+        options.chordalDeflection,
+        options.angularDeflection,
+        options.reportVersion,
+      ) as LoadResult;
     } catch (e) {
       throw this.#noteFault(asForgeError(e, "RENDER_LOAD"));
     }

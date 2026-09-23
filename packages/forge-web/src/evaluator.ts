@@ -4,11 +4,11 @@
  * `Viewport.setBodies`.
  */
 import { forgeError, init, wasmModule } from "./engine.js";
-import type { EvaluateResult, InitInput, IrInput, TessellationOptions } from "./types.js";
+import type { EvaluateOptions, EvaluateResult, InitInput, IrInput } from "./types.js";
 
 export interface Evaluator {
   /** Evaluate in the worker. Requests are answered in order. */
-  evaluate(ir: IrInput, options?: TessellationOptions): Promise<EvaluateResult>;
+  evaluate(ir: IrInput, options?: EvaluateOptions): Promise<EvaluateResult>;
   /** Stop the worker; pending requests reject with `FORGE_WORKER_TERMINATED`. */
   terminate(): void;
 }
@@ -49,7 +49,7 @@ export function createEvaluator(options: EvaluatorOptions = {}): Evaluator {
       const id = next++;
       return new Promise<EvaluateResult>((resolve, reject) => {
         pending.set(id, { resolve, reject });
-        const msg: { id: number; ir: IrInput; options?: TessellationOptions; wasm?: InitInput } = { id, ir };
+        const msg: { id: number; ir: IrInput; options?: EvaluateOptions; wasm?: InitInput } = { id, ir };
         if (opts) msg.options = opts;
         if (!wasmSent) {
           const wasm = options.wasm ?? wasmModule();

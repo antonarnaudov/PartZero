@@ -1,0 +1,84 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "boxes_cut",
+    "description": "two overlapping boxes, extrude cut with targets all (closed form)"
+  },
+  "params": [],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "sa",
+          "name": "sa",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                5,
+                5
+              ],
+              "w": 10,
+              "h": 10
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "ea",
+          "name": "ea",
+          "sketch": "sa",
+          "distance": 10
+        },
+        {
+          "type": "sketch",
+          "id": "sb",
+          "name": "sb",
+          "plane": {
+            "origin": [
+              0,
+              0,
+              5
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "x_dir": [
+              1,
+              0,
+              0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                10,
+                10
+              ],
+              "w": 10,
+              "h": 10
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "eb",
+          "name": "eb",
+          "sketch": "sb",
+          "distance": 10,
+          "op": "cut",
+          "targets": "all"
+        }
+      ]
+    }
+  ]
+}

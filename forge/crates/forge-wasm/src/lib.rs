@@ -3,11 +3,20 @@
 //! `wasm-bindgen` bindings consumed by `@aicad/forge-web` (packages/forge-web), which
 //! wraps them in the typed, documented JS API (see its README). The raw exports are:
 //!
-//! - `evaluate(irJson, chordal?, angular?)` → `{ report, bodies, meshErrors, timings }`:
-//!   forge-regen evaluation and `forge_mesh::tessellate_render` meshes as typed arrays;
+//! - `evaluate(irJson, chordal?, angular?, reportVersion?)` → `{ report, bodies, meshErrors,
+//!   timings }`: forge-regen evaluation and `forge_mesh::tessellate_render` meshes as typed
+//!   arrays. `aicad.ir/0` documents get the `aicad.metrics/0` report and one body per feature
+//!   body (or, with `reportVersion = "v1"`, are migrated and get the `aicad.metrics/1` report,
+//!   SPEC-v1 §0.2 rule 4); `aicad.ir/1` documents the `aicad.metrics/1` report and the final
+//!   bodies of each part;
+//! - `migrate(irJson)` → `{ document, renames }` (SPEC-v1 §9.1), `params(irJson)` → the report's
+//!   `params` block, `writeBack(irJson, sketches?)` → `{ document, written, skipped }`
+//!   (`writeBackSolution`, §0.6): the command layer's engine entry points (W9); they throw a
+//!   `code`d error with `errors` for a rejected document;
 //! - `exportMesh(irJson, format, chordal?, angular?, allowPartial?)` → `Uint8Array`
 //!   (3MF / binary STL / OBJ via forge-io);
-//! - `createViewport(canvas, backend, width, height, dpr)` → `RawViewport`: the
+//! - `createViewport(canvas, backend, width, height, dpr)` → `RawViewport` (its
+//!   `loadIr(irJson, chordal?, angular?, reportVersion?)` evaluates and uploads): the
 //!   forge-render viewport on an `HTMLCanvasElement` or `OffscreenCanvas`, on WebGPU or
 //!   WebGL2 (`backend` = `"auto" | "webgpu" | "webgl2"`).
 //!

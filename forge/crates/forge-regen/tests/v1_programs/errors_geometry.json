@@ -1,0 +1,149 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "errors_geometry",
+    "description": "geometric evaluation errors: PLANE_NOT_PLANAR, AXIS_REF_UNSUPPORTED, BOOLEAN_EMPTY_RESULT, BOOLEAN_TOOL_IS_TARGET, BOOLEAN_NO_INTERSECTION (cut)"
+  },
+  "params": [],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "s1",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "c",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 5
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "e1",
+          "sketch": "s1",
+          "distance": 10
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "s2",
+          "plane": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "side",
+                "feature": "e1",
+                "curve": "c"
+              }
+            }
+          },
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                0,
+                0
+              ],
+              "w": 2,
+              "h": 2
+            }
+          ]
+        },
+        {
+          "type": "datum_axis",
+          "id": "a1",
+          "name": "a1",
+          "mode": "cylinder",
+          "face": {
+            "kind": "face",
+            "q": {
+              "op": "cap",
+              "feature": "e1",
+              "end": "end"
+            }
+          }
+        },
+        {
+          "type": "sketch",
+          "id": "s3",
+          "name": "s3",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                30,
+                0
+              ],
+              "w": 4,
+              "h": 4
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e3",
+          "name": "e3",
+          "sketch": "s3",
+          "distance": 4,
+          "op": "intersect",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          }
+        },
+        {
+          "type": "boolean",
+          "id": "b1",
+          "name": "b1",
+          "op": "join",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          },
+          "tools": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          }
+        },
+        {
+          "type": "extrude",
+          "id": "e4",
+          "name": "e4",
+          "sketch": "s3",
+          "distance": 4,
+          "op": "cut",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

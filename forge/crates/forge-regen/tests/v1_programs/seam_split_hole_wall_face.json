@@ -1,0 +1,171 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "seam_split_hole_wall_face",
+    "description": "gen1_s23_01337 (seed 23) reduced to the plate and the pocket: a through pocket whose corner pokes out of the centre hole (r 1.837) notches the hole wall; the wall stays one cylinder face (6 cylinders: 4 rounded corners, h0, hc; 14 faces, 35 edges). Regression for the oracle's seam re-merge of faces (SPEC-v1 \u00a78.3 rule 1): OCCT leaves the wall split at its seam (7 cylinders)"
+  },
+  "params": [
+    {
+      "name": "width",
+      "unit": "mm",
+      "value": 42.953,
+      "min": 10.0
+    },
+    {
+      "name": "depth",
+      "unit": "mm",
+      "value": 81.674
+    },
+    {
+      "name": "thick",
+      "unit": "mm",
+      "value": 14.948,
+      "min": 0.5
+    },
+    {
+      "name": "holes",
+      "unit": "count",
+      "value": 1.0
+    },
+    {
+      "name": "hole_d",
+      "unit": "mm",
+      "value": 3.674
+    },
+    {
+      "name": "spread",
+      "unit": "ratio",
+      "value": 0.42
+    },
+    {
+      "name": "pocket_w",
+      "unit": "mm",
+      "value": 1.932
+    },
+    {
+      "name": "width_2",
+      "unit": "mm",
+      "value": 39.094,
+      "min": 10.0
+    },
+    {
+      "name": "depth_2",
+      "unit": "mm",
+      "value": 83.457
+    }
+  ],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part_1",
+      "params": [
+        {
+          "name": "margin",
+          "unit": "mm",
+          "value": "min(width, depth) / 5"
+        },
+        {
+          "name": "margin_2",
+          "unit": "mm",
+          "value": "min(width_2, depth_2) / 5"
+        }
+      ],
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "plate_sk",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "outline",
+              "corner": [
+                "-width / 2",
+                "-depth / 2"
+              ],
+              "w": "width",
+              "h": "depth",
+              "r": "min(width, depth) / 12"
+            },
+            {
+              "kind": "circle",
+              "id": "h0",
+              "center": [
+                "(width / 2 - margin) * spread",
+                "(depth / 2 - margin) * 1"
+              ],
+              "radius": "hole_d / 2"
+            },
+            {
+              "kind": "circle",
+              "id": "hc",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "radius": "hole_d / 2 * max(1, holes / 4)"
+            },
+            {
+              "kind": "line",
+              "id": "guide",
+              "start": [
+                "-width / 2",
+                0.0
+              ],
+              "end": [
+                "width / 2",
+                0.0
+              ],
+              "construction": true
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "plate",
+          "sketch": "s1",
+          "distance": "thick"
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "pocket_sk",
+          "plane": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "end"
+              }
+            }
+          },
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "pocket",
+              "center": [
+                -0.659,
+                -0.253
+              ],
+              "w": "pocket_w",
+              "h": "pocket_w * 0.75"
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e2",
+          "name": "pocket",
+          "sketch": "s2",
+          "distance": 1000.0,
+          "direction": "reverse",
+          "op": "cut",
+          "targets": "all"
+        }
+      ]
+    }
+  ]
+}

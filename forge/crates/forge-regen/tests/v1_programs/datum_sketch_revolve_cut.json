@@ -1,0 +1,117 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "datum_sketch_revolve_cut",
+    "description": "a sketch on an offset datum plane; a revolve cuts a groove into a cylinder"
+  },
+  "params": [
+    {
+      "name": "lift",
+      "unit": "mm",
+      "value": 3
+    }
+  ],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "s1",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "c",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 10
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "e1",
+          "sketch": "s1",
+          "distance": 20
+        },
+        {
+          "type": "datum_plane",
+          "id": "d1",
+          "name": "d1",
+          "mode": "offset",
+          "from": "XY",
+          "distance": "lift"
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "s2",
+          "plane": {
+            "datum": "d1"
+          },
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                9,
+                0
+              ],
+              "w": 4,
+              "h": 2
+            }
+          ]
+        },
+        {
+          "type": "sketch",
+          "id": "s3",
+          "name": "s3",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "g",
+              "center": [
+                10,
+                10
+              ],
+              "w": 2,
+              "h": 3
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "r1",
+          "name": "r1",
+          "sketch": "s3",
+          "axis": {
+            "origin": [
+              0,
+              0
+            ],
+            "direction": [
+              0,
+              1
+            ]
+          },
+          "angle": 360,
+          "op": "cut",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

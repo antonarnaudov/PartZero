@@ -5,12 +5,24 @@
  * Units: millimetres for geometry, CSS pixels for everything on screen (the viewport
  * applies the device-pixel ratio itself).
  */
-import type { EvalReport, IrDocument } from "@aicad/ir-types";
+import type { EvalReport, IrDocument, metricsV1, v1 } from "@aicad/ir-types";
 
 export type { EvalReport, IrDocument };
 
-/** An IR document as JSON text or as an already-parsed object. */
-export type IrInput = string | IrDocument | Record<string, unknown>;
+/** An `aicad.ir/1` document (SPEC-v1). */
+export type IrDocumentV1 = v1.IrDocument;
+/** The `aicad.metrics/1` report of an `aicad.ir/1` document (SPEC-v1 §7). */
+export type EvalReportV1 = metricsV1.EvalReport;
+/**
+ * The report `evaluate` returns: `aicad.metrics/0` for an `aicad.ir/0` document,
+ * `aicad.metrics/1` for everything else (narrow on `schema`): an `aicad.ir/1` document, and the
+ * rejection of any other or missing `schema` (`UNSUPPORTED_SCHEMA`) or of text that is not
+ * JSON (`IR_PARSE_ERROR`), SPEC-v1 §0.5 rule 4.
+ */
+export type AnyEvalReport = EvalReport | EvalReportV1;
+
+/** An IR document (either version) as JSON text or as an already-parsed object. */
+export type IrInput = string | IrDocument | IrDocumentV1 | Record<string, unknown>;
 
 /** Tessellation tolerances. Defaults: 0.05 mm chordal, 0.35 rad (≈ 20°) angular. */
 export interface TessellationOptions {
@@ -18,6 +30,20 @@ export interface TessellationOptions {
   chordalDeflection?: number;
   /** Maximum normal deviation along a mesh edge, radians, in (0, π]. */
   angularDeflection?: number;
+}
+
+/**
+ * Which report an `aicad.ir/0` document gets: `"auto"` (default) keeps its `aicad.metrics/0`
+ * report; `"v1"` migrates it (SPEC-v1 §9.1) and returns the `aicad.metrics/1` report of SPEC-v1
+ * §0.2 rule 4 (with `migration` when ids were rewritten). An `aicad.ir/1` document always gets
+ * the v1 report. Same values as `aicad eval --report-version`.
+ */
+export type ReportVersion = "auto" | "v1";
+
+/** Options of {@link evaluate}, the evaluator and {@link Viewport.loadIr}. */
+export interface EvaluateOptions extends TessellationOptions {
+  /** Default `"auto"`. Any other value throws `REPORT_VERSION`. */
+  reportVersion?: ReportVersion;
 }
 
 /** The triangles of one B-rep face: `indices[3*start .. 3*(start+count))`. */
@@ -83,12 +109,20 @@ export interface EvaluateTimings {
 /** Result of {@link evaluate}. */
 export interface EvaluateResult {
   /**
-   * The `aicad.metrics/0` report. A document that fails to parse or validate is not an
-   * exception: the report has `status: "error"` and a document-level `error`, and
-   * `bodies` is empty.
+   * The metrics report: `aicad.metrics/0` for an `aicad.ir/0` document (unless
+   * `reportVersion: "v1"`), `aicad.metrics/1` for anything else (narrow on `report.schema`).
+   * A document that fails to parse or validate is not an exception: the report has
+   * `status: "error"` and a document-level `error`, and `bodies` is empty. An unknown or
+   * missing `schema` is `UNSUPPORTED_SCHEMA`; a document using the optional `draft`, which
+   * Forge does not implement, is `UNSUPPORTED_FEATURE` (SPEC-v1 §6.9), and one using `hole`,
+   * `fillet`, `chamfer`, `shell` or `pattern`, which Forge does not implement yet, is
+   * `UNSUPPORTED_FEATURE_VERSION` at the feature's `/v` (SPEC-v1 §0.2 rule 3).
    */
-  report: EvalReport;
-  /** Bodies of every successful body feature, in timeline order. */
+  report: AnyEvalReport;
+  /**
+   * v0: the bodies of every successful body feature, in timeline order. v1: the final bodies
+   * of every part (`report.parts[].bodies`), in canonical order.
+   */
   bodies: RenderBody[];
   /** Bodies that failed to tessellate (rare; reported, never silently dropped). */
   meshErrors: MeshError[];
@@ -103,9 +137,60 @@ export interface ExportOptions extends TessellationOptions {
   allowPartial?: boolean;
 }
 
+/** One problem of a rejected document (SPEC-v1 §0.5, §7.2 `error.details.errors`). */
+export interface RejectionProblem {
+  code: string;
+  /** JSON pointer into the document. */
+  path: string;
+  message: string;
+  details: Record<string, unknown>;
+}
+
 /** Errors thrown by the engine carry a stable machine-readable `code`. */
 export interface ForgeError extends Error {
   code: string;
+  /**
+   * {@link migrate}, {@link params}, {@link writeBack}: every problem of a rejected document
+   * (empty for a parse error or a usage error such as `WRITE_BACK_UNKNOWN_SKETCH`).
+   */
+  errors?: RejectionProblem[];
+}
+
+/** An id rewritten by the migration (SPEC-v1 §9.1 rule 3); `from` is untrusted data. */
+export type IdRename = metricsV1.IdRename;
+
+/** Result of {@link migrate}. */
+export interface MigrateResult {
+  /** The canonical `aicad.ir/1` text (SPEC-v1 §0.4), byte-identical to `aicad migrate`. */
+  document: string;
+  /** Ids the migration rewrote (empty for v1 input and for every v0 document in the repo). */
+  renames: IdRename[];
+}
+
+/** A parameter's value or failure (the report's `params` block, SPEC-v1 §7.2). */
+export type ParamReport = metricsV1.ParamReport;
+
+/** Options of {@link writeBack}. */
+export interface WriteBackOptions {
+  /** Only these sketch ids (each must be a sketch of the document). Default: every constrained sketch. */
+  sketches?: string[];
+}
+
+/** A sketch {@link writeBack} did not write. */
+export interface WriteBackSkip {
+  sketch: string;
+  /** `explicit`: no constraints; `suppressed`; `failed`: its evaluation failed with `code`. */
+  reason: "explicit" | "suppressed" | "failed";
+  code?: string;
+}
+
+/** Result of {@link writeBack} (`writeBackSolution`, SPEC-v1 §0.6). */
+export interface WriteBackResult {
+  /** The canonical `aicad.ir/1` text with the solved geometry stored (nothing else changes). */
+  document: string;
+  /** Sketches written, in document order. */
+  written: string[];
+  skipped: WriteBackSkip[];
 }
 
 /** Graphics backend in use. */
@@ -228,7 +313,7 @@ export interface ViewportStats {
 
 /** Result of {@link Viewport.loadIr}: like {@link EvaluateResult} without the meshes. */
 export interface LoadResult {
-  report: EvalReport;
+  report: AnyEvalReport;
   meshErrors: MeshError[];
   timings: EvaluateTimings;
 }

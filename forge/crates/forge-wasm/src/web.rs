@@ -69,8 +69,11 @@ fn now_ms() -> f64 {
     js_sys::Date::now()
 }
 
-fn report_js(report: &forge_ir::EvalReport) -> Result<JsValue, JsValue> {
-    let s = serde_json::to_string(report).map_err(|e| js_error("FORGE_REPORT", &e.to_string()))?;
+/// The report (`aicad.metrics/0` or `aicad.metrics/1`) as a JS object.
+fn report_js(report: &engine::Report) -> Result<JsValue, JsValue> {
+    let s = report
+        .to_json()
+        .map_err(|e| js_error("FORGE_REPORT", &e.to_string()))?;
     js_sys::JSON::parse(&s)
 }
 
@@ -136,16 +139,25 @@ fn timings_js(t: &engine::Timings, extra: &[(&str, f64)]) -> Object {
     o
 }
 
-/// Evaluate an IR document and tessellate its bodies for rendering.
+/// Evaluate an IR document and tessellate its bodies for rendering. `report_version`:
+/// `"auto"` (default; a v0 document keeps the `aicad.metrics/0` report) or `"v1"` (a v0
+/// document is migrated and gets the `aicad.metrics/1` report, SPEC-v1 §0.2 rule 4).
 #[wasm_bindgen(js_name = evaluate)]
 pub fn evaluate(
     ir_json: &str,
     chordal: Option<f64>,
     angular: Option<f64>,
+    report_version: Option<String>,
 ) -> Result<JsValue, JsValue> {
     let t0 = now_ms();
-    let out = engine::evaluate_document(ir_json, &engine::tess_params(chordal, angular), &now_ms)
-        .map_err(core_error)?;
+    let version = engine::ReportVersion::parse(report_version.as_deref()).map_err(core_error)?;
+    let out = engine::evaluate_document(
+        ir_json,
+        &engine::tess_params(chordal, angular),
+        version,
+        &now_ms,
+    )
+    .map_err(core_error)?;
     let t1 = now_ms();
     let o = Object::new();
     set(&o, "report", report_js(&out.report)?);
@@ -160,6 +172,81 @@ pub fn evaluate(
         &o,
         "timings",
         timings_js(&out.timings, &[("packMs", t2 - t1), ("totalMs", t2 - t0)]),
+    );
+    Ok(o.into())
+}
+
+/// A JSON value as a JS value.
+fn json_js(v: &serde_json::Value) -> Result<JsValue, JsValue> {
+    let s = serde_json::to_string(v).map_err(|e| js_error("FORGE_JSON", &e.to_string()))?;
+    js_sys::JSON::parse(&s)
+}
+
+/// A rejected command-layer input as a JS error: `code`, `message`, and `errors` (every problem,
+/// `{ code, path, message, details }`).
+fn rejection_js(r: engine::Rejection) -> JsValue {
+    let e = js_error(&r.code, &r.message);
+    if let Ok(errors) = json_js(&serde_json::Value::Array(r.errors)) {
+        let _ = Reflect::set(&e, &"errors".into(), &errors);
+    }
+    e
+}
+
+/// `migrate_v0_to_v1` (SPEC-v1 §9.1): `{ document, renames }` — the canonical `aicad.ir/1` text
+/// and the migration report's renames. Throws (code, `errors`) for a rejected document.
+#[wasm_bindgen(js_name = migrate)]
+pub fn migrate(ir_json: &str) -> Result<JsValue, JsValue> {
+    let m = engine::migrate(ir_json).map_err(rejection_js)?;
+    let o = Object::new();
+    set(&o, "document", m.document.as_str());
+    let report =
+        serde_json::to_value(&m.report).map_err(|e| js_error("FORGE_JSON", &e.to_string()))?;
+    set(&o, "renames", json_js(&report["renames"])?);
+    Ok(o.into())
+}
+
+/// The `params` block of the document's `aicad.metrics/1` report (no feature is evaluated).
+/// Throws (code, `errors`) for a rejected document.
+#[wasm_bindgen(js_name = params)]
+pub fn params(ir_json: &str) -> Result<JsValue, JsValue> {
+    let ps = engine::params(ir_json).map_err(rejection_js)?;
+    let v = serde_json::to_value(&ps).map_err(|e| js_error("FORGE_JSON", &e.to_string()))?;
+    json_js(&v)
+}
+
+/// `writeBackSolution` (SPEC-v1 §0.6): `{ document, written, skipped }`. `sketches`: an array of
+/// sketch ids, or `undefined` / `null` for every constrained sketch. Throws (code, `errors`)
+/// for a rejected document and `WRITE_BACK_UNKNOWN_SKETCH` for an unknown id.
+#[wasm_bindgen(js_name = writeBack)]
+pub fn write_back(ir_json: &str, sketches: JsValue) -> Result<JsValue, JsValue> {
+    let ids: Option<Vec<String>> = if sketches.is_undefined() || sketches.is_null() {
+        None
+    } else {
+        let arr = sketches.dyn_ref::<Array>().ok_or_else(|| {
+            js_error(
+                "WRITE_BACK_SKETCHES",
+                "sketches must be an array of sketch ids",
+            )
+        })?;
+        let mut v = Vec::with_capacity(arr.length() as usize);
+        for x in arr.iter() {
+            v.push(x.as_string().ok_or_else(|| {
+                js_error(
+                    "WRITE_BACK_SKETCHES",
+                    "sketches must be an array of sketch ids",
+                )
+            })?);
+        }
+        Some(v)
+    };
+    let wb = engine::write_back(ir_json, ids.as_deref()).map_err(rejection_js)?;
+    let o = Object::new();
+    set(&o, "document", wb.document.as_str());
+    set(&o, "written", json_js(&serde_json::json!(wb.written))?);
+    set(
+        &o,
+        "skipped",
+        json_js(&serde_json::Value::Array(wb.skipped))?,
     );
     Ok(o.into())
 }
@@ -821,17 +908,25 @@ impl RawViewport {
 
     /// Evaluate + tessellate + upload in one call, without copying meshes through JS.
     /// Returns `{ report, meshErrors, timings }` (timings include `uploadMs`).
+    /// `report_version` as for `evaluate` (`"auto"` default, or `"v1"`).
     #[wasm_bindgen(js_name = loadIr)]
     pub fn load_ir(
         &self,
         ir_json: &str,
         chordal: Option<f64>,
         angular: Option<f64>,
+        report_version: Option<String>,
     ) -> Result<JsValue, JsValue> {
         let t0 = now_ms();
-        let out =
-            engine::evaluate_document(ir_json, &engine::tess_params(chordal, angular), &now_ms)
-                .map_err(core_error)?;
+        let version =
+            engine::ReportVersion::parse(report_version.as_deref()).map_err(core_error)?;
+        let out = engine::evaluate_document(
+            ir_json,
+            &engine::tess_params(chordal, angular),
+            version,
+            &now_ms,
+        )
+        .map_err(core_error)?;
         let t1 = now_ms();
         let bodies: Vec<SceneBody> = out
             .bodies
