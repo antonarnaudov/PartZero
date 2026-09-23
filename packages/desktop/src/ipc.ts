@@ -18,7 +18,7 @@ import type {
 } from "@aicad/app/bridge";
 import type { AgentSetup } from "./agent/setup.js";
 import { parseClearApiKey, parseSetApiKey, parseSettingsUpdate } from "./agent/protocol.js";
-import { isDocumentPath, type PathGrants, type RecentFiles } from "./files.js";
+import { documentStatePath, isDocumentPath, type PathGrants, type RecentFiles } from "./files.js";
 import { forgeEval, forgeExport, forgeInfo, MESH_FORMATS } from "./forge-cli.js";
 
 export interface IpcDeps {
@@ -82,47 +82,54 @@ export function registerIpc(deps: IpcDeps): void {
     const opts = { ...o, properties: ["openFile" as const] };
     const r = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts);
     const p = r.canceled ? undefined : r.filePaths[0];
-    return p ? deps.grants.grant(p) : null;
+    return p ? deps.grants.grantOpened(p) : null;
   });
 
   handle("dialog:save", async (_e, options) => {
     const win = deps.window();
     const o = { ...dialogOptions(options), properties: ["createDirectory" as const, "showOverwriteConfirmation" as const] };
     const r = win ? await dialog.showSaveDialog(win, o) : await dialog.showSaveDialog(o);
-    return !r.canceled && r.filePath ? deps.grants.grant(r.filePath) : null;
+    return !r.canceled && r.filePath ? deps.grants.grantSaveTarget(r.filePath) : null;
   });
 
+  // A document read or written here is the one the user works on in this session: it goes to the
+  // top of the recent list (with its canonical path, see files.ts) and keeps its access when the
+  // recent list is cleared, so Save still works after Clear Recent.
+  const usedDocument = (path: string, real: string): void => {
+    if (!isDocumentPath(path)) return;
+    deps.grants.keepForSession(real);
+    deps.recent.add(path, real);
+    deps.onRecentChanged();
+  };
+
   handle("fs:readText", async (_e, path) => {
-    const p = deps.grants.check(path);
-    const text = await readFile(p, "utf8");
-    if (isDocumentPath(p)) {
-      deps.recent.add(p);
-      deps.onRecentChanged();
-    }
+    const real = deps.grants.check(path, "read");
+    const text = await readFile(real, "utf8");
+    usedDocument(path as string, real);
     return text;
   });
 
   handle("fs:write", async (_e, path, data) => {
-    const p = deps.grants.check(path);
+    const real = deps.grants.check(path, "write");
     if (typeof data === "string") {
       if (data.length > MAX_WRITE_BYTES) throw new Error("file too large");
-      await writeFile(p, data, "utf8");
+      await writeFile(real, data, "utf8");
     } else if (data instanceof Uint8Array) {
       if (data.byteLength > MAX_WRITE_BYTES) throw new Error("file too large");
-      await writeFile(p, data);
+      await writeFile(real, data);
     } else {
       throw new Error("invalid data");
     }
-    if (isDocumentPath(p)) {
-      deps.recent.add(p);
-      deps.onRecentChanged();
-    }
+    usedDocument(path as string, real);
   });
 
   handle("recent:list", () => deps.recent.list());
 
   handle("recent:clear", () => {
     deps.recent.clear();
+    // Forget the files, not just their names: grants restored from the list go too (except for the
+    // documents opened or saved in this session).
+    deps.grants.revokeRecent();
     deps.onRecentChanged();
   });
 
@@ -172,6 +179,7 @@ export function registerIpc(deps: IpcDeps): void {
     if (!deps.isTrustedSender(event.senderFrame?.url)) return;
     const s = (typeof state === "object" && state !== null ? state : {}) as Partial<DocumentStateMessage>;
     if (typeof s.title !== "string" || typeof s.dirty !== "boolean") return;
-    deps.onDocState({ title: s.title.slice(0, 200), path: typeof s.path === "string" ? s.path : null, dirty: s.dirty });
+    // Only a path the user granted may become the window's represented file.
+    deps.onDocState({ title: s.title.slice(0, 200), path: documentStatePath(s.path, deps.grants), dirty: s.dirty });
   });
 }

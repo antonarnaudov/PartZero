@@ -9,7 +9,7 @@
  * The key reaches the app the development way (environment → main process → agent process); it is
  * never typed into the UI or written to disk here.
  */
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,11 +32,13 @@ test.setTimeout(600_000);
 
 let app: ElectronApplication;
 let page: Page;
+let userData: string;
 
 test.beforeAll(async () => {
+  userData = mkdtempSync(join(tmpdir(), "aicad-e2e-live-"));
   app = await electron.launch({
     args: [desktopRoot, "--use-mock-keychain"],
-    env: { ...(process.env as Record<string, string>), AICAD_USER_DATA_DIR: mkdtempSync(join(tmpdir(), "aicad-e2e-live-")), AICAD_SKIP_CLOSE_PROMPT: "1", AICAD_AGENT_TRANSPORT: "live" },
+    env: { ...(process.env as Record<string, string>), AICAD_USER_DATA_DIR: userData, AICAD_SKIP_CLOSE_PROMPT: "1", AICAD_AGENT_TRANSPORT: "live" },
   });
   page = await app.firstWindow();
   await expect(page.getByTestId("app-shell")).toBeVisible();
@@ -44,6 +46,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await app?.close();
+  if (userData) rmSync(userData, { recursive: true, force: true });
 });
 
 test("a real model makes the NEMA 17 plate 2 mm thicker; accept and undo", async () => {

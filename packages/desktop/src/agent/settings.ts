@@ -11,7 +11,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { AgentRoleId, AgentSettingsView, AgentTransportKind, ModelProfileInfo, ProviderId, SettingsUpdate } from "@aicad/app/bridge";
 import { BUILTIN_PROFILES, DEFAULT_ROUTING, ProfileRegistry, Router, type ModelProfile, type RoutingConfig } from "@aicad/llm-gateway";
 import { PROVIDERS, type KeyResolver } from "./keys.js";
-import { MAX_BUDGET_USD, MIN_BUDGET_USD, PROTOCOL_VERSION, ROLE_IDS } from "./protocol.js";
+import { baseUrlProblem, MAX_BUDGET_USD, MIN_BUDGET_USD, PROTOCOL_VERSION, ROLE_IDS } from "./protocol.js";
 
 export const DEFAULT_BUDGET_USD = 1.0;
 
@@ -79,7 +79,10 @@ function sanitize(v: unknown): StoredSettings {
   for (const role of ROLE_IDS) if (typeof m[role] === "string" && (m[role] as string).length <= 100) models[role] = m[role] as string;
   const b = o["budgetUsd"];
   const budgetUsd = typeof b === "number" && Number.isFinite(b) && b >= MIN_BUDGET_USD && b <= MAX_BUDGET_USD ? b : DEFAULT_BUDGET_USD;
-  const url = typeof o["compatBaseUrl"] === "string" && /^https?:\/\//.test(o["compatBaseUrl"]) ? o["compatBaseUrl"] : null;
+  // The same rule as a Settings update (https, or http on loopback): a hand-edited file cannot
+  // send the key and the design over cleartext to a remote host.
+  const rawUrl = o["compatBaseUrl"];
+  const url = typeof rawUrl === "string" && rawUrl.length <= 500 && baseUrlProblem(rawUrl) === null ? rawUrl : null;
   return { v: 1, models, budgetUsd, compatBaseUrl: url };
 }
 

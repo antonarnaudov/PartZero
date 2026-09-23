@@ -28,7 +28,7 @@ import {
   type TransportCall,
 } from "@aicad/llm-gateway";
 import { createAgentEngine, type AgentEngine } from "./engine.js";
-import { composePrompt, PROTOCOL_VERSION, type HostToWorker, type WorkerRunConfig, type WorkerToHost } from "./protocol.js";
+import { baseUrlProblem, composePrompt, PROTOCOL_VERSION, type HostToWorker, type WorkerRunConfig, type WorkerToHost } from "./protocol.js";
 import { routingFor } from "./settings.js";
 
 export interface RunnerDeps {
@@ -70,6 +70,9 @@ class CompatTransport implements ProviderTransport {
   #client(call: TransportCall): OpenAISdkTransport {
     const baseURL = this.#baseUrl ?? call.endpoint;
     if (!baseURL) throw new GatewayError("invalid_request", "No base URL for the OpenAI-compatible endpoint: set one in Settings.");
+    // Settings are validated on the way in; this also covers a profile's endpoint (defence in depth).
+    const problem = baseUrlProblem(baseURL);
+    if (problem) throw new GatewayError("invalid_request", `The OpenAI-compatible base URL ${problem}.`);
     let c = this.#clients.get(baseURL);
     if (!c) {
       c = new OpenAISdkTransport({ apiKey: this.#apiKey ?? "not-needed", baseURL }, "openai-compat");
@@ -77,11 +80,12 @@ class CompatTransport implements ProviderTransport {
     }
     return c;
   }
-  send(call: TransportCall): Promise<unknown> {
+  // Async so that a refused endpoint is a rejected call (like any transport error), not a sync throw.
+  async send(call: TransportCall): Promise<unknown> {
     return this.#client(call).send(call);
   }
-  stream(call: TransportCall): AsyncIterable<unknown> {
-    return this.#client(call).stream(call);
+  async *stream(call: TransportCall): AsyncIterable<unknown> {
+    yield* this.#client(call).stream(call);
   }
 }
 
@@ -161,18 +165,35 @@ export function buildGateway(config: WorkerRunConfig, secrets: Partial<Record<Pr
       note: "replay transport (offline): recorded responses, no API calls are made",
     };
   }
-  const k = secrets;
   return {
     gateway: new LLMGateway({
       config: { routing: routingFor(config.models) },
-      transports: {
-        anthropic: k.anthropic ? new AnthropicSdkTransport({ apiKey: k.anthropic }) : new MissingKeyTransport("Anthropic"),
-        openai: k.openai ? new OpenAISdkTransport({ apiKey: k.openai }, "openai") : new MissingKeyTransport("OpenAI"),
-        google: k.google ? new GoogleSdkTransport({ apiKey: k.google }) : new MissingKeyTransport("Google Gemini"),
-        "openai-compat": new CompatTransport(k["openai-compat"], config.compatBaseUrl),
-      },
+      transports: liveTransports(secrets, config.compatBaseUrl),
       onRoutingWarning: () => undefined,
     }),
+  };
+}
+
+/**
+ * The providers' official API endpoints, passed explicitly: without a `baseURL` the SDKs read
+ * `ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL` and `GOOGLE_GEMINI_BASE_URL` from the environment, which
+ * would send the key from Settings to whatever endpoint the environment names. (The worker's
+ * environment is allowlisted too; this holds even if it were not.)
+ */
+export const OFFICIAL_BASE_URLS = {
+  anthropic: "https://api.anthropic.com",
+  openai: "https://api.openai.com/v1",
+  google: "https://generativelanguage.googleapis.com/",
+} as const;
+
+/** Live SDK transports with the run's keys (the OpenAI-compatible endpoint comes from Settings or the profile). */
+export function liveTransports(secrets: Partial<Record<ProviderId, string>>, compatBaseUrl: string | null): Record<ProviderId, ProviderTransport> {
+  const k = secrets;
+  return {
+    anthropic: k.anthropic ? new AnthropicSdkTransport({ apiKey: k.anthropic, baseURL: OFFICIAL_BASE_URLS.anthropic }) : new MissingKeyTransport("Anthropic"),
+    openai: k.openai ? new OpenAISdkTransport({ apiKey: k.openai, baseURL: OFFICIAL_BASE_URLS.openai }, "openai") : new MissingKeyTransport("OpenAI"),
+    google: k.google ? new GoogleSdkTransport({ apiKey: k.google, baseURL: OFFICIAL_BASE_URLS.google }) : new MissingKeyTransport("Google Gemini"),
+    "openai-compat": new CompatTransport(k["openai-compat"], compatBaseUrl),
   };
 }
 

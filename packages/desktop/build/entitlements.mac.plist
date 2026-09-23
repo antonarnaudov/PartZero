@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Hardened-runtime entitlements for the app and its helpers (electron-builder.config.cjs
+  `mac.entitlements` / `mac.entitlementsInherit`). Only what V8 needs: JIT (MAP_JIT) for
+  JavaScript and WebAssembly.
+
+  Deliberately absent (electron-builder's default template has the first two):
+  - com.apple.security.cs.disable-library-validation: would let any same-user process load an
+    unsigned dylib into the signed app (and read keychain items the app is trusted for).
+  - com.apple.security.cs.allow-unsigned-executable-memory: not needed with allow-jit.
+  - com.apple.security.cs.allow-dyld-environment-variables, com.apple.security.get-task-allow:
+    DYLD_INSERT_LIBRARIES injection and debugger attach.
+-->
+<plist version="1.0">
+  <dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+  </dict>
+</plist>

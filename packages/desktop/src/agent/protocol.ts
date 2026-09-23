@@ -125,17 +125,37 @@ export function parseStopRequest(v: unknown): AgentStopRequest {
   return { v: PROTOCOL_VERSION, runId: id(o["runId"], "runId") };
 }
 
-/** http(s) URL without credentials; returns the normalized URL. */
-export function parseBaseUrl(v: unknown): string {
-  const s = str(v, "compatBaseUrl", 500, 1).trim();
+/** Loopback hosts, where cleartext http never leaves the machine: localhost, 127.0.0.0/8, [::1]. */
+export function isLoopbackHost(hostname: string): boolean {
+  if (hostname === "localhost" || hostname === "[::1]") return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
+  return m !== null && m[1] === "127" && m.slice(2).every((o) => Number(o) <= 255);
+}
+
+/**
+ * Why a base URL must not receive an API key and the design, or null when it is fine: https
+ * anywhere, cleartext http only on loopback, never credentials in the URL.
+ */
+export function baseUrlProblem(value: string): string | null {
   let u: URL;
   try {
-    u = new URL(s);
+    u = new URL(value);
   } catch {
-    throw new ProtocolError("compatBaseUrl is not a valid URL");
+    return "is not a valid URL";
   }
-  if (u.protocol !== "http:" && u.protocol !== "https:") throw new ProtocolError("compatBaseUrl must be an http(s) URL");
-  if (u.username || u.password) throw new ProtocolError("compatBaseUrl must not contain credentials; enter the key separately");
+  if (u.protocol !== "http:" && u.protocol !== "https:") return "must be an http(s) URL";
+  if (u.username || u.password) return "must not contain credentials; enter the key separately";
+  if (u.protocol === "http:" && !isLoopbackHost(u.hostname)) {
+    return "must use https:// (cleartext http:// is allowed only for localhost, 127.0.0.0/8 and [::1])";
+  }
+  return null;
+}
+
+/** An https URL, or an http URL on a loopback host, without credentials; returns the normalized URL. */
+export function parseBaseUrl(v: unknown): string {
+  const s = str(v, "compatBaseUrl", 500, 1).trim();
+  const problem = baseUrlProblem(s);
+  if (problem) throw new ProtocolError(`compatBaseUrl ${problem}`);
   return s.replace(/\/+$/, "");
 }
 

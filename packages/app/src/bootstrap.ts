@@ -21,7 +21,12 @@ import { BLANK_SOURCE, TEMPLATES } from "./host/templates";
 import { EditorController, ViewportController, type AppServices } from "./services";
 import { UiStore } from "./ui-store";
 
-/** `window.__aicad`: a small automation surface over the command layer (e2e tests, debugging). */
+/**
+ * `window.__aicad`: a small automation surface over the command layer (e2e tests, debugging).
+ * Installed only in development: a Vite dev build, or an unpackaged desktop run (`AppInfo.isDev`,
+ * which is how the Playwright e2e suite launches the app). A packaged or production build has no
+ * such global, so nothing pasted into a console can drive the command layer through it.
+ */
 export interface AutomationApi {
   execute(cmd: unknown): Promise<CommandResult<unknown>>;
   describe(): CommandInfo[];
@@ -169,6 +174,11 @@ function summarize(services: AppServices): DocSummary {
   };
 }
 
+/** Whether to install `window.__aicad`: a dev build, or a host that reports an unpackaged (dev) run. */
+export function automationAllowed(devBuild: boolean, info: { isDev: boolean } | null): boolean {
+  return devBuild || info?.isDev === true;
+}
+
 export async function bootstrap(): Promise<Bootstrapped> {
   const host = createHost();
   const cadscript = await createCadScriptService();
@@ -232,19 +242,22 @@ export async function bootstrap(): Promise<Bootstrapped> {
   } catch {
     // ignore
   }
-  void host.appInfo().then((info) => ui.setAppInfo(info), () => undefined);
+  const info = await host.appInfo().catch(() => null);
+  if (info) ui.setAppInfo(info);
   void host.recentFiles().then((r) => ui.setRecentFiles(r), () => undefined);
 
-  window.__aicad = {
-    execute: (cmd) => commands.executeUnknown(cmd, { source: "test" }),
-    describe: () => commands.describe(),
-    idle: async () => {
-      await doc.idle();
-      return summarize(services);
-    },
-    summary: () => summarize(services),
-    agent: () => summarizeAgent(services),
-  };
+  if (automationAllowed(import.meta.env.DEV, info)) {
+    window.__aicad = {
+      execute: (cmd) => commands.executeUnknown(cmd, { source: "test" }),
+      describe: () => commands.describe(),
+      idle: async () => {
+        await doc.idle();
+        return summarize(services);
+      },
+      summary: () => summarize(services),
+      agent: () => summarizeAgent(services),
+    };
+  }
 
   // Pick the engine before the first evaluation, then open the starter document.
   await engines.select("auto");

@@ -1,12 +1,12 @@
-import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AgentEvent } from "@aicad/app/bridge";
 import { SMALL_MODEL_BY_PROVIDER as AGENT_SMALL_MODELS } from "@aicad/agent";
 import { describe, expect, it } from "vitest";
 import { AgentHost, type WorkerHandle } from "../src/agent/host.js";
-import { KeyResolver, KeyStore, keysFromVariables, last4, parseDotenv, sanitizedEnv, type Cipher } from "../src/agent/keys.js";
+import { KeyResolver, KeyStore, keysFromVariables, last4, parseDotenv, type Cipher } from "../src/agent/keys.js";
+import { agentWorkerEnv } from "../src/env.js";
 import {
   composePrompt,
   parseAnswerRequest,
@@ -21,8 +21,9 @@ import {
 import { AgentRunner, parseScriptFile, redact, traceToEvents } from "../src/agent/runner.js";
 import { buildSettingsView, effectiveModels, profileRegistry, providersForRun, SettingsStore, SMALL_MODEL_BY_PROVIDER, type StoredSettings } from "../src/agent/settings.js";
 import { dotenvKeys, transportFromEnv } from "../src/agent/setup.js";
+import { tempDirs } from "./temp-dirs.js";
 
-const tmp = (): string => mkdtempSync(join(tmpdir(), "aicad-agent-test-"));
+const tmp = tempDirs("aicad-agent-test-");
 const START = { v: 1, prompt: "Make the plate 2 mm thicker", source: "part('p');", documentName: "plate", selection: [] };
 
 /** A reversible stand-in for safeStorage that makes ciphertext obviously not the plaintext. */
@@ -158,8 +159,8 @@ describe("API keys: encrypted store, env and .env", () => {
   });
 
   it("gives the agent process an environment without secrets", () => {
-    const env = sanitizedEnv({ PATH: "/bin", HOME: "/h", ANTHROPIC_API_KEY: "a", OPENAI_API_KEY: "b", GITHUB_TOKEN: "c", AWS_SECRET: "d", AICAD_BIN: "/x" });
-    expect(env).toEqual({ PATH: "/bin", HOME: "/h", AICAD_BIN: "/x" });
+    const env = agentWorkerEnv({ PATH: "/bin", HOME: "/h", ANTHROPIC_API_KEY: "a", OPENAI_API_KEY: "b", GITHUB_TOKEN: "c", AWS_SECRET: "d", AICAD_BIN: "/x" });
+    expect(env).toEqual({ PATH: "/bin", HOME: "/h" });
   });
 
   it("reads .env only in development, and only when not disabled", () => {

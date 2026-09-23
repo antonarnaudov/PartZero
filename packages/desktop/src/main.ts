@@ -5,8 +5,11 @@
  *   bridge (`preload.cts` ↔ `ipc.ts`).
  * - Content: the built `@aicad/app` served from `app://aicad/` with COOP/COEP (cross-origin
  *   isolation for SharedArrayBuffer / WASM threads) and a strict CSP; in dev, the Vite server
- *   (`AICAD_DEV_URL`, same headers from vite.config.ts).
+ *   (`AICAD_DEV_URL`, loopback only, same headers from vite.config.ts).
  * - Native menu → command layer; window state and recent files persist in userData.
+ * - Packaged builds ignore every `AICAD_*` override (env.ts), have no DevTools and no renderer
+ *   automation API, and refuse to start with a debugger switch such as `--remote-debugging-port`
+ *   (debug-switches.ts); child processes get allowlisted environments.
  */
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
@@ -14,38 +17,47 @@ import { fileURLToPath } from "node:url";
 import { app, BrowserWindow, dialog, Menu, safeStorage, screen, session, shell, utilityProcess } from "electron";
 import type { AgentEvent, AppInfo, DocumentStateMessage, MenuCommandMessage } from "@aicad/app/bridge";
 import type { WorkerHandle } from "./agent/host.js";
-import { sanitizedEnv, type Cipher } from "./agent/keys.js";
+import type { Cipher } from "./agent/keys.js";
 import { scrubKeyLike } from "./agent/protocol.js";
 import { setupAgent, type AgentSetup } from "./agent/setup.js";
-import { PathGrants, RecentFiles } from "./files.js";
+import { debugSwitchRefusal, forbiddenDebugSwitches } from "./debug-switches.js";
+import { agentWorkerEnv, readDevOverrides, resolveWebRoot } from "./env.js";
+import { documentStatePath, PathGrants, RecentFiles } from "./files.js";
 import { findRepoRoot, forgeInfo, locateForgeBinary } from "./forge-cli.js";
 import { registerIpc } from "./ipc.js";
 import { buildMenuTemplate } from "./menu.js";
-import { APP_ENTRY_URL, APP_ORIGIN } from "./protocol-core.js";
+import { APP_ENTRY_URL, isTrustedFrameUrl } from "./protocol-core.js";
 import { registerAppScheme, serveApp } from "./protocol.js";
+import { mainWindowWebPreferences } from "./web-preferences.js";
 import { loadWindowState, MIN_SIZE, saveWindowState, type WindowState } from "./window-state.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const devUrl = process.env["AICAD_DEV_URL"];
-const isDev = !app.isPackaged;
+/** Development and test overrides; a packaged build reads none of them. */
+const overrides = readDevOverrides(process.env, app.isPackaged, (m) => console.warn(`[aicad] ${m}`));
+/**
+ * Unpackaged run: DevTools, Reload and `window.__aicad` (e2e automation). A packaged build has
+ * none of them, and neither has an unpackaged run with `AICAD_SIMULATE_PACKAGED=1`.
+ */
+const isDev = !app.isPackaged && !overrides.simulatePackaged;
+const devOrigin = overrides.devServer?.origin ?? null;
+/**
+ * Debugger switches present on the command line. A packaged build (or a simulated one) refuses to
+ * start with any of them; see debug-switches.ts. `AICAD_ALLOW_DEBUGGER=1` (unpackaged only) lets
+ * Playwright attach to a simulated packaged run.
+ */
+const refusedSwitches = isDev || overrides.allowDebugger ? [] : forbiddenDebugSwitches((s) => app.commandLine.hasSwitch(s), process.argv.slice(1));
 
-if (process.env["AICAD_USER_DATA_DIR"]) app.setPath("userData", process.env["AICAD_USER_DATA_DIR"]);
-app.setName("aicad");
-registerAppScheme();
-
-/** The built web app: packaged resources, `$AICAD_APP_DIST`, or `@aicad/app/dist/web` in the workspace. */
-function resolveWebRoot(): string {
-  const override = process.env["AICAD_APP_DIST"];
-  if (override) return override;
-  if (app.isPackaged) return join(process.resourcesPath, "app-web");
-  const require = createRequire(import.meta.url);
-  return join(dirname(require.resolve("@aicad/app/package.json")), "dist", "web");
+function webRoot(): string {
+  return resolveWebRoot({
+    isPackaged: app.isPackaged,
+    appPath: app.getAppPath(),
+    appDistOverride: overrides.appDist,
+    workspaceWebRoot: () => join(dirname(createRequire(import.meta.url).resolve("@aicad/app/package.json")), "dist", "web"),
+  });
 }
 
 function isTrustedSender(frameUrl: string | undefined): boolean {
-  if (!frameUrl) return false;
-  if (frameUrl.startsWith(`${APP_ORIGIN}/`)) return true;
-  return !!devUrl && frameUrl.startsWith(devUrl);
+  return isTrustedFrameUrl(frameUrl, devOrigin);
 }
 
 let mainWindow: BrowserWindow | null = null;
@@ -67,7 +79,7 @@ const safeStorageCipher: Cipher = {
 function spawnAgentWorker(): WorkerHandle {
   const child = utilityProcess.fork(join(here, "agent", "worker.js"), [], {
     serviceName: "aicad-agent",
-    env: sanitizedEnv(process.env),
+    env: agentWorkerEnv(process.env),
     stdio: "pipe",
   });
   const forward = (stream: NodeJS.ReadableStream | null, level: "log" | "error"): void => {
@@ -122,14 +134,7 @@ function createWindow(): BrowserWindow {
     title: "aicad",
     backgroundColor: "#141619",
     ...(process.platform === "darwin" ? { titleBarStyle: "hiddenInset" as const, trafficLightPosition: { x: 14, y: 13 } } : {}),
-    webPreferences: {
-      preload: join(here, "preload.cjs"),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      webSecurity: true,
-      spellcheck: false,
-    },
+    webPreferences: mainWindowWebPreferences(join(here, "preload.cjs"), isDev),
   });
   if (saved.maximized) win.maximize();
   win.once("ready-to-show", () => win.show());
@@ -152,7 +157,7 @@ function createWindow(): BrowserWindow {
   win.on("close", (event) => {
     clearTimeout(timer);
     saveWindowState(stateFile, snapshot());
-    if (docState.dirty && !process.env["AICAD_SKIP_CLOSE_PROMPT"]) {
+    if (docState.dirty && !overrides.skipClosePrompt) {
       const choice = dialog.showMessageBoxSync(win, {
         type: "warning",
         buttons: ["Discard Changes", "Cancel"],
@@ -185,7 +190,7 @@ function createWindow(): BrowserWindow {
     console.error(`[aicad] failed to load ${url}: ${description} (${code})`);
   });
 
-  void win.loadURL(devUrl ?? APP_ENTRY_URL);
+  void win.loadURL(overrides.devServer?.url ?? APP_ENTRY_URL);
   return win;
 }
 
@@ -203,10 +208,15 @@ async function appInfo(forgeBin: string): Promise<AppInfo> {
   };
 }
 
-const gotLock = app.requestSingleInstanceLock();
-if (!gotLock) {
-  app.quit();
-} else {
+function start(): void {
+  if (overrides.userDataDir) app.setPath("userData", overrides.userDataDir);
+  app.setName("aicad");
+  registerAppScheme();
+
+  if (!app.requestSingleInstanceLock()) {
+    app.quit();
+    return;
+  }
   app.on("second-instance", () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
@@ -219,9 +229,13 @@ if (!gotLock) {
     session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
     session.defaultSession.setPermissionCheckHandler(() => false);
 
-    serveApp(resolveWebRoot());
+    serveApp(webRoot());
     recent = new RecentFiles(join(app.getPath("userData"), "recent-files.json"));
-    for (const p of recent.list()) grants.grant(p);
+    // Documents the user opened or saved in earlier sessions (revoked by Clear Recent), unless the
+    // path now resolves to another file than the one recorded (e.g. swapped for a symlink).
+    for (const e of recent.entries()) {
+      if (!grants.grantRecent(e.path, e.real)) console.warn(`[aicad] recent document ${e.path} no longer resolves to the file that was opened; not restoring its access`);
+    }
 
     const forgeBin = locateForgeBinary({ env: process.env, isPackaged: app.isPackaged, resourcesPath: process.resourcesPath, appPath: app.getAppPath() });
     agent = setupAgent({
@@ -243,17 +257,15 @@ if (!gotLock) {
       recent,
       forgeBin,
       appInfo: () => appInfo(forgeBin),
-      onRecentChanged: () => {
-        for (const p of recent.list()) grants.grant(p);
-        rebuildMenu();
-      },
+      onRecentChanged: () => rebuildMenu(),
       onDocState: (state) => {
         docState = state;
         if (!mainWindow) return;
         mainWindow.setTitle(`${state.title}${state.dirty ? " •" : ""} — aicad`);
         if (process.platform === "darwin") {
           mainWindow.setDocumentEdited(state.dirty);
-          mainWindow.setRepresentedFilename(state.path ?? "");
+          // ipc.ts already dropped an ungranted path; checked again because this is the sink.
+          mainWindow.setRepresentedFilename(documentStatePath(state.path, grants) ?? "");
         }
       },
     });
@@ -271,4 +283,12 @@ if (!gotLock) {
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();
   });
+}
+
+if (refusedSwitches.length > 0) {
+  // Before any window, IPC handler, agent or protocol exists.
+  console.error(`[aicad] ${debugSwitchRefusal(refusedSwitches)}`);
+  app.exit(1);
+} else {
+  start();
 }

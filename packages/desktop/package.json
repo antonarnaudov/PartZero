@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:e2e": "node scripts/ensure-electron.mjs && pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && playwright test -c e2e/playwright.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "package": "pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && electron-builder --config electron-builder.config.cjs",
+    "package": "pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && node scripts/package-notices.mjs && electron-builder --config electron-builder.config.cjs",
     "package:mac": "pnpm run package --mac",
     "package:win": "pnpm run package --win",
     "package:linux": "pnpm run package --linux",

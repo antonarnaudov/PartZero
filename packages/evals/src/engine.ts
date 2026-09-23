@@ -56,7 +56,7 @@ export interface ProcessResult {
   error?: Error;
 }
 
-export function runProcess(cmd: string, args: string[], options: { cwd?: string; timeoutMs?: number } = {}): Promise<ProcessResult> {
+export function runProcess(cmd: string, args: string[], options: { cwd?: string; timeoutMs?: number; env?: NodeJS.ProcessEnv } = {}): Promise<ProcessResult> {
   return new Promise((done) => {
     let stdout = "";
     let stderr = "";
@@ -69,7 +69,7 @@ export function runProcess(cmd: string, args: string[], options: { cwd?: string;
         done(r);
       }
     };
-    const child = spawn(cmd, args, { cwd: options.cwd, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(cmd, args, { cwd: options.cwd, stdio: ["ignore", "pipe", "pipe"], ...(options.env ? { env: options.env } : {}) });
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill("SIGKILL");
@@ -123,6 +123,24 @@ function reportFromProcess(what: string, r: ProcessResult, timeoutMs: number): E
 
 // ─── Forge CLI ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Variables the `aicad` binary may inherit: paths, locale, the Windows essentials and
+ * `RUST_BACKTRACE`. Callers such as the desktop agent hold provider API keys in their environment;
+ * the kernel needs none of it.
+ */
+export const FORGE_CLI_ENV_ALLOWLIST: readonly string[] = [
+  "PATH", "HOME", "USER", "LOGNAME", "TMPDIR", "TMP", "TEMP", "LANG", "LANGUAGE", "LC_ALL", "LC_CTYPE", "LC_MESSAGES", "LC_NUMERIC", "TZ",
+  "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "APPDATA", "LOCALAPPDATA", "PROGRAMDATA", "RUST_BACKTRACE",
+];
+
+/** `env` filtered to {@link FORGE_CLI_ENV_ALLOWLIST} (case-insensitive: Windows names are). */
+export function forgeCliEnv(env: NodeJS.ProcessEnv = process.env): Record<string, string> {
+  const allow = new Set(FORGE_CLI_ENV_ALLOWLIST.map((k) => k.toUpperCase()));
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(env)) if (v !== undefined && allow.has(k.toUpperCase())) out[k] = v;
+  return out;
+}
+
 export interface ForgeCliEngineOptions {
   /** Path to the `aicad` binary. Default: `<repo>/forge/target/debug/aicad`. */
   bin?: string;
@@ -155,7 +173,7 @@ export class ForgeCliEngine implements Engine {
     const a = await this.availability();
     if (!a.available) throw new EngineError("ENGINE_UNAVAILABLE", a.detail);
     return withTempIr(ir, options.name ?? "doc", async (path) => {
-      const r = await runProcess(this.bin, ["eval", path, "--format", "json"], { timeoutMs: this.timeoutMs });
+      const r = await runProcess(this.bin, ["eval", path, "--format", "json"], { timeoutMs: this.timeoutMs, env: forgeCliEnv() });
       return reportFromProcess("aicad eval", r, this.timeoutMs);
     });
   }

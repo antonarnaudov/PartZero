@@ -12,6 +12,7 @@ import { constants } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import type { ForgeCliInfo, ForgeEvalRequest, ForgeEvalResponse, ForgeExportRequest, ForgeExportResponse, MeshFormat } from "@aicad/app/bridge";
+import { forgeCliEnv } from "./env.js";
 
 const EXE = process.platform === "win32" ? "aicad.exe" : "aicad";
 const MAX_IR_BYTES = 32 * 1024 * 1024;
@@ -36,14 +37,15 @@ export interface LocateOptions {
 }
 
 /**
- * Where the `aicad` binary is: `$AICAD_BIN`, else the copy bundled in the app's resources
- * (packaged), else the repo's cargo build (`forge/target/{release,debug}`, newest first: debug is
- * what `cargo build -p forge-cli` produces during development).
+ * Where the `aicad` binary is: in a packaged build always the copy bundled in the app's resources
+ * (`$AICAD_BIN` is ignored there); unpackaged, `$AICAD_BIN`, else the repo's cargo build
+ * (`forge/target/{release,debug}`: debug is what `cargo build -p forge-cli` produces during
+ * development).
  */
 export function locateForgeBinary(o: LocateOptions): string {
+  if (o.isPackaged) return join(o.resourcesPath, "bin", EXE);
   const fromEnv = o.env["AICAD_BIN"];
   if (fromEnv) return resolve(fromEnv);
-  if (o.isPackaged) return join(o.resourcesPath, "bin", EXE);
   const root = findRepoRoot(o.appPath);
   if (!root) return join(o.appPath, EXE);
   const debug = join(root, "forge", "target", "debug", EXE);
@@ -73,7 +75,9 @@ interface RunResult {
 
 function run(bin: string, args: string[], timeoutMs: number): Promise<RunResult> {
   return new Promise((done) => {
-    const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], windowsHide: true, shell: false });
+    // An allowlisted environment: the main process holds provider API keys (env / .env) that the
+    // kernel has no business seeing.
+    const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], windowsHide: true, shell: false, env: forgeCliEnv(process.env) });
     const out: Buffer[] = [];
     let err = "";
     let settled = false;

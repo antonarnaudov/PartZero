@@ -1,15 +1,15 @@
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { isDocumentPath, PathGrants, RecentFiles } from "../src/files.js";
+import { canonicalPath, isDocumentPath, PathGrants, RecentFiles } from "../src/files.js";
 import { findRepoRoot, forgeEval, forgeExport, forgeInfo, locateForgeBinary } from "../src/forge-cli.js";
 import { buildMenuTemplate } from "../src/menu.js";
 import { contentTypeFor, resolveAssetPath, SECURITY_HEADERS } from "../src/protocol-core.js";
 import { sanitizeWindowState } from "../src/window-state.js";
+import { tempDirs } from "./temp-dirs.js";
 
-const tmp = (): string => mkdtempSync(join(tmpdir(), "aicad-desktop-test-"));
+const tmp = tempDirs("aicad-desktop-test-");
 
 describe("app:// protocol", () => {
   const root = resolve("/srv/web");
@@ -66,11 +66,13 @@ describe("window state", () => {
 describe("file access", () => {
   it("grants only paths chosen in dialogs", () => {
     const g = new PathGrants();
-    expect(() => g.check("/tmp/a.cad.ts")).toThrow(/access denied/);
-    g.grant("/tmp/x/../a.cad.ts");
-    expect(g.check("/tmp/a.cad.ts")).toBe(resolve("/tmp/a.cad.ts"));
-    expect(() => g.check(42)).toThrow(/invalid path/);
-    expect(() => g.check("/tmp/a\0.cad.ts")).toThrow(/invalid path/);
+    const dir = tmp();
+    const doc = join(dir, "a.cad.ts");
+    expect(() => g.check(doc, "read")).toThrow(/access denied/);
+    expect(g.grantOpened(join(dir, "x", "..", "a.cad.ts"))).toBe(doc);
+    expect(g.check(doc, "read")).toBe(canonicalPath(doc));
+    expect(() => g.check(42, "read")).toThrow(/invalid path/);
+    expect(() => g.check(join(dir, "a\0.cad.ts"), "read")).toThrow(/invalid path/);
     expect(isDocumentPath("/a/b.cad.ts")).toBe(true);
     expect(isDocumentPath("/a/b.json")).toBe(true);
     expect(isDocumentPath("/a/b.3mf")).toBe(false);
@@ -79,9 +81,10 @@ describe("file access", () => {
   it("persists recent files, most recent first, deduplicated and capped", () => {
     const file = join(tmp(), "recent.json");
     const r = new RecentFiles(file, 3);
-    for (const p of ["/a.cad.ts", "/b.cad.ts", "/a.cad.ts", "/c.json", "/d.json"]) r.add(p);
+    for (const p of ["/a.cad.ts", "/b.cad.ts", "/a.cad.ts", "/c.json", "/d.json"]) r.add(p, canonicalPath(p));
     expect(r.list()).toEqual(["/d.json", "/c.json", "/a.cad.ts"].map((p) => resolve(p)));
     expect(new RecentFiles(file, 3).list()).toEqual(r.list());
+    expect(new RecentFiles(file, 3).entries()).toEqual(r.list().map((p) => ({ path: p, real: canonicalPath(p) })));
     r.clear();
     expect(JSON.parse(readFileSync(file, "utf8"))).toEqual([]);
     writeFileSync(file, "{broken");

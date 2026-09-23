@@ -3,7 +3,7 @@
  * create a document from a MakerBench template through the UI, check the timeline and that there
  * are zero problems, export 3MF through the command layer, and save a screenshot.
  */
-import { mkdtempSync, readFileSync, statSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -67,6 +67,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await app?.close();
+  if (userData) rmSync(userData, { recursive: true, force: true });
 });
 
 test("launches the shell with a sandboxed, cross-origin-isolated renderer", async () => {
@@ -185,6 +186,27 @@ test("native menu items run commands", async () => {
   await expect(page.getByTestId("problems-count")).toBeHidden();
   await app.evaluate(({ Menu }) => Menu.getApplicationMenu()?.getMenuItemById("view.toggleProblems")?.click());
   await expect(page.getByTestId("problems-count")).toBeVisible();
+});
+
+test("About → Licenses: the MPL-2.0 text, the source notice and the third-party notices ship with the app", async () => {
+  await page.evaluate(() => window.__aicad!.execute({ id: "help.about" }));
+  const about = page.getByRole("dialog", { name: "About aicad" });
+  await expect(about.getByTestId("about-source")).toContainText("Source code:");
+  await about.getByTestId("about-notices").click();
+  const text = about.getByTestId("license-text");
+  await expect(text).toContainText("THIRD-PARTY SOFTWARE NOTICES: aicad web app");
+  // npm packages in the bundle and workers, with notices the minifier strips (React headers,
+  // DOMPurify vendored inside Monaco, Monaco's and TypeScript's own third-party notice files).
+  for (const s of ["monaco-editor 0.56", "react-dom", "scheduler", "typescript", "zod", "Meta Platforms", "@license DOMPurify", "markedjs NOTICES", "ThirdPartyNoticeText.txt"]) {
+    await expect(text).toContainText(s);
+  }
+  // The Rust crates compiled into the bundled Forge WASM module.
+  if (!expectFallback) await expect(text).toContainText("forge_wasm_bg.wasm (@aicad/forge-web)");
+  await about.getByTestId("about-back").click();
+  await about.getByTestId("about-license").click();
+  await expect(about.getByTestId("license-text")).toContainText("Mozilla Public License Version 2.0");
+  await page.keyboard.press("Escape");
+  await expect(about).toBeHidden();
 });
 
 test("screenshot of the main window", async () => {

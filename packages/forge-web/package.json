@@ -24,7 +24,8 @@
     "pkg/forge_wasm.js",
     "pkg/forge_wasm.d.ts",
     "pkg/forge_wasm_bg.wasm",
-    "pkg/forge_wasm_bg.wasm.d.ts"
+    "pkg/forge_wasm_bg.wasm.d.ts",
+    "pkg/THIRD_PARTY_LICENSES.txt"
   ],
   "scripts": {
     "build": "node scripts/build.mjs && tsc -p tsconfig.build.json",

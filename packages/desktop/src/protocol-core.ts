@@ -54,6 +54,26 @@ const TYPES: Record<string, string> = {
   ".txt": "text/plain; charset=utf-8",
 };
 
+/**
+ * Whether a frame URL belongs to our own app: exactly `app://aicad` (the packaged web app), or
+ * exactly the dev server's origin when one is configured (see `env.ts` `parseDevServerUrl`, which
+ * accepts loopback origins only). Compares parsed origins, never string prefixes: a prefix test
+ * would also trust `http://localhost:5173@evil.com/` or `http://localhost:5173.evil.com/`.
+ */
+export function isTrustedFrameUrl(frameUrl: string | undefined, devOrigin: string | null): boolean {
+  if (!frameUrl) return false;
+  let u: URL;
+  try {
+    u = new URL(frameUrl);
+  } catch {
+    return false;
+  }
+  if (u.username || u.password) return false;
+  // `app:` is not a special scheme, so `URL.origin` is "null": compare scheme, host and port.
+  if (u.protocol === `${APP_SCHEME}:`) return u.host === APP_HOST && u.port === "";
+  return devOrigin !== null && u.origin === devOrigin;
+}
+
 export function contentTypeFor(path: string): string {
   return TYPES[extname(path).toLowerCase()] ?? "application/octet-stream";
 }

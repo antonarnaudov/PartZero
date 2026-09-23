@@ -8,7 +8,7 @@
  * viewport update as one transaction → undo reverts it. Then Stop while the agent waits for an
  * answer, and the API-key settings (encrypted at rest, never readable by the renderer).
  */
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -75,6 +75,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await app?.close();
+  if (userData) rmSync(userData, { recursive: true, force: true });
 });
 
 const summary = (): Promise<Summary> => page.evaluate(() => (window as unknown as AW).__aicad.idle());

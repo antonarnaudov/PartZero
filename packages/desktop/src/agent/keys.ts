@@ -76,17 +76,6 @@ export function keysFromVariables(vars: Readonly<Record<string, string | undefin
   return out;
 }
 
-/** The environment for the agent utility process: everything except secrets (keys go explicitly, per run). */
-export function sanitizedEnv(env: NodeJS.ProcessEnv): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(env)) {
-    if (v === undefined) continue;
-    if (/(API_KEY|_KEY|TOKEN|SECRET|PASSWORD|CREDENTIALS)$/i.test(k)) continue;
-    out[k] = v;
-  }
-  return out;
-}
-
 // ─── Encrypted store ───────────────────────────────────────────────────────────────────────
 
 /** The subset of Electron `safeStorage` the store needs (injectable for tests). */

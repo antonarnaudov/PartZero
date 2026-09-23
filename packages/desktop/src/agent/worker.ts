@@ -5,8 +5,9 @@
  * (the TypeScript compiler) and evaluates Forge WASM synchronously, for seconds at a time. In the
  * main process that would stall every window's IPC, menus and the app:// protocol; a crash or OOM
  * in a provider SDK or in WASM would take the whole app down. Here it only ends the run: the main
- * process reports the crash and forks a fresh process for the next run. The process gets a
- * sanitized environment (no `*_API_KEY` variables) and receives keys per run, in memory.
+ * process reports the crash and forks a fresh process for the next run. The process gets an
+ * allowlisted environment (`env.ts` `agentWorkerEnv`: no keys, no `*_BASE_URL` or Node overrides)
+ * and receives keys per run, in memory.
  */
 import { PROTOCOL_VERSION, scrubKeyLike, type HostToWorker, type WorkerToHost } from "./protocol.js";
 import { AgentRunner } from "./runner.js";

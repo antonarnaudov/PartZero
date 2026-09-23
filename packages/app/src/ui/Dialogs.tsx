@@ -3,6 +3,9 @@ import { useApp, useStore } from "./context";
 import { fuzzyScore } from "./CommandPalette";
 import { Icon } from "./icons";
 
+// About (with Licenses) lives in About.tsx.
+export { AboutDialog } from "./About";
+
 export function TemplateDialog(): ReactElement {
   const { services, run } = useApp();
   const [query, setQuery] = useState("");
@@ -104,55 +107,6 @@ export function TemplateDialog(): ReactElement {
             )}
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-export function AboutDialog(): ReactElement {
-  const { services } = useApp();
-  const info = useStore(services.ui, (s) => s.appInfo);
-  const engines = useStore(services.engines, (s) => s.candidates);
-  const active = useStore(services.engines, (s) => s.active);
-  const viewport = useStore(services.ui, (s) => s.viewport);
-  const close = (): void => services.ui.closeDialog();
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") close();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
-  const rows: Array<[string, string]> = [
-    ["Version", info?.version ?? "—"],
-    ["Electron / Chrome / Node", info ? `${info.electron} / ${info.chrome} / ${info.node}` : "—"],
-    ["Platform", info ? `${info.platform} ${info.arch}` : "—"],
-    ["Cross-origin isolated", String(globalThis.crossOriginIsolated === true)],
-    ["Active engine", `${active.label} — ${active.detail}`],
-    ...engines.map((c): [string, string] => [`Engine: ${c.id}`, `${c.available === null ? "not probed" : c.available ? "available" : "unavailable"} — ${c.detail}`]),
-    ["Viewport", `${viewport.kind} · ${viewport.backend}`],
-  ];
-  return (
-    <div className="overlay" onMouseDown={close}>
-      <div className="dialog about" role="dialog" aria-label="About aicad" onMouseDown={(e) => e.stopPropagation()}>
-        <header className="dialog-head">
-          <Icon.Cube size={15} />
-          <h2>aicad</h2>
-          <span className="muted small">AI-native CAD · app shell spike</span>
-          <span className="spacer" />
-          <button type="button" className="icon-btn" aria-label="Close" onClick={close}>
-            <Icon.Close size={12} />
-          </button>
-        </header>
-        <dl className="about-grid">
-          {rows.map(([k, v]) => (
-            <div key={k}>
-              <dt>{k}</dt>
-              <dd>{v}</dd>
-            </div>
-          ))}
-        </dl>
-        <p className="muted small">MPL-2.0. Forge kernel, CadScript and the Feature-Graph IR are developed in this repository.</p>
       </div>
     </div>
   );

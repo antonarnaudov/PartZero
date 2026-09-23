@@ -2,7 +2,8 @@
  * Main-process wiring of the agent: key store (safeStorage), settings, environment/.env keys in
  * development, the transport (live / scripted / replay) and the utility process factory.
  *
- * Environment (all optional):
+ * Environment (all optional; development and tests only: a packaged build always uses the live
+ * transport and never reads a `.env`):
  * - `AICAD_AGENT_TRANSPORT` = `live` (default) | `scripted` | `replay`
  * - `AICAD_AGENT_SCRIPT`    = JSON script for `scripted` (see `runner.ts` `parseScriptFile`)
  * - `AICAD_AGENT_FIXTURES`  = JSON fixture array for `replay` (`@aicad/llm-gateway` `Fixture[]`)
@@ -16,7 +17,11 @@ import { KeyResolver, KeyStore, keysFromVariables, parseDotenv, type Cipher } fr
 import type { TransportConfig } from "./protocol.js";
 import { SettingsStore } from "./settings.js";
 
-export function transportFromEnv(env: NodeJS.ProcessEnv, warn: (m: string) => void = () => undefined): TransportConfig {
+export function transportFromEnv(env: NodeJS.ProcessEnv, warn: (m: string) => void = () => undefined, isPackaged = false): TransportConfig {
+  if (isPackaged) {
+    if (env["AICAD_AGENT_TRANSPORT"]) warn("AICAD_AGENT_TRANSPORT is ignored in packaged builds; using the live transport");
+    return { kind: "live" };
+  }
   const kind = env["AICAD_AGENT_TRANSPORT"] ?? "live";
   if (kind === "scripted") {
     const scriptPath = env["AICAD_AGENT_SCRIPT"];
@@ -68,7 +73,7 @@ export function setupAgent(o: AgentSetupOptions): AgentSetup {
   const store = new KeyStore(join(o.userData, "agent-keys.json"), o.cipher);
   const keys = new KeyResolver(store, keysFromVariables(o.env), dotenvKeys(o.env, o.repoRoot, o.isPackaged));
   const settings = new SettingsStore(join(o.userData, "agent-settings.json"));
-  const transport = transportFromEnv(o.env, (m) => o.log("warn", m));
+  const transport = transportFromEnv(o.env, (m) => o.log("warn", m), o.isPackaged);
   const host = new AgentHost({ spawnWorker: o.spawnWorker, keys, settings, transport, forgeBin: o.forgeBin, send: o.send, log: o.log });
   return { host, keys, settings };
 }

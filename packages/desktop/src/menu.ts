@@ -12,6 +12,7 @@ export interface MenuDeps {
   recentFiles: readonly string[];
   platform: NodeJS.Platform;
   appName: string;
+  /** Unpackaged run: adds Reload and Toggle Developer Tools (a packaged build has neither). */
   isDev: boolean;
 }
 
@@ -152,7 +153,7 @@ export function buildMenuTemplate(deps: MenuDeps): MenuItemConstructorOptions[] 
         { role: "zoomOut" },
         sep,
         { role: "togglefullscreen" },
-        ...(deps.isDev ? [sep, { role: "reload" } as MenuItemConstructorOptions, { role: "toggleDevTools" } as MenuItemConstructorOptions] : [{ role: "toggleDevTools" } as MenuItemConstructorOptions]),
+        ...(deps.isDev ? [sep, { role: "reload" } as MenuItemConstructorOptions, { role: "toggleDevTools" } as MenuItemConstructorOptions] : []),
       ],
     },
     {
