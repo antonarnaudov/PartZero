@@ -1,0 +1,37 @@
+{
+  "name": "@aicad/desktop",
+  "version": "0.0.1",
+  "description": "The aicad desktop shell (Electron): sandboxed renderer serving @aicad/app over a COOP/COEP app:// protocol, a typed preload bridge, native menus wired to the command layer, and the Forge CLI engine over IPC.",
+  "license": "MPL-2.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/main.js",
+  "productName": "aicad",
+  "author": "aicad contributors",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "node scripts/ensure-electron.mjs && tsc -p tsconfig.build.json && node scripts/dev.mjs",
+    "start": "node scripts/ensure-electron.mjs && tsc -p tsconfig.build.json && electron .",
+    "test": "vitest run",
+    "test:e2e": "node scripts/ensure-electron.mjs && pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && playwright test -c e2e/playwright.config.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "package": "pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && electron-builder --config electron-builder.config.cjs",
+    "package:mac": "pnpm run package --mac",
+    "package:win": "pnpm run package --win",
+    "package:linux": "pnpm run package --linux",
+    "test:e2e:fallback": "node scripts/ensure-electron.mjs && pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && node scripts/e2e-fallback.mjs"
+  },
+  "devDependencies": {
+    "@aicad/app": "workspace:*",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^24.9.0",
+    "electron": "^44.4.4",
+    "electron-builder": "^26.15.3",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.0",
+    "vitest": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

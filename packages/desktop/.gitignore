@@ -1,0 +1,4 @@
+# Playwright output and electron-builder artifacts
+test-results/
+playwright-report/
+release/
