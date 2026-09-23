@@ -1,0 +1,411 @@
+corpus/makerbench/t4-knob-taller.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 9-10,23
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-8,11-22,24-66
+packages/evals/src/hash.ts
+  s_59c0dd2af30db2::t_0ce2b6311b5ffe 1-25
+packages/evals/src/report.ts
+  s_59c0dd2af30db2::t_dba1c18f1e89bf 1-104
+corpus/makerbench/t1-shelf-bracket.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-52
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+corpus/makerbench/t5-pcb-spacers.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,35
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-34,36-54
+corpus/makerbench/t2-enclosure-with-lid.cad.ts
+  s_59c0dd2af30db2::t_d187899619c27b 1-45
+packages/evals/fixtures/makerbench/t1-plant-saucer.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-145
+packages/evals/src/mutate.ts
+  s_59c0dd2af30db2::t_c5f924a198f0f0 1-97
+packages/evals/test/helpers.ts
+  s_59c0dd2af30db2::t_14fff844f59429 1-67
+packages/evals/fixtures/makerbench/t4-plate-thicker.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,76,144,212,280
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-75,77-143,145-211,213-279,281-347
+corpus/makerbench/t1-gridfinity-cell.cad.ts
+  s_59c0dd2af30db2::t_a0dc7cc5c34950 1-24
+corpus/makerbench/t5-phone-stand.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,34,40
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-33,35-39,41-51
+corpus/makerbench/t1-v-pulley.cad.ts
+  s_59c0dd2af30db2::t_a0dc7cc5c34950 1-15
+packages/evals/src/pipeline.ts
+  s_59c0dd2af30db2::t_f5a63b9f2d59d3 13,171-179,247,273,276,282,291,328
+  s_59c0dd2af30db2::t_a843d536c1ad12 1-12,14-170,180-246,248-272,274-275,277-281,283-290,292-327,329-331
+corpus/makerbench/t1-keychain-tag.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,36
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-35,37-60
+packages/evals/fixtures/makerbench/t4-lid-add-jack-hole.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,76,144,212,280
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-75,77-143,145-211,213-279,281-347
+corpus/makerbench/t1-knob.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-61
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+packages/evals/src/engine.ts
+  s_59c0dd2af30db2::t_7db410ea599bd7 230
+  s_59c0dd2af30db2::t_847bb2e5e5fb56 235-239,241-244
+  s_59c0dd2af30db2::t_994a86d30a1681 1-101,106-108,110-113,116-119,121-229,231-234,240,245-304
+  s_59c0dd2af30db2::t_6bfe790c59560b 102-105,109,114-115,120
+corpus/makerbench/t2-pen-holder.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,35,43-45,53-54
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-34,36-42,46-52,55-65
+corpus/makerbench/tsconfig.json
+  s_59c0dd2af30db2::t_779c406dd74061 1-17
+corpus/makerbench/t4-plate-thicker.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 9-10
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-8,11-70
+docs/spikes/08-eval-harness.md
+  s_59c0dd2af30db2::t_9eb9f9a911e99b 1-131,143-180
+  s_59c0dd2af30db2::t_9b97a53b500336 132-142
+corpus/makerbench/t1-bearing-housing.cad.ts
+  s_59c0dd2af30db2::t_c5f8928b8e24e9 1-14
+corpus/makerbench/t1-nema17-plate.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-35,37-42,45-49,52-69
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,36,43-44,50-51
+packages/evals/test/reference.test.ts
+  s_59c0dd2af30db2::t_6883ad794a6772 1-64
+corpus/makerbench/t1-cable-clip.task.json
+  s_59c0dd2af30db2::t_799976a2937efe 54
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,35,43
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-34,36-42,44-53,55
+corpus/makerbench/t4-plate-holes-m4.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-8,11-23,25-31,33-38,41-77
+  s_59c0dd2af30db2::t_500b0ef556b912 9-10,24,32,39-40
+corpus/makerbench/t1-bearing-housing.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-53
+corpus/makerbench/t1-rpi4-plate.cad.ts
+  s_59c0dd2af30db2::t_8ad5725b70493e 1-16
+corpus/makerbench/t1-gridfinity-cell.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-53
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+corpus/makerbench/t4-knob-taller.cad.ts
+  s_59c0dd2af30db2::t_ae3048be6f84ed 1-15
+packages/evals/tsconfig.build.json
+  s_59c0dd2af30db2::t_c13b8c1030d281 1-9
+packages/evals/fixtures/makerbench/t1-shelf-bracket.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-137
+corpus/makerbench/t2-parts-tray.cad.ts
+  s_59c0dd2af30db2::t_d187899619c27b 1-34
+corpus/makerbench/t1-desk-grommet.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-53
+packages/evals/fixtures/makerbench/t1-slotted-shim.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-143
+corpus/makerbench/t2-headphone-stand.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-35,38-45,48-55,59-70
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,36-37,46-47,56-58
+corpus/makerbench/t4-lid-add-jack-hole.context.cad.ts
+  s_59c0dd2af30db2::t_ae3048be6f84ed 1-16
+packages/evals/src/solver.ts
+  s_59c0dd2af30db2::t_4264f0d770ecf8 1-90
+corpus/makerbench/t1-flanged-bushing.cad.ts
+  s_59c0dd2af30db2::t_a0dc7cc5c34950 1-14
+corpus/makerbench/t5-phone-stand.cad.ts
+  s_59c0dd2af30db2::t_0af0d7fb70825a 1-18
+packages/evals/src/checks.ts
+  s_59c0dd2af30db2::t_f5a63b9f2d59d3 304-309,311-319,337
+  s_59c0dd2af30db2::t_847bb2e5e5fb56 320-331,339-340,349
+  s_59c0dd2af30db2::t_189b29253c0d13 291-297,310,360-361,367,379
+  s_59c0dd2af30db2::t_7c7d9708186dce 1-290,298-303,332-336,338,341-348,350-359,362-366,368-378,380-405
+corpus/makerbench/t5-shelf-bracket.cad.ts
+  s_59c0dd2af30db2::t_0af0d7fb70825a 1-15
+corpus/makerbench/t2-enclosure-with-lid.task.json
+  s_59c0dd2af30db2::t_799976a2937efe 40
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-34,36-39,41-42,46-53,56-68
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,35,43-45,54-55
+packages/evals/fixtures/makerbench/t2-headphone-stand.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-181,183-355
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,182
+corpus/makerbench/t2-wall-hook.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-34,36-41,44-50,53-60,63-74
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,35,42-43,51-52,61-62
+packages/evals/package.json
+  s_59c0dd2af30db2::t_c13b8c1030d281 1-45
+corpus/makerbench/t1-nema17-plate.cad.ts
+  s_59c0dd2af30db2::t_8ad5725b70493e 1-17
+corpus/makerbench/t1-m3-washer.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-47
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+corpus/makerbench/t1-m5-spacer.cad.ts
+  s_59c0dd2af30db2::t_8ad5725b70493e 1-13
+corpus/makerbench/t2-parts-tray.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,35,43-44,53-54
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-34,36-42,45-52,55-66
+packages/evals/src/paths.ts
+  s_59c0dd2af30db2::t_0ce2b6311b5ffe 1-17
+packages/evals/fixtures/makerbench/t1-fan40-mount.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-75,77-143,145-211,213-279
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,76,144,212
+packages/evals/fixtures/makerbench/t1-knob.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-78,80-149
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,79
+packages/evals/src/ir-geom.ts
+  s_59c0dd2af30db2::t_4ba585529863b2 151-154,158-159
+  s_59c0dd2af30db2::t_189b29253c0d13 78-79,95
+  s_59c0dd2af30db2::t_0dafb3b5d986fa 1-77,80-94,96-150,155-157,160-255
+corpus/makerbench/t2-spool-holder.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-34,36-41,44-49,52-59,61-72
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,35,42-43,50-51,60
+corpus/makerbench/t5-shelf-bracket.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-33,35-39,41-51
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,34,40
+packages/evals/fixtures/makerbench/t1-desk-grommet.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,77
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-76,78-145
+corpus/makerbench/t1-m3-washer.cad.ts
+  s_59c0dd2af30db2::t_8ad5725b70493e 1-10
+corpus/makerbench/t1-slotted-shim.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-41,43-60
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,42
+corpus/makerbench/t1-drawer-pull.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-42,44-55
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,43
+corpus/makerbench/t1-cable-clip.cad.ts
+  s_59c0dd2af30db2::t_a0dc7cc5c34950 1-21
+corpus/makerbench/t1-rect-gasket.cad.ts
+  s_59c0dd2af30db2::t_8ad5725b70493e 1-20
+corpus/makerbench/t1-phone-stand-side.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-47
+corpus/makerbench/t1-keychain-tag.cad.ts
+  s_59c0dd2af30db2::t_c5f8928b8e24e9 1-13
+packages/evals/fixtures/makerbench/t1-gridfinity-cell.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-79,81-151
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,80
+packages/evals/fixtures/makerbench/t1-nema17-plate.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-279
+packages/evals/src/cli-main.ts
+  s_59c0dd2af30db2::t_c22f43de16891e 1-285
+packages/evals/src/task.ts
+  s_59c0dd2af30db2::t_57ab2c536e765c 249-251
+  s_59c0dd2af30db2::t_c36b61c86def95 1-169,171-248,252-345
+  s_59c0dd2af30db2::t_35e74b3cfea92f 170
+packages/evals/schema/makerbench-task.schema.json
+  s_59c0dd2af30db2::t_189b29253c0d13 138
+  s_59c0dd2af30db2::t_424c0cee9e7919 1-137,139-217
+packages/evals/fixtures/makerbench/t1-drawer-pull.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,82
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-81,83-155
+corpus/makerbench/t4-knob-taller.context.cad.ts
+  s_59c0dd2af30db2::t_ae3048be6f84ed 1-15
+packages/evals/fixtures/makerbench/t2-nema17-l-bracket.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-131,133-255,257-379,381-503
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,132,256,380
+packages/evals/fixtures/makerbench/t1-cable-clip.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,82
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-81,83-155
+corpus/makerbench/t1-slotted-shim.cad.ts
+  s_59c0dd2af30db2::t_a0dc7cc5c34950 1-20
+corpus/makerbench/t4-plate-thicker.cad.ts
+  s_59c0dd2af30db2::t_ae3048be6f84ed 1-15
+packages/evals/vitest.config.ts
+  s_59c0dd2af30db2::t_c13b8c1030d281 1-16
+packages/evals/test/cli.test.ts
+  s_59c0dd2af30db2::t_a703c515b44f42 1-82
+corpus/makerbench/t1-flange-gasket.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,35-36
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-34,37-53
+packages/evals/fixtures/makerbench/t1-v-pulley.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-149
+corpus/makerbench/t1-knob.cad.ts
+  s_59c0dd2af30db2::t_a0dc7cc5c34950 1-15
+corpus/makerbench/t1-plant-saucer.cad.ts
+  s_59c0dd2af30db2::t_c5f8928b8e24e9 1-16
+corpus/makerbench/t1-sg90-mount.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,41-42
+  s_59c0dd2af30db2::t_d777a1ceadea35 39
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-38,40,43-60
+packages/evals/fixtures/makerbench/t1-rect-gasket.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-279
+corpus/makerbench/t2-headphone-stand.cad.ts
+  s_59c0dd2af30db2::t_d187899619c27b 1-23
+corpus/makerbench/t1-rpi4-plate.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-34,37-53
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,35-36
+corpus/makerbench/t4-plate-holes-m4.context.cad.ts
+  s_59c0dd2af30db2::t_ae3048be6f84ed 1-16
+packages/evals/fixtures/makerbench/t1-m5-spacer.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-141
+corpus/makerbench/t1-sg90-mount.cad.ts
+  s_59c0dd2af30db2::t_c5f8928b8e24e9 1-18
+corpus/makerbench/t1-v-pulley.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-53
+corpus/makerbench/t1-2020-corner-plate.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-34,37-54
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,35-36
+packages/evals/fixtures/makerbench/t2-enclosure-with-lid.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-235,237-463
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,236
+corpus/makerbench/t1-shelf-bracket.cad.ts
+  s_59c0dd2af30db2::t_c5f8928b8e24e9 1-17
+corpus/makerbench/t4-lid-add-jack-hole.cad.ts
+  s_59c0dd2af30db2::t_ae3048be6f84ed 1-18
+packages/evals/test/tasks.test.ts
+  s_59c0dd2af30db2::t_fb407a51eed98f 1-135
+packages/evals/fixtures/makerbench/t5-shelf-bracket.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,73
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-72,74-137
+packages/evals/fixtures/makerbench/t1-phone-stand-side.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-149
+corpus/makerbench/t1-gt2-idler.cad.ts
+  s_59c0dd2af30db2::t_a0dc7cc5c34950 1-16
+corpus/makerbench/t2-spool-holder.cad.ts
+  s_59c0dd2af30db2::t_d187899619c27b 1-24
+corpus/makerbench/t1-m5-spacer.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-54
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+packages/evals/fixtures/makerbench/t1-sg90-mount.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,76,144,212
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-75,77-143,145-211,213-279
+packages/evals/fixtures/makerbench/t1-flanged-bushing.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-76,78-145
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,77
+packages/evals/fixtures/makerbench/t1-rpi4-plate.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,76,144,212
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-75,77-143,145-211,213-279
+corpus/makerbench/t4-plate-thicker.context.cad.ts
+  s_59c0dd2af30db2::t_ae3048be6f84ed 1-15
+packages/evals/tsconfig.json
+  s_59c0dd2af30db2::t_c13b8c1030d281 1-10
+corpus/makerbench/t2-pen-holder.cad.ts
+  s_59c0dd2af30db2::t_d187899619c27b 1-19
+packages/evals/fixtures/makerbench/t2-wall-hook.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,135,262,389
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-134,136-261,263-388,390-515
+packages/evals/fixtures/makerbench/t2-jar-with-lid.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,136
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-135,137-263
+packages/evals/fixtures/makerbench/t2-spool-holder.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,133,258,383
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-132,134-257,259-382,384-507
+corpus/makerbench/t1-fan40-mount.cad.ts
+  s_59c0dd2af30db2::t_c5f8928b8e24e9 1-17
+corpus/makerbench/t2-wall-hook.cad.ts
+  s_59c0dd2af30db2::t_d187899619c27b 1-26
+packages/evals/fixtures/makerbench/t1-keychain-tag.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-279
+packages/evals/fixtures/makerbench/t1-bearing-housing.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,77
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-76,78-145
+packages/evals/fixtures/makerbench/t2-pen-holder.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-161,163-315,317-469,471-623
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,162,316,470
+packages/evals/src/fixtures.ts
+  s_59c0dd2af30db2::t_356ed0b35ff9dd 1-7,9-26,29-49
+  s_59c0dd2af30db2::t_6fe3a08a636972 8,27-28
+corpus/makerbench/t2-nema17-l-bracket.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-34,36-41,44-49,52-57,60-71
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,35,42-43,50-51,58-59
+corpus/makerbench/t2-nema17-l-bracket.cad.ts
+  s_59c0dd2af30db2::t_d187899619c27b 1-28
+packages/evals/test/checks.test.ts
+  s_59c0dd2af30db2::t_85a0c09619f445 189
+  s_59c0dd2af30db2::t_30bf4ccebe42d5 1-188,190-246
+corpus/makerbench/t1-tube-end-plug.cad.ts
+  s_59c0dd2af30db2::t_c5f8928b8e24e9 1-16
+packages/evals/fixtures/makerbench/t5-phone-stand.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-78,80-149
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,79
+packages/evals/fixtures/makerbench/t4-plate-holes-m4.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-75,77-143,145-211,213-279,281-347
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,76,144,212,280
+corpus/makerbench/t1-phone-stand-side.cad.ts
+  s_59c0dd2af30db2::t_a0dc7cc5c34950 1-18
+corpus/makerbench/t1-rect-gasket.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-40,43-52
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,41-42
+corpus/makerbench/t1-flanged-bushing.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-53
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+packages/evals/fixtures/makerbench/t1-2020-corner-plate.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,78,148,218
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-77,79-147,149-217,219-287
+packages/evals/fixtures/makerbench/t2-parts-tray.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,220
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-219,221-431
+corpus/makerbench/t2-jar-with-lid.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,36-37,46-47
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-35,38-45,48-67
+packages/evals/fixtures/makerbench/t1-m3-hex-standoff.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-285
+corpus/makerbench/t5-pcb-spacers.cad.ts
+  s_59c0dd2af30db2::t_0af0d7fb70825a 1-17
+corpus/makerbench/t4-plate-holes-m4.cad.ts
+  s_59c0dd2af30db2::t_ae3048be6f84ed 1-16
+corpus/makerbench/t1-flange-gasket.cad.ts
+  s_59c0dd2af30db2::t_8ad5725b70493e 1-14
+corpus/makerbench/t1-2020-corner-plate.cad.ts
+  s_59c0dd2af30db2::t_8ad5725b70493e 1-19
+packages/evals/fixtures/makerbench/t1-m3-washer.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-263
+packages/evals/fixtures/makerbench/t1-gt2-idler.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,79
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-78,80-149
+packages/evals/test/real-engine.test.ts
+  s_59c0dd2af30db2::t_7bc9dd8761878a 1-40
+corpus/makerbench/t1-m3-hex-standoff.cad.ts
+  s_59c0dd2af30db2::t_8ad5725b70493e 1-16
+corpus/makerbench/t1-m3-hex-standoff.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-54
+packages/evals/fixtures/makerbench/t1-tube-end-plug.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-147
+packages/evals/test/mutant.test.ts
+  s_59c0dd2af30db2::t_c3521c9ed95fec 1-118
+packages/evals/fixtures/makerbench/t4-knob-taller.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,79,150
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-78,80-149,151-220
+corpus/makerbench/t1-plant-saucer.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-53
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+corpus/makerbench/t1-drawer-pull.cad.ts
+  s_59c0dd2af30db2::t_a0dc7cc5c34950 1-19
+corpus/makerbench/t4-lid-add-jack-hole.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-8,11-22,25-30,33-69
+  s_59c0dd2af30db2::t_500b0ef556b912 9-10,23-24,31-32
+corpus/makerbench/t1-desk-grommet.cad.ts
+  s_59c0dd2af30db2::t_c5f8928b8e24e9 1-14
+packages/evals/test/engine.test.ts
+  s_59c0dd2af30db2::t_7bc9dd8761878a 1,93-94
+  s_59c0dd2af30db2::t_b2d769a5c986cb 2-92,95-112,124-194
+  s_59c0dd2af30db2::t_85a0c09619f445 113-123
+corpus/makerbench/t2-jar-with-lid.cad.ts
+  s_59c0dd2af30db2::t_d187899619c27b 1-28
+corpus/makerbench/t1-gt2-idler.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-54
+corpus/makerbench/t1-fan40-mount.task.json
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-35,37-42,45-49,52-62
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28,36,43-44,50-51
+corpus/makerbench/t1-tube-end-plug.task.json
+  s_59c0dd2af30db2::t_500b0ef556b912 8-9,28
+  s_59c0dd2af30db2::t_51d9c04e21de42 1-7,10-27,29-54
+packages/evals/fixtures/makerbench/t1-flange-gasket.json
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,72,136,200
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-71,73-135,137-199,201-263
+packages/evals/fixtures/makerbench/t5-pcb-spacers.json
+  s_59c0dd2af30db2::t_9265048be99f12 1-7,9-179,181-351,353-523,525-695
+  s_59c0dd2af30db2::t_a61c4ce4c6e2fd 8,180,352,524
+packages/evals/src/cli.ts
+  s_59c0dd2af30db2::t_2ddaf3bfd2046b 1-16
+packages/evals/src/index.ts
+  s_59c0dd2af30db2::t_1c1cac2cce0332 1-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f1ed40103109f9a88cda0f612bf02e816606a16b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
