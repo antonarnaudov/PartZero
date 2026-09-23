@@ -32,3 +32,8 @@ __pycache__/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Secrets (API keys for live LLM runs) — never commit
+.env
+.env.*
+!.env.example
