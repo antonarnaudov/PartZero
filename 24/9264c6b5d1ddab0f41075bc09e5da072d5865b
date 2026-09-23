@@ -1,0 +1,23 @@
+README.md
+  s_59c0dd2af30db2::t_05de2e1cd9ac2b 1,3,17
+forge/Cargo.toml
+  s_59c0dd2af30db2::t_05de2e1cd9ac2b 10
+docs/VISION.md
+  s_59c0dd2af30db2::t_05de2e1cd9ac2b 3,100-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "249264c6b5d1ddab0f41075bc09e5da072d5865b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
