@@ -26,6 +26,17 @@ This list collects follow-ups from agent reports and reviews. Items are grouped 
 ## IR / CadScript
 - **P1 Comments inside a changed statement are lost** by `applyIrEdit`. Comments above and after the statement are kept.
 - **P1 IR v1 additions:** parameters and expressions, constraints (feeding `forge-solve`), booleans, holes as features, fillet and chamfer, and face and edge references through semantic queries.
+- **P1 How IR v1 should store face and edge references** (from spike 02, [02-naming.md](spikes/02-naming.md)):
+  1. Never store `#k` indices. Write the position instead, e.g. `edgeAt(bow.end)`.
+  2. Identify a body by one of its curves, and include body identity in cap names.
+  3. Treat a reference as a set with a declared count, so a split returns every piece or is flagged.
+  4. Flag a reference whose surface type changed.
+  5. Store the two face references with every edge reference.
+  6. Key references by feature id, not feature name.
+  7. Make renames explicit edits that carry a map from old id to new id, and have the printer preserve curve ids and directions.
+  8. Auto-accept a match only when the geometry is identical.
+  9. Write the naming conventions into the SPEC.
+- **P1 Rerun the naming harness** after booleans (F1) and fillets (F2) are in. Splits and merges are where naming is genuinely hard.
 
 ## Oracle / verification
 - ~~**P0 Two horn-torus bbox differences.**~~ **Resolved 2026-09-23:** the oracle was wrong, because OCCT's `AddOptimal` stops short on surfaces of revolution. The oracle now uses closed-form bounds. Forge matches OCCT on 6,218 of 6,220 programs. The other 2 are OCCT defects where Forge equals the closed form.

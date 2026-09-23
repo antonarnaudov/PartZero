@@ -1,0 +1,160 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "drawer_pull",
+    "description": "U-shaped drawer pull for 96 mm screw spacing: 106x25 profile, 12 wide, R8 outer corners"
+  },
+  "parts": [
+    {
+      "id": "p_pull",
+      "name": "pull",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "foot_l",
+              "start": [
+                0,
+                0
+              ],
+              "end": [
+                10,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "leg_l_in",
+              "start": [
+                10,
+                0
+              ],
+              "end": [
+                10,
+                17
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "grip_under",
+              "start": [
+                10,
+                17
+              ],
+              "end": [
+                96,
+                17
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "leg_r_in",
+              "start": [
+                96,
+                17
+              ],
+              "end": [
+                96,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "foot_r",
+              "start": [
+                96,
+                0
+              ],
+              "end": [
+                106,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "leg_r_out",
+              "start": [
+                106,
+                0
+              ],
+              "end": [
+                106,
+                17
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "round_r",
+              "start": [
+                106,
+                17
+              ],
+              "end": [
+                98,
+                25
+              ],
+              "center": [
+                98,
+                17
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "grip_top",
+              "start": [
+                98,
+                25
+              ],
+              "end": [
+                8,
+                25
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "round_l",
+              "start": [
+                8,
+                25
+              ],
+              "end": [
+                0,
+                17
+              ],
+              "center": [
+                8,
+                17
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "leg_l_out",
+              "start": [
+                0,
+                17
+              ],
+              "end": [
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_pull",
+          "name": "pull",
+          "sketch": "profile",
+          "distance": 12
+        }
+      ]
+    }
+  ]
+}

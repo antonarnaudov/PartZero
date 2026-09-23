@@ -1,0 +1,26 @@
+[package]
+name = "forge-naming"
+description = "Forge persistent-naming resolver (provenance name + fingerprint + geometric fallback) and the spike-2 naming stability harness"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MPL-2.0"
+publish.workspace = true
+
+[dependencies]
+forge-core.workspace = true
+forge-ir.workspace = true
+forge-ops.workspace = true
+forge-regen.workspace = true
+forge-mesh.workspace = true
+forge-check.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[[bin]]
+name = "naming-harness"
+path = "src/bin/naming-harness.rs"
+
+[lints]
+workspace = true

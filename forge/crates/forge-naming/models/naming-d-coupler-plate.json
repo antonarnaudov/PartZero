@@ -1,0 +1,33 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": { "name": "naming_d_coupler_plate", "description": "Spike 2 model: 60x40x6 plate with rounded corners, a D-shaft hole (line + arc meeting twice), two slots and six round holes" },
+  "parts": [{ "id": "p1", "name": "plate", "features": [
+    { "type": "sketch", "id": "s1", "name": "outline", "plane": "XY", "curves": [
+      { "kind": "line", "id": "bottom", "start": [4, 0], "end": [56, 0] },
+      { "kind": "arc", "id": "c_br", "start": [56, 0], "end": [60, 4], "center": [56, 4], "ccw": true },
+      { "kind": "line", "id": "right", "start": [60, 4], "end": [60, 36] },
+      { "kind": "arc", "id": "c_tr", "start": [60, 36], "end": [56, 40], "center": [56, 36], "ccw": true },
+      { "kind": "line", "id": "top", "start": [56, 40], "end": [4, 40] },
+      { "kind": "arc", "id": "c_tl", "start": [4, 40], "end": [0, 36], "center": [4, 36], "ccw": true },
+      { "kind": "line", "id": "left", "start": [0, 36], "end": [0, 4] },
+      { "kind": "arc", "id": "c_bl", "start": [0, 4], "end": [4, 0], "center": [4, 4], "ccw": true },
+      { "kind": "line", "id": "d_flat", "start": [33, 16], "end": [33, 24] },
+      { "kind": "arc", "id": "d_round", "start": [33, 24], "end": [33, 16], "center": [30, 20], "ccw": true },
+      { "kind": "line", "id": "sa_low", "start": [10, 6], "end": [18, 6] },
+      { "kind": "arc", "id": "sa_r", "start": [18, 6], "end": [18, 10], "center": [18, 8], "ccw": true },
+      { "kind": "line", "id": "sa_up", "start": [18, 10], "end": [10, 10] },
+      { "kind": "arc", "id": "sa_l", "start": [10, 10], "end": [10, 6], "center": [10, 8], "ccw": true },
+      { "kind": "line", "id": "sb_right", "start": [52.5, 12], "end": [52.5, 28] },
+      { "kind": "arc", "id": "sb_top", "start": [52.5, 28], "end": [47.5, 28], "center": [50, 28], "ccw": true },
+      { "kind": "line", "id": "sb_left", "start": [47.5, 28], "end": [47.5, 12] },
+      { "kind": "arc", "id": "sb_bot", "start": [47.5, 12], "end": [52.5, 12], "center": [50, 12], "ccw": true },
+      { "kind": "circle", "id": "h1", "center": [8, 32], "radius": 1.6 },
+      { "kind": "circle", "id": "h2", "center": [18, 32], "radius": 1.6 },
+      { "kind": "circle", "id": "h3", "center": [40, 8], "radius": 1.6 },
+      { "kind": "circle", "id": "h4", "center": [40, 32], "radius": 1.6 },
+      { "kind": "circle", "id": "h5", "center": [22, 20], "radius": 1.2 },
+      { "kind": "circle", "id": "h6", "center": [8, 20], "radius": 2 }
+    ]},
+    { "type": "extrude", "id": "e1", "name": "coupler", "sketch": "outline", "distance": 6 }
+  ]}]
+}

@@ -1,0 +1,123 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "nema17_plate",
+    "description": "NEMA 17 mounting plate: 50x50x5, 22 mm pilot, 4x M3 clearance on 31 mm square"
+  },
+  "parts": [
+    {
+      "id": "p_plate",
+      "name": "plate",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -25,
+                -25
+              ],
+              "end": [
+                25,
+                -25
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                25,
+                -25
+              ],
+              "end": [
+                25,
+                25
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                25,
+                25
+              ],
+              "end": [
+                -25,
+                25
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -25,
+                25
+              ],
+              "end": [
+                -25,
+                -25
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "pilot",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 11
+            },
+            {
+              "kind": "circle",
+              "id": "m3_a",
+              "center": [
+                15.5,
+                15.5
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_b",
+              "center": [
+                -15.5,
+                15.5
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_c",
+              "center": [
+                -15.5,
+                -15.5
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_d",
+              "center": [
+                15.5,
+                -15.5
+              ],
+              "radius": 1.7
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_plate",
+          "name": "plate",
+          "sketch": "outline",
+          "distance": 5
+        }
+      ]
+    }
+  ]
+}

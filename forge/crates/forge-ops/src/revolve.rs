@@ -22,8 +22,12 @@
 //! - On-axis profile vertices are singular points: no edge, no vertex at 360°; below
 //!   360° they are one vertex shared by both end caps.
 //! - A profile line on the axis is, below 360°, one line edge shared by both end caps.
-//! - Below 360° there are two planar end caps (`endcap:start` at `φ = 0`,
-//!   `endcap:end` at `φ = Θ`) whose loops are the profile loops.
+//! - Below 360° there are two planar end caps whose loops are the profile loops:
+//!   `endcap:start` where the sweep of SPEC §4.3 starts and `endcap:end` where it ends,
+//!   the same convention as extrude's caps — `normal`: the profile plane and `+Θ`;
+//!   `reverse`: the profile plane and `−Θ`; `symmetric`: `−Θ/2` and `+Θ/2`. (In the
+//!   revolve frame, which always runs from its start plane to `+Θ`, a `reverse` sweep's
+//!   start is the frame's `φ = Θ` plane.)
 //! - Shells are the connected components of the faces (a full revolve of a region with
 //!   holes has a cavity shell per hole).
 //!
@@ -580,18 +584,20 @@ pub fn revolve(
             .ok_or_else(|| OpError::Internal("degenerate start cap frame".into()))?;
         let fe = Frame::from_normal_x(a3, dirs[1].cross(d), dirs[1])
             .ok_or_else(|| OpError::Internal("degenerate end cap frame".into()))?;
-        plan.face(
-            Plane::new(fs),
-            true,
-            Provenance::end_cap_start(feature),
-            start_cap,
-        );
-        plan.face(
-            Plane::new(fe),
-            false,
-            Provenance::end_cap_end(feature),
-            end_cap,
-        );
+        // Names follow the sweep, as for extrude's caps: a `reverse` sweep starts on the
+        // profile plane (the frame's φ = Θ plane) and ends at −Θ (the frame's φ = 0).
+        let (at_frame_start, at_frame_end) = match direction {
+            SweepDirection::Reverse => (
+                Provenance::end_cap_end(feature),
+                Provenance::end_cap_start(feature),
+            ),
+            SweepDirection::Normal | SweepDirection::Symmetric => (
+                Provenance::end_cap_start(feature),
+                Provenance::end_cap_end(feature),
+            ),
+        };
+        plan.face(Plane::new(fs), true, at_frame_start, start_cap);
+        plan.face(Plane::new(fe), false, at_frame_end, end_cap);
     }
     for (surface, sense, prov, loops) in side_faces {
         plan.face(surface, sense, prov, loops);

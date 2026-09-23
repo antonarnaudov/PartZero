@@ -1,0 +1,20 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": { "name": "naming_revolve_bead_partial", "description": "Spike 2 model: 200 deg revolve of a filleted bowl wall (lines + two fillet arcs -> tori) and a separate D-shaped bead (line + arc meeting twice): two bodies from one feature" },
+  "parts": [{ "id": "p1", "name": "bowl", "features": [
+    { "type": "sketch", "id": "s1", "name": "profile", "plane": "XZ", "curves": [
+      { "kind": "line", "id": "floor_b", "start": [5, 0], "end": [30, 0] },
+      { "kind": "arc", "id": "fil_out", "start": [30, 0], "end": [35, 5], "center": [30, 5], "ccw": true },
+      { "kind": "line", "id": "wall_out", "start": [35, 5], "end": [35, 20] },
+      { "kind": "line", "id": "lip", "start": [35, 20], "end": [33, 20] },
+      { "kind": "line", "id": "wall_in", "start": [33, 20], "end": [33, 7] },
+      { "kind": "arc", "id": "fil_in", "start": [33, 7], "end": [28, 2], "center": [28, 7], "ccw": false },
+      { "kind": "line", "id": "floor_t", "start": [28, 2], "end": [5, 2] },
+      { "kind": "line", "id": "hub", "start": [5, 2], "end": [5, 0] },
+      { "kind": "line", "id": "bead_flat", "start": [45, 0], "end": [45, 10] },
+      { "kind": "arc", "id": "bead_arc", "start": [45, 10], "end": [45, 0], "center": [45, 5], "ccw": false }
+    ]},
+    { "type": "revolve", "id": "r1", "name": "bowl", "sketch": "profile",
+      "axis": { "origin": [0, 0], "direction": [0, 1] }, "angle": 200 }
+  ]}]
+}

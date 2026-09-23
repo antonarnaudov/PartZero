@@ -1,0 +1,12 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": { "name": "extrude_two_regions", "description": "Two disjoint regions produce two bodies; a ring (region with hole) and a disc" },
+  "parts": [{ "id": "p1", "name": "part", "features": [
+    { "type": "sketch", "id": "s1", "name": "base", "plane": "XY", "curves": [
+      { "kind": "circle", "id": "ring_outer", "center": [0, 0], "radius": 20 },
+      { "kind": "circle", "id": "ring_inner", "center": [0, 0], "radius": 12 },
+      { "kind": "circle", "id": "disc", "center": [50, 0], "radius": 8 }
+    ]},
+    { "type": "extrude", "id": "e1", "name": "pucks", "sketch": "base", "distance": 3, "direction": "reverse" }
+  ]}]
+}

@@ -110,6 +110,57 @@ fn partial_revolve_names_edges_after_their_faces() {
     assert_eq!(all.len(), n);
 }
 
+/// The end cap named `endcap:start` must be where the sweep starts (SPEC §4.3), like
+/// extrude's `cap:start`: on the profile plane for `normal` and `reverse`, at `−Θ/2` for
+/// `symmetric`. Flipping `normal` → `reverse` must not move the name to the far cap.
+#[test]
+fn partial_revolve_end_cap_names_follow_the_sweep_direction() {
+    let r = region_of(vec![
+        line("inner", [20.0, 0.0], [20.0, 6.0]),
+        line("top", [20.0, 6.0], [32.0, 6.0]),
+        line("outer", [32.0, 6.0], [32.0, 0.0]),
+        line("bottom", [32.0, 0.0], [20.0, 0.0]),
+    ]);
+    // XZ sketch, axis +Z: the profile lies at azimuth 0 (+X half of the XZ plane); a
+    // positive rotation about +Z moves towards +Y.
+    let azimuth_of = |b: &Body, name: &str| -> f64 {
+        let (fid, _) = b
+            .faces()
+            .iter()
+            .find(|(_, f)| f.provenance.name() == name)
+            .unwrap_or_else(|| panic!("no face {name}"));
+        // The boundary point farthest from the axis (+Z through the origin).
+        let far = b
+            .face_edges(fid)
+            .into_iter()
+            .filter_map(|e| b.edge(e))
+            .map(|e| e.curve.eval(0.5 * (e.t_range.0 + e.t_range.1)))
+            .max_by(|p, q| p.x.hypot(p.y).total_cmp(&q.x.hypot(q.y)))
+            .expect("cap has edges");
+        forge_core::math::atan2(far.y, far.x).to_degrees()
+    };
+    let cases = [
+        (SweepDirection::Normal, 0.0, 90.0),
+        (SweepDirection::Reverse, 0.0, -90.0),
+        (SweepDirection::Symmetric, -45.0, 45.0),
+    ];
+    for (dir, start, end) in cases {
+        let b = revolve(&r, &frame(), &z_axis(), 90.0, dir, "q").expect("revolve");
+        let (s, e) = (
+            azimuth_of(&b, "q/endcap:start"),
+            azimuth_of(&b, "q/endcap:end"),
+        );
+        assert!(
+            (s - start).abs() < 1e-6,
+            "{dir:?}: endcap:start at {s}°, expected {start}°"
+        );
+        assert!(
+            (e - end).abs() < 1e-6,
+            "{dir:?}: endcap:end at {e}°, expected {end}°"
+        );
+    }
+}
+
 #[test]
 fn edges_between_the_same_two_faces_get_canonical_indices() {
     // A "D" profile: the line and the arc meet twice, so the two vertical edges between
