@@ -1,0 +1,137 @@
+forge/crates/forge-check/src/domain.rs
+  s_59c0dd2af30db2::t_ca9869c2d44272 1-25,27-37,39-209,211-214,218-219,226-228,230-249,251-263,265-303,311-319,324-349,351-386,392-449
+  s_59c0dd2af30db2::t_6adabcce4f4b6f 26,210,229,250,264,304-310,320-323,350
+  s_59c0dd2af30db2::t_83da85a6792d6e 38,215-217,220-225,387-391
+forge/crates/forge-ir/src/validate.rs
+  s_59c0dd2af30db2::t_83da85a6792d6e 62-66
+  s_59c0dd2af30db2::t_9cb6c61357dfdd 61,67
+forge/crates/forge-ops/src/extrude.rs
+  s_59c0dd2af30db2::t_83da85a6792d6e 51-55,142-149,209-218
+  s_59c0dd2af30db2::t_f6b37baa4b38be 273
+  s_59c0dd2af30db2::t_823349ee39e4a7 1-50,56-141,150-208,219-272,274-333
+forge/crates/forge-check/src/bbox.rs
+  s_59c0dd2af30db2::t_83da85a6792d6e 92-96
+  s_59c0dd2af30db2::t_ff726513ce84dc 155-165
+  s_59c0dd2af30db2::t_d20adef68787d4 1-91,97-154,166-231,234-240
+  s_59c0dd2af30db2::t_6adabcce4f4b6f 232-233
+forge/crates/forge-ops/tests/corpus_topology.rs
+  s_59c0dd2af30db2::t_73030f54184c13 1-155
+forge/crates/forge-cli/tests/cli.rs
+  s_59c0dd2af30db2::t_26b4b2f4983ec5 1-27,33-113,118
+  s_59c0dd2af30db2::t_83da85a6792d6e 28-32,114-117
+forge/crates/forge-core/src/geom/surface/mod.rs
+  s_59c0dd2af30db2::t_c3504f0bd0ac68 182-183,191
+  s_59c0dd2af30db2::t_a9814707019e16 196
+  s_59c0dd2af30db2::t_6682fb8d77f756 45
+  s_59c0dd2af30db2::t_d9c90f0a7b9c05 177
+  s_59c0dd2af30db2::t_2af070d64c7b84 5
+forge/crates/forge-ops/src/sketch/prim.rs
+  s_59c0dd2af30db2::t_6c63c7413d0bc7 1-23,25-131,135-194,197-372,378-384,400,406-422,425-430,437-440
+  s_59c0dd2af30db2::t_eb56530c56cf0f 24
+  s_59c0dd2af30db2::t_83da85a6792d6e 132-134,195-196,373-377,385-399,401-405,431-436
+  s_59c0dd2af30db2::t_4cc760e2ae7d45 423-424
+forge/crates/forge-ir/tests/roundtrip.rs
+  s_59c0dd2af30db2::t_6f1f619660d947 130-135,143
+  s_59c0dd2af30db2::t_83da85a6792d6e 136-142
+forge/crates/forge-core/src/geom/surface/analytic.rs
+  s_59c0dd2af30db2::t_91623a5992fafb 543-544,548-553,555,557-563,573-590
+  s_59c0dd2af30db2::t_eb5ba03ba511f1 404-425,429-437,443-444,448-449,457-481,488,491-503
+forge/crates/forge-regen/src/lib.rs
+  s_59c0dd2af30db2::t_f1d370312f170f 1-132,158-285
+  s_59c0dd2af30db2::t_83da85a6792d6e 133-157
+forge/crates/forge-check/tests/props.rs
+  s_59c0dd2af30db2::t_83da85a6792d6e 11-13,213-218,235-240,245-250
+  s_59c0dd2af30db2::t_759737be8423f3 1-10,14-212,219-234,241-244,251-310,312-395,398-410
+  s_59c0dd2af30db2::t_c5ff8827d256a9 311,396-397
+forge/crates/forge-check/src/mass.rs
+  s_59c0dd2af30db2::t_83da85a6792d6e 106-110,144-146,185-188,190-193,195-197
+  s_59c0dd2af30db2::t_90ca1078c6d2ba 1-105,111-143,147-184,189,194,198-240
+forge/crates/forge-core/src/topo/validate.rs
+  s_59c0dd2af30db2::t_b9a1fd291aadf5 232-233,247-251
+forge/crates/forge-ops/src/sketch/winding.rs
+  s_59c0dd2af30db2::t_f0afc336e9a06b 1-135
+forge/crates/forge-check/tests/props.proptest-regressions
+  s_59c0dd2af30db2::t_66e2240b9cf09b 1-8
+forge/crates/forge-check/src/lib.rs
+  s_59c0dd2af30db2::t_9868ad183d2bbd 1-125,128-131,134-142,164,181,187-244,265-277,279-284,293,305,313-319,324-325,329-331,335,340-353
+  s_59c0dd2af30db2::t_83da85a6792d6e 126-127,132-133,326-328,332-334
+  s_59c0dd2af30db2::t_20f77926cff71e 143-163,165-180,182-186,245-264,278,285-292,294-304,306-312,320-323,336-339
+forge/crates/forge-check/Cargo.toml
+  s_59c0dd2af30db2::t_72288a810f48f4 1-20
+forge/crates/forge-core/src/geom/mod.rs
+  s_59c0dd2af30db2::t_b9a1fd291aadf5 38-39
+forge/crates/forge-cli/Cargo.toml
+  s_59c0dd2af30db2::t_72288a810f48f4 1-21
+forge/crates/forge-ops/src/plan.rs
+  s_59c0dd2af30db2::t_196c0bf6930181 1-16,18-268,277-307
+  s_59c0dd2af30db2::t_83da85a6792d6e 17,269-276
+forge/crates/forge-ops/src/sketch/mod.rs
+  s_59c0dd2af30db2::t_83da85a6792d6e 172-174,228-240,377-378,617-621
+  s_59c0dd2af30db2::t_62bfc2bb7fc985 440,483-496,610-616,622-669
+  s_59c0dd2af30db2::t_e65746cac04029 448-450,460
+  s_59c0dd2af30db2::t_04fe69f0612705 1-171,175-227,241-376,379-439,441-447,451-459,461-482,497-609,670
+forge/crates/forge-ops/src/lib.rs
+  s_59c0dd2af30db2::t_7955eeb26b483b 1-32
+forge/crates/forge-regen/tests/regen.rs
+  s_59c0dd2af30db2::t_f083b4504f2735 93
+  s_59c0dd2af30db2::t_0ed71818c8c883 20-23
+  s_59c0dd2af30db2::t_86868b1c9d65b4 1-19,24-53,74-92,94-150,154-163,168-209,214-219,224-304
+  s_59c0dd2af30db2::t_83da85a6792d6e 54-73,151-153,164-167,210-213,220-223
+forge/crates/forge-regen/Cargo.toml
+  s_59c0dd2af30db2::t_72288a810f48f4 1-21
+forge/crates/forge-ops/src/plane.rs
+  s_59c0dd2af30db2::t_1da66232a4b7fe 1-26
+forge/crates/forge-ops/tests/topology_details.rs
+  s_59c0dd2af30db2::t_f150825801615c 1-201
+  s_59c0dd2af30db2::t_54aca7f3cb0608 202-219
+forge/crates/forge-ops/Cargo.toml
+  s_59c0dd2af30db2::t_72288a810f48f4 1-20
+forge/crates/forge-core/tests/spindle_torus.rs
+  s_59c0dd2af30db2::t_83da85a6792d6e 38,111-117
+  s_59c0dd2af30db2::t_1edb0751af0c5f 1-37,39-110,118-123
+forge/crates/forge-check/tests/analytic.rs
+  s_59c0dd2af30db2::t_f083b4504f2735 66,68
+  s_59c0dd2af30db2::t_2497a39156ec77 1-15,20-55,72-74,83-92,97-118,126-211,214-230,238-239
+  s_59c0dd2af30db2::t_83da85a6792d6e 16-19,56-65,67,69-71,75-82,93-96,119-125,212-213,231-237
+  s_59c0dd2af30db2::t_bcb053a1731b9a 240-328
+forge/crates/forge-ops/src/revolve.rs
+  s_59c0dd2af30db2::t_7955eeb26b483b 38,563
+  s_59c0dd2af30db2::t_a9ba850d49134e 246
+  s_59c0dd2af30db2::t_e65746cac04029 519,526
+  s_59c0dd2af30db2::t_83da85a6792d6e 363-367,463-466,480-483,496-500,502-505,589-594,731-736
+  s_59c0dd2af30db2::t_dc0bbb2489b4c4 237-238,240-245,247-263,280-285
+  s_59c0dd2af30db2::t_9f9c42c1ffbcf2 1-37,39-236,239,264-279,286-362,368-462,467-479,484-495,501,506-518,520-525,527-562,564-588,595-730,737-933
+forge/crates/forge-cli/src/main.rs
+  s_59c0dd2af30db2::t_83da85a6792d6e 21-25
+  s_59c0dd2af30db2::t_b192a7668e9ef8 1-20,26-217
+forge/crates/forge-ops/tests/regions.rs
+  s_59c0dd2af30db2::t_62bfc2bb7fc985 194-196,201
+  s_59c0dd2af30db2::t_83da85a6792d6e 6,65-68,73-77,82-85,94-97,125-135,151-154,178-182,225-228,253-257
+  s_59c0dd2af30db2::t_5deda24c34e74c 1-5,7-64,69-72,78-81,86-93,98-124,136-150,155-177,183-193,197-200,202-224,229-252,258-313
+forge/crates/forge-core/src/lib.rs
+  s_59c0dd2af30db2::t_83da85a6792d6e 75-76
+forge/Cargo.toml
+  s_59c0dd2af30db2::t_7f1e8dfb5bb579 31-33
+forge/crates/forge-ops/src/error.rs
+  s_59c0dd2af30db2::t_83da85a6792d6e 143-145,185
+  s_59c0dd2af30db2::t_a43c1bcfc3af18 157,160
+  s_59c0dd2af30db2::t_8798cfb873e4d8 1-142,146-156,158-159,161-184,186-188
+forge/Cargo.lock
+  s_59c0dd2af30db2::t_b4ecf6d9373d31 5-60,94-139,168-188,203-213,224-255,279-290,321-329,375-380,619-624,692-697
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "79bad0c88cdbd6467c8dc9bd2e7dc46cb4a9677c",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
