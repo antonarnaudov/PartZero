@@ -21,7 +21,7 @@ import {
 import { STD_MODULE } from "./syntax.js";
 import { attachedCommentStart, endOfStatementLine, lineStart, onlyWhitespaceBefore } from "./trivia.js";
 
-/** Thrown when the source cannot be edited structurally (syntax errors, features outside a part). */
+/** Thrown when the source cannot be edited structurally (syntax errors, too deep nesting, features outside a part). */
 export class CadScriptEditError extends Error {
   readonly diagnostics: readonly Diagnostic[];
 
@@ -100,14 +100,20 @@ function lcs(a: string[], b: string[]): [number, number][] {
  * Statements are identified by compiling `source` against `oldIr` (so ids line up), and compared
  * with `newIr` by their canonical text. The result compiles, with `{ base: newIr }`, to `newIr`.
  *
- * @throws {CadScriptEditError} if the source has syntax errors or features outside any part.
+ * @throws {CadScriptEditError} if the source has syntax errors, is nested too deeply (`CS_TOO_COMPLEX`) or has features outside any part.
  * @throws {CadScriptPrintError} if `newIr` cannot be written as CadScript.
  */
 export function applyIrEdit(source: string, oldIr: IrDocument, newIr: IrDocument): string {
   const problems = printabilityProblems(newIr);
   if (problems.length > 0) throw new CadScriptPrintError(problems);
   const a = analyze(source, { base: oldIr });
-  if (a.hasSyntaxErrors) throw new CadScriptEditError("cannot splice an edit into source with syntax errors", a.result.diagnostics);
+  if (a.hasSyntaxErrors) {
+    const tooComplex = a.result.diagnostics.some((d) => d.code === "CS_TOO_COMPLEX");
+    throw new CadScriptEditError(
+      tooComplex ? "cannot splice an edit into source that is nested too deeply" : "cannot splice an edit into source with syntax errors",
+      a.result.diagnostics,
+    );
+  }
   const orphan = a.result.diagnostics.filter((d) => d.code === "CS_MISSING_PART");
   if (orphan.length > 0) throw new CadScriptEditError("cannot splice an edit into source with features outside a part", orphan);
 

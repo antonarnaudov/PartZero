@@ -62,6 +62,16 @@ describe("cadscript CLI", () => {
     expect(JSON.parse(bad.stdout).map((d: { code: string }) => d.code)).toEqual(["CS_BAD_ARGUMENT", "TS2322"]);
   });
 
+  it("check: too deeply nested source is reported once (compile and typecheck agree), not thrown", () => {
+    const deep = boxSrc.replace("distance: 8", `distance: ${"(".repeat(3000)}8${")".repeat(3000)}`);
+    const r = run(["check", "deep.cad.ts", "--json"], { "deep.cad.ts": deep });
+    expect(r.code).toBe(1);
+    expect(JSON.parse(r.stdout).map((d: { code: string }) => d.code)).toEqual(["CS_TOO_COMPLEX"]);
+    const human = run(["compile", "deep.cad.ts"], { "deep.cad.ts": deep });
+    expect(human.code).toBe(1);
+    expect(human.stderr).toContain("error CS_TOO_COMPLEX: brackets are nested more than 32 levels deep");
+  });
+
   it("usage errors exit 2; --help exits 0", () => {
     expect(run([], {}).code).toBe(2);
     expect(run(["frobnicate", "x"], {}).code).toBe(2);

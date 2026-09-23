@@ -21,6 +21,7 @@ import {
   type SketchFeature,
   type SweepDirection,
 } from "@aicad/ir-types";
+import { isStackOverflow, parseWithinLimits, stackOverflowProblem, tooComplexDiagnostic, type TooComplex } from "./complexity.js";
 import { compareSpans, DIAGNOSTIC_CODES, type Diagnostic, type DiagnosticCode, type Span } from "./diagnostics.js";
 import { assignIds } from "./identity.js";
 import {
@@ -83,15 +84,21 @@ export interface SourceStatement {
   featureIndex: number;
 }
 
-/** @internal The full analysis behind {@link compile}. */
-export interface Analysis {
-  sf: ts.SourceFile;
+interface AnalysisBase {
   result: CompileResult;
   /** The lowered document even when there are errors (placeholders where lowering failed). */
   doc: IrDocument;
   statements: SourceStatement[];
-  hasSyntaxErrors: boolean;
 }
+
+/**
+ * @internal The full analysis behind {@link compile}. `hasSyntaxErrors` is true when nothing was
+ * lowered: the source has syntax errors (`CS_SYNTAX`) or is nested beyond the limits
+ * (`CS_TOO_COMPLEX`; then `sf` may be missing).
+ */
+export type Analysis =
+  | (AnalysisBase & { sf: ts.SourceFile; hasSyntaxErrors: false })
+  | (AnalysisBase & { sf: ts.SourceFile | undefined; hasSyntaxErrors: true });
 
 /** Compile CadScript source to an IR document. */
 export function compile(source: string, options: CompileOptions = {}): CompileResult {
@@ -236,37 +243,56 @@ function numericValue(lit: ts.NumericLiteral): number {
   return Number(lit.text.replace(/_/g, ""));
 }
 
-/** Constant-fold literal arithmetic (for hints only; the value is never used). */
-function fold(e: ts.Expression): number | undefined {
-  if (ts.isNumericLiteral(e)) return numericValue(e);
-  if (ts.isParenthesizedExpression(e)) return fold(e.expression);
-  if (ts.isPrefixUnaryExpression(e)) {
-    const v = fold(e.operand);
-    if (v === undefined) return undefined;
-    if (e.operator === ts.SyntaxKind.MinusToken) return -v;
-    if (e.operator === ts.SyntaxKind.PlusToken) return v;
-    return undefined;
+function arithmetic(op: ts.SyntaxKind, a: number, b: number): number {
+  switch (op) {
+    case ts.SyntaxKind.PlusToken:
+      return a + b;
+    case ts.SyntaxKind.MinusToken:
+      return a - b;
+    case ts.SyntaxKind.AsteriskToken:
+      return a * b;
+    case ts.SyntaxKind.SlashToken:
+      return a / b;
+    case ts.SyntaxKind.PercentToken:
+      return a % b;
+    default:
+      return a ** b;
   }
-  if (ts.isBinaryExpression(e) && ARITHMETIC.has(e.operatorToken.kind)) {
-    const a = fold(e.left);
-    const b = fold(e.right);
-    if (a === undefined || b === undefined) return undefined;
-    switch (e.operatorToken.kind) {
-      case ts.SyntaxKind.PlusToken:
-        return a + b;
-      case ts.SyntaxKind.MinusToken:
-        return a - b;
-      case ts.SyntaxKind.AsteriskToken:
-        return a * b;
-      case ts.SyntaxKind.SlashToken:
-        return a / b;
-      case ts.SyntaxKind.PercentToken:
-        return a % b;
-      default:
-        return a ** b;
+}
+
+/**
+ * Constant-fold literal arithmetic (for hints only; the value is never used).
+ *
+ * Iterative (explicit stacks, post-order): a left-associative chain `1 + 1 + … + 1` is a tree
+ * as deep as it is long, which the nesting limits deliberately allow (see `complexity.ts`).
+ */
+function fold(root: ts.Expression): number | undefined {
+  /** `expanded`: the operands are already on `values`; apply the operator. */
+  const work: { e: ts.Expression; expanded: boolean }[] = [{ e: root, expanded: false }];
+  const values: number[] = [];
+  while (work.length > 0) {
+    const { e, expanded } = work.pop()!;
+    if (ts.isNumericLiteral(e)) {
+      values.push(numericValue(e));
+    } else if (ts.isParenthesizedExpression(e)) {
+      work.push({ e: e.expression, expanded: false });
+    } else if (ts.isPrefixUnaryExpression(e) && (e.operator === ts.SyntaxKind.MinusToken || e.operator === ts.SyntaxKind.PlusToken)) {
+      if (!expanded) work.push({ e, expanded: true }, { e: e.operand, expanded: false });
+      else if (e.operator === ts.SyntaxKind.MinusToken) values.push(-values.pop()!);
+    } else if (ts.isBinaryExpression(e) && ARITHMETIC.has(e.operatorToken.kind)) {
+      if (!expanded) {
+        // Popped in reverse: the left operand is evaluated first.
+        work.push({ e, expanded: true }, { e: e.right, expanded: false }, { e: e.left, expanded: false });
+      } else {
+        const b = values.pop()!;
+        const a = values.pop()!;
+        values.push(arithmetic(e.operatorToken.kind, a, b));
+      }
+    } else {
+      return undefined;
     }
   }
-  return undefined;
+  return values[0];
 }
 
 function literalHint(e: ts.Expression): string {
@@ -835,10 +861,32 @@ function hasOwn(obj: object | undefined, key: string): boolean {
   return obj !== undefined && Object.prototype.hasOwnProperty.call(obj, key);
 }
 
-/** @internal Parse, lower, assign ids, validate. */
+/**
+ * @internal Parse, lower, assign ids, validate. Never throws for any source text: input nested
+ * beyond the limits of `complexity.ts` gets a single `CS_TOO_COMPLEX` diagnostic.
+ */
 export function analyze(source: string, options: CompileOptions = {}): Analysis {
-  const fileName = options.fileName ?? "main.cad.ts";
-  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  let sf: ts.SourceFile | undefined;
+  try {
+    const parsed = parseWithinLimits(options.fileName ?? "main.cad.ts", source, ts.ScriptTarget.Latest);
+    sf = parsed.sf;
+    if (parsed.problem) return tooComplex(source, parsed.problem, sf);
+    return analyzeParsed(parsed.sf, options);
+  } catch (e) {
+    // Within the limits lowering stays shallow (its recursion is bounded by the grammar, `fold`
+    // is iterative); this catches a caller that left almost no stack, so that no input can
+    // turn into a thrown RangeError.
+    if (!isStackOverflow(e)) throw e;
+    return tooComplex(source, stackOverflowProblem("compile"), sf);
+  }
+}
+
+function tooComplex(source: string, problem: TooComplex, sf: ts.SourceFile | undefined): Analysis {
+  const empty: IrDocument = { schema: IR_SCHEMA, parts: [] };
+  return { sf, result: emptyResult([tooComplexDiagnostic(source, problem)]), doc: empty, statements: [], hasSyntaxErrors: true };
+}
+
+function analyzeParsed(sf: ts.SourceFile, options: CompileOptions): Analysis {
   const ctx = new Ctx(sf);
   const statements: SourceStatement[] = [];
   const parts: LPart[] = [];
@@ -869,6 +917,7 @@ export function analyze(source: string, options: CompileOptions = {}): Analysis 
 
   let seenBody = false;
   let docSeen = false;
+  let imports = 0;
   const ensurePart = (node: ts.Node): void => {
     if (ctx.currentPart >= 0) return;
     ctx.report("CS_MISSING_PART", node, "features must follow a part(\"…\") statement", 'add `part("part");` above the first feature', false);
@@ -883,6 +932,7 @@ export function analyze(source: string, options: CompileOptions = {}): Analysis 
     // import { … } from "@aicad/std";
     if (ts.isImportDeclaration(stmt)) {
       info.kind = "import";
+      imports++;
       lowerImport(ctx, stmt, seenBody);
       continue;
     }
@@ -895,7 +945,7 @@ export function analyze(source: string, options: CompileOptions = {}): Analysis 
       if (callee === "doc") {
         info.kind = "doc";
         ctx.use("doc", call.expression);
-        const first = statements.filter((s) => s.kind !== "import").length === 1;
+        const first = statements.length - imports === 1; // (a count: filtering here was quadratic)
         let misplaced = false;
         if (docSeen) {
           ctx.report("CS_DOC_MISPLACED", call, "doc() may appear only once", "merge the metadata into the first doc({ … })");
@@ -1015,9 +1065,10 @@ export function analyze(source: string, options: CompileOptions = {}): Analysis 
   });
 
   // ── IR validation (mirror of forge-ir validate.rs) ──
-  const brokenPaths = parts.flatMap((p, pi) => p.features.flatMap((f, fi) => (f.broken ? [`/parts/${pi}/features/${fi}`] : [])));
+  const brokenPaths = new Set(parts.flatMap((p, pi) => p.features.flatMap((f, fi) => (f.broken ? [`/parts/${pi}/features/${fi}`] : []))));
   for (const e of validateIr(doc)) {
-    if (brokenPaths.some((b) => e.path === b || e.path.startsWith(`${b}/`))) continue;
+    const featurePath = /^\/parts\/\d+\/features\/\d+(?=\/|$)/.exec(e.path)?.[0];
+    if (featurePath !== undefined && brokenPaths.has(featurePath)) continue;
     const code = e.code as DiagnosticCode;
     const d: Diagnostic = {
       code: e.code,
@@ -1153,7 +1204,19 @@ function lowerFeatureStatement(ctx: Ctx, stmt: ts.VariableStatement, ensurePart:
   const name = nameNode.text;
   if (decl.type) ctx.report("CS_STATEMENT_UNSUPPORTED", decl.type, "type annotations are not supported on features", "remove the `: Type` annotation");
   const init = decl.initializer;
-  if (!init) return undefined; // a syntax error already
+  if (!init) {
+    // `const x;` parses without error: TypeScript reports it (TS1155) only in its checker, so the
+    // compiler must, or the statement would silently vanish. (`declare const x: T;` is legal
+    // TypeScript and already reported for its `declare` modifier.)
+    ctx.names.set(name, { type: "invalid", partIndex: ctx.currentPart, node: nameNode });
+    if (stmt.modifiers?.some((m) => m.kind === ts.SyntaxKind.DeclareKeyword)) return undefined;
+    return ctx.report(
+      "CS_SYNTAX",
+      decl,
+      `\`const ${name}\` has no value: 'const' declarations must be initialized`,
+      `a feature const needs a value, e.g. const ${name} = sketch(XY, { … }), extrude(…) or revolve(…); or delete the declaration`,
+    );
+  }
   const callee = calleeOf(init);
   if (!callee) {
     const v = fold(init);

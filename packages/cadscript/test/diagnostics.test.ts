@@ -1,6 +1,16 @@
 import { IR_SCHEMA, type IrDocument } from "@aicad/ir-types";
 import { describe, expect, it } from "vitest";
-import { compile, DIAGNOSTIC_CODES, formatDiagnostic, spanForIrPath, validateIr, type Diagnostic, type DiagnosticCode } from "../src/index.js";
+import {
+  compile,
+  DIAGNOSTIC_CODES,
+  formatDiagnostic,
+  MAX_FLOW_STEPS,
+  spanForIrPath,
+  typecheck,
+  validateIr,
+  type Diagnostic,
+  type DiagnosticCode,
+} from "../src/index.js";
 import { src } from "./helpers.js";
 
 const BOX = `part("part");
@@ -35,6 +45,39 @@ const cases: Record<DiagnosticCode, () => Diagnostic | void> = {
   CS_SYNTAX: () => {
     const d = one(diagnosticsOf(src(`${BOX}const plate = extrude(base, { distance: 8 };\n`)), "CS_SYNTAX");
     expect(d.span.start.line).toBe(10);
+    // `const x;` parses (TypeScript flags TS1155 only in its checker) but must not vanish silently.
+    const r = compile(src(`${BOX}const x;\nconst plate = extrude(x, { distance: 8 });\n`));
+    expect(r.ok).toBe(false);
+    expect(r.ir).toBeNull();
+    const noInit = one(r.diagnostics, "CS_SYNTAX");
+    expect(noInit.message).toBe("`const x` has no value: 'const' declarations must be initialized");
+    expect(noInit.span).toEqual({ start: { line: 10, col: 7 }, end: { line: 10, col: 8 } });
+    expect(r.diagnostics.map((x) => x.code)).toEqual(["CS_SYNTAX"]); // no cascade into `plate`
+    return d;
+  },
+  CS_TOO_COMPLEX: () => {
+    // Deep brackets are rejected on tokens, before the parser could overflow the stack.
+    const r = compile(src(`${BOX}const plate = extrude(base, { distance: ${"(".repeat(5000)}8${")".repeat(5000)} });\n`));
+    expect(r.ok).toBe(false);
+    const d = one(r.diagnostics, "CS_TOO_COMPLEX");
+    expect(r.diagnostics).toHaveLength(1);
+    expect(d.message).toBe("brackets are nested more than 32 levels deep");
+    // extrude( and { are levels 1–2: the 31st paren is level 33.
+    expect(d.span).toEqual({ start: { line: 10, col: 41 + 30 }, end: { line: 10, col: 42 + 30 } });
+    expect(d.hint).toContain("unbalanced brackets");
+    // typecheck() also stops at the checker's work limits, e.g. MAX_FLOW_STEPS, where tsc's time
+    // grows with the square of the statement count. part() and `base` are steps 1–2, so the 2047th
+    // extrude is step 2049. compile() has no such limit.
+    const extrudes = (n: number) => src(`${BOX}${Array.from({ length: n }, (_, i) => `const e${i} = extrude(base, { distance: 1 });\n`).join("")}`);
+    expect(typecheck(extrudes(MAX_FLOW_STEPS - 2))).toEqual([]);
+    const many = extrudes(MAX_FLOW_STEPS - 1);
+    expect(compile(many).diagnostics).toEqual([]);
+    const [work, ...rest] = typecheck(many);
+    expect(rest).toEqual([]);
+    expect(work).toMatchObject({ code: "CS_TOO_COMPLEX", severity: "error" });
+    expect(work!.message).toBe("not type-checked: the file has more than 2048 declarations, assignments and statements");
+    expect(work!.span).toEqual({ start: { line: 2056, col: 7 }, end: { line: 2056, col: 45 } });
+    expect(work!.hint).toContain("look for a line or fragment repeated by mistake");
     return d;
   },
   CS_BAD_IMPORT: () => {

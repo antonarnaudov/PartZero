@@ -8,6 +8,13 @@
  * built-in lib, which is all CadScript needs (it never calls into the JS runtime).
  */
 import ts from "typescript";
+import {
+  checkerWorkProblem,
+  isStackOverflow,
+  parseWithinLimits,
+  stackOverflowProblem,
+  tooComplexDiagnostic,
+} from "./complexity.js";
 import type { Diagnostic, Severity } from "./diagnostics.js";
 import { STD_DTS } from "./generated/std-dts.js";
 import { STD_MODULE } from "./syntax.js";
@@ -53,9 +60,8 @@ function libs(): { std: ts.SourceFile; lib: ts.SourceFile } {
   return cached;
 }
 
-function createProgram(source: string): { program: ts.Program; main: ts.SourceFile } {
+function createProgram(main: ts.SourceFile): ts.Program {
   const { std, lib } = libs();
-  const main = ts.createSourceFile(MAIN_PATH, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
   const files = new Map<string, ts.SourceFile>([
     [MAIN_PATH, main],
     [STD_PATH, std],
@@ -79,8 +85,7 @@ function createProgram(source: string): { program: ts.Program; main: ts.SourceFi
             : undefined,
       })),
   };
-  const program = ts.createProgram({ rootNames: [MAIN_PATH, LIB_PATH], options: OPTIONS, host });
-  return { program, main };
+  return ts.createProgram({ rootNames: [MAIN_PATH, LIB_PATH], options: OPTIONS, host });
 }
 
 function severity(c: ts.DiagnosticCategory): Severity {
@@ -103,21 +108,43 @@ function convert(d: ts.Diagnostic, main: ts.SourceFile): Diagnostic {
 /**
  * Type-check CadScript source against `@aicad/std`. Returns TypeScript's diagnostics for the file
  * (code `TS####`), e.g. `TS2322` for `distance: "8"`. An empty array means the file type-checks.
+ *
+ * Like `tsc`, reports only the syntax errors (`TS1xxx`) of a file that does not parse: the
+ * checker's view of error-recovered code is noise ("Duplicate identifier '(Missing)'"), and can
+ * be quadratic (a fragment repeated in an object literal parses as thousands of methods).
+ *
+ * Never throws or hangs for any source text; the checker does not run, and a single
+ * `CS_TOO_COMPLEX` diagnostic is returned instead, for
+ * - input nested beyond the limits of `complexity.ts` (which would overflow the checker's stack):
+ *   the same diagnostic that `compile()` reports;
+ * - input beyond the checker's work limits (`checkerWorkProblem()` in `complexity.ts`), where tsc
+ *   takes time growing with the square of the input: "not type-checked: …".
  */
 export function typecheck(source: string): Diagnostic[] {
-  const { program, main } = createProgram(source);
-  const diags = [
-    ...program.getOptionsDiagnostics(),
-    ...program.getGlobalDiagnostics(),
-    ...program.getSyntacticDiagnostics(main),
-    ...program.getSemanticDiagnostics(main),
-  ];
-  return diags.map((d) => convert(d, main));
+  try {
+    const parsed = parseWithinLimits(MAIN_PATH, source, ts.ScriptTarget.ES2022);
+    if (parsed.problem) return [tooComplexDiagnostic(source, parsed.problem)];
+    const main = parsed.sf;
+    const program = createProgram(main);
+    // tsc's own order (`emitFilesAndReportErrors`): semantic diagnostics only for a file that parses.
+    const syntactic = program.getSyntacticDiagnostics(main);
+    if (syntactic.length > 0) return syntactic.map((d) => convert(d, main));
+    const heavy = checkerWorkProblem(main);
+    if (heavy) return [tooComplexDiagnostic(source, heavy)];
+    const diags = [...program.getOptionsDiagnostics(), ...program.getGlobalDiagnostics(), ...program.getSemanticDiagnostics(main)];
+    return diags.map((d) => convert(d, main));
+  } catch (e) {
+    // Within the limits only a caller that left little stack gets here (see
+    // test/robustness.test.ts); no input may turn into a thrown RangeError.
+    if (!isStackOverflow(e)) throw e;
+    return [tooComplexDiagnostic(source, stackOverflowProblem("type-check"))];
+  }
 }
 
 /** @internal Diagnostics of the std declarations themselves (must be empty). */
 export function stdLibDiagnostics(): Diagnostic[] {
-  const { program, main } = createProgram(`import {} from "${STD_MODULE}";\n`);
+  const main = ts.createSourceFile(MAIN_PATH, `import {} from "${STD_MODULE}";\n`, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  const program = createProgram(main);
   const std = program.getSourceFile(STD_PATH)!;
   return [...program.getSyntacticDiagnostics(std), ...program.getSemanticDiagnostics(std)].map((d) => convert(d, main));
 }

@@ -34,6 +34,12 @@ export interface Diagnostic {
 export const DIAGNOSTIC_CODES = {
   // Front end.
   CS_SYNTAX: { severity: "error", summary: "TypeScript syntax error." },
+  CS_TOO_COMPLEX: {
+    severity: "error",
+    summary:
+      "The code exceeds one of CadScript's fixed limits (see `complexity.ts`): it is nested too deeply to parse, or (typecheck() only) " +
+      "it would take the TypeScript checker time growing with the square of its size. It is not processed further.",
+  },
   CS_BAD_IMPORT: { severity: "error", summary: "Imports must be `import { … } from \"@aicad/std\"`, before any other statement." },
   CS_NOT_IMPORTED: { severity: "error", summary: "A builtin is used without being imported from @aicad/std." },
   CS_UNKNOWN_BUILTIN: { severity: "error", summary: "Call to (or import of) something that is not a CadScript v0 builtin, or the wrong builtin in this position." },

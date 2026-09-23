@@ -113,7 +113,10 @@ export function main(argv: string[], io: CliIo): number {
       }
       default: {
         const source = io.readFile(file);
-        const diags = [...compile(source, { fileName: file }).diagnostics, ...typecheck(source)];
+        const compiled = compile(source, { fileName: file }).diagnostics;
+        // Too deeply nested source gets the same CS_TOO_COMPLEX from both: report it once.
+        const tooComplex = compiled.some((d) => d.code === "CS_TOO_COMPLEX");
+        const diags = [...compiled, ...(tooComplex ? [] : typecheck(source))];
         if (flags.has("--json")) io.stdout(`${JSON.stringify(diags, null, 2)}\n`);
         else report(io, file, diags);
         const errors = diags.filter((d) => d.severity === "error").length;

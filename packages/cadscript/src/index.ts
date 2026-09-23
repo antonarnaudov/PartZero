@@ -5,10 +5,25 @@
  * - {@link compile}: source → IR, with diagnostics and source maps. Never executes the source.
  * - {@link print}: IR → canonical source.
  * - {@link applyIrEdit}: splice an IR edit into existing source, keeping untouched text intact.
- * - {@link typecheck}: tsc diagnostics against the `@aicad/std` declarations ({@link STD_DTS}).
+ * - {@link typecheck}: tsc diagnostics against the `@aicad/std` declarations ({@link STD_DTS}),
+ *   within fixed work limits (`CS_TOO_COMPLEX` beyond them).
  * - {@link validateIr}: TS mirror of forge-ir's structural validation.
+ * - {@link parseWithinLimits}: the nesting-limited TypeScript parse behind compile() and
+ *   typecheck(), for tools that parse CadScript themselves (`CS_TOO_COMPLEX` instead of a
+ *   stack overflow).
  */
 export { compile, spanForIrPath, type CompileOptions, type CompileResult } from "./compile.js";
+export {
+  MAX_BRACKET_DEPTH,
+  MAX_CHECKED_DEPTH,
+  MAX_FLOW_STEPS,
+  MAX_OVERLOADS,
+  MAX_SYNTAX_DEPTH,
+  parseWithinLimits,
+  tooComplexDiagnostic,
+  type GuardedParse,
+  type TooComplex,
+} from "./complexity.js";
 export {
   compareSpans,
   DIAGNOSTIC_CODES,

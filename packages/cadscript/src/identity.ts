@@ -41,11 +41,26 @@ function sanitize(name: string): string {
   return name.replace(/[^A-Za-z0-9_]/g, "_");
 }
 
-function fresh(prefix: string, name: string, taken: Set<string>): string {
+/**
+ * Ids in use, plus per stem the first suffix not yet seen taken. Ids are only ever added, so a
+ * suffix once taken stays taken and the search can resume where it stopped: linear time for n
+ * items with the same name (restarting from `_2` each time made that quadratic).
+ */
+interface Taken {
+  ids: Set<string>;
+  next: Map<string, number>;
+}
+
+const taken = (ids: Iterable<string>): Taken => ({ ids: new Set(ids), next: new Map() });
+
+/** The first of `stem`, `stem_2`, `stem_3`, … that is not taken; it becomes taken. */
+function fresh(prefix: string, name: string, t: Taken): string {
   const stem = `${prefix}${sanitize(name)}`;
-  let id = stem;
-  for (let i = 2; taken.has(id); i++) id = `${stem}_${i}`;
-  taken.add(id);
+  let i = t.next.get(stem) ?? 1;
+  let id = i === 1 ? stem : `${stem}_${i}`;
+  while (t.ids.has(id)) id = `${stem}_${++i}`;
+  t.ids.add(id);
+  t.next.set(stem, i + 1);
   return id;
 }
 
@@ -78,8 +93,8 @@ function match<N, B>(
 
 export function assignIds(parts: IdentityInput[], base: IrDocument | undefined): IdentityResult {
   const baseParts = base?.parts ?? [];
-  const takenParts = new Set(baseParts.map((p) => p.id));
-  const takenFeatures = new Set(baseParts.flatMap((p) => p.features.map((f) => f.id)));
+  const takenParts = taken(baseParts.map((p) => p.id));
+  const takenFeatures = taken(baseParts.flatMap((p) => p.features.map((f) => f.id)));
   const renames: Rename[] = [];
 
   const pm = match(
