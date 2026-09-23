@@ -1,0 +1,347 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t4-plate-holes-m4",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "a93fa6bef3358646220f7033fc1fabf5f198a59481cfc0c95d1d3e979fd8e1a6",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "mounting_plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3939.1787662265015,
+        "loops": 5,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 15756.715064906004,
+        "area": 9139.525655265723,
+        "centroid": [
+         -1.529608773002609e-15,
+         -2.164540716513126e-17,
+         2.0000000000000004
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         4
+        ],
+        "faces": 10,
+        "edges": 20,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "context",
+   "ir_sha256": "44e2c72a1ee74ef4b11a1f705a2b8542fa594af846321ab30a4fde9c3ee3e5e2",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "mounting_plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3963.683188924502,
+        "loops": 5,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 15854.732755698007,
+        "area": 9138.269018204286,
+        "centroid": [
+         -4.445728633430932e-16,
+         5.826055668810697e-16,
+         2.0000000000000004
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         4
+        ],
+        "faces": 10,
+        "edges": 20,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "6de82798f053920945b5997d754b09b1b10b155f197464991e068fe1069890f4",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "mounting_plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4766.406307134068,
+        "loops": 5,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 20972.1877513899,
+        "area": 11058.82604287153,
+        "centroid": [
+         2.959777688996159e-15,
+         -3.0662329914245287e-16,
+         2.2
+        ],
+        "bbox_min": [
+         -44,
+         -27.500000000000004,
+         0
+        ],
+        "bbox_max": [
+         44,
+         27.500000000000004,
+         4.4
+        ],
+        "faces": 10,
+        "edges": 20,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "db615098638d70602d682e27982f9141e8a3b6b6c3213e89259ec5583edbfc29",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "mounting_plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3954.384074669876,
+        "loops": 4,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 15817.536298679504,
+        "area": 9114.644241449292,
+        "centroid": [
+         0.13073603304906525,
+         0.07305837140977245,
+         2.0000000000000004
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         4
+        ],
+        "faces": 9,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "0bc1daa54a43ce957ececa7a91515beb09065a35acfdc5dc26585f17964a33a5",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "mounting_plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3926.406307134067,
+        "loops": 5,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 15705.625228536266,
+        "area": 9136.097549362123,
+        "centroid": [
+         2.2150135277394937e-15,
+         3.619303149901134e-17,
+         2.0000000000000004
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         4
+        ],
+        "faces": 10,
+        "edges": 20,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

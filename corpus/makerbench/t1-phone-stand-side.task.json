@@ -1,0 +1,47 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-phone-stand-side",
+  "tier": "T1",
+  "title": "One-piece phone stand (side profile)",
+  "prompt": "One-piece phone stand: a side profile extruded 70 mm wide. From the front: a 6 mm wide lip 16 mm tall, then a 10 mm wide slot for the phone's edge, then the back rest. The base is 90 mm deep and 6 mm thick. The back rest's front face runs in a straight line from the back of the slot (16 mm from the front, on top of the base) up to 42 mm from the front at 66 mm height; the top is flat and 8 mm deep, and the back slopes straight down to the rear edge of the base at 6 mm height.",
+  "process": "fdm",
+  "tags": ["stand", "phone", "profile-extrude"],
+  "requires": ["ir/0"],
+  "reference": "t1-phone-stand-side.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "90 mm deep, 66 mm tall, 70 mm wide, ±0.3 mm",
+      "check": "bbox_sorted",
+      "approx": [66, 70, 90],
+      "abs": 0.3
+    },
+    {
+      "id": "all_flat",
+      "description": "Eleven flat faces: nine profile edges plus the two sides",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 11
+    },
+    {
+      "id": "volume",
+      "description": "Volume 3060 mm² profile × 70 ≈ 214200 mm³ ±2%",
+      "check": "volume",
+      "approx": 214200,
+      "rel": 0.02
+    }
+  ],
+  "notes": "Profile area: base 540 + back rest 2460 + lip 60 = 3060 mm²."
+}

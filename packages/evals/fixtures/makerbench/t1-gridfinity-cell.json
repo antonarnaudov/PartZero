@@ -1,0 +1,151 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-gridfinity-cell",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "6022314b28892fbeed882c204c360eae7ac13f8aa130e89d5aff6ab1a0c421c5",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "gridfinity_cell",
+    "status": "ok",
+    "features": [
+     {
+      "part": "baseplate",
+      "feature": "frame_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 455.12388980384685,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_c1",
+         "o_c2",
+         "o_c3",
+         "o_c4",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "baseplate",
+      "feature": "cell",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 2275.6194490192333,
+        "area": 2427.327412287182,
+        "centroid": [
+         8.619071959498246e-16,
+         8.492967671288072e-16,
+         2.500000000000001
+        ],
+        "bbox_min": [
+         -21,
+         -21,
+         0
+        ],
+        "bbox_max": [
+         21,
+         21,
+         5
+        ],
+        "faces": 18,
+        "edges": 48,
+        "face_types": {
+         "cylinder": 8,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 16,
+         "line": 32
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "b50f4d305379409aaa353403a9ad3e28d7fff57b044a22d60e5b132183109c74",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "gridfinity_cell",
+    "status": "ok",
+    "features": [
+     {
+      "part": "baseplate",
+      "feature": "frame_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 550.6999066626549,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_c1",
+         "o_c2",
+         "o_c3",
+         "o_c4",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "baseplate",
+      "feature": "cell",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 3028.849486644603,
+        "area": 2937.0661688674913,
+        "centroid": [
+         6.12216273254846e-16,
+         2.787791795361488e-15,
+         2.7499999999999996
+        ],
+        "bbox_min": [
+         -23.1,
+         -23.1,
+         0
+        ],
+        "bbox_max": [
+         23.1,
+         23.1,
+         5.5
+        ],
+        "faces": 18,
+        "edges": 48,
+        "face_types": {
+         "cylinder": 8,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 16,
+         "line": 32
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

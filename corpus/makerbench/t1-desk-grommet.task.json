@@ -1,0 +1,53 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-desk-grommet",
+  "tier": "T1",
+  "title": "Desk cable grommet",
+  "prompt": "Desk cable grommet for a 60 mm hole: a tube 60 mm outside diameter with a 2 mm wall, 20 mm long, and a 70 mm diameter, 3 mm thick flange at the top.",
+  "process": "fdm",
+  "tags": ["grommet", "cable-management", "revolve"],
+  "requires": ["ir/0", "feature/revolve"],
+  "reference": "t1-desk-grommet.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "70 mm flange, 23 mm tall overall, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [23, 70, 70],
+      "abs": 0.1
+    },
+    {
+      "id": "round_faces",
+      "description": "Three cylindrical faces: tube inside, tube outside and flange rim",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 3
+    },
+    {
+      "id": "flat_faces",
+      "description": "Three flat faces: tube end, flange underside and top",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 3
+    },
+    {
+      "id": "volume",
+      "description": "Volume 3643π ≈ 11445 mm³ ±1%",
+      "check": "volume",
+      "approx": 11444.82,
+      "rel": 0.01
+    }
+  ]
+}

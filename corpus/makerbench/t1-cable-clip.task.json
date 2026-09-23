@@ -1,0 +1,55 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-cable-clip",
+  "tier": "T1",
+  "title": "Stick-on cable clip",
+  "prompt": "Stick-on cable clip for a 6 mm cable. It's a C-shaped ring (6 mm inside, 1.5 mm wall) with a 4 mm wide gap at the top to push the cable in, sitting on a flat foot 20 mm long and 2 mm thick that I'll put double-sided tape on. The ring's centre is 6 mm above the bottom of the foot, so the ring merges into the foot. The whole clip is 8 mm wide.",
+  "process": "fdm",
+  "tags": ["clip", "cable-management", "profile-extrude"],
+  "requires": ["ir/0"],
+  "reference": "t1-cable-clip.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "20 mm long foot, 8 mm wide, 9–10.6 mm tall (depends on how the gap is cut)",
+      "check": "bbox_sorted",
+      "between": [[7.9, 8.1], [9, 10.6], [19.9, 20.1]]
+    },
+    {
+      "id": "cable_seat",
+      "description": "The cable seat is a 6 mm diameter arc",
+      "check": "curve_count",
+      "kind": "arc",
+      "diameter": [5.9, 6.3],
+      "gte": 1
+    },
+    {
+      "id": "outer_ring",
+      "description": "The outside of the ring is a 9 mm diameter arc (1.5 mm wall)",
+      "check": "curve_count",
+      "kind": "arc",
+      "diameter": [8.8, 9.2],
+      "gte": 1
+    },
+    {
+      "id": "volume",
+      "description": "Volume ≈ 526 mm³ ±8% (the lip faces may be radial or vertical)",
+      "check": "volume",
+      "approx": 525.9,
+      "rel": 0.08
+    }
+  ],
+  "notes": "Reference cuts the gap with radial lip faces (inner corners at x = ±2). Volume 525.9 = 65.74 mm² profile (numerically integrated) × 8; vertical lip faces change it by < 5%."
+}

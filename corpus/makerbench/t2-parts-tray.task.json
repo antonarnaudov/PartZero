@@ -1,0 +1,66 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-parts-tray",
+  "tier": "T2",
+  "title": "Parts tray with dividers",
+  "prompt": "Parts tray: 128 x 80 mm outside, 25 mm tall, 2 mm floor, 2 mm outer walls, and two 2 mm thick divider walls across the short direction splitting it into three equal 40 mm compartments. Corner at the origin, Z up, long side along X.",
+  "process": "fdm",
+  "tags": ["tray", "storage", "multi-body"],
+  "requires": ["ir/0", "plane/frame"],
+  "reference": "t2-parts-tray.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "At least floor, walls and dividers (separate bodies are fine without booleans)",
+      "check": "body_count",
+      "gte": 3
+    },
+    {
+      "id": "size",
+      "description": "128 x 80 mm, 25 mm tall",
+      "check": "bbox_size",
+      "approx": [128, 80, 25],
+      "abs": 0.2
+    },
+    {
+      "id": "placement",
+      "description": "Corner at the origin",
+      "check": "bbox_min",
+      "approx": [0, 0, 0],
+      "abs": 0.05
+    },
+    {
+      "id": "divider_1",
+      "description": "A 2 mm divider centred at X = 43 (first 40 mm compartment after the 2 mm wall)",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_size", "axis": "x", "approx": 2, "abs": 0.05},
+        {"check": "centroid", "axis": "x", "approx": 43, "abs": 0.1}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "divider_2",
+      "description": "A 2 mm divider centred at X = 85 (second 40 mm compartment)",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_size", "axis": "x", "approx": 2, "abs": 0.05},
+        {"check": "centroid", "axis": "x", "approx": 85, "abs": 0.1}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "volume",
+      "description": "Total volume 46240 mm³ ±1% (no overlapping bodies)",
+      "check": "volume",
+      "approx": 46240,
+      "rel": 0.01
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-drawer-pull",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "7eff85b1620a360ab444f1463dbc48040f7660f6d5cedebe4940b43d010e4ff5",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "drawer_pull",
+    "status": "ok",
+    "features": [
+     {
+      "part": "pull",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1160.5309649148735,
+        "loops": 1,
+        "outer_curves": [
+         "foot_l",
+         "foot_r",
+         "grip_top",
+         "grip_under",
+         "leg_l_in",
+         "leg_l_out",
+         "leg_r_in",
+         "leg_r_out",
+         "round_l",
+         "round_r"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "pull",
+      "feature": "pull",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 13926.37157897848,
+        "area": 5790.654824574366,
+        "centroid": [
+         53,
+         17.285501501769613,
+         6.000000000000001
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         106,
+         25,
+         12
+        ],
+        "faces": 12,
+        "edges": 30,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 26
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "3128cd59ee91900b0cac010435b39e56b56d353be349c8454d1b14e946f11f13",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "drawer_pull",
+    "status": "ok",
+    "features": [
+     {
+      "part": "pull",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1404.242467546997,
+        "loops": 1,
+        "outer_curves": [
+         "foot_l",
+         "foot_r",
+         "grip_top",
+         "grip_under",
+         "leg_l_in",
+         "leg_l_out",
+         "leg_r_in",
+         "leg_r_out",
+         "round_l",
+         "round_r"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "pull",
+      "feature": "pull",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 18536.00057162036,
+        "area": 7006.692337734984,
+        "centroid": [
+         58.300000000000004,
+         19.014051651946573,
+         6.6
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         116.60000000000001,
+         27.500000000000004,
+         13.200000000000001
+        ],
+        "faces": 12,
+        "edges": 30,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 26
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

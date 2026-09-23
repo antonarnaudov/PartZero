@@ -1,0 +1,137 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-shelf-bracket",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "87b49eb374ef28fdb4df208d8514185ce4b88d52f9633b37990ab5b5a44af63d",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "shelf_bracket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "bracket",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2842.6273663982347,
+        "loops": 2,
+        "outer_curves": [
+         "brace",
+         "shelf_edge",
+         "wall_edge"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "bracket",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 28426.27366398235,
+        "area": 10422.96701012686,
+        "centroid": [
+         26.797971941740414,
+         34.71891165700302,
+         4.999999999999997
+        ],
+        "bbox_min": [
+         -1.320589028907526e-15,
+         0,
+         0
+        ],
+        "bbox_max": [
+         80,
+         100,
+         10
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "plane": 8
+        },
+        "edge_types": {
+         "line": 18
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "b66b5f6e617b77f54aedce8df8c906fbf1499f9fd48e9d59ea36fbd9abdc9b94",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "shelf_bracket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "bracket",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3439.5791133418647,
+        "loops": 2,
+        "outer_curves": [
+         "brace",
+         "shelf_edge",
+         "wall_edge"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "bracket",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 37835.37024676051,
+        "area": 12611.790082253503,
+        "centroid": [
+         29.477769135914453,
+         38.19080282270334,
+         5.500000000000001
+        ],
+        "bbox_min": [
+         -3.567977948549175e-15,
+         0,
+         0
+        ],
+        "bbox_max": [
+         88,
+         110.00000000000001,
+         11
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "plane": 8
+        },
+        "edge_types": {
+         "line": 18
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

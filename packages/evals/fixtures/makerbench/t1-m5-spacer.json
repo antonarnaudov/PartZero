@@ -1,0 +1,141 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-m5-spacer",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "5feecf65b0d1805097a8485330c632cacbbc601189408efc2eec66d63d176439",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "m5_spacer",
+    "status": "ok",
+    "features": [
+     {
+      "part": "spacer",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 35.25,
+        "loops": 1,
+        "outer_curves": [
+         "bore",
+         "bottom",
+         "outer",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "spacer",
+      "feature": "spacer",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 847.1697289486576,
+        "area": 833.9514778586786,
+        "centroid": [
+         -1.5768036765038204e-15,
+         5.631085475196123e-17,
+         7.499999999999998
+        ],
+        "bbox_min": [
+         -5,
+         -5,
+         0
+        ],
+        "bbox_max": [
+         5,
+         5,
+         15
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "e4664f1b31b2bdea2a46302a4f4e4196f9b17fdd4dd7b5acb3cd3f21874271a1",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "m5_spacer",
+    "status": "ok",
+    "features": [
+     {
+      "part": "spacer",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 42.6525,
+        "loops": 1,
+        "outer_curves": [
+         "bore",
+         "bottom",
+         "outer",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "spacer",
+      "feature": "spacer",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1127.582909230663,
+        "area": 1009.081288209001,
+        "centroid": [
+         -5.797350346018491e-16,
+         6.076645266823824e-17,
+         8.25
+        ],
+        "bbox_min": [
+         -5.5,
+         -5.5,
+         0
+        ],
+        "bbox_max": [
+         5.5,
+         5.5,
+         16.5
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

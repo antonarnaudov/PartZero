@@ -1,0 +1,54 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-m5-spacer",
+  "tier": "T1",
+  "title": "M5 round spacer",
+  "prompt": "Round spacer for an M5 bolt: 10 mm outside diameter, 5.3 mm hole, 15 mm long.",
+  "process": "fdm",
+  "tags": ["spacer", "fastener", "round"],
+  "requires": ["ir/0"],
+  "reference": "t1-m5-spacer.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "10 mm diameter and 15 mm long, ±0.05 mm",
+      "check": "bbox_sorted",
+      "approx": [10, 10, 15],
+      "abs": 0.05
+    },
+    {
+      "id": "round_faces",
+      "description": "Two cylindrical faces: outside and the 5.3 mm bore",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 2
+    },
+    {
+      "id": "flat_ends",
+      "description": "Two flat end faces",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 2
+    },
+    {
+      "id": "volume",
+      "description": "Volume π/4·(10² − 5.3²)·15 ≈ 847.2 mm³ ±1% (checks the 5.3 mm M5 clearance bore)",
+      "check": "volume",
+      "approx": 847.17,
+      "rel": 0.01
+    }
+  ],
+  "notes": "M5 clearance: ISO 273 fine 5.3 / medium 5.5."
+}

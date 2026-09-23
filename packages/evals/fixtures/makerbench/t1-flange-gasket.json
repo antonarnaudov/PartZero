@@ -1,0 +1,263 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-flange-gasket",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "c4587e5e5691df7e21692e54a85e54731b2eb465bb0fec9ed76e0aaf80b6c0fd",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "flange_gasket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "gasket",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1507.179075559703,
+        "loops": 6,
+        "outer_curves": [
+         "outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "gasket",
+      "feature": "gasket",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 3014.358151119407,
+        "area": 3755.7740173665998,
+        "centroid": [
+         3.7715106175886056e-15,
+         4.186376785523353e-15,
+         1
+        ],
+        "bbox_min": [
+         -30,
+         -30,
+         0
+        ],
+        "bbox_max": [
+         30,
+         30,
+         2
+        ],
+        "faces": 8,
+        "edges": 12,
+        "face_types": {
+         "cylinder": 6,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "e0b25f119535d830f6ea0a76b8f8cce4973e6a5a02c2c72f86b9ce14bdd4b28c",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "flange_gasket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "gasket",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1823.6866814272412,
+        "loops": 6,
+        "outer_curves": [
+         "outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "gasket",
+      "feature": "gasket",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 4012.110699139933,
+        "area": 4544.486561013586,
+        "centroid": [
+         3.1736227586019807e-15,
+         2.748094776160695e-15,
+         1.1000000000000003
+        ],
+        "bbox_min": [
+         -33,
+         -33,
+         0
+        ],
+        "bbox_max": [
+         33,
+         33,
+         2.2
+        ],
+        "faces": 8,
+        "edges": 12,
+        "face_types": {
+         "cylinder": 6,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "098c8bc5ee94eaa7081388d9e46550345d08dc75975afe76caca98a8ff699fbb",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "flange_gasket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "gasket",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1523.0833883685016,
+        "loops": 5,
+        "outer_curves": [
+         "outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "gasket",
+      "feature": "gasket",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 3046.1667767370045,
+        "area": 3759.308309101888,
+        "centroid": [
+         0.2610545313910066,
+         3.6294943050590886e-15,
+         1
+        ],
+        "bbox_min": [
+         -30,
+         -30,
+         0
+        ],
+        "bbox_max": [
+         30,
+         30,
+         2
+        ],
+        "faces": 7,
+        "edges": 10,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 10
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "cd7febf7ae0d15207dfd6d4b19db682bf8b0e78b0dc3af4635920d72c9c4e078",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "flange_gasket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "gasket",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1493.8194528003125,
+        "loops": 6,
+        "outer_curves": [
+         "outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "gasket",
+      "feature": "gasket",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 2987.6389056006265,
+        "area": 3740.364505400741,
+        "centroid": [
+         5.631755548255117e-15,
+         3.9384236435432744e-15,
+         1
+        ],
+        "bbox_min": [
+         -30,
+         -30,
+         0
+        ],
+        "bbox_max": [
+         30,
+         30,
+         2
+        ],
+        "faces": 8,
+        "edges": 12,
+        "face_types": {
+         "cylinder": 6,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

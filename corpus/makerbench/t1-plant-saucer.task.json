@@ -1,0 +1,53 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-plant-saucer",
+  "tier": "T1",
+  "title": "Plant pot saucer",
+  "prompt": "Round saucer to go under a plant pot: 120 mm across at the top rim, 100 mm across at the bottom, 15 mm tall. 3 mm thick floor, and walls 2 mm thick (measured horizontally) that slope outwards.",
+  "process": "fdm",
+  "tags": ["saucer", "home", "revolve"],
+  "requires": ["ir/0", "feature/revolve"],
+  "reference": "t1-plant-saucer.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "120 mm across the rim, 15 mm tall, ±0.2 mm",
+      "check": "bbox_sorted",
+      "approx": [15, 120, 120],
+      "abs": 0.2
+    },
+    {
+      "id": "sloped_walls",
+      "description": "The sloped inner and outer walls are two cones",
+      "check": "face_count",
+      "type": "cone",
+      "eq": 2
+    },
+    {
+      "id": "flat_faces",
+      "description": "Three flat faces: underside, floor and rim",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 3
+    },
+    {
+      "id": "volume",
+      "description": "Volume by Pappus 2π·5222 ≈ 32811 mm³ ±2%",
+      "check": "volume",
+      "approx": 32810.79,
+      "rel": 0.02
+    }
+  ]
+}

@@ -1,0 +1,149 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-v-pulley",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "50178b62a621bdafb70fc1c02a53746751aa78f5bf728191613d4fe6d14edc79",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "v_pulley",
+    "status": "ok",
+    "features": [
+     {
+      "part": "pulley",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 144,
+        "loops": 1,
+        "outer_curves": [
+         "bore",
+         "bottom",
+         "flank_high",
+         "flank_low",
+         "rim_high",
+         "rim_low",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "pulley",
+      "feature": "pulley",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10187.137778040502,
+        "area": 4194.948268720937,
+        "centroid": [
+         -1.3057013955481807e-15,
+         3.6488685121112816e-16,
+         5
+        ],
+        "bbox_min": [
+         -20,
+         -20,
+         0
+        ],
+        "bbox_max": [
+         20,
+         20,
+         10
+        ],
+        "faces": 7,
+        "edges": 7,
+        "face_types": {
+         "cone": 2,
+         "cylinder": 3,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 7
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "bab38d4639b14f77f877ee798dbe64c8c2ed0ca0c223d3f08e76395be8fdd37d",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "v_pulley",
+    "status": "ok",
+    "features": [
+     {
+      "part": "pulley",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 174.24,
+        "loops": 1,
+        "outer_curves": [
+         "bore",
+         "bottom",
+         "flank_high",
+         "flank_low",
+         "rim_high",
+         "rim_low",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "pulley",
+      "feature": "pulley",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 13559.080382571912,
+        "area": 5075.887405152334,
+        "centroid": [
+         2.557288881454051e-15,
+         4.536261029843237e-16,
+         5.499999999999999
+        ],
+        "bbox_min": [
+         -22,
+         -22,
+         0
+        ],
+        "bbox_max": [
+         22,
+         22,
+         11
+        ],
+        "faces": 7,
+        "edges": 7,
+        "face_types": {
+         "cone": 2,
+         "cylinder": 3,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 7
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

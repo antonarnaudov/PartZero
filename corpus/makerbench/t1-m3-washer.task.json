@@ -1,0 +1,47 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-m3-washer",
+  "tier": "T1",
+  "title": "M3 washer",
+  "prompt": "Can you make me a washer for M3 screws? 3.2 mm hole, 7 mm outside diameter, 1 mm thick. I'm going to print a bunch of them.",
+  "process": "fdm",
+  "tags": ["washer", "fastener", "round"],
+  "requires": ["ir/0"],
+  "reference": "t1-m3-washer.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "7 mm across and 1 mm thick (any orientation), ±0.05 mm",
+      "check": "bbox_sorted",
+      "approx": [1, 7, 7],
+      "abs": 0.05
+    },
+    {
+      "id": "round_faces",
+      "description": "Two cylindrical faces: the outer rim and the bore",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 2
+    },
+    {
+      "id": "volume",
+      "description": "Volume π/4·(7² − 3.2²)·1 ≈ 30.44 mm³ ±1% (a 3.4 mm hole would be 3.4% off)",
+      "check": "volume",
+      "approx": 30.44,
+      "rel": 0.01
+    }
+  ],
+  "notes": "DIN 125 M3 washer is 3.2 x 7 x 0.5; thickened to 1 mm for printing. Extrude or revolve both pass."
+}

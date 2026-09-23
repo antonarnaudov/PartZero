@@ -1,0 +1,71 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-nema17-l-bracket",
+  "tier": "T2",
+  "title": "NEMA 17 L-bracket",
+  "prompt": "L-bracket to hold a NEMA 17 stepper with its shaft horizontal. Base: 50 mm wide (X) x 45 mm deep (Y) x 5 mm thick, with two M5 clearance holes (5.5 mm) 30 mm apart across the width, 30 mm from the back edge. Upright: 50 wide x 50 tall x 5 thick, standing on the back edge of the base, with the 22 mm pilot hole and four M3 clearance holes (3.4 mm) on the 31 mm square pattern, all centred 25 mm above the top of the base. Put the back edge on the X axis (Y = 0), centred on X = 0, base on Z = 0, and the base extending toward +Y.",
+  "process": "fdm",
+  "tags": ["bracket", "stepper", "nema17", "multi-body", "hole-pattern"],
+  "requires": ["ir/0"],
+  "reference": "t2-nema17-l-bracket.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Two bodies: base and upright",
+      "check": "body_count",
+      "eq": 2
+    },
+    {
+      "id": "size",
+      "description": "50 wide, 45 deep, 55 tall overall",
+      "check": "bbox_size",
+      "approx": [50, 45, 55],
+      "abs": 0.2
+    },
+    {
+      "id": "placement",
+      "description": "Back edge on Y = 0, centred on X, sitting on Z = 0",
+      "check": "bbox_min",
+      "approx": [-25, 0, 0],
+      "abs": 0.1
+    },
+    {
+      "id": "pilot",
+      "description": "22 mm pilot hole through the upright, its axis at X = 0, Z = 30 (25 mm above the base top)",
+      "check": "hole_positions",
+      "diameter": [21.9, 22.6],
+      "points": [[0, 0, 30]],
+      "tol": 0.1
+    },
+    {
+      "id": "m3_holes",
+      "description": "Four M3 clearance holes through the upright on the 31 mm square around the pilot",
+      "check": "hole_positions",
+      "diameter": [3.2, 3.5],
+      "points": [[15.5, 0, 45.5], [-15.5, 0, 45.5], [-15.5, 0, 14.5], [15.5, 0, 14.5]],
+      "tol": 0.1
+    },
+    {
+      "id": "m5_holes",
+      "description": "Two M5 clearance holes through the base, 30 mm apart, 30 mm from the back edge",
+      "check": "hole_positions",
+      "diameter": [5.3, 5.6],
+      "points": [[-15, 30, 0], [15, 30, 0]],
+      "tol": 0.1
+    },
+    {
+      "id": "volume",
+      "description": "Total volume ≈ 21430 mm³ ±1%",
+      "check": "volume",
+      "approx": 21430.17,
+      "rel": 0.01
+    }
+  ],
+  "notes": "hole_positions compares against hole axes, so the holes may be sketched on either face."
+}

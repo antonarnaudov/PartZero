@@ -1,0 +1,263 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-m3-washer",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "c09d8d48c8bd6c0b82d7ed8626620bd04719528bbc8a41f5fb3c43cbb18cddb9",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "m3_washer",
+    "status": "ok",
+    "features": [
+     {
+      "part": "washer",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 30.442032813285092,
+        "loops": 2,
+        "outer_curves": [
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "washer",
+      "feature": "washer",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 30.442032813285103,
+        "area": 92.92831069318608,
+        "centroid": [
+         -8.75281646085591e-17,
+         1.281064262297256e-16,
+         0.5
+        ],
+        "bbox_min": [
+         -3.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         3.5,
+         3.5,
+         1
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "a9208cc4cca32cbda3cb22a79f4ab3ef4871c92ff61de8f90ee5b3f8b067349b",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "m3_washer",
+    "status": "ok",
+    "features": [
+     {
+      "part": "washer",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 36.83485970407497,
+        "loops": 2,
+        "outer_curves": [
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "washer",
+      "feature": "washer",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 40.51834567448248,
+        "area": 112.44325593875519,
+        "centroid": [
+         -1.3152241113232017e-16,
+         1.9380002153429998e-16,
+         0.5500000000000002
+        ],
+        "bbox_min": [
+         -3.8500000000000005,
+         -3.8500000000000005,
+         0
+        ],
+        "bbox_max": [
+         3.8500000000000005,
+         3.8500000000000005,
+         1.1
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "46eccb965394d6026e26d5eb09430f22c7e05eb14a08391afc19a09feb736a04",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "m3_washer",
+    "status": "ok",
+    "features": [
+     {
+      "part": "washer",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 38.48451000647496,
+        "loops": 1,
+        "outer_curves": [
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "washer",
+      "feature": "washer",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 38.48451000647498,
+        "area": 98.96016858807847,
+        "centroid": [
+         -1.8463083865185035e-16,
+         8.727402989819769e-17,
+         0.5
+        ],
+        "bbox_min": [
+         -3.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         3.5,
+         3.5,
+         1
+        ],
+        "faces": 3,
+        "edges": 2,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 2
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "52af7a47fb2a46331b95a6b731c6b4c1578d71c94912dbd50943f6b5d107f1ec",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "m3_washer",
+    "status": "ok",
+    "features": [
+     {
+      "part": "washer",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 28.75311260271522,
+        "loops": 2,
+        "outer_curves": [
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "washer",
+      "feature": "washer",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 28.753112602715227,
+        "area": 90.55577992119507,
+        "centroid": [
+         -6.17796363108356e-17,
+         9.697859700408011e-17,
+         0.5
+        ],
+        "bbox_min": [
+         -3.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         3.5,
+         3.5,
+         1
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

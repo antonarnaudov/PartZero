@@ -1,0 +1,52 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-rect-gasket",
+  "tier": "T1",
+  "title": "Junction box lid gasket",
+  "prompt": "Gasket for a junction box lid, laser cut from 1.5 mm rubber sheet. Outside 90 x 70 mm, 8 mm wide all round (so the opening is 74 x 54), with an M3 clearance hole (3.4 mm) in each corner, centred in the 8 mm band.",
+  "process": "laser",
+  "tags": ["gasket", "sheet", "hole-pattern"],
+  "requires": ["ir/0"],
+  "reference": "t1-rect-gasket.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "90 x 70 mm outside, 1.5 mm thick, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [1.5, 70, 90],
+      "abs": 0.1
+    },
+    {
+      "id": "cutouts",
+      "description": "Five cut-outs: the 74 x 54 opening and four screw holes",
+      "check": "inner_loops",
+      "eq": 5
+    },
+    {
+      "id": "m3_pattern",
+      "description": "Four M3 clearance holes on an 82 x 62 mm rectangle (centred in the band)",
+      "check": "hole_pattern",
+      "diameter": [3.2, 3.5],
+      "points": [[0, 0], [82, 0], [82, 62], [0, 62]]
+    },
+    {
+      "id": "volume",
+      "description": "Volume (90·70 − 74·54 − 4·Ø3.4)·1.5 ≈ 3401.5 mm³ ±1%",
+      "check": "volume",
+      "approx": 3401.52,
+      "rel": 0.01
+    }
+  ]
+}

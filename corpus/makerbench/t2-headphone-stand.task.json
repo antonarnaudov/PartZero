@@ -1,0 +1,70 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-headphone-stand",
+  "tier": "T2",
+  "title": "Three-piece headphone stand",
+  "prompt": "Headphone stand in three pieces I'll print and glue: a round base 120 mm diameter and 6 mm thick; a 30 x 20 mm post 250 mm tall standing in the middle of the base (30 mm along X); and on top of the post a 100 x 30 x 8 mm saddle with fully rounded ends, running along X. Base centred on the origin, Z up.",
+  "process": "fdm",
+  "tags": ["stand", "headphones", "multi-body"],
+  "requires": ["ir/0", "plane/frame"],
+  "reference": "t2-headphone-stand.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Three bodies: base, post and saddle",
+      "check": "body_count",
+      "eq": 3
+    },
+    {
+      "id": "size",
+      "description": "120 mm base, 264 mm tall overall",
+      "check": "bbox_size",
+      "approx": [120, 120, 264],
+      "abs": 0.3
+    },
+    {
+      "id": "base",
+      "description": "Round base: 120 mm disc, 6 mm thick",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_sorted", "approx": [6, 120, 120], "abs": 0.1},
+        {"check": "face_count", "type": "cylinder", "eq": 1}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "post",
+      "description": "Post 30 (X) x 20 (Y) x 250 mm, centred, standing on the base (from Z = 6)",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_size", "approx": [30, 20, 250], "abs": 0.1},
+        {"check": "bbox_min", "approx": [-15, -10, 6], "abs": 0.1}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "saddle",
+      "description": "Saddle 100 x 30 x 8 mm along X with two rounded ends, on top of the post (from Z = 256)",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_size", "approx": [100, 30, 8], "abs": 0.1},
+        {"check": "bbox_min", "axis": "z", "approx": 256, "abs": 0.1},
+        {"check": "face_count", "type": "cylinder", "eq": 2}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "volume",
+      "description": "Total volume ≈ 240313 mm³ ±1%",
+      "check": "volume",
+      "approx": 240313.27,
+      "rel": 0.01
+    }
+  ]
+}

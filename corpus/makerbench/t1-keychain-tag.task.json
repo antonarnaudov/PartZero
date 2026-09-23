@@ -1,0 +1,60 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-keychain-tag",
+  "tier": "T1",
+  "title": "Keychain tag",
+  "prompt": "Keychain tag: 50 x 20 mm with fully rounded ends, 3 mm thick, and a 5 mm hole for the key ring centred 8 mm from one end.",
+  "process": "fdm",
+  "tags": ["keychain", "rounded-ends"],
+  "requires": ["ir/0"],
+  "reference": "t1-keychain-tag.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "50 x 20 mm, 3 mm thick, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [3, 20, 50],
+      "abs": 0.1
+    },
+    {
+      "id": "ring_hole",
+      "description": "One 5 mm hole for the key ring",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [4.9, 5.2],
+      "eq": 1
+    },
+    {
+      "id": "one_hole",
+      "description": "Nothing else cut out",
+      "check": "inner_loops",
+      "eq": 1
+    },
+    {
+      "id": "round_faces",
+      "description": "Three cylindrical faces: two rounded ends and the ring hole",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 3
+    },
+    {
+      "id": "volume",
+      "description": "Volume (stadium 914.2 mm² − Ø5)·3 ≈ 2683.6 mm³ ±1%",
+      "check": "volume",
+      "approx": 2683.57,
+      "rel": 0.01
+    }
+  ]
+}

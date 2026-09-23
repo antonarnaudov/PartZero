@@ -1,0 +1,72 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-spool-holder",
+  "tier": "T2",
+  "title": "Filament spool holder",
+  "prompt": "Filament spool holder that sits on a shelf: a 60 x 60 x 5 mm base plate with four M4 clearance holes (4.5 mm) on a 50 mm square pattern, and a 30 mm diameter, 80 mm tall round spindle standing in the middle of the plate, with a 2 mm chamfer on its top edge. Centre it on the origin, Z up, base on Z = 0.",
+  "process": "fdm",
+  "tags": ["spool-holder", "multi-body", "revolve"],
+  "requires": ["ir/0", "feature/revolve"],
+  "reference": "t2-spool-holder.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Two bodies: the base plate and the spindle",
+      "check": "body_count",
+      "eq": 2
+    },
+    {
+      "id": "size",
+      "description": "60 x 60 mm footprint, 85 mm tall overall",
+      "check": "bbox_size",
+      "approx": [60, 60, 85],
+      "abs": 0.2
+    },
+    {
+      "id": "placement",
+      "description": "Centred on the origin, sitting on Z = 0",
+      "check": "bbox_min",
+      "approx": [-30, -30, 0],
+      "abs": 0.1
+    },
+    {
+      "id": "m4_pattern",
+      "description": "Four M4 clearance holes (4.3–4.6 mm) on a 50 mm square",
+      "check": "hole_pattern",
+      "diameter": [4.3, 4.6],
+      "points": [[0, 0], [50, 0], [50, 50], [0, 50]]
+    },
+    {
+      "id": "spindle",
+      "description": "A 30 mm x 80 mm spindle with a chamfered (conical) top edge",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_sorted", "approx": [30, 30, 80], "abs": 0.1},
+        {"check": "face_count", "type": "cone", "eq": 1}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "base",
+      "description": "A 60 x 60 x 5 mm base plate",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_sorted", "approx": [5, 60, 60], "abs": 0.1}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "volume",
+      "description": "Total volume ≈ 74050 mm³ ±1%",
+      "check": "volume",
+      "approx": 74050.46,
+      "rel": 0.01
+    }
+  ]
+}

@@ -1,0 +1,695 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t5-pcb-spacers",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "238b0e5c4c2875a8cbe3c2afb1e226238675d45d60afb5ce078fab43d5b4261a",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "pcb_spacers",
+    "status": "ok",
+    "features": [
+     {
+      "part": "spacers",
+      "feature": "rings",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 29.40530723760046,
+        "loops": 2,
+        "outer_curves": [
+         "s1_outer"
+        ]
+       },
+       {
+        "area": 29.40530723760046,
+        "loops": 2,
+        "outer_curves": [
+         "s2_outer"
+        ]
+       },
+       {
+        "area": 29.40530723760046,
+        "loops": 2,
+        "outer_curves": [
+         "s3_outer"
+        ]
+       },
+       {
+        "area": 29.40530723760046,
+        "loops": 2,
+        "outer_curves": [
+         "s4_outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "spacers",
+      "feature": "spacers",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 294.0530723760047,
+        "area": 385.5362504485395,
+        "centroid": [
+         3.3829261569222583e-16,
+         1.3204052323001676e-16,
+         5
+        ],
+        "bbox_min": [
+         -3.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         3.5,
+         3.5,
+         10
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 294.0530723760047,
+        "area": 385.5362504485395,
+        "centroid": [
+         11.999999999999998,
+         6.945264515940318e-17,
+         4.999999999999999
+        ],
+        "bbox_min": [
+         8.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         15.5,
+         3.5,
+         10
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 294.0530723760046,
+        "area": 385.5362504485395,
+        "centroid": [
+         24.000000000000007,
+         2.239711948004877e-16,
+         5.000000000000001
+        ],
+        "bbox_min": [
+         20.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         27.5,
+         3.5,
+         10
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 294.0530723760046,
+        "area": 385.53625044853936,
+        "centroid": [
+         36,
+         2.38948113189714e-16,
+         4.999999999999999
+        ],
+        "bbox_min": [
+         32.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         39.5,
+         3.5,
+         10
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "6041f78efd789591f82a92a593fa82aa8438b1fb9060af5a9815a7613a4e963d",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "pcb_spacers",
+    "status": "ok",
+    "features": [
+     {
+      "part": "spacers",
+      "feature": "rings",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 35.580421757496566,
+        "loops": 2,
+        "outer_curves": [
+         "s1_outer"
+        ]
+       },
+       {
+        "area": 35.580421757496566,
+        "loops": 2,
+        "outer_curves": [
+         "s2_outer"
+        ]
+       },
+       {
+        "area": 35.580421757496566,
+        "loops": 2,
+        "outer_curves": [
+         "s3_outer"
+        ]
+       },
+       {
+        "area": 35.580421757496566,
+        "loops": 2,
+        "outer_curves": [
+         "s4_outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "spacers",
+      "feature": "spacers",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 391.38463933246237,
+        "area": 466.49886304273264,
+        "centroid": [
+         -1.4523671383158774e-16,
+         3.3600575646564877e-16,
+         5.5
+        ],
+        "bbox_min": [
+         -3.8500000000000005,
+         -3.8500000000000005,
+         0
+        ],
+        "bbox_max": [
+         3.8500000000000005,
+         3.8500000000000005,
+         11
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 391.38463933246226,
+        "area": 466.49886304273264,
+        "centroid": [
+         13.200000000000003,
+         2.943599528964902e-16,
+         5.500000000000002
+        ],
+        "bbox_min": [
+         9.350000000000001,
+         -3.8500000000000005,
+         0
+        ],
+        "bbox_max": [
+         17.05,
+         3.8500000000000005,
+         11
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 391.38463933246237,
+        "area": 466.49886304273275,
+        "centroid": [
+         26.400000000000006,
+         6.592175881322517e-17,
+         5.5
+        ],
+        "bbox_min": [
+         22.55,
+         -3.8500000000000005,
+         0
+        ],
+        "bbox_max": [
+         30.250000000000004,
+         3.8500000000000005,
+         11
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 391.3846393324625,
+        "area": 466.49886304273286,
+        "centroid": [
+         39.6,
+         1.7805762607569035e-16,
+         5.499999999999999
+        ],
+        "bbox_min": [
+         35.75,
+         -3.8500000000000005,
+         0
+        ],
+        "bbox_max": [
+         43.45,
+         3.8500000000000005,
+         11
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "42f23606979a0959969e733ca51ea3154b329f1e92a213a3e2a348bd36b131ad",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "pcb_spacers",
+    "status": "ok",
+    "features": [
+     {
+      "part": "spacers",
+      "feature": "rings",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 38.48451000647496,
+        "loops": 1,
+        "outer_curves": [
+         "s1_outer"
+        ]
+       },
+       {
+        "area": 29.40530723760046,
+        "loops": 2,
+        "outer_curves": [
+         "s2_outer"
+        ]
+       },
+       {
+        "area": 29.40530723760046,
+        "loops": 2,
+        "outer_curves": [
+         "s3_outer"
+        ]
+       },
+       {
+        "area": 29.40530723760046,
+        "loops": 2,
+        "outer_curves": [
+         "s4_outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "spacers",
+      "feature": "spacers",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 384.8451000647498,
+        "area": 296.88050576423547,
+        "centroid": [
+         2.2155700638222043e-16,
+         1.1905133177649936e-16,
+         5
+        ],
+        "bbox_min": [
+         -3.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         3.5,
+         3.5,
+         10
+        ],
+        "faces": 3,
+        "edges": 2,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 2
+        },
+        "valid": true
+       },
+       {
+        "volume": 294.0530723760047,
+        "area": 385.5362504485395,
+        "centroid": [
+         11.999999999999998,
+         6.945264515940318e-17,
+         4.999999999999999
+        ],
+        "bbox_min": [
+         8.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         15.5,
+         3.5,
+         10
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 294.0530723760046,
+        "area": 385.5362504485395,
+        "centroid": [
+         24.000000000000007,
+         2.239711948004877e-16,
+         5.000000000000001
+        ],
+        "bbox_min": [
+         20.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         27.5,
+         3.5,
+         10
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 294.0530723760046,
+        "area": 385.53625044853936,
+        "centroid": [
+         36,
+         2.38948113189714e-16,
+         4.999999999999999
+        ],
+        "bbox_min": [
+         32.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         39.5,
+         3.5,
+         10
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "cc9f2d1cbb74ffa2c41ad8d2969e839eeaabe4eadf1bf7e2ea9d8325883189db",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "pcb_spacers",
+    "status": "ok",
+    "features": [
+     {
+      "part": "spacers",
+      "feature": "rings",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 27.498674656136814,
+        "loops": 2,
+        "outer_curves": [
+         "s1_outer"
+        ]
+       },
+       {
+        "area": 27.498674656136814,
+        "loops": 2,
+        "outer_curves": [
+         "s2_outer"
+        ]
+       },
+       {
+        "area": 27.498674656136814,
+        "loops": 2,
+        "outer_curves": [
+         "s3_outer"
+        ]
+       },
+       {
+        "area": 27.498674656136814,
+        "loops": 2,
+        "outer_curves": [
+         "s4_outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "spacers",
+      "feature": "spacers",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 274.9867465613682,
+        "area": 392.40440030781735,
+        "centroid": [
+         3.7466786299179637e-16,
+         1.5995033489249826e-16,
+         5.000000000000001
+        ],
+        "bbox_min": [
+         -3.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         3.5,
+         3.5,
+         10
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 274.98674656136814,
+        "area": 392.40440030781735,
+        "centroid": [
+         12,
+         1.2992050964386685e-16,
+         5
+        ],
+        "bbox_min": [
+         8.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         15.5,
+         3.5,
+         10
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 274.98674656136814,
+        "area": 392.40440030781735,
+        "centroid": [
+         24,
+         2.266689362031109e-16,
+         4.999999999999999
+        ],
+        "bbox_min": [
+         20.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         27.5,
+         3.5,
+         10
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 274.9867465613683,
+        "area": 392.40440030781747,
+        "centroid": [
+         36,
+         3.2342231511708147e-16,
+         4.999999999999999
+        ],
+        "bbox_min": [
+         32.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         39.5,
+         3.5,
+         10
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

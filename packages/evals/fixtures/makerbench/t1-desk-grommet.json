@@ -1,0 +1,145 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-desk-grommet",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "1f6dff24d5a4b1a332bb3ee836a9210457a5c7eddac1ad5ef37c5e630ee8552d",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "desk_grommet",
+    "status": "ok",
+    "features": [
+     {
+      "part": "grommet",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 61,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "flange_rim",
+         "flange_under",
+         "top",
+         "tube_inner",
+         "tube_outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "grommet",
+      "feature": "grommet",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11444.822037027603,
+        "area": 11246.90169985146,
+        "centroid": [
+         5.0859384903624795e-15,
+         7.451586653395411e-15,
+         14.176365632720284
+        ],
+        "bbox_min": [
+         -35,
+         -35,
+         0
+        ],
+        "bbox_max": [
+         35,
+         35,
+         23
+        ],
+        "faces": 6,
+        "edges": 6,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 6
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "1fe003e64c4e617d1da17e054b60d757f5e81280766216fbe4fd12ecf7736d96",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "desk_grommet",
+    "status": "ok",
+    "features": [
+     {
+      "part": "grommet",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 73.80999999999995,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "flange_rim",
+         "flange_under",
+         "top",
+         "tube_inner",
+         "tube_outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "grommet",
+      "feature": "grommet",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 15233.058131283746,
+        "area": 13608.751056820262,
+        "centroid": [
+         -3.821140864284356e-15,
+         -1.7192157737117735e-15,
+         15.594002195992312
+        ],
+        "bbox_min": [
+         -38.5,
+         -38.5,
+         0
+        ],
+        "bbox_max": [
+         38.5,
+         38.5,
+         25.3
+        ],
+        "faces": 6,
+        "edges": 6,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 6
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

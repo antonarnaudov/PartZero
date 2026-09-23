@@ -1,0 +1,145 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-flanged-bushing",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "49994d248fc92d4b7b93b88353c8c42db22b6863e9dc9a3ac25d82c49f54ac06",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "flanged_bushing",
+    "status": "ok",
+    "features": [
+     {
+      "part": "bushing",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 35.25,
+        "loops": 1,
+        "outer_curves": [
+         "body",
+         "bore",
+         "bottom",
+         "flange_rim",
+         "flange_top",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "bushing",
+      "feature": "bushing",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1206.2537692539709,
+        "area": 1390.7673597809335,
+        "centroid": [
+         1.413717916818544e-16,
+         -9.870125029137486e-17,
+         5.976413712276591
+        ],
+        "bbox_min": [
+         -9,
+         -9,
+         0
+        ],
+        "bbox_max": [
+         9,
+         9,
+         15
+        ],
+        "faces": 6,
+        "edges": 6,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 6
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "12c1b791c125bef6d1365bf438ebb0ab80ad22aff65accd2088fb8bbc150d22b",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "flanged_bushing",
+    "status": "ok",
+    "features": [
+     {
+      "part": "bushing",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 42.652499999999996,
+        "loops": 1,
+        "outer_curves": [
+         "body",
+         "bore",
+         "bottom",
+         "flange_rim",
+         "flange_top",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "bushing",
+      "feature": "bushing",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1605.5237668770358,
+        "area": 1682.8285053349293,
+        "centroid": [
+         1.2037668212329196e-15,
+         -2.021930315813611e-16,
+         6.574055083504248
+        ],
+        "bbox_min": [
+         -9.9,
+         -9.9,
+         0
+        ],
+        "bbox_max": [
+         9.9,
+         9.9,
+         16.5
+        ],
+        "faces": 6,
+        "edges": 6,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 6
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

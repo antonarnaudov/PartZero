@@ -1,0 +1,54 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-gt2-idler",
+  "tier": "T1",
+  "title": "GT2 idler pulley for a 608 bearing",
+  "prompt": "Flanged idler pulley for a 6 mm GT2 belt that presses onto a 608 bearing: 22 mm bore, 26 mm diameter where the belt runs, 7 mm between the flanges, and 32 mm diameter flanges 1 mm thick on both sides.",
+  "process": "fdm",
+  "tags": ["pulley", "gt2", "608-bearing", "revolve"],
+  "requires": ["ir/0", "feature/revolve"],
+  "reference": "t1-gt2-idler.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "32 mm flanges, 9 mm overall height, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [9, 32, 32],
+      "abs": 0.1
+    },
+    {
+      "id": "round_faces",
+      "description": "Four cylindrical faces: 22 mm bore, 26 mm belt seat and two flange rims",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 4
+    },
+    {
+      "id": "flat_faces",
+      "description": "Four flat annular faces (outer and inner side of each flange)",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 4
+    },
+    {
+      "id": "volume",
+      "description": "Volume 606π ≈ 1903.8 mm³ ±1% (checks the 22 mm bore for the 608's 22 mm OD)",
+      "check": "volume",
+      "approx": 1903.81,
+      "rel": 0.01
+    }
+  ],
+  "notes": "608 bearing: 8 x 22 x 7 mm. 6 mm GT2 belt needs ~7 mm between flanges."
+}

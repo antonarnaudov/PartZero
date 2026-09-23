@@ -1,0 +1,155 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-cable-clip",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "60b9f780a8a5697a78436d394052294344f5cf91a28e56dfd3cc0596b8e12f80",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cable_clip",
+    "status": "ok",
+    "features": [
+     {
+      "part": "clip",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 65.74307691594367,
+        "loops": 1,
+        "outer_curves": [
+         "foot_bottom",
+         "foot_left",
+         "foot_right",
+         "foot_top_l",
+         "foot_top_r",
+         "lip_l",
+         "lip_r",
+         "outer_l",
+         "outer_r",
+         "seat"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "clip",
+      "feature": "clip",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 525.9446153275495,
+        "area": 729.6615865349352,
+        "centroid": [
+         2.0628878345917242e-16,
+         -3.386804271143623,
+         4
+        ],
+        "bbox_min": [
+         -10,
+         -6,
+         0
+        ],
+        "bbox_max": [
+         10,
+         3.3541019662496847,
+         8
+        ],
+        "faces": 12,
+        "edges": 30,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 9
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "8a6f949b63cc6df7a241407e74aa7eb497f40d2a516f4e1b23f84ebf5559df76",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cable_clip",
+    "status": "ok",
+    "features": [
+     {
+      "part": "clip",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 79.54912306829186,
+        "loops": 1,
+        "outer_curves": [
+         "foot_bottom",
+         "foot_left",
+         "foot_right",
+         "foot_top_l",
+         "foot_top_r",
+         "lip_l",
+         "lip_r",
+         "outer_l",
+         "outer_r",
+         "seat"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "clip",
+      "feature": "clip",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 700.0322830009685,
+        "area": 882.8905197072719,
+        "centroid": [
+         -2.4360341761865304e-16,
+         -3.725484698257984,
+         4.400000000000001
+        ],
+        "bbox_min": [
+         -11,
+         -6.6000000000000005,
+         0
+        ],
+        "bbox_max": [
+         11,
+         3.6895121628746534,
+         8.8
+        ],
+        "faces": 12,
+        "edges": 30,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 9
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,279 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-rect-gasket",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "5a22938111e37b2a341a9094d552f55a53e32ea835140d841deb8c89b25fddf8",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "rect_gasket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "gasket",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2267.683188924502,
+        "loops": 6,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "gasket",
+      "feature": "gasket",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 3401.5247833867534,
+        "area": 5463.4548679822365,
+        "centroid": [
+         -6.834863713949625e-15,
+         -1.14889212795608e-15,
+         0.7499999999999998
+        ],
+        "bbox_min": [
+         -45,
+         -35,
+         0
+        ],
+        "bbox_max": [
+         45,
+         35,
+         1.5
+        ],
+        "faces": 14,
+        "edges": 32,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "cc83b772c711c08b7afb6b83c2ece3ac0d4f8022d58617b9c446285acf93537b",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "rect_gasket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "gasket",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2743.8966585986473,
+        "loops": 6,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "gasket",
+      "feature": "gasket",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 4527.42948668777,
+        "area": 6610.780390258504,
+        "centroid": [
+         -1.5348903778991132e-15,
+         1.9937830249254473e-16,
+         0.8250000000000002
+        ],
+        "bbox_min": [
+         -49.50000000000001,
+         -38.5,
+         0
+        ],
+        "bbox_max": [
+         49.50000000000001,
+         38.5,
+         1.6500000000000001
+        ],
+        "faces": 14,
+        "edges": 32,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "8489d9873d6fe81f0f9f1009a62fd903ebf18b5a8d56dd7fc705837a25872f9d",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "rect_gasket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "gasket",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2276.7623916933767,
+        "loops": 5,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "gasket",
+      "feature": "gasket",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 3415.143587540066,
+        "area": 5465.591150986677,
+        "centroid": [
+         0.1634985340947162,
+         0.12362084285210671,
+         0.7499999999999993
+        ],
+        "bbox_min": [
+         -45,
+         -35,
+         0
+        ],
+        "bbox_max": [
+         45,
+         35,
+         1.5
+        ],
+        "faces": 13,
+        "edges": 30,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "cb79c5e37d6168be40dd74f8ea8cebfb4365ea0a8cac0140a19f85feace9c102",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "rect_gasket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "gasket",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2260.0566585986476,
+        "loops": 6,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "gasket",
+      "feature": "gasket",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 3390.0849878979707,
+        "area": 5454.61065634385,
+        "centroid": [
+         1.6348361054998963e-15,
+         -7.503478535499525e-16,
+         0.7500000000000002
+        ],
+        "bbox_min": [
+         -45,
+         -35,
+         0
+        ],
+        "bbox_max": [
+         45,
+         35,
+         1.5
+        ],
+        "faces": 14,
+        "edges": 32,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

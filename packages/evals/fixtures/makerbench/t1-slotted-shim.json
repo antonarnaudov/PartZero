@@ -1,0 +1,143 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-slotted-shim",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "e5edefeba20a4504b9d96e8faa748874753c15286cda7bce9958f8b5dff28511",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "slotted_shim",
+    "status": "ok",
+    "features": [
+     {
+      "part": "shim",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 680.9834111144544,
+        "loops": 3,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "shim",
+      "feature": "shim",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 680.9834111144544,
+        "area": 1542.524341418396,
+        "centroid": [
+         -2.712857733131713e-16,
+         4.197919661049384e-17,
+         0.5
+        ],
+        "bbox_min": [
+         -20,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         20,
+         10,
+         1
+        ],
+        "faces": 14,
+        "edges": 36,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 28
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "23529c119039ae0d53a919bd6075a183921cec5e8c538491b008f8fb3c6c8188",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "slotted_shim",
+    "status": "ok",
+    "features": [
+     {
+      "part": "shim",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 823.9899274484898,
+        "loops": 3,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "shim",
+      "feature": "shim",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 906.3889201933391,
+        "area": 1866.45445311626,
+        "centroid": [
+         7.635096578873491e-17,
+         7.047450274875987e-17,
+         0.55
+        ],
+        "bbox_min": [
+         -22,
+         -11,
+         0
+        ],
+        "bbox_max": [
+         22,
+         11,
+         1.1
+        ],
+        "faces": 14,
+        "edges": 36,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 28
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

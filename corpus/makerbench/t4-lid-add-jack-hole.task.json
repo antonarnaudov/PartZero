@@ -1,0 +1,69 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-lid-add-jack-hole",
+  "tier": "T4",
+  "title": "Edit: add a DC jack hole to a lid",
+  "prompt": "Add an 8 mm hole for a panel-mount DC barrel jack, centred across the lid's width and 15 mm in from the left short edge.",
+  "context": "t4-lid-add-jack-hole.context.cad.ts",
+  "process": "fdm",
+  "tags": ["edit", "holes", "enclosure"],
+  "requires": ["ir/0"],
+  "reference": "t4-lid-add-jack-hole.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "jack_hole",
+      "description": "One 8 mm hole with its centre at X = 15, Y = 30",
+      "check": "hole_positions",
+      "diameter": [7.9, 8.3],
+      "points": [[15, 30, 0]],
+      "tol": 0.1
+    },
+    {
+      "id": "screws_kept",
+      "description": "The four corner screw holes are unchanged",
+      "check": "hole_positions",
+      "diameter": [3.2, 3.5],
+      "points": [[5, 5, 0], [85, 5, 0], [85, 55, 0], [5, 55, 0]],
+      "tol": 0.01
+    },
+    {
+      "id": "holes",
+      "description": "Five holes in total",
+      "check": "inner_loops",
+      "eq": 5
+    },
+    {
+      "id": "size_kept",
+      "description": "Lid size unchanged (90 x 60 x 2)",
+      "check": "bbox_size",
+      "approx": "$context",
+      "abs": 0.001
+    },
+    {
+      "id": "one_curve_added",
+      "description": "Exactly one curve added; nothing else touched",
+      "check": "changed_curves",
+      "eq": 1
+    },
+    {
+      "id": "same_features",
+      "description": "Same features as before",
+      "check": "feature_names",
+      "eq": "$context"
+    },
+    {
+      "id": "volume",
+      "description": "Volume ≈ 10626.8 mm³ ±0.2%",
+      "check": "volume",
+      "approx": 10626.84,
+      "rel": 0.002
+    }
+  ],
+  "notes": "Panel-mount 5.5/2.1 DC jacks typically need an 8 mm hole."
+}

@@ -1,0 +1,147 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-tube-end-plug",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "450f56fe40d35686a575605922a3f9e10e787917facb8baf88b4b235302cb96c",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "tube_end_plug",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plug",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 171.78567451656306,
+        "loops": 1,
+        "outer_curves": [
+         "axis_edge",
+         "bottom",
+         "cap_edge",
+         "dome",
+         "shoulder",
+         "spigot"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plug",
+      "feature": "plug",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 5955.595733226512,
+        "area": 1930.508685630928,
+        "centroid": [
+         -5.344942133069696e-16,
+         1.8268696362292133e-16,
+         7.742486383837317
+        ],
+        "bbox_min": [
+         -12.5,
+         -12.5,
+         0
+        ],
+        "bbox_max": [
+         12.500000000000002,
+         12.5,
+         16
+        ],
+        "faces": 5,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2,
+         "sphere": 1
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "3383ac6a99fc12e051283ee5b1b7bf2641b8d3dbea19835117d04070e212173c",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "tube_end_plug",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plug",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 207.86066616504138,
+        "loops": 1,
+        "outer_curves": [
+         "axis_edge",
+         "bottom",
+         "cap_edge",
+         "dome",
+         "shoulder",
+         "spigot"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plug",
+      "feature": "plug",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 7926.89792092449,
+        "area": 2335.9155096134236,
+        "centroid": [
+         -1.835764175788668e-15,
+         3.241506624148171e-16,
+         8.51673502222105
+        ],
+        "bbox_min": [
+         -13.750000000000002,
+         -13.750000000000002,
+         0
+        ],
+        "bbox_max": [
+         13.750000000000004,
+         13.750000000000002,
+         17.6
+        ],
+        "faces": 5,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2,
+         "sphere": 1
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

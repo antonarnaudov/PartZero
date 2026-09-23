@@ -1,0 +1,61 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-knob",
+  "tier": "T1",
+  "title": "Potentiometer knob",
+  "prompt": "Simple round knob for a potentiometer with a 6 mm round shaft: 30 mm diameter, 15 mm tall, a 6 mm hole 10 mm deep from the bottom for the shaft, and a 2 mm 45° chamfer around the top edge.",
+  "process": "fdm",
+  "tags": ["knob", "round", "revolve"],
+  "requires": ["ir/0", "feature/revolve"],
+  "reference": "t1-knob.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "30 mm diameter, 15 mm tall, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [15, 30, 30],
+      "abs": 0.1
+    },
+    {
+      "id": "chamfer",
+      "description": "The top chamfer is one conical face",
+      "check": "face_count",
+      "type": "cone",
+      "eq": 1
+    },
+    {
+      "id": "blind_bore",
+      "description": "Three flat faces: bottom, top, and the end of the blind shaft hole",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 3
+    },
+    {
+      "id": "round_faces",
+      "description": "Two cylindrical faces: the outside and the shaft hole",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 2
+    },
+    {
+      "id": "volume",
+      "description": "Volume π·15²·15 − Ø6×10 bore − 2 mm chamfer ring ≈ 10140 mm³ ±1%",
+      "check": "volume",
+      "approx": 10140.01,
+      "rel": 0.01
+    }
+  ],
+  "notes": "A blind hole and a chamfer in one body need a revolve in IR v0."
+}

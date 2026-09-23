@@ -1,0 +1,53 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-flange-gasket",
+  "tier": "T1",
+  "title": "Round flange gasket",
+  "prompt": "Round flange gasket, 2 mm thick: 60 mm outside diameter, 40 mm inside diameter, four 4.5 mm bolt holes (M4) evenly spaced on a 50 mm bolt circle. I'll laser cut it.",
+  "process": "laser",
+  "tags": ["gasket", "sheet", "round", "bolt-circle"],
+  "requires": ["ir/0"],
+  "reference": "t1-flange-gasket.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "60 mm diameter, 2 mm thick, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [2, 60, 60],
+      "abs": 0.1
+    },
+    {
+      "id": "bolt_circle",
+      "description": "Four M4 clearance holes (4.3–4.6 mm) at 90° on a 50 mm bolt circle",
+      "check": "hole_pattern",
+      "diameter": [4.3, 4.6],
+      "points": [[25, 0], [0, 25], [-25, 0], [0, -25]]
+    },
+    {
+      "id": "round_faces",
+      "description": "Six cylindrical faces: outside, bore and four bolt holes",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 6
+    },
+    {
+      "id": "volume",
+      "description": "Volume (annulus 60/40 − 4·Ø4.5)·2 ≈ 3014 mm³ ±1%",
+      "check": "volume",
+      "approx": 3014.36,
+      "rel": 0.01
+    }
+  ]
+}

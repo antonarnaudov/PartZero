@@ -1,0 +1,69 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-nema17-plate",
+  "tier": "T1",
+  "title": "NEMA 17 motor mounting plate",
+  "prompt": "Mounting plate for a NEMA 17 stepper, CNC'd from 5 mm aluminium. 50 x 50 mm with a 22 mm hole in the middle for the motor's centering boss, and four M3 clearance holes on the standard 31 mm square pattern around it.",
+  "process": "cnc",
+  "tags": ["mounting-plate", "stepper", "nema17", "hole-pattern"],
+  "requires": ["ir/0"],
+  "reference": "t1-nema17-plate.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "50 x 50 mm plate, 5 mm thick, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [5, 50, 50],
+      "abs": 0.1
+    },
+    {
+      "id": "pilot",
+      "description": "One 22 mm pilot hole for the motor boss (up to 0.6 mm oversize for clearance)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [21.9, 22.6],
+      "eq": 1
+    },
+    {
+      "id": "m3_pattern",
+      "description": "Four M3 clearance holes (3.2–3.5 mm) on a 31 mm square",
+      "check": "hole_pattern",
+      "diameter": [3.2, 3.5],
+      "points": [[0, 0], [31, 0], [31, 31], [0, 31]]
+    },
+    {
+      "id": "pattern_centred",
+      "description": "The 31 mm square is centred on the pilot hole",
+      "check": "hole_pattern",
+      "diameter": [3.2, 22.6],
+      "points": [[0, 0], [15.5, 15.5], [-15.5, 15.5], [-15.5, -15.5], [15.5, -15.5]]
+    },
+    {
+      "id": "hole_walls",
+      "description": "Five cylindrical hole walls and no other round faces",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 5
+    },
+    {
+      "id": "volume",
+      "description": "Volume (50² − Ø22 − 4·Ø3.4)·5 ≈ 10418 mm³ ±1%",
+      "check": "volume",
+      "approx": 10417.75,
+      "rel": 0.01
+    }
+  ],
+  "notes": "NEMA 17: 31 mm hole spacing, 22 mm pilot boss. M3 clearance 3.4 (ISO 273 medium)."
+}

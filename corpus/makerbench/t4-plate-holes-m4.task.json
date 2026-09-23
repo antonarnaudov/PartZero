@@ -1,0 +1,77 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-plate-holes-m4",
+  "tier": "T4",
+  "title": "Edit: change holes to M4 clearance",
+  "prompt": "Make the holes M4 clearance instead of M3. Keep everything else the same.",
+  "context": "t4-plate-holes-m4.context.cad.ts",
+  "process": "any",
+  "tags": ["edit", "holes", "mounting-plate"],
+  "requires": ["ir/0"],
+  "reference": "t4-plate-holes-m4.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "m4_holes",
+      "description": "All four holes are now M4 clearance (4.3–4.5 mm)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [4.3, 4.5],
+      "eq": 4
+    },
+    {
+      "id": "no_m3",
+      "description": "No M3-size holes left",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [2.5, 4.2],
+      "eq": 0
+    },
+    {
+      "id": "positions",
+      "description": "The holes stay where they were (6 mm from the edges)",
+      "check": "hole_positions",
+      "diameter": [4.3, 4.5],
+      "points": [[34, 19, 0], [-34, 19, 0], [-34, -19, 0], [34, -19, 0]],
+      "tol": 0.01
+    },
+    {
+      "id": "size_kept",
+      "description": "Plate size unchanged (80 x 50 x 4)",
+      "check": "bbox_size",
+      "approx": "$context",
+      "abs": 0.001
+    },
+    {
+      "id": "same_features",
+      "description": "Same features as before: edited in place, not rebuilt",
+      "check": "feature_names",
+      "eq": "$context"
+    },
+    {
+      "id": "only_holes",
+      "description": "Only the four hole circles changed",
+      "check": "changed_curves",
+      "eq": 4
+    },
+    {
+      "id": "extrude_kept",
+      "description": "The extrude itself is untouched",
+      "check": "changed_features",
+      "eq": 0
+    },
+    {
+      "id": "volume",
+      "description": "Volume (80·50 − 4·Ø4.4)·4 ≈ 15757 mm³ ±0.2%",
+      "check": "volume",
+      "approx": 15756.72,
+      "rel": 0.002
+    }
+  ],
+  "notes": "M4 clearance 4.3 (fine) – 4.5 (medium); reference uses 4.4."
+}

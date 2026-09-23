@@ -1,0 +1,53 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-v-pulley",
+  "tier": "T1",
+  "title": "V-groove pulley",
+  "prompt": "V-groove pulley for a 4 mm round belt: 40 mm diameter, 10 mm thick, 8 mm bore. The groove is a 90° V, 4 mm deep, centred on the rim, leaving a 1 mm flat on each side.",
+  "process": "fdm",
+  "tags": ["pulley", "round-belt", "revolve"],
+  "requires": ["ir/0", "feature/revolve"],
+  "reference": "t1-v-pulley.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "40 mm diameter, 10 mm thick, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [10, 40, 40],
+      "abs": 0.1
+    },
+    {
+      "id": "v_flanks",
+      "description": "The groove flanks are two conical faces",
+      "check": "face_count",
+      "type": "cone",
+      "eq": 2
+    },
+    {
+      "id": "round_faces",
+      "description": "Three cylindrical faces: bore and the two 1 mm rim flats",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 3
+    },
+    {
+      "id": "volume",
+      "description": "Volume π(20² − 4²)·10 − V-groove ring ≈ 10187 mm³ ±1%",
+      "check": "volume",
+      "approx": 10187.14,
+      "rel": 0.01
+    }
+  ]
+}

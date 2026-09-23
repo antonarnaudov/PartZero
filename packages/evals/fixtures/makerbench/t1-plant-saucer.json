@@ -1,0 +1,145 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-plant-saucer",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "ff14ac873d118a59ed5978ea29ea94fab2187d5088755f9d3784cfc7d2fbdb0d",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "plant_saucer",
+    "status": "ok",
+    "features": [
+     {
+      "part": "saucer",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 177,
+        "loops": 1,
+        "outer_curves": [
+         "axis_edge",
+         "bottom",
+         "floor",
+         "inner_wall",
+         "outer_wall",
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "saucer",
+      "feature": "saucer",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 32810.79367409178,
+        "area": 27572.66341215064,
+        "centroid": [
+         -3.4593780299465227e-14,
+         -5.527496311130694e-16,
+         3.447242435848331
+        ],
+        "bbox_min": [
+         -60,
+         -60,
+         0
+        ],
+        "bbox_max": [
+         60,
+         60,
+         15
+        ],
+        "faces": 5,
+        "edges": 4,
+        "face_types": {
+         "cone": 2,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "3b7ce7c2ed15b92966b53f45ede3365a3f7dffd04a9483da7fa18fb036aab114",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "plant_saucer",
+    "status": "ok",
+    "features": [
+     {
+      "part": "saucer",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 214.17000000000002,
+        "loops": 1,
+        "outer_curves": [
+         "axis_edge",
+         "bottom",
+         "floor",
+         "inner_wall",
+         "outer_wall",
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "saucer",
+      "feature": "saucer",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 43671.1663802162,
+        "area": 33362.92272870227,
+        "centroid": [
+         1.1995762688365668e-14,
+         4.696337832030473e-15,
+         3.791966679433164
+        ],
+        "bbox_min": [
+         -66,
+         -66,
+         0
+        ],
+        "bbox_max": [
+         66,
+         66,
+         16.5
+        ],
+        "faces": 5,
+        "edges": 4,
+        "face_types": {
+         "cone": 2,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

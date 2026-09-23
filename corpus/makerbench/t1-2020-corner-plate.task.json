@@ -1,0 +1,54 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-2020-corner-plate",
+  "tier": "T1",
+  "title": "2020 extrusion L corner plate",
+  "prompt": "Flat L-shaped corner plate to join two 2020 aluminium extrusions at 90°. Each leg is 60 mm long and 20 mm wide (the corner square is shared), 4 mm thick. Five M5 clearance holes (5.5 mm) on the extrusion centrelines, 20 mm apart: one in the corner square and two along each leg.",
+  "process": "cnc",
+  "tags": ["bracket", "2020-extrusion", "hole-pattern"],
+  "requires": ["ir/0"],
+  "reference": "t1-2020-corner-plate.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "60 x 60 mm L, 4 mm thick, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [4, 60, 60],
+      "abs": 0.1
+    },
+    {
+      "id": "m5_pattern",
+      "description": "Five M5 clearance holes (5.3–5.6 mm) in an L at 20 mm pitch",
+      "check": "hole_pattern",
+      "diameter": [5.3, 5.6],
+      "points": [[10, 10], [30, 10], [50, 10], [10, 30], [10, 50]]
+    },
+    {
+      "id": "l_outline",
+      "description": "L outline: six flat side faces plus top and bottom",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 8
+    },
+    {
+      "id": "volume",
+      "description": "Volume (2000 mm² L − 5·Ø5.5)·4 ≈ 7525 mm³ ±1%",
+      "check": "volume",
+      "approx": 7524.83,
+      "rel": 0.01
+    }
+  ],
+  "notes": "2020 slot centreline is 10 mm from the profile edge; M5 T-nuts."
+}

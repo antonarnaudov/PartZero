@@ -1,0 +1,65 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-pen-holder",
+  "tier": "T2",
+  "title": "Desk pen holder",
+  "prompt": "Desk pen holder: an 80 x 40 x 3 mm base plate with two round cups standing on it. Each cup is 30 mm outside diameter with a 2 mm wall and 60 mm tall (measured from the top of the base), centred on the base's long centreline 20 mm from each end. The cups are open tubes; the base plate is their bottom. Base corner at the origin, Z up.",
+  "process": "fdm",
+  "tags": ["desk", "organizer", "multi-body"],
+  "requires": ["ir/0", "plane/frame"],
+  "reference": "t2-pen-holder.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Three bodies: base and two cups",
+      "check": "body_count",
+      "eq": 3
+    },
+    {
+      "id": "size",
+      "description": "80 x 40 mm footprint, 63 mm tall overall",
+      "check": "bbox_size",
+      "approx": [80, 40, 63],
+      "abs": 0.2
+    },
+    {
+      "id": "placement",
+      "description": "Base corner at the origin",
+      "check": "bbox_min",
+      "approx": [0, 0, 0],
+      "abs": 0.05
+    },
+    {
+      "id": "cups",
+      "description": "Two 30 x 60 mm tubes (inner and outer wall) standing on top of the base (from Z = 3)",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_sorted", "approx": [30, 30, 60], "abs": 0.1},
+        {"check": "face_count", "type": "cylinder", "eq": 2},
+        {"check": "bbox_min", "axis": "z", "approx": 3, "abs": 0.05}
+      ],
+      "eq": 2
+    },
+    {
+      "id": "cup_positions",
+      "description": "Cup bores (26 mm) centred at X = 20 and X = 60 on the Y = 20 centreline",
+      "check": "hole_positions",
+      "diameter": [25.9, 26.1],
+      "points": [[20, 20, 3], [60, 20, 3]],
+      "tol": 0.1
+    },
+    {
+      "id": "volume",
+      "description": "Total volume ≈ 30712 mm³ ±1% (checks the 2 mm walls)",
+      "check": "volume",
+      "approx": 30711.5,
+      "rel": 0.01
+    }
+  ]
+}

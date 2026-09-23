@@ -1,0 +1,54 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t5-pcb-spacers",
+  "tier": "T5",
+  "title": "Under-specified: PCB spacers",
+  "prompt": "I need some spacers for my PCB.",
+  "process": "fdm",
+  "tags": ["spacer", "electronics", "underspecified"],
+  "requires": ["ir/0"],
+  "reference": "t5-pcb-spacers.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "status_ok",
+      "description": "The model evaluates without feature errors",
+      "check": "status",
+      "eq": "ok"
+    },
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Between 1 and 20 spacers",
+      "check": "body_count",
+      "between": [1, 20]
+    },
+    {
+      "id": "spacer_sized",
+      "description": "The largest body is spacer-sized (fits in 15 x 15 x 40 mm)",
+      "check": "bbox_sorted",
+      "body": 0,
+      "between": [[2, 15], [2, 15], [1, 40]]
+    },
+    {
+      "id": "has_bore",
+      "description": "The largest spacer has a round bore for the screw",
+      "check": "face_count",
+      "body": 0,
+      "type": "cylinder",
+      "gte": 1
+    }
+  ],
+  "clarify": {
+    "questions": [
+      "Which screw size do the PCB holes take (M2, M2.5, M3)?",
+      "How tall should the spacers be, and how many do you need?",
+      "Round or hex, and do they need to be threaded (tap drill) or clearance?"
+    ],
+    "assumptions": "M3 hardware (most hobby PCBs), 10 mm tall, a set of four round clearance spacers: 7 mm OD, 3.4 mm bore."
+  }
+}

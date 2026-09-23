@@ -1,0 +1,55 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-drawer-pull",
+  "tier": "T1",
+  "title": "U-shaped drawer pull",
+  "prompt": "Drawer pull I can print lying on its side: a U-shaped bar handle for 96 mm screw spacing. 106 mm long, 25 mm tall, 12 mm wide. The two legs are 10 mm wide (the screws go into the middle of each leg; I'll drill those myself), the grip bar is 8 mm thick, and round off the two top outer corners with an 8 mm radius.",
+  "process": "fdm",
+  "tags": ["handle", "furniture", "profile-extrude"],
+  "requires": ["ir/0"],
+  "reference": "t1-drawer-pull.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "106 mm long, 25 mm tall, 12 mm wide, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [12, 25, 106],
+      "abs": 0.1
+    },
+    {
+      "id": "rounded_corners",
+      "description": "Two rounded corners (cylindrical faces)",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 2
+    },
+    {
+      "id": "r8",
+      "description": "The corner rounds are R8 (Ø16 arcs)",
+      "check": "curve_count",
+      "kind": "arc",
+      "diameter": [15.9, 16.1],
+      "eq": 2
+    },
+    {
+      "id": "volume",
+      "description": "Volume (106·25 − 86·17 opening − two R8 corner cut-offs)·12 ≈ 13926 mm³ ±1%",
+      "check": "volume",
+      "approx": 13926.37,
+      "rel": 0.01
+    }
+  ],
+  "notes": "Legs centred at 5 and 101 mm = 96 mm spacing (not checkable without holes in IR v0)."
+}

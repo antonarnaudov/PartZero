@@ -1,0 +1,52 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-shelf-bracket",
+  "tier": "T1",
+  "title": "Triangular shelf bracket",
+  "prompt": "Triangular shelf bracket I can print flat: 100 mm along the wall, 80 mm along the shelf, 10 mm thick. 12 mm wide arms all round, with a triangular window in the middle to save plastic (window edges 12 mm in from the outside edges). I'll drill the screw holes.",
+  "process": "fdm",
+  "tags": ["bracket", "shelf", "profile-extrude"],
+  "requires": ["ir/0"],
+  "reference": "t1-shelf-bracket.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "100 x 80 mm triangle, 10 mm thick, ±0.2 mm",
+      "check": "bbox_sorted",
+      "approx": [10, 80, 100],
+      "abs": 0.2
+    },
+    {
+      "id": "window",
+      "description": "One triangular window",
+      "check": "inner_loops",
+      "eq": 1
+    },
+    {
+      "id": "flat_faces",
+      "description": "Eight flat faces: three outside, three window edges, two sides",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 8
+    },
+    {
+      "id": "volume",
+      "description": "Volume (4000 mm² − window 1157 mm²)·10 ≈ 28426 mm³ ±2%",
+      "check": "volume",
+      "approx": 28426.27,
+      "rel": 0.02
+    }
+  ]
+}

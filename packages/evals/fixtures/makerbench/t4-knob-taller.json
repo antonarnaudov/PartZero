@@ -1,0 +1,220 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t4-knob-taller",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "158924e0f4b07f7e650d39439ba47cb463d162a4a5d66ac89d44317647dac858",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "knob",
+    "status": "ok",
+    "features": [
+     {
+      "part": "knob",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 187.375,
+        "loops": 1,
+        "outer_curves": [
+         "axis_cap",
+         "bore_end",
+         "bore_wall",
+         "bottom",
+         "chamfer",
+         "side",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "knob",
+      "feature": "knob",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 8033.837813392499,
+        "area": 2395.781787416207,
+        "centroid": [
+         4.917472449145578e-16,
+         3.554187005702141e-16,
+         8.542287858050642
+        ],
+        "bbox_min": [
+         -12.5,
+         -12.5,
+         0
+        ],
+        "bbox_max": [
+         12.5,
+         12.5,
+         17
+        ],
+        "faces": 6,
+        "edges": 5,
+        "face_types": {
+         "cone": 1,
+         "cylinder": 2,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 5
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "context",
+   "ir_sha256": "c7a1299a762d507bfcddd56dadef376c66a43165beb5280239d79b6e337f5695",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "knob",
+    "status": "ok",
+    "features": [
+     {
+      "part": "knob",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 124.875,
+        "loops": 1,
+        "outer_curves": [
+         "axis_cap",
+         "bore_end",
+         "bore_wall",
+         "bottom",
+         "chamfer",
+         "side",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "knob",
+      "feature": "knob",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 5579.468552775474,
+        "area": 2003.0827057174831,
+        "centroid": [
+         6.469356469203068e-16,
+         3.2812812998424947e-16,
+         5.99754539695946
+        ],
+        "bbox_min": [
+         -12.5,
+         -12.5,
+         0
+        ],
+        "bbox_max": [
+         12.5,
+         12.5,
+         12
+        ],
+        "faces": 6,
+        "edges": 5,
+        "face_types": {
+         "cone": 1,
+         "cylinder": 2,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 5
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "df2ee522f8c90e00fa5717ca560e47b0445248f379ca397f79aaadb320a25b2a",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "knob",
+    "status": "ok",
+    "features": [
+     {
+      "part": "knob",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 226.72375000000005,
+        "loops": 1,
+        "outer_curves": [
+         "axis_cap",
+         "bore_end",
+         "bore_wall",
+         "bottom",
+         "chamfer",
+         "side",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "knob",
+      "feature": "knob",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10693.038129625418,
+        "area": 2898.8959627736112,
+        "centroid": [
+         -2.6473320537644087e-15,
+         2.806713697654748e-16,
+         9.396516643855707
+        ],
+        "bbox_min": [
+         -13.750000000000002,
+         -13.750000000000002,
+         0
+        ],
+        "bbox_max": [
+         13.750000000000002,
+         13.750000000000002,
+         18.700000000000003
+        ],
+        "faces": 6,
+        "edges": 5,
+        "face_types": {
+         "cone": 1,
+         "cylinder": 2,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 5
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

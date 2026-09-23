@@ -1,0 +1,17 @@
+{
+  // Lets editors and `tsc -p corpus/makerbench` resolve "@aicad/std" for the MakerBench reference
+  // and context CadScript files. Task definitions are the *.task.json files next to them
+  // (schema: packages/evals/schema/makerbench-task.schema.json).
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": [],
+    "paths": {
+      "@aicad/std": ["../../packages/cadscript/std/index.d.ts"]
+    }
+  },
+  "include": ["*.cad.ts"]
+}

@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aicad.dev/schemas/makerbench-task-0.schema.json",
+  "title": "MakerBench task (makerbench/0)",
+  "description": "One MakerBench task: a maker's natural-language request, a reference CadScript solution and declarative hidden tests evaluated on the candidate's aicad.metrics/0 report (and, for IR checks, on the candidate's compiled IR). The file is named <id>.task.json; paths are relative to it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "tier", "title", "prompt", "process", "tags", "requires", "reference", "hidden_tests"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "description": "Stable task id; equals the file stem. Starts with the tier (t1-, t2-, t4-, t5-).",
+      "type": "string",
+      "pattern": "^t[1-6]-[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "tier": {
+      "description": "T1 simple part, T2 multi-feature part, T4 edit of an existing model, T5 under-specified request.",
+      "enum": ["T1", "T2", "T4", "T5"]
+    },
+    "title": { "description": "One-line human title.", "type": "string", "minLength": 3, "maxLength": 100 },
+    "prompt": {
+      "description": "The request exactly as a maker would type it. This (plus the context file for T4) is all a solver sees.",
+      "type": "string",
+      "minLength": 10
+    },
+    "context": {
+      "description": "T4 only: the CadScript file the agent starts from (relative path). Checks may compare against it with \"$context\".",
+      "type": "string",
+      "pattern": "\\.cad\\.ts$"
+    },
+    "process": { "description": "Intended manufacturing process.", "enum": ["fdm", "cnc", "laser", "any"] },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+      "uniqueItems": true
+    },
+    "requires": {
+      "description": "Minimum engine capabilities: an IR level (ir/0 = sketches + extrude/revolve as new bodies) plus optional feature/* and op/* tokens (e.g. feature/revolve, op/boolean, op/fillet, assembly). Runners skip tasks whose requirements they do not meet.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^(ir/[0-9]+|(feature|op|sketch|plane)/[a-z0-9_]+|assembly|multi-part)$" },
+      "contains": { "type": "string", "pattern": "^ir/[0-9]+$" }
+    },
+    "reference": {
+      "description": "A correct CadScript solution (relative path). It must pass every hidden test.",
+      "type": "string",
+      "pattern": "\\.cad\\.ts$"
+    },
+    "hidden_tests": {
+      "description": "Declarative checks; the candidate passes the task when it compiles, evaluates with status ok, and every test passes.",
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/hiddenTest" }
+    },
+    "clarify": {
+      "description": "T5 only: what a good agent should ask (or state as an explicit assumption) before modelling.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["questions", "assumptions"],
+      "properties": {
+        "questions": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 5 } },
+        "assumptions": {
+          "description": "The defaults the reference solution assumed, i.e. an acceptable answer when the agent may not ask.",
+          "type": "string",
+          "minLength": 5
+        }
+      }
+    },
+    "notes": { "description": "Author notes: where the numbers come from, known alternative solutions.", "type": "string" }
+  },
+  "allOf": [
+    { "if": { "properties": { "tier": { "const": "T4" } } }, "then": { "required": ["context"] } },
+    { "if": { "properties": { "tier": { "const": "T5" } } }, "then": { "required": ["clarify"] } }
+  ],
+  "$defs": {
+    "range": {
+      "description": "Inclusive [min, max].",
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "contextRef": {
+      "description": "Use the same measurement taken on the T4 context model.",
+      "const": "$context"
+    },
+    "comparators": {
+      "description": "Exactly one of eq / approx / between / gte / lte (hole_pattern and hole_positions take none). approx needs abs and/or rel: |actual - expected| <= max(abs, rel * |expected|), element-wise for vectors.",
+      "type": "object",
+      "properties": {
+        "eq": {
+          "description": "Exact equality (deep for arrays).",
+          "anyOf": [
+            { "type": ["number", "string", "boolean"] },
+            { "type": "array" }
+          ]
+        },
+        "approx": {
+          "anyOf": [
+            { "type": "number" },
+            { "type": "array", "items": { "type": "number" }, "minItems": 1 },
+            { "$ref": "#/$defs/contextRef" }
+          ]
+        },
+        "abs": { "description": "Absolute tolerance for approx (mm, mm², mm³).", "type": "number", "minimum": 0 },
+        "rel": { "description": "Relative tolerance for approx (0.01 = 1%).", "type": "number", "minimum": 0 },
+        "between": {
+          "description": "Inclusive range; for vector measures a list of per-element ranges.",
+          "anyOf": [
+            { "$ref": "#/$defs/range" },
+            { "type": "array", "items": { "$ref": "#/$defs/range" }, "minItems": 1 }
+          ]
+        },
+        "gte": { "type": "number" },
+        "lte": { "type": "number" }
+      },
+      "dependentRequired": { "abs": ["approx"], "rel": ["approx"] },
+      "if": { "required": ["approx"] },
+      "then": { "anyOf": [{ "required": ["abs"] }, { "required": ["rel"] }] }
+    },
+    "params": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "description": "face_count: plane|cylinder|cone|sphere|torus|bspline|other; edge_count: line|circle|ellipse|bspline|other; feature_count: sketch|extrude|revolve.",
+          "type": "string",
+          "pattern": "^[a-z_]+$"
+        },
+        "axis": { "description": "Pick one component of a vector measure.", "enum": ["x", "y", "z"] },
+        "body": {
+          "description": "Measure a single body: 0 = largest by volume, 1 = second largest, -1 = smallest. Omitted: all bodies together (sums, union box, mass-weighted centroid).",
+          "type": "integer"
+        },
+        "kind": { "description": "curve_count: line|arc|circle.", "enum": ["line", "arc", "circle"] },
+        "diameter": { "description": "curve_count / hole_pattern / hole_positions: inclusive diameter range, mm.", "$ref": "#/$defs/range" },
+        "points": {
+          "description": "hole_pattern: 2D or 3D hole centres in any placement (compared by pairwise distances, so translation, rotation and mirroring do not matter). hole_positions: absolute 3D model points, each of which must lie on the axis of a distinct hole.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 3 }
+        },
+        "tol": { "description": "hole_pattern / hole_positions: distance tolerance, mm (default 0.05).", "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "bodyCheck": {
+      "description": "A per-body condition inside bodies_matching.where.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": ["check"],
+      "allOf": [{ "$ref": "#/$defs/comparators" }, { "$ref": "#/$defs/params" }],
+      "properties": {
+        "check": {
+          "enum": ["volume", "area", "centroid", "bbox_size", "bbox_sorted", "bbox_min", "bbox_max", "face_count", "edge_count", "valid"]
+        }
+      }
+    },
+    "hiddenTest": {
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": ["id", "description", "check"],
+      "allOf": [
+        { "$ref": "#/$defs/comparators" },
+        { "$ref": "#/$defs/params" },
+        {
+          "if": { "properties": { "check": { "const": "bodies_matching" } } },
+          "then": { "required": ["where"] }
+        },
+        {
+          "if": { "properties": { "check": { "enum": ["hole_pattern", "hole_positions"] } } },
+          "then": { "required": ["diameter", "points"] }
+        }
+      ],
+      "properties": {
+        "id": { "description": "Unique within the task.", "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "description": {
+          "description": "What the test means for the maker, in plain words (shown in reports).",
+          "type": "string",
+          "minLength": 8
+        },
+        "check": {
+          "description": "What to measure. Model: status, valid, body_count, feature_count, region_count, inner_loops. Body (aggregate or with body): volume, area, centroid, bbox_size, bbox_sorted, bbox_min, bbox_max, face_count, edge_count. Quantifier: bodies_matching. IR: curve_count, hole_pattern, hole_positions, feature_names, changed_curves, changed_features.",
+          "enum": [
+            "status",
+            "valid",
+            "body_count",
+            "feature_count",
+            "region_count",
+            "inner_loops",
+            "volume",
+            "area",
+            "centroid",
+            "bbox_size",
+            "bbox_sorted",
+            "bbox_min",
+            "bbox_max",
+            "face_count",
+            "edge_count",
+            "bodies_matching",
+            "curve_count",
+            "hole_pattern",
+            "hole_positions",
+            "feature_names",
+            "changed_curves",
+            "changed_features"
+          ]
+        },
+        "where": {
+          "description": "bodies_matching: the conditions one body must meet; the measure is how many bodies meet all of them.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/bodyCheck" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-fan40-mount",
+  "tier": "T1",
+  "title": "40 mm fan mounting plate",
+  "prompt": "Mounting plate for a 40 mm fan: 40 x 40 x 3 mm, a 38 mm hole in the middle for airflow, and four M3 clearance holes (3.4 mm) on the fan's 32 mm square hole pattern.",
+  "process": "fdm",
+  "tags": ["mounting-plate", "fan", "hole-pattern"],
+  "requires": ["ir/0"],
+  "reference": "t1-fan40-mount.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "40 x 40 mm, 3 mm thick, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [3, 40, 40],
+      "abs": 0.1
+    },
+    {
+      "id": "air_hole",
+      "description": "One 38 mm airflow hole",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [37.5, 38.5],
+      "eq": 1
+    },
+    {
+      "id": "m3_pattern",
+      "description": "Four M3 clearance holes on a 32 mm square",
+      "check": "hole_pattern",
+      "diameter": [3.2, 3.5],
+      "points": [[0, 0], [32, 0], [32, 32], [0, 32]]
+    },
+    {
+      "id": "pattern_centred",
+      "description": "The 32 mm square is centred on the air hole",
+      "check": "hole_pattern",
+      "diameter": [3.2, 38.5],
+      "points": [[0, 0], [16, 16], [-16, 16], [-16, -16], [16, -16]]
+    },
+    {
+      "id": "volume",
+      "description": "Volume (40² − Ø38 − 4·Ø3.4)·3 ≈ 1288.7 mm³ ±2%",
+      "check": "volume",
+      "approx": 1288.7,
+      "rel": 0.02
+    }
+  ],
+  "notes": "40 mm fans: 32 mm hole spacing, M3 (self-tapping) screws."
+}

@@ -1,0 +1,45 @@
+{
+  "name": "@aicad/evals",
+  "version": "0.0.1",
+  "description": "MakerBench evaluation harness: runs solvers on CadScript tasks, evaluates candidates with Forge or the OCCT oracle, and scores declarative hidden tests.",
+  "license": "MPL-2.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "aicad-evals": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schema/makerbench-task.schema.json": "./schema/makerbench-task.schema.json"
+  },
+  "files": [
+    "dist",
+    "schema"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "makerbench": "node dist/cli.js run --tasks ../../corpus/makerbench --solver reference --engine fixture --out ../../artifacts/evals/reference-fixture",
+    "fixtures": "node dist/cli.js fixtures --tasks ../../corpus/makerbench --engine oracle --out fixtures/makerbench"
+  },
+  "dependencies": {
+    "@aicad/cadscript": "workspace:*",
+    "@aicad/ir-types": "workspace:*",
+    "ajv": "^8.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,149 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-gt2-idler",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "732adb93fd9ec5bb28d8ffc616f4332c20b987909a27f2bb8503547767f102c6",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "gt2_idler",
+    "status": "ok",
+    "features": [
+     {
+      "part": "idler",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 24,
+        "loops": 1,
+        "outer_curves": [
+         "belt_seat",
+         "bore",
+         "bottom",
+         "flange1_rim",
+         "flange1_top",
+         "flange2_bottom",
+         "flange2_rim",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "idler",
+      "feature": "idler",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1903.8051480754152,
+        "area": 2789.734276387736,
+        "centroid": [
+         7.64359485164624e-15,
+         5.402147695888783e-16,
+         4.499999999999999
+        ],
+        "bbox_min": [
+         -16,
+         -16,
+         0
+        ],
+        "bbox_max": [
+         16,
+         16,
+         9
+        ],
+        "faces": 8,
+        "edges": 8,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 4
+        },
+        "edge_types": {
+         "circle": 8
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "27a440cccf7e7aa32a798b8e700e664c37905e88bf2caddbda9bba0228c185ca",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "gt2_idler",
+    "status": "ok",
+    "features": [
+     {
+      "part": "idler",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 29.039999999999992,
+        "loops": 1,
+        "outer_curves": [
+         "belt_seat",
+         "bore",
+         "bottom",
+         "flange1_rim",
+         "flange1_top",
+         "flange2_bottom",
+         "flange2_rim",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "idler",
+      "feature": "idler",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 2533.964652088377,
+        "area": 3375.5784744291623,
+        "centroid": [
+         8.97304053771394e-15,
+         1.27341035430279e-15,
+         4.950000000000001
+        ],
+        "bbox_min": [
+         -17.6,
+         -17.6,
+         0
+        ],
+        "bbox_max": [
+         17.6,
+         17.6,
+         9.9
+        ],
+        "faces": 8,
+        "edges": 8,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 4
+        },
+        "edge_types": {
+         "circle": 8
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

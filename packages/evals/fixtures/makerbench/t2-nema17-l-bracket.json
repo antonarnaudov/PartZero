@@ -1,0 +1,503 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t2-nema17-l-bracket",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "9a952720604538b1b38408e81a6310cfc6ac9b17ace833ce558f9f5c51b26392",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "nema17_l_bracket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "bracket",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2202.4834111144546,
+        "loops": 3,
+        "outer_curves": [
+         "back",
+         "front",
+         "left",
+         "right"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11012.417055572272,
+        "area": 5527.754418176348,
+        "centroid": [
+         4.1294054574182915e-17,
+         22.338194278856676,
+         2.5
+        ],
+        "bbox_min": [
+         -25,
+         0,
+         0
+        ],
+        "bbox_max": [
+         25,
+         45,
+         5
+        ],
+        "faces": 8,
+        "edges": 16,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "face_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2083.5504778401373,
+        "loops": 6,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "face",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10417.752389200685,
+        "area": 5726.3044480192575,
+        "centroid": [
+         2.160734199462681e-15,
+         2.4999999999999996,
+         29.999999999999996
+        ],
+        "bbox_min": [
+         -25,
+         0,
+         5
+        ],
+        "bbox_max": [
+         25,
+         5,
+         55
+        ],
+        "faces": 11,
+        "edges": 22,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 10,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "c06a07cb8f4923ad24e9e3bb0e1d34fbe052ae76dbf4f0d42a1f0437ff6a24f2",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "nema17_l_bracket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "bracket",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2665.004927448491,
+        "loops": 3,
+        "outer_curves": [
+         "back",
+         "front",
+         "left",
+         "right"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 14657.527100966698,
+        "area": 6688.582845993382,
+        "centroid": [
+         7.601084425751173e-16,
+         24.572013706742343,
+         2.75
+        ],
+        "bbox_min": [
+         -27.500000000000004,
+         0,
+         0
+        ],
+        "bbox_max": [
+         27.500000000000004,
+         49.50000000000001,
+         5.5
+        ],
+        "faces": 8,
+        "edges": 16,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "face_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2521.0960781865665,
+        "loops": 6,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "face",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 13866.028430026112,
+        "area": 6928.828382103301,
+        "centroid": [
+         1.6397894796672063e-16,
+         2.7500000000000004,
+         33
+        ],
+        "bbox_min": [
+         -27.500000000000004,
+         0,
+         5.5
+        ],
+        "bbox_max": [
+         27.500000000000004,
+         5.5,
+         60.50000000000001
+        ],
+        "faces": 11,
+        "edges": 22,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 10,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "e366be719b053173ecb4b4ddc700ddc91ecebdb00d8f6751807494918042d05b",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "nema17_l_bracket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "bracket",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2226.2417055572273,
+        "loops": 2,
+        "outer_curves": [
+         "back",
+         "front",
+         "left",
+         "right"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11131.208527786137,
+        "area": 5488.877209088174,
+        "centroid": [
+         -0.16007894190105013,
+         22.419960529049476,
+         2.5
+        ],
+        "bbox_min": [
+         -25,
+         0,
+         0
+        ],
+        "bbox_max": [
+         25,
+         45,
+         5
+        ],
+        "faces": 7,
+        "edges": 14,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "face_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2083.5504778401373,
+        "loops": 6,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "face",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10417.752389200685,
+        "area": 5726.3044480192575,
+        "centroid": [
+         2.160734199462681e-15,
+         2.4999999999999996,
+         29.999999999999996
+        ],
+        "bbox_min": [
+         -25,
+         0,
+         5
+        ],
+        "bbox_max": [
+         25,
+         5,
+         55
+        ],
+        "faces": 11,
+        "edges": 22,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 10,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "0dc1a9764e45533b19f47437fe4a55315a5c71de9fbf755c2d8a504f14bdde41",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "nema17_l_bracket",
+    "status": "ok",
+    "features": [
+     {
+      "part": "bracket",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2192.50492744849,
+        "loops": 3,
+        "outer_curves": [
+         "back",
+         "front",
+         "left",
+         "right"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10962.524637242448,
+        "area": 5525.076210439162,
+        "centroid": [
+         7.15564348757962e-16,
+         22.30332402507385,
+         2.5000000000000004
+        ],
+        "bbox_min": [
+         -25,
+         0,
+         0
+        ],
+        "bbox_max": [
+         25,
+         45,
+         5
+        ],
+        "faces": 8,
+        "edges": 16,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "face_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2075.9239475142826,
+        "loops": 6,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "bracket",
+      "feature": "face",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10379.61973757141,
+        "area": 5732.414217411958,
+        "centroid": [
+         6.352676451128387e-16,
+         2.5,
+         29.999999999999996
+        ],
+        "bbox_min": [
+         -25,
+         0,
+         5
+        ],
+        "bbox_max": [
+         25,
+         5,
+         55
+        ],
+        "faces": 11,
+        "edges": 22,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 10,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

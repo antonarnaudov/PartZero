@@ -1,0 +1,66 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-knob-taller",
+  "tier": "T4",
+  "title": "Edit: make the knob taller",
+  "prompt": "Make the knob 5 mm taller. Keep the shaft hole depth and the chamfer size the same.",
+  "context": "t4-knob-taller.context.cad.ts",
+  "process": "fdm",
+  "tags": ["edit", "knob", "revolve"],
+  "requires": ["ir/0", "feature/revolve"],
+  "reference": "t4-knob-taller.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "size",
+      "description": "17 mm tall now, still 25 mm diameter",
+      "check": "bbox_sorted",
+      "approx": [17, 25, 25],
+      "abs": 0.05
+    },
+    {
+      "id": "bottom_kept",
+      "description": "The bottom (shaft side) stays where it was",
+      "check": "bbox_min",
+      "approx": "$context",
+      "abs": 0.001
+    },
+    {
+      "id": "faces_kept",
+      "description": "Same faces as before: chamfer, bore and flats all kept",
+      "check": "face_count",
+      "eq": "$context"
+    },
+    {
+      "id": "chamfer_kept",
+      "description": "The chamfer is still one conical face",
+      "check": "face_count",
+      "type": "cone",
+      "eq": 1
+    },
+    {
+      "id": "same_features",
+      "description": "Same features as before",
+      "check": "feature_names",
+      "eq": "$context"
+    },
+    {
+      "id": "revolve_kept",
+      "description": "Only the profile changed; the revolve is untouched",
+      "check": "changed_features",
+      "eq": 0
+    },
+    {
+      "id": "volume",
+      "description": "Volume π·12.5²·17 − Ø6×8 bore − 1.5 mm chamfer ≈ 8033.8 mm³ ±0.3% (bore depth and chamfer unchanged)",
+      "check": "volume",
+      "approx": 8033.84,
+      "rel": 0.003
+    }
+  ]
+}

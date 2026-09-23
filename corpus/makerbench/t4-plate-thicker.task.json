@@ -1,0 +1,70 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-plate-thicker",
+  "tier": "T4",
+  "title": "Edit: make the plate 10 mm thicker",
+  "prompt": "Make the plate 10 mm thicker.",
+  "context": "t4-plate-thicker.context.cad.ts",
+  "process": "any",
+  "tags": ["edit", "thickness", "mounting-plate"],
+  "requires": ["ir/0"],
+  "reference": "t4-plate-thicker.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "thickness",
+      "description": "Now 15 mm thick (5 + 10)",
+      "check": "bbox_size",
+      "axis": "z",
+      "approx": 15,
+      "abs": 0.01
+    },
+    {
+      "id": "width_kept",
+      "description": "Outline unchanged: 60 mm",
+      "check": "bbox_size",
+      "axis": "x",
+      "approx": "$context",
+      "abs": 0.001
+    },
+    {
+      "id": "depth_kept",
+      "description": "Outline unchanged: 40 mm",
+      "check": "bbox_size",
+      "axis": "y",
+      "approx": "$context",
+      "abs": 0.001
+    },
+    {
+      "id": "base_kept",
+      "description": "Still sits on the same base plane (grows away from it, not both ways)",
+      "check": "bbox_min",
+      "approx": "$context",
+      "abs": 0.001
+    },
+    {
+      "id": "holes_kept",
+      "description": "Same three holes",
+      "check": "inner_loops",
+      "eq": "$context"
+    },
+    {
+      "id": "sketch_kept",
+      "description": "Sketch untouched",
+      "check": "changed_curves",
+      "eq": 0
+    },
+    {
+      "id": "volume",
+      "description": "Volume exactly 3x the original (holes still go all the way through) ≈ 33847 mm³",
+      "check": "volume",
+      "approx": 33847.38,
+      "rel": 0.001
+    }
+  ]
+}

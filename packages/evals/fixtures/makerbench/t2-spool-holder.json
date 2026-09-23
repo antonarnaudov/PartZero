@@ -1,0 +1,507 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t2-spool-holder",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "c56c2902f339a657fece27acf82b1bd24cf57f296515351af3aae1d39c0eebae",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "spool_holder",
+    "status": "ok",
+    "features": [
+     {
+      "part": "holder",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3536.382748764807,
+        "loops": 5,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "holder",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 17681.91374382403,
+        "area": 8555.508836352696,
+        "centroid": [
+         -1.6716843117699543e-16,
+         -1.1894676833747752e-16,
+         2.5
+        ],
+        "bbox_min": [
+         -30,
+         -30,
+         0
+        ],
+        "bbox_max": [
+         30,
+         30,
+         5
+        ],
+        "faces": 10,
+        "edges": 20,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "holder",
+      "feature": "spindle_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1198,
+        "loops": 1,
+        "outer_curves": [
+         "axis_edge",
+         "chamfer",
+         "foot",
+         "side",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "holder",
+      "feature": "spindle",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 56368.54978581047,
+        "area": 8837.915759451364,
+        "centroid": [
+         2.807453424113564e-15,
+         1.573102785717272e-16,
+         44.87434049193728
+        ],
+        "bbox_min": [
+         -15,
+         -15,
+         5
+        ],
+        "bbox_max": [
+         15,
+         15,
+         85
+        ],
+        "faces": 4,
+        "edges": 3,
+        "face_types": {
+         "cone": 1,
+         "cylinder": 1,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 3
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "b1663afc52de23fcddb36f80f53baf219d2763441b81dd142110973e0259e5de",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "spool_holder",
+    "status": "ok",
+    "features": [
+     {
+      "part": "holder",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4279.023126005416,
+        "loops": 5,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "holder",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 23534.627193029788,
+        "area": 10352.165691986764,
+        "centroid": [
+         1.3139286042923986e-15,
+         3.848104991359327e-17,
+         2.7500000000000004
+        ],
+        "bbox_min": [
+         -33,
+         -33,
+         0
+        ],
+        "bbox_max": [
+         33,
+         33,
+         5.5
+        ],
+        "faces": 10,
+        "edges": 20,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "holder",
+      "feature": "spindle_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1449.5800000000004,
+        "loops": 1,
+        "outer_curves": [
+         "axis_edge",
+         "chamfer",
+         "foot",
+         "side",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "holder",
+      "feature": "spindle",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 75026.53976491376,
+        "area": 10693.878068936148,
+        "centroid": [
+         -2.9093535315563236e-16,
+         -1.872314271158847e-17,
+         49.36177454113101
+        ],
+        "bbox_min": [
+         -16.5,
+         -16.5,
+         5.5
+        ],
+        "bbox_max": [
+         16.5,
+         16.5,
+         93.50000000000001
+        ],
+        "faces": 4,
+        "edges": 3,
+        "face_types": {
+         "cone": 1,
+         "cylinder": 1,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 3
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "61079589e0dbcb4b2a5985f45aacb070c8268396bf8fd8f69ff0b1014b2e6ac8",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "spool_holder",
+    "status": "ok",
+    "features": [
+     {
+      "part": "holder",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3552.287061573605,
+        "loops": 4,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "holder",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 17761.43530786802,
+        "area": 8516.631627264522,
+        "centroid": [
+         0.11193009273406612,
+         0.11193009273406596,
+         2.5
+        ],
+        "bbox_min": [
+         -30,
+         -30,
+         0
+        ],
+        "bbox_max": [
+         30,
+         30,
+         5
+        ],
+        "faces": 9,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "holder",
+      "feature": "spindle_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1198,
+        "loops": 1,
+        "outer_curves": [
+         "axis_edge",
+         "chamfer",
+         "foot",
+         "side",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "holder",
+      "feature": "spindle",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 56368.54978581047,
+        "area": 8837.915759451364,
+        "centroid": [
+         2.807453424113564e-15,
+         1.573102785717272e-16,
+         44.87434049193728
+        ],
+        "bbox_min": [
+         -15,
+         -15,
+         5
+        ],
+        "bbox_max": [
+         15,
+         15,
+         85
+        ],
+        "faces": 4,
+        "edges": 3,
+        "face_types": {
+         "cone": 1,
+         "cylinder": 1,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 3
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "1be0823a2ae60ce92f7e3060f8f9df6b0ee6e108a7d845caf5db019f325f1761",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "spool_holder",
+    "status": "ok",
+    "features": [
+     {
+      "part": "holder",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3523.023126005416,
+        "loops": 5,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "holder",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 17615.115630027078,
+        "area": 8557.06392471622,
+        "centroid": [
+         1.4327739030663383e-15,
+         -1.936180950089647e-17,
+         2.5000000000000004
+        ],
+        "bbox_min": [
+         -30,
+         -30,
+         0
+        ],
+        "bbox_max": [
+         30,
+         30,
+         5
+        ],
+        "faces": 10,
+        "edges": 20,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "holder",
+      "feature": "spindle_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1198,
+        "loops": 1,
+        "outer_curves": [
+         "axis_edge",
+         "chamfer",
+         "foot",
+         "side",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "holder",
+      "feature": "spindle",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 56368.54978581047,
+        "area": 8837.915759451364,
+        "centroid": [
+         2.807453424113564e-15,
+         1.573102785717272e-16,
+         44.87434049193728
+        ],
+        "bbox_min": [
+         -15,
+         -15,
+         5
+        ],
+        "bbox_max": [
+         15,
+         15,
+         85
+        ],
+        "faces": 4,
+        "edges": 3,
+        "face_types": {
+         "cone": 1,
+         "cylinder": 1,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 3
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

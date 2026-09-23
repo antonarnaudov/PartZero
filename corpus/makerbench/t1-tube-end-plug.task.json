@@ -1,0 +1,54 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-tube-end-plug",
+  "tier": "T1",
+  "title": "Round tube end plug",
+  "prompt": "End plug for 25 mm round tube with a 1.5 mm wall: a 10 mm long spigot that goes inside (21.8 mm diameter, a bit under the 22 mm ID), a 3 mm thick cap flush with the tube's 25 mm outside, and a gently domed top rising 3 mm above the cap edge (spherical).",
+  "process": "fdm",
+  "tags": ["plug", "tube", "revolve"],
+  "requires": ["ir/0", "feature/revolve", "sketch/arc"],
+  "reference": "t1-tube-end-plug.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "25 mm diameter, 16 mm tall overall, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [16, 25, 25],
+      "abs": 0.1
+    },
+    {
+      "id": "dome",
+      "description": "The domed top is one spherical face",
+      "check": "face_count",
+      "type": "sphere",
+      "eq": 1
+    },
+    {
+      "id": "round_faces",
+      "description": "Two cylindrical faces: spigot and cap edge",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 2
+    },
+    {
+      "id": "volume",
+      "description": "Volume spigot + cap + 3 mm spherical cap ≈ 5955.6 mm³ ±1%",
+      "check": "volume",
+      "approx": 5955.6,
+      "rel": 0.01
+    }
+  ],
+  "notes": "Dome sphere radius 27.54 mm (through the cap edge and the apex, centred on the axis)."
+}

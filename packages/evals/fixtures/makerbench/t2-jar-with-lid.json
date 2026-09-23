@@ -1,0 +1,263 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t2-jar-with-lid",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "77dc0136ef67e8946caf56ee8ec0efa5e2018b104a11ff6f881f6e4250746557",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "jar_with_lid",
+    "status": "ok",
+    "features": [
+     {
+      "part": "jar",
+      "feature": "jar_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 126,
+        "loops": 1,
+        "outer_curves": [
+         "axis_edge",
+         "bottom",
+         "floor",
+         "inner",
+         "outer",
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "jar",
+      "feature": "jar",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 15387.520817282817,
+        "area": 15701.680082641784,
+        "centroid": [
+         -7.0927191916562166e-15,
+         -1.0056791002920601e-15,
+         15.895875867701086
+        ],
+        "bbox_min": [
+         -25,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         25,
+         25,
+         40
+        ],
+        "faces": 5,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 57.499999999999986,
+        "loops": 1,
+        "outer_curves": [
+         "axis_edge",
+         "bottom",
+         "edge",
+         "plug_inner",
+         "plug_outer",
+         "plug_top",
+         "top_inner",
+         "top_outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 4966.072587162065,
+        "area": 5626.59244257932,
+        "centroid": [
+         59.99999999999997,
+         3.036183340548082e-16,
+         1.7323264273287966
+        ],
+        "bbox_min": [
+         35,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         85,
+         25,
+         7
+        ],
+        "faces": 7,
+        "edges": 6,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 4
+        },
+        "edge_types": {
+         "circle": 6
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "059da954e9cd2855a8a4df0aad087b59af09575672433d62363e575f6e82daeb",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "jar_with_lid",
+    "status": "ok",
+    "features": [
+     {
+      "part": "jar",
+      "feature": "jar_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 152.46000000000024,
+        "loops": 1,
+        "outer_curves": [
+         "axis_edge",
+         "bottom",
+         "floor",
+         "inner",
+         "outer",
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "jar",
+      "feature": "jar",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 20480.790207803453,
+        "area": 18999.032899996564,
+        "centroid": [
+         1.4210306419546623e-14,
+         1.35241297287415e-16,
+         17.485463454471212
+        ],
+        "bbox_min": [
+         -27.500000000000004,
+         -27.500000000000004,
+         0
+        ],
+        "bbox_max": [
+         27.500000000000004,
+         27.500000000000004,
+         44
+        ],
+        "faces": 5,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 69.575,
+        "loops": 1,
+        "outer_curves": [
+         "axis_edge",
+         "bottom",
+         "edge",
+         "plug_inner",
+         "plug_outer",
+         "plug_top",
+         "top_inner",
+         "top_outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 6609.842613512708,
+        "area": 6808.176855520982,
+        "centroid": [
+         66,
+         -1.9504567531488039e-16,
+         1.9055590700616765
+        ],
+        "bbox_min": [
+         38.499999999999986,
+         -27.500000000000014,
+         0
+        ],
+        "bbox_max": [
+         93.50000000000001,
+         27.500000000000014,
+         7.700000000000001
+        ],
+        "faces": 7,
+        "edges": 6,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 4
+        },
+        "edge_types": {
+         "circle": 6
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

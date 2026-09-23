@@ -1,0 +1,347 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t4-lid-add-jack-hole",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "b936a9ef2d41d04bfe2b8c10237b7e54b4fe02ea4fd7fb2b9253a44c17c61f63",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "box_lid",
+    "status": "ok",
+    "features": [
+     {
+      "part": "lid",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5313.417706467066,
+        "loops": 6,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10626.83541293413,
+        "area": 11362.552215569207,
+        "centroid": [
+         45.28380311073376,
+         30,
+         1.0000000000000002
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         90,
+         60,
+         2
+        ],
+        "faces": 11,
+        "edges": 22,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 10,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "context",
+   "ir_sha256": "9dd180afa2e8420df15b3664870f00549ffb4859b3fe5ccc6b3cab82a892e3a9",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "box_lid",
+    "status": "ok",
+    "features": [
+     {
+      "part": "lid",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5363.683188924502,
+        "loops": 5,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10727.366377849004,
+        "area": 11412.817698026643,
+        "centroid": [
+         45,
+         29.999999999999996,
+         1
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         90,
+         60,
+         2
+        ],
+        "faces": 10,
+        "edges": 20,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "fb79ae7ae8ba507fd6522561eda97478bd1defd3281cebe930de02b4a7081f4b",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "box_lid",
+    "status": "ok",
+    "features": [
+     {
+      "part": "lid",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 6429.2354248251495,
+        "loops": 6,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 14144.317934615334,
+        "area": 13748.688180838746,
+        "centroid": [
+         49.81218342180711,
+         33,
+         1.0999999999999999
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         99.00000000000001,
+         66,
+         2.2
+        ],
+        "faces": 11,
+        "edges": 22,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 10,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "2eaa4580d96b11458fbd3e0847e565c636f927f14bf8c1f33e73ef5e1205e58a",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "box_lid",
+    "status": "ok",
+    "features": [
+     {
+      "part": "lid",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5322.49690923594,
+        "loops": 5,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10644.993818471881,
+        "area": 11359.347791062546,
+        "centroid": [
+         45.215086336824655,
+         29.957354588815626,
+         0.9999999999999998
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         90,
+         60,
+         2
+        ],
+        "faces": 10,
+        "edges": 20,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "f5f42a79f03258e606fdf8c108d474158bc283a2d790d5e73241d8462f550615",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "box_lid",
+    "status": "ok",
+    "features": [
+     {
+      "part": "lid",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5305.791176141211,
+        "loops": 6,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10611.58235228242,
+        "area": 11355.84428693527,
+        "centroid": [
+         45.284211048581035,
+         30,
+         1.0000000000000002
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         90,
+         60,
+         2
+        ],
+        "faces": 11,
+        "edges": 22,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 10,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,463 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t2-enclosure-with-lid",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "c7b60ffa392d04a58fdb443cef537d3d8e692660a1c93ba43d97d149c26ecb09",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "enclosure_with_lid",
+    "status": "ok",
+    "features": [
+     {
+      "part": "box",
+      "feature": "floor_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5400,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "floor",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10800,
+        "area": 11400,
+        "centroid": [
+         45,
+         30,
+         1
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         90,
+         60,
+         2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "wall_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 584,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "walls",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 16352.000000000022,
+        "area": 17520,
+        "centroid": [
+         44.99999999999998,
+         29.999999999999996,
+         16
+        ],
+        "bbox_min": [
+         0,
+         0,
+         2
+        ],
+        "bbox_max": [
+         90,
+         60,
+         30
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5400,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid_plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10800,
+        "area": 11400,
+        "centroid": [
+         145,
+         30,
+         1
+        ],
+        "bbox_min": [
+         100,
+         0,
+         0
+        ],
+        "bbox_max": [
+         190,
+         60,
+         2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lip_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 333.1200000000008,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lip",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1332.4800000000037,
+        "area": 2887.0399999999977,
+        "centroid": [
+         144.99999999999974,
+         29.999999999999968,
+         4
+        ],
+        "bbox_min": [
+         102.2,
+         2.2,
+         2
+        ],
+        "bbox_max": [
+         187.8,
+         57.8,
+         6
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "76d7199c7e7782cef539bd194d71446620b30d446bde0270f5fe66b1a0d3edbf",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "enclosure_with_lid",
+    "status": "ok",
+    "features": [
+     {
+      "part": "box",
+      "feature": "floor_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 6534.000000000001,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "floor",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 14374.800000000001,
+        "area": 13794,
+        "centroid": [
+         49.500000000000014,
+         33,
+         1.1
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         99.00000000000001,
+         66,
+         2.2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "wall_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 706.6400000000003,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "walls",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 21764.512000000006,
+        "area": 21199.2,
+        "centroid": [
+         49.5,
+         32.99999999999988,
+         17.60000000000001
+        ],
+        "bbox_min": [
+         0,
+         0,
+         2.2
+        ],
+        "bbox_max": [
+         99.00000000000001,
+         66,
+         33.00000000000001
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 6534.000000000002,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid_plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 14374.800000000001,
+        "area": 13794,
+        "centroid": [
+         159.50000000000003,
+         33,
+         1.1
+        ],
+        "bbox_min": [
+         110.00000000000001,
+         0,
+         0
+        ],
+        "bbox_max": [
+         209.00000000000003,
+         66,
+         2.2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lip_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 403.0751999999993,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lip",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1773.5308800000034,
+        "area": 3493.318400000003,
+        "centroid": [
+         159.50000000000048,
+         33.000000000000014,
+         4.400000000000004
+        ],
+        "bbox_min": [
+         112.42000000000002,
+         2.4200000000000004,
+         2.2
+        ],
+        "bbox_max": [
+         206.58000000000004,
+         63.580000000000005,
+         6.6000000000000005
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

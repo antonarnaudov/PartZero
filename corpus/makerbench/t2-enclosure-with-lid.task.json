@@ -1,0 +1,68 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-enclosure-with-lid",
+  "tier": "T2",
+  "title": "Project box with press-fit lid",
+  "prompt": "Two-part project box, printed side by side. The box is 90 x 60 mm outside and 30 mm tall, open at the top, with a 2 mm floor and 2 mm walls. The lid is a flat 90 x 60 x 2 mm plate with a 4 mm tall, 1.2 mm thick locating lip on top that fits inside the box with 0.2 mm clearance all round (so the lip is 85.6 x 55.6 outside); I'll flip it over to use it. Put the box's corner at the origin and the lid 10 mm to the right (+X) of the box, everything sitting on Z = 0.",
+  "process": "fdm",
+  "tags": ["enclosure", "lid", "multi-body"],
+  "requires": ["ir/0", "plane/frame"],
+  "reference": "t2-enclosure-with-lid.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Box and lid are solids; floor, walls, lid plate and lip may be separate bodies (no booleans in IR v0)",
+      "check": "body_count",
+      "gte": 3
+    },
+    {
+      "id": "layout",
+      "description": "Side-by-side layout: 190 x 60 mm footprint, 30 mm tall",
+      "check": "bbox_size",
+      "approx": [190, 60, 30],
+      "abs": 0.3
+    },
+    {
+      "id": "origin",
+      "description": "Box corner at the origin, everything on Z = 0",
+      "check": "bbox_min",
+      "approx": [0, 0, 0],
+      "abs": 0.05
+    },
+    {
+      "id": "walls",
+      "description": "The box walls: a 90 x 60 mm body reaching the 30 mm rim",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_max", "axis": "z", "approx": 30, "abs": 0.1},
+        {"check": "bbox_size", "axis": "x", "approx": 90, "abs": 0.1},
+        {"check": "bbox_size", "axis": "y", "approx": 60, "abs": 0.1}
+      ],
+      "gte": 1
+    },
+    {
+      "id": "lip",
+      "description": "The locating lip: 85.6 x 55.6 x 4 mm, centred on the lid and standing on its 2 mm plate",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_sorted", "approx": [4, 55.6, 85.6], "abs": 0.1},
+        {"check": "bbox_min", "approx": [102.2, 2.2, 2], "abs": 0.1}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "volume",
+      "description": "Total volume ≈ 39284 mm³ ±1% (2 mm floor and walls, 1.2 mm lip)",
+      "check": "volume",
+      "approx": 39284.48,
+      "rel": 0.01
+    }
+  ],
+  "notes": "Floor 10800 + walls 16352 + lid 10800 + lip 1332.48 mm³."
+}

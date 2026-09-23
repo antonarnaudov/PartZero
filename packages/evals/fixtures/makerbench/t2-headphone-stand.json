@@ -1,0 +1,355 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t2-headphone-stand",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "3950bd750acc1f6129f3c9c530a8f770d28d878ccd486c5b40368955219151f3",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "headphone_stand",
+    "status": "ok",
+    "features": [
+     {
+      "part": "stand",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 11309.733552923255,
+        "loops": 1,
+        "outer_curves": [
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "stand",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 67858.40131753954,
+        "area": 24881.413816431166,
+        "centroid": [
+         8.577812000180782e-16,
+         2.145982469326115e-15,
+         3.0000000000000004
+        ],
+        "bbox_min": [
+         -60,
+         -60,
+         0
+        ],
+        "bbox_max": [
+         60,
+         60,
+         6
+        ],
+        "faces": 3,
+        "edges": 2,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 2
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "stand",
+      "feature": "post_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 600,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "stand",
+      "feature": "post",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 150000,
+        "area": 26200,
+        "centroid": [
+         1.4220608493632354e-17,
+         -6.85652955768668e-17,
+         131
+        ],
+        "bbox_min": [
+         -15,
+         -10,
+         6
+        ],
+        "bbox_max": [
+         15,
+         10,
+         256
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "stand",
+      "feature": "saddle_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2806.858347057703,
+        "loops": 1,
+        "outer_curves": [
+         "end_l",
+         "end_r",
+         "side_a",
+         "side_b"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "stand",
+      "feature": "saddle",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 22454.86677646163,
+        "area": 7487.698930976957,
+        "centroid": [
+         1.6201293213216627e-16,
+         -3.918078586915622e-16,
+         260
+        ],
+        "bbox_min": [
+         -50,
+         -15,
+         256
+        ],
+        "bbox_max": [
+         50,
+         15,
+         264
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 4
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 8
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "c8f38060476cacc1ccb2d690c9d809cef2ece91342762a1dfab5b47fc3b81080",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "headphone_stand",
+    "status": "ok",
+    "features": [
+     {
+      "part": "stand",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 13684.77759903714,
+        "loops": 1,
+        "outer_curves": [
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "stand",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 90319.53215364514,
+        "area": 30106.510717881716,
+        "centroid": [
+         -5.15570969206959e-15,
+         3.4845326055807146e-15,
+         3.3
+        ],
+        "bbox_min": [
+         -66,
+         -66,
+         0
+        ],
+        "bbox_max": [
+         66,
+         66,
+         6.6000000000000005
+        ],
+        "faces": 3,
+        "edges": 2,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 2
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "stand",
+      "feature": "post_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 726,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "stand",
+      "feature": "post",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 199650,
+        "area": 31702,
+        "centroid": [
+         6.500968797388947e-17,
+         -2.435705291909281e-17,
+         144.10000000000002
+        ],
+        "bbox_min": [
+         -16.5,
+         -11,
+         6.6000000000000005
+        ],
+        "bbox_max": [
+         16.5,
+         11,
+         281.6
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "stand",
+      "feature": "saddle_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3396.2985999398206,
+        "loops": 1,
+        "outer_curves": [
+         "end_l",
+         "end_r",
+         "side_a",
+         "side_b"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "stand",
+      "feature": "saddle",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 29887.427679470446,
+        "area": 9060.11570648212,
+        "centroid": [
+         1.1259351030973231e-15,
+         6.416009644325297e-17,
+         286
+        ],
+        "bbox_min": [
+         -55,
+         -16.5,
+         281.6
+        ],
+        "bbox_max": [
+         55,
+         16.5,
+         290.40000000000003
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 4
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 8
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

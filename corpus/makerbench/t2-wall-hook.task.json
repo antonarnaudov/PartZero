@@ -1,0 +1,74 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-wall-hook",
+  "tier": "T2",
+  "title": "Wall hook with back plate",
+  "prompt": "Wall hook. Back plate: 30 mm wide x 60 mm tall x 4 mm thick, in the XZ plane with its back on Y = 0, bottom edge on Z = 0, centred on X; two 4.5 mm screw holes on the vertical centreline at 10 mm and 50 mm height. Hook arm: 10 mm wide, centred on the plate. It sticks straight out from the front of the plate (8 mm tall, bottom at 20 mm height) to 38 mm from the wall, with the outside bottom corner rounded (R8), and turns up into a lip 8 mm thick that rises to 36 mm height.",
+  "process": "fdm",
+  "tags": ["hook", "wall-mount", "multi-body"],
+  "requires": ["ir/0", "sketch/arc"],
+  "reference": "t2-wall-hook.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Two bodies: back plate and arm",
+      "check": "body_count",
+      "eq": 2
+    },
+    {
+      "id": "size",
+      "description": "30 wide, sticks out 38 mm from the wall, 60 tall",
+      "check": "bbox_size",
+      "approx": [30, 38, 60],
+      "abs": 0.2
+    },
+    {
+      "id": "placement",
+      "description": "Back on Y = 0, centred on X, bottom on Z = 0",
+      "check": "bbox_min",
+      "approx": [-15, 0, 0],
+      "abs": 0.1
+    },
+    {
+      "id": "screw_holes",
+      "description": "Screw holes through the plate on the centreline at 10 and 50 mm height",
+      "check": "hole_positions",
+      "diameter": [4.3, 4.6],
+      "points": [[0, 0, 10], [0, 0, 50]],
+      "tol": 0.1
+    },
+    {
+      "id": "plate",
+      "description": "The back plate: 30 x 60 x 4 mm with its two holes",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_sorted", "approx": [4, 30, 60], "abs": 0.1},
+        {"check": "face_count", "type": "cylinder", "eq": 2}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "arm",
+      "description": "The arm: 10 wide, from the plate front (Y = 4) to Y = 38, Z from 20 to 36",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_min", "approx": [-5, 4, 20], "abs": 0.1},
+        {"check": "bbox_max", "approx": [5, 38, 36], "abs": 0.1}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "volume",
+      "description": "Total volume ≈ 10295 mm³ ±1%",
+      "check": "volume",
+      "approx": 10295.42,
+      "rel": 0.01
+    }
+  ]
+}

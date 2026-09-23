@@ -1,0 +1,149 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t5-phone-stand",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "8ebd9ad6f79697c49116771e9370b5bcbae956d7a02196872a586bccdbe4805e",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "phone_stand",
+    "status": "ok",
+    "features": [
+     {
+      "part": "stand",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3000,
+        "loops": 1,
+        "outer_curves": [
+         "back_slope",
+         "base_back",
+         "base_bottom",
+         "front",
+         "lip_inner",
+         "lip_top",
+         "rest_face",
+         "rest_top",
+         "slot_floor"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "stand",
+      "feature": "stand",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 225000.00000000003,
+        "area": 27330.919088650957,
+        "centroid": [
+         49.599999999999994,
+         -37.49999999999999,
+         23.160000000000004
+        ],
+        "bbox_min": [
+         0,
+         -75,
+         0
+        ],
+        "bbox_max": [
+         90,
+         0,
+         66
+        ],
+        "faces": 11,
+        "edges": 27,
+        "face_types": {
+         "plane": 11
+        },
+        "edge_types": {
+         "line": 27
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "f432c1050b28062baab5c80162d843effb2537a658f962ca7209ee51b007592e",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "phone_stand",
+    "status": "ok",
+    "features": [
+     {
+      "part": "stand",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3630,
+        "loops": 1,
+        "outer_curves": [
+         "back_slope",
+         "base_back",
+         "base_bottom",
+         "front",
+         "lip_inner",
+         "lip_top",
+         "rest_face",
+         "rest_top",
+         "slot_floor"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "stand",
+      "feature": "stand",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 299475.00000000006,
+        "area": 33070.41209726766,
+        "centroid": [
+         54.56000000000001,
+         -41.25000000000001,
+         25.476000000000013
+        ],
+        "bbox_min": [
+         0,
+         -82.5,
+         0
+        ],
+        "bbox_max": [
+         99.00000000000001,
+         0,
+         72.60000000000001
+        ],
+        "faces": 11,
+        "edges": 27,
+        "face_types": {
+         "plane": 11
+        },
+        "edge_types": {
+         "line": 27
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

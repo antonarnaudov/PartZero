@@ -1,0 +1,51 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t5-shelf-bracket",
+  "tier": "T5",
+  "title": "Under-specified: shelf bracket",
+  "prompt": "I need a bracket to hold up a small shelf.",
+  "process": "any",
+  "tags": ["bracket", "shelf", "underspecified"],
+  "requires": ["ir/0"],
+  "reference": "t5-shelf-bracket.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "status_ok",
+      "description": "The model evaluates without feature errors",
+      "check": "status",
+      "eq": "ok"
+    },
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "One to four bodies",
+      "check": "body_count",
+      "between": [1, 4]
+    },
+    {
+      "id": "plausible_size",
+      "description": "Bracket-sized: 3–40 mm thick, legs 40–350 mm",
+      "check": "bbox_sorted",
+      "between": [[3, 40], [40, 300], [40, 350]]
+    },
+    {
+      "id": "plausible_material",
+      "description": "A plausible amount of material (5 to 1500 cm³)",
+      "check": "volume",
+      "between": [5000, 1500000]
+    }
+  ],
+  "clarify": {
+    "questions": [
+      "How deep is the shelf and roughly how much weight will it carry?",
+      "What will it be screwed into (wood, drywall with anchors, masonry), and with which screws?",
+      "Do you want a plain L bracket or a braced/triangular one, and how will you make it (3D print, laser, CNC)?"
+    ],
+    "assumptions": "A ~150 mm deep shelf with a light load (books or plants up to ~5 kg), printed flat in PETG: a triangular bracket 150 mm along the wall, 120 mm along the shelf, 15 mm thick with 15 mm arms; screw holes drilled on install."
+  }
+}

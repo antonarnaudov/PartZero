@@ -1,0 +1,51 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t5-phone-stand",
+  "tier": "T5",
+  "title": "Under-specified: phone stand",
+  "prompt": "make me a phone stand",
+  "process": "fdm",
+  "tags": ["stand", "phone", "underspecified"],
+  "requires": ["ir/0"],
+  "reference": "t5-phone-stand.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "status_ok",
+      "description": "The model evaluates without feature errors",
+      "check": "status",
+      "eq": "ok"
+    },
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "One to five bodies",
+      "check": "body_count",
+      "between": [1, 5]
+    },
+    {
+      "id": "plausible_size",
+      "description": "Desk-stand-sized: 20–160 x 40–200 x 50–220 mm",
+      "check": "bbox_sorted",
+      "between": [[20, 160], [40, 200], [50, 220]]
+    },
+    {
+      "id": "plausible_material",
+      "description": "A plausible amount of material (5 to 800 cm³)",
+      "check": "volume",
+      "between": [5000, 800000]
+    }
+  ],
+  "clarify": {
+    "questions": [
+      "Which phone is it (or how big), and how thick is it with its case?",
+      "Portrait, landscape or both, and at what viewing angle?",
+      "Should it leave room for a charging cable?"
+    ],
+    "assumptions": "A typical 6.5\" phone in a case (~12 mm thick), portrait, leaning back ~23°: a one-piece side profile 90 mm deep and 66 mm tall with a 12 mm slot, extruded 75 mm."
+  }
+}

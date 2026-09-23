@@ -1,0 +1,431 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t2-parts-tray",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "6a654131f8ec381c46a37fda3d97cced28a819a2ffcc9ea89adabb5da829c959",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "parts_tray",
+    "status": "ok",
+    "features": [
+     {
+      "part": "tray",
+      "feature": "floor_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 10240,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "tray",
+      "feature": "floor",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 20479.999999999996,
+        "area": 21312,
+        "centroid": [
+         64.00000000000001,
+         39.99999999999999,
+         1
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         128,
+         80,
+         2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "tray",
+      "feature": "wall_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 816,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "tray",
+      "feature": "walls",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 18767.999999999956,
+        "area": 20400,
+        "centroid": [
+         64.0000000000001,
+         39.99999999999995,
+         13.500000000000004
+        ],
+        "bbox_min": [
+         0,
+         0,
+         2
+        ],
+        "bbox_max": [
+         128,
+         80,
+         25
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "tray",
+      "feature": "divider_outlines",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 152,
+        "loops": 1,
+        "outer_curves": [
+         "d1_bottom",
+         "d1_left",
+         "d1_right",
+         "d1_top"
+        ]
+       },
+       {
+        "area": 152,
+        "loops": 1,
+        "outer_curves": [
+         "d2_bottom",
+         "d2_left",
+         "d2_right",
+         "d2_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "tray",
+      "feature": "dividers",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 3496,
+        "area": 3892,
+        "centroid": [
+         43,
+         40,
+         13.499999999999998
+        ],
+        "bbox_min": [
+         42,
+         2,
+         2
+        ],
+        "bbox_max": [
+         44,
+         78,
+         25
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 3496,
+        "area": 3892,
+        "centroid": [
+         85,
+         40,
+         13.499999999999998
+        ],
+        "bbox_min": [
+         84,
+         2,
+         2
+        ],
+        "bbox_max": [
+         86,
+         78,
+         25
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "73075dda5595ed0d8bdcf4174e3946c45ef965e8633ddc8be18288fc1f709f62",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "parts_tray",
+    "status": "ok",
+    "features": [
+     {
+      "part": "tray",
+      "feature": "floor_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 12390.400000000001,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "tray",
+      "feature": "floor",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 27258.88,
+        "area": 25787.520000000004,
+        "centroid": [
+         70.39999999999999,
+         44,
+         1.1000000000000003
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         140.8,
+         88,
+         2.2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "tray",
+      "feature": "wall_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 987.359999999997,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "tray",
+      "feature": "walls",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 24980.20799999997,
+        "area": 24684.000000000007,
+        "centroid": [
+         70.39999999999993,
+         43.999999999999886,
+         14.849999999999966
+        ],
+        "bbox_min": [
+         0,
+         0,
+         2.2
+        ],
+        "bbox_max": [
+         140.8,
+         88,
+         27.5
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "tray",
+      "feature": "divider_outlines",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 183.9200000000003,
+        "loops": 1,
+        "outer_curves": [
+         "d1_bottom",
+         "d1_left",
+         "d1_right",
+         "d1_top"
+        ]
+       },
+       {
+        "area": 183.92000000000007,
+        "loops": 1,
+        "outer_curves": [
+         "d2_bottom",
+         "d2_left",
+         "d2_right",
+         "d2_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "tray",
+      "feature": "dividers",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 4653.176000000007,
+        "area": 4709.320000000001,
+        "centroid": [
+         47.3,
+         44.00000000000001,
+         14.849999999999998
+        ],
+        "bbox_min": [
+         46.2,
+         2.2,
+         2.2
+        ],
+        "bbox_max": [
+         48.400000000000006,
+         85.80000000000001,
+         27.5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 4653.176000000007,
+        "area": 4709.320000000001,
+        "centroid": [
+         93.5,
+         44.00000000000001,
+         14.849999999999998
+        ],
+        "bbox_min": [
+         92.4,
+         2.2,
+         2.2
+        ],
+        "bbox_max": [
+         94.60000000000001,
+         85.80000000000001,
+         27.5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}
