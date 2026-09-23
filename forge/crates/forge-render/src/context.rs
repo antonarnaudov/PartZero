@@ -1,4 +1,72 @@
-//! Device creation and capability probing.
+//! Device creation, capability probing and GPU error capture.
+//!
+//! ## GPU errors
+//! Every [`GpuContext`] installs **one** uncaptured-error handler on its device when it is
+//! created ([`GpuContext::from_device`], used by [`GpuContext::request`] and
+//! [`GpuContext::headless`]): WebGPU validation, out-of-memory and internal errors are
+//! recorded as [`GpuFault`]s in a list that every clone of the context — and every
+//! [`crate::Viewport`] created on it — shares, instead of reaching wgpu's default handler,
+//! which panics (and a panic aborts the whole WASM module, engine included).
+//!
+//! A recorded fault is sticky and is never silent: every result-producing entry point of
+//! the viewport (`render`, `set_bodies`, `begin_pick`/`finish_pick`, `pick_blocking`,
+//! `render_image`) returns it as an error (code `RENDER_GPU`) from then on, so no host can
+//! consume a frame, a pick or an image from a faulted device. On native and WebGL2
+//! (wgpu-core) errors are reported synchronously by the call that caused them; on
+//! browser WebGPU they arrive asynchronously, so the call after the fault reports it
+//! (hosts that must know at once await an error scope, as forge-wasm does on creation).
+
+use std::sync::{Arc, Mutex, MutexGuard};
+
+/// At most this many GPU faults are kept per device (the first one matters most).
+const MAX_GPU_FAULTS: usize = 16;
+
+/// An error the GPU device reported (see the module docs): the device cannot be trusted
+/// for rendering or picking any more.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+#[error("{kind} GPU error: {message}")]
+pub struct GpuFault {
+    /// `validation`, `out-of-memory`, `internal` or `device-lost`.
+    pub kind: &'static str,
+    /// The device's description of the error.
+    pub message: String,
+}
+
+impl GpuFault {
+    /// Stable machine-readable code (`RENDER_GPU`).
+    pub fn code(&self) -> &'static str {
+        "RENDER_GPU"
+    }
+
+    /// The fault for a wgpu error.
+    pub fn from_wgpu(e: &wgpu::Error) -> Self {
+        let kind = match e {
+            wgpu::Error::OutOfMemory { .. } => "out-of-memory",
+            wgpu::Error::Validation { .. } => "validation",
+            wgpu::Error::Internal { .. } => "internal",
+        };
+        GpuFault {
+            kind,
+            message: e.to_string(),
+        }
+    }
+}
+
+/// A device's fault list (shared by every clone of its [`GpuContext`]).
+type FaultSink = Arc<Mutex<Vec<GpuFault>>>;
+
+fn lock(sink: &FaultSink) -> MutexGuard<'_, Vec<GpuFault>> {
+    // Only `push` runs under the lock, so a poisoned lock still holds a valid list.
+    sink.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+fn record(sink: &FaultSink, fault: GpuFault) {
+    let mut v = lock(sink);
+    if v.len() < MAX_GPU_FAULTS {
+        v.push(fault);
+    }
+}
 
 /// Why the renderer could not start.
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
@@ -96,6 +164,8 @@ pub struct GpuContext {
     pub sample_count: u32,
     /// Largest 2D texture dimension.
     pub max_texture_dimension: u32,
+    /// GPU errors the device reported (see the module docs).
+    faults: FaultSink,
 }
 
 impl GpuContext {
@@ -116,8 +186,28 @@ impl GpuContext {
         }
     }
 
-    /// Wrap a device created from `adapter` with [`GpuContext::device_descriptor`].
+    /// Wrap a device created from `adapter` with [`GpuContext::device_descriptor`], and
+    /// route the device's uncaptured errors into the context's fault list (see the module
+    /// docs). Create **one** context per device: a device has a single uncaptured-error
+    /// handler, and wrapping it again moves the errors to the new context's list.
     pub fn from_device(adapter: &wgpu::Adapter, device: wgpu::Device, queue: wgpu::Queue) -> Self {
+        let faults: FaultSink = Arc::new(Mutex::new(Vec::new()));
+        let sink = Arc::clone(&faults);
+        device.on_uncaptured_error(Arc::new(move |e: wgpu::Error| {
+            record(&sink, GpuFault::from_wgpu(&e));
+        }));
+        // A lost device raises no further errors (WebGPU turns every call into a no-op),
+        // so the loss itself is a fault: nothing drawn or picked after it is real.
+        let lost = Arc::clone(&faults);
+        device.set_device_lost_callback(move |reason, message| {
+            record(
+                &lost,
+                GpuFault {
+                    kind: "device-lost",
+                    message: format!("{reason:?}: {message}"),
+                },
+            );
+        });
         let info = adapter.get_info();
         let msaa = |f: wgpu::TextureFormat| {
             adapter
@@ -138,7 +228,34 @@ impl GpuContext {
             adapter_name: info.name,
             sample_count,
             max_texture_dimension,
+            faults,
         }
+    }
+
+    /// The first GPU error the device reported since the context was created, or `None`
+    /// while the device is healthy. Faults are sticky: a device that raised one is not
+    /// trusted again.
+    pub fn gpu_fault(&self) -> Option<GpuFault> {
+        lock(&self.faults).first().cloned()
+    }
+
+    /// [`GpuContext::gpu_fault`] as a `Result`, for `?` in hosts.
+    pub fn check_gpu(&self) -> Result<(), GpuFault> {
+        self.gpu_fault().map_or(Ok(()), Err)
+    }
+
+    /// Every recorded GPU fault (at most 16), oldest first.
+    pub fn gpu_faults(&self) -> Vec<GpuFault> {
+        lock(&self.faults).clone()
+    }
+
+    /// Record an error the host captured itself (e.g. through an error scope, which
+    /// keeps it from the uncaptured-error handler) so that it is sticky like the others.
+    /// Returns the recorded fault.
+    pub fn record_gpu_error(&self, e: &wgpu::Error) -> GpuFault {
+        let f = GpuFault::from_wgpu(e);
+        record(&self.faults, f.clone());
+        f
     }
 
     /// Request a device from `adapter`.

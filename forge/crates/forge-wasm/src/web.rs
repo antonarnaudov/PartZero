@@ -8,8 +8,8 @@ use forge_render::camera::{Projection, StandardView};
 use forge_render::glam::DVec3;
 use forge_render::wgpu;
 use forge_render::{
-    EntityRef, GpuContext, PickHit, SceneBody, SceneEdge, SceneFace, SceneTables, SectionPlane,
-    Viewport,
+    BackendKind, EntityRef, GpuContext, GpuFault, PickHit, SceneBody, SceneEdge, SceneFace,
+    SceneTables, SectionPlane, Viewport,
 };
 use js_sys::{Array, Float32Array, Function, Object, Reflect, Uint8Array, Uint32Array};
 use wasm_bindgen::JsCast;
@@ -17,6 +17,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 
 use crate::engine;
+use crate::scopes::Scopes;
 
 #[wasm_bindgen(start)]
 pub fn start() {
@@ -31,6 +32,17 @@ fn js_error(code: &str, message: &str) -> JsValue {
 
 fn core_error(e: engine::CoreError) -> JsValue {
     js_error(&e.code, &e.message)
+}
+
+/// A GPU fault as a JS error (`code: "RENDER_GPU"`).
+fn gpu_error(f: &GpuFault) -> JsValue {
+    js_error(f.code(), &f.to_string())
+}
+
+/// The message of a JS error value (for folding it into another error's message).
+fn js_message(v: &JsValue) -> String {
+    v.dyn_ref::<js_sys::Error>()
+        .map_or_else(|| format!("{v:?}"), |e| String::from(e.message()))
 }
 
 fn set(o: &Object, k: &str, v: impl Into<JsValue>) {
@@ -221,6 +233,83 @@ fn has_webgpu() -> bool {
 
 type Made = (wgpu::Surface<'static>, wgpu::Adapter, GpuContext);
 
+/// Render a test quad offscreen and pick it back — uploads, pipelines, a frame and a
+/// read-back, what the viewport relies on — inside error scopes, **before** the canvas is
+/// committed to WebGPU (a canvas keeps its first context type).
+///
+/// Audit V3: Chromium's SwiftShader WebGPU adapter (unsafe flags) gave a device whose
+/// canvas stayed blank and whose every pick failed to map. Such a device fails here, so
+/// `auto` falls back to WebGL2 on the still-free canvas, and `webgpu` rejects with
+/// `RENDER_NO_ADAPTER` naming the failure.
+async fn webgpu_self_test(ctx: &GpuContext) -> Result<(), String> {
+    const SIZE: u32 = 16;
+    let format = wgpu::TextureFormat::Rgba8Unorm;
+    let scopes = Scopes::push(ctx);
+    let mut vp = Viewport::new(ctx, format, SIZE, SIZE, 1.0);
+    let quad = SceneBody {
+        name: "self-test".into(),
+        positions: vec![
+            [-1.0, -1.0, 0.0],
+            [1.0, -1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [-1.0, 1.0, 0.0],
+        ],
+        normals: vec![[0.0, 0.0, 1.0]; 4],
+        triangles: vec![[0, 1, 2], [0, 2, 3]],
+        faces: vec![SceneFace {
+            name: "quad".into(),
+            tri_start: 0,
+            tri_count: 2,
+        }],
+        edges: Vec::new(),
+        color: None,
+    };
+    let upload = vp.set_bodies(&[quad]);
+    vp.set_view(StandardView::Top);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("forge-render self-test"),
+        size: wgpu::Extent3d {
+            width: SIZE,
+            height: SIZE,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[],
+    });
+    let frame = vp.render(&target.create_view(&wgpu::TextureViewDescriptor::default()));
+    let centre = f64::from(SIZE) / 2.0;
+    let pick = vp.begin_pick(centre, centre);
+    let checked = scopes.pop();
+    upload.map_err(|e| e.to_string())?;
+    frame.map_err(|f| f.to_string())?;
+    let req = pick
+        .map_err(|f| f.to_string())?
+        .ok_or_else(|| "the pick window is empty".to_string())?;
+    let bytes = read_buffer(
+        &ctx.device,
+        req.buffer(),
+        "the self-test read-back",
+        SELF_TEST_TIMEOUT_MS,
+    )
+    .await
+    .map_err(|e| js_message(&e))?;
+    if let Some(f) = checked.await {
+        return Err(f.to_string());
+    }
+    match vp.finish_pick(&req, &bytes) {
+        Ok(Some(h)) if h.face.as_ref().is_some_and(|(_, n)| n == "quad") => Ok(()),
+        Ok(other) => Err(format!(
+            "the read-back pick returned {:?} instead of the test quad",
+            other.map(|h| h.id)
+        )),
+        Err(f) => Err(f.to_string()),
+    }
+}
+
 async fn init_webgpu(canvas: &Canvas) -> Result<Made, String> {
     let mut d = wgpu::InstanceDescriptor::new_without_display_handle();
     d.backends = wgpu::Backends::BROWSER_WEBGPU;
@@ -239,6 +328,9 @@ async fn init_webgpu(canvas: &Canvas) -> Result<Made, String> {
     let ctx = GpuContext::request(&adapter)
         .await
         .map_err(|e| e.to_string())?;
+    webgpu_self_test(&ctx)
+        .await
+        .map_err(|e| format!("device self-test failed: {e}"))?;
     // The canvas gets its "webgpu" context only now, so a failure above leaves it free
     // for the WebGL2 fallback.
     let surface = instance
@@ -309,17 +401,87 @@ impl Host {
         let device = self.viewport.context().device.clone();
         self.surface.configure(&device, &self.config);
     }
+
+    /// Acquire the canvas texture, render and present one frame. A frame whose encoding
+    /// raised a GPU fault is not presented; a faulted device draws nothing.
+    fn draw(&mut self) -> Result<(), GpuFault> {
+        self.viewport.check_gpu()?;
+        let frame = match self.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(t)
+            | wgpu::CurrentSurfaceTexture::Suboptimal(t) => t,
+            wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
+                self.reconfigure();
+                return self.viewport.check_gpu();
+            }
+            // Timeout / occluded: skip this frame. A validation error of the acquisition
+            // itself was recorded as a fault.
+            _ => return self.viewport.check_gpu(),
+        };
+        let view = frame
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        self.viewport.render(&view)?;
+        let queue = self.viewport.context().queue.clone();
+        queue.present(frame);
+        self.viewport.check_gpu()
+    }
+}
+
+/// The JS callback told about GPU faults found after a call returned (browser WebGPU
+/// reports errors asynchronously).
+type FaultCallback = Rc<RefCell<Option<Function>>>;
+
+fn notify_fault(callback: &FaultCallback, f: &GpuFault) {
+    // Cloned out first: the callback may re-register itself.
+    let cb = callback.borrow().clone();
+    if let Some(cb) = cb {
+        let _ = cb.call1(&JsValue::NULL, &gpu_error(f));
+    }
 }
 
 /// The viewport on a canvas (wrapped by `Viewport` in @aicad/forge-web).
 #[wasm_bindgen]
 pub struct RawViewport {
     inner: Rc<RefCell<Host>>,
+    on_fault: FaultCallback,
+    /// Why `auto` fell back to WebGL2 although the browser offers WebGPU.
+    fallback: Option<String>,
+}
+
+impl RawViewport {
+    /// Replace the scene (`RENDER_BODY`-style scene errors, or `RENDER_GPU`).
+    fn upload(&self, bodies: &[SceneBody]) -> Result<(), JsValue> {
+        let (scopes, uploaded) = {
+            let mut h = self.inner.borrow_mut();
+            let scopes = Scopes::on_webgpu(h.viewport.context());
+            (scopes, h.viewport.set_bodies(bodies))
+        };
+        self.watch(scopes);
+        uploaded.map_err(|e| js_error(e.code(), &e.to_string()))
+    }
+
+    /// Await `scopes` in the background and report a fault to the fault callback.
+    fn watch(&self, scopes: Option<Scopes>) {
+        let Some(scopes) = scopes else { return };
+        let checked = scopes.pop();
+        let callback = Rc::clone(&self.on_fault);
+        wasm_bindgen_futures::spawn_local(async move {
+            if let Some(f) = checked.await {
+                notify_fault(&callback, &f);
+            }
+        });
+    }
 }
 
 /// Create a viewport on `canvas` (`HTMLCanvasElement` or `OffscreenCanvas`), sized
 /// `width × height` physical pixels. `backend`: `"auto"` (WebGPU, else WebGL2),
-/// `"webgpu"` or `"webgl2"`.
+/// `"webgpu"` or `"webgl2"`. A WebGPU device must pass a self-test (a frame and a pick
+/// read-back) before the canvas is committed to it; `auto` otherwise falls back to WebGL2.
+/// The surface setup and the first frame are awaited inside error scopes.
+///
+/// Rejects with `RENDER_NO_ADAPTER` (every backend failed; the message lists each
+/// backend's reason), `RENDER_GPU` (the device faulted while setting up the canvas or
+/// drawing the first frame), `RENDER_SURFACE`, `RENDER_CANVAS` or `RENDER_BACKEND`.
 #[wasm_bindgen(js_name = createViewport)]
 pub async fn create_viewport(
     canvas: JsValue,
@@ -356,17 +518,39 @@ pub async fn create_viewport(
     }
     let (surface, adapter, ctx) =
         made.ok_or_else(|| js_error("RENDER_NO_ADAPTER", &errors.join("; ")))?;
+    let fallback = (want == "auto" && ctx.backend != BackendKind::WebGpu && has_webgpu())
+        .then(|| errors.join("; "));
     let max = ctx.max_texture_dimension;
     let (w, h) = (width.clamp(1, max), height.clamp(1, max));
+    // No GPU call yet, so no scope: the configuration is only read from the adapter.
     let config = surface_config(&surface, &adapter, w, h)?;
+    // The canvas is committed to this backend now: the setup and the first frame run
+    // inside error scopes and are awaited, so a device that fails them is reported
+    // (`RENDER_GPU`) instead of leaving a blank canvas. (An early return after this point
+    // would still pop the scopes in order: see `Scopes`'s `Drop`.)
+    let scopes = Scopes::push(&ctx);
     surface.configure(&ctx.device, &config);
     let viewport = Viewport::new(&ctx, config.format, w, h, dpr);
+    let mut host = Host {
+        surface,
+        config,
+        viewport,
+    };
+    let first = host.draw();
+    let checked = scopes.pop().await;
+    if let Some(f) = first.err().or(checked).or_else(|| ctx.gpu_fault()) {
+        return Err(js_error(
+            f.code(),
+            &format!(
+                "{}: the device failed setting up the canvas or drawing the first frame: {f}",
+                ctx.backend.as_str()
+            ),
+        ));
+    }
     Ok(RawViewport {
-        inner: Rc::new(RefCell::new(Host {
-            surface,
-            config,
-            viewport,
-        })),
+        inner: Rc::new(RefCell::new(host)),
+        on_fault: Rc::new(RefCell::new(None)),
+        fallback,
     })
 }
 
@@ -524,32 +708,44 @@ async fn sleep_ms(ms: i32) {
     let _ = JsFuture::from(p).await;
 }
 
-/// Map `buffer` for reading without blocking the event loop: WebGPU resolves the map
-/// from the browser's event loop, the GL backend on `device.poll`.
-async fn read_buffer(device: &wgpu::Device, buffer: &wgpu::Buffer) -> Result<Vec<u8>, JsValue> {
+/// How long a pick's read-back may take (ms) before it fails with `RENDER_READBACK`.
+const PICK_READBACK_TIMEOUT_MS: f64 = 5000.0;
+/// How long the WebGPU self-test's read-back may take (ms; forge-web's device check uses
+/// the same budget per step).
+const SELF_TEST_TIMEOUT_MS: f64 = 3000.0;
+
+/// Map `buffer` (`what`, for messages) for reading without blocking the event loop:
+/// WebGPU resolves the map from the browser's event loop, the GL backend on
+/// `device.poll`. Fails with `RENDER_READBACK` when the map fails or takes longer than
+/// `timeout_ms`.
+async fn read_buffer(
+    device: &wgpu::Device,
+    buffer: &wgpu::Buffer,
+    what: &str,
+    timeout_ms: f64,
+) -> Result<Vec<u8>, JsValue> {
     let state: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
     let s = Rc::clone(&state);
     buffer.map_async(wgpu::MapMode::Read, .., move |r| s.set(Some(r.is_ok())));
-    let mut waited = 0;
+    let t0 = now_ms();
     loop {
         let _ = device.poll(wgpu::PollType::Poll);
         if let Some(ok) = state.get() {
             if !ok {
                 return Err(js_error(
                     "RENDER_READBACK",
-                    "mapping the pick buffer failed",
+                    &format!("mapping {what} failed"),
                 ));
             }
             break;
         }
-        if waited > 5000 {
+        if now_ms() - t0 > timeout_ms {
             return Err(js_error(
                 "RENDER_READBACK",
-                "timed out mapping the pick buffer",
+                &format!("timed out mapping {what} ({timeout_ms} ms)"),
             ));
         }
         sleep_ms(1).await;
-        waited += 1;
     }
     let bytes = buffer
         .get_mapped_range(..)
@@ -561,25 +757,42 @@ async fn read_buffer(device: &wgpu::Device, buffer: &wgpu::Buffer) -> Result<Vec
 
 #[wasm_bindgen]
 impl RawViewport {
-    /// Render one frame and present it.
+    /// Render one frame and present it. Throws `RENDER_GPU` once the device faulted
+    /// (WebGPU faults found after the call returned go to the `onGpuFault` callback).
     pub fn render(&self) -> Result<(), JsValue> {
-        let mut h = self.inner.borrow_mut();
-        let frame = match h.surface.get_current_texture() {
-            wgpu::CurrentSurfaceTexture::Success(t)
-            | wgpu::CurrentSurfaceTexture::Suboptimal(t) => t,
-            wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
-                h.reconfigure();
-                return Ok(());
-            }
-            _ => return Ok(()),
+        let (scopes, drawn) = {
+            let mut h = self.inner.borrow_mut();
+            let scopes = Scopes::on_webgpu(h.viewport.context());
+            (scopes, h.draw())
         };
-        let view = frame
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-        h.viewport.render(&view);
-        let queue = h.viewport.context().queue.clone();
-        queue.present(frame);
-        Ok(())
+        self.watch(scopes);
+        drawn.map_err(|f| gpu_error(&f))
+    }
+
+    /// Register `callback(error)` for GPU faults found after a call returned (browser
+    /// WebGPU reports them asynchronously) that no caller receives otherwise: those of
+    /// `render`, `setBodies` and `loadIr` (a pick's fault rejects its promise instead);
+    /// `error.code` is `RENDER_GPU`. `null` removes it.
+    #[wasm_bindgen(js_name = onGpuFault)]
+    pub fn on_gpu_fault(&self, callback: Option<Function>) {
+        *self.on_fault.borrow_mut() = callback;
+    }
+
+    /// The first GPU fault of the device as an error (`code: "RENDER_GPU"`), or `null`.
+    #[wasm_bindgen(js_name = gpuFault)]
+    pub fn gpu_fault(&self) -> JsValue {
+        self.inner
+            .borrow()
+            .viewport
+            .gpu_fault()
+            .map_or(JsValue::NULL, |f| gpu_error(&f))
+    }
+
+    /// Why `backend: "auto"` fell back to WebGL2 although the browser offers WebGPU
+    /// (the WebGPU failure), or `undefined`.
+    #[wasm_bindgen(js_name = backendFallback)]
+    pub fn backend_fallback(&self) -> Option<String> {
+        self.fallback.clone()
     }
 
     /// Resize to `width × height` physical pixels at device-pixel ratio `dpr`.
@@ -603,11 +816,7 @@ impl RawViewport {
         for (i, b) in arr.iter().enumerate() {
             list.push(scene_body_from_js(&b, i)?);
         }
-        self.inner
-            .borrow_mut()
-            .viewport
-            .set_bodies(&list)
-            .map_err(|e| js_error(e.code(), &e.to_string()))
+        self.upload(&list)
     }
 
     /// Evaluate + tessellate + upload in one call, without copying meshes through JS.
@@ -629,11 +838,7 @@ impl RawViewport {
             .into_iter()
             .map(|b| SceneBody::from_owned_render_mesh(b.name, b.mesh))
             .collect();
-        self.inner
-            .borrow_mut()
-            .viewport
-            .set_bodies(&bodies)
-            .map_err(|e| js_error(e.code(), &e.to_string()))?;
+        self.upload(&bodies)?;
         let t2 = now_ms();
         let o = Object::new();
         set(&o, "report", report_js(&out.report)?);
@@ -646,17 +851,51 @@ impl RawViewport {
         Ok(o.into())
     }
 
-    /// Pick at physical pixel `(x, y)`; resolves to a pick object or `null`.
+    /// Pick at physical pixel `(x, y)`; resolves to a pick object or `null` (nothing
+    /// under the cursor). Rejects with `RENDER_GPU` when the device faulted (before or
+    /// during the pick: a faulted device's read-back would read as "nothing hit") and
+    /// `RENDER_READBACK` when the read-back cannot be mapped.
     pub fn pick(&self, x: f64, y: f64) -> js_sys::Promise {
-        let req = self.inner.borrow_mut().viewport.begin_pick(x, y);
+        let (req, checked) = {
+            let mut h = self.inner.borrow_mut();
+            let scopes = Scopes::on_webgpu(h.viewport.context());
+            let req = h.viewport.begin_pick(x, y);
+            (req, scopes.map(Scopes::pop))
+        };
         let inner = Rc::clone(&self.inner);
         wasm_bindgen_futures::future_to_promise(async move {
+            let req = req.map_err(|f| gpu_error(&f))?;
+            // The rejection carries the fault to the caller awaiting this pick, so it does
+            // not also go to the fault callback (that is for faults no caller receives).
+            if let Some(checked) = checked
+                && let Some(f) = checked.await
+            {
+                return Err(gpu_error(&f));
+            }
             let Some(req) = req else {
                 return Ok(JsValue::NULL);
             };
             let device = inner.borrow().viewport.context().device.clone();
-            let bytes = read_buffer(&device, req.buffer()).await?;
-            let hit = inner.borrow().viewport.finish_pick(&req, &bytes);
+            let bytes = read_buffer(
+                &device,
+                req.buffer(),
+                "the pick buffer",
+                PICK_READBACK_TIMEOUT_MS,
+            )
+            .await
+            // A fault explains a failed map better than the map error does.
+            .map_err(|e| {
+                inner
+                    .borrow()
+                    .viewport
+                    .gpu_fault()
+                    .map_or(e, |f| gpu_error(&f))
+            })?;
+            let hit = inner
+                .borrow()
+                .viewport
+                .finish_pick(&req, &bytes)
+                .map_err(|f| gpu_error(&f))?;
             Ok(hit.as_ref().map_or(JsValue::NULL, hit_js))
         })
     }

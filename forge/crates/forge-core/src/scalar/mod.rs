@@ -140,9 +140,12 @@ pub trait Scalar:
     /// Natural logarithm.
     fn ln(self) -> Self;
 
-    /// Minimum (for intervals: the enclosure of the pointwise minimum).
+    /// Minimum (for intervals: the enclosure of the pointwise minimum). Must be
+    /// deterministic across targets: for `f64` this is [`math::min`] (`−0 < +0`, NaN
+    /// ignored), never the target-dependent [`f64::min`].
     fn min(self, other: Self) -> Self;
-    /// Maximum (for intervals: the enclosure of the pointwise maximum).
+    /// Maximum (for intervals: the enclosure of the pointwise maximum). For `f64` this is
+    /// [`math::max`].
     fn max(self, other: Self) -> Self;
     /// `true` if the scalar holds no NaN or infinity.
     fn is_finite(self) -> bool;
@@ -237,13 +240,17 @@ impl Scalar for f64 {
     fn ln(self) -> Self {
         math::ln(self)
     }
+    /// [`math::min`]: unlike [`f64::min`], the `±0` tie is resolved the same on every
+    /// target.
     #[inline]
     fn min(self, other: Self) -> Self {
-        f64::min(self, other)
+        math::min(self, other)
     }
+    /// [`math::max`]: unlike [`f64::max`], the `±0` tie is resolved the same on every
+    /// target.
     #[inline]
     fn max(self, other: Self) -> Self {
-        f64::max(self, other)
+        math::max(self, other)
     }
     #[inline]
     fn is_finite(self) -> bool {
@@ -266,6 +273,99 @@ mod tests {
         assert!((f64::pi() - math::PI).abs() == 0.0);
         assert!((Scalar::powi(2.0, -3) - 0.125).abs() == 0.0);
         assert!((Scalar::hypot(3.0, 4.0) - 5.0).abs() < 1e-15);
+    }
+
+    /// `Scalar::min`/`max` for `f64` (and so the component-wise `Vec3` min/max that build
+    /// bounding boxes) resolve ±0 ties the same way whatever the argument order and target.
+    #[test]
+    fn f64_scalar_min_max_are_order_independent_at_signed_zero() {
+        let (p, n) = (0.0f64, -0.0f64);
+        for (a, b) in [(p, n), (n, p)] {
+            assert_eq!(Scalar::min(a, b).to_bits(), n.to_bits());
+            assert_eq!(Scalar::max(a, b).to_bits(), p.to_bits());
+        }
+        let a = crate::Vec3::new(0.0, -0.0, 1.0);
+        let b = crate::Vec3::new(-0.0, 0.0, f64::NAN);
+        for (lo, hi) in [
+            (a.min_components(b), a.max_components(b)),
+            (b.min_components(a), b.max_components(a)),
+        ] {
+            assert_eq!(
+                [lo.x.to_bits(), lo.y.to_bits(), lo.z.to_bits()],
+                [n.to_bits(), n.to_bits(), 1.0f64.to_bits()]
+            );
+            assert_eq!(
+                [hi.x.to_bits(), hi.y.to_bits(), hi.z.to_bits()],
+                [p.to_bits(), p.to_bits(), 1.0f64.to_bits()]
+            );
+        }
+    }
+
+    /// The source text between the first `{` at or after `from` and its matching `}`.
+    fn braced(src: &str, from: usize) -> &str {
+        let open = from + src[from..].find('{').expect("an opening brace");
+        let mut depth = 0usize;
+        for (i, c) in src[open..].char_indices() {
+            match c {
+                '{' => depth += 1,
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return &src[open..=open + i];
+                    }
+                }
+                _ => {}
+            }
+        }
+        panic!("unbalanced braces");
+    }
+
+    /// `src` without its `//` comments (doc links name `f64::min` on purpose).
+    fn code(src: &str) -> String {
+        src.lines()
+            .map(|l| l.find("//").map_or(l, |i| &l[..i]))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// Audit L2 guard that holds on every host. The runtime test above cannot catch a
+    /// revert to `f64::min`/`max` on aarch64, where those already put −0 below +0 in
+    /// either argument order (they differ on x86_64 and wasm32). So check the wiring in
+    /// the source: the `f64` impl routes through `math::min`/`max`, and the vector code
+    /// neither names `f64::min`/`max` nor calls `.min(`/`.max(` in an `f64`-only impl
+    /// block, where that resolves to the inherent, target-dependent `f64` method instead
+    /// of `Scalar::min`/`max` (as it does in the generic blocks).
+    #[test]
+    fn f64_min_max_go_through_math_in_the_source() {
+        let src = code(include_str!("mod.rs"));
+        let imp = braced(&src, src.find("impl Scalar for f64").expect("f64 impl"));
+        let body = |f: &str| braced(imp, imp.find(f).unwrap_or_else(|| panic!("{f}")));
+        assert!(body("fn min(").contains("math::min(self, other)"));
+        assert!(body("fn max(").contains("math::max(self, other)"));
+        assert!(!imp.contains("f64::min") && !imp.contains("f64::max"));
+
+        let vec = code(include_str!("../linalg/vec.rs"));
+        assert!(!vec.contains("f64::min") && !vec.contains("f64::max"));
+        for concrete in ["impl Vec2<f64>", "impl Vec3<f64>"] {
+            let mut at = 0;
+            while let Some(i) = vec[at..].find(concrete) {
+                let block = braced(&vec, at + i);
+                assert!(
+                    !block.contains(".min(") && !block.contains(".max("),
+                    "{concrete} calls the inherent f64 min/max"
+                );
+                at += i + concrete.len();
+            }
+        }
+        for f in ["pub fn min_components", "pub fn max_components"] {
+            let at = vec.find(f).unwrap_or_else(|| panic!("{f}"));
+            let generic = vec[..at].rfind("impl<S: Scalar> Vec3<S>");
+            let concrete = vec[..at].rfind("impl Vec3<f64>");
+            assert!(
+                generic.is_some() && generic > concrete,
+                "{f} is in the generic Vec3<S> impl"
+            );
+        }
     }
 
     #[test]

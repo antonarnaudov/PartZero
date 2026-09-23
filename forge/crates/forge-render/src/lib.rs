@@ -44,13 +44,13 @@ pub mod viewport;
 pub use camera::{Camera, CameraFrame, Projection, Sphere, StandardView};
 #[cfg(not(target_arch = "wasm32"))]
 pub use context::block_on;
-pub use context::{BackendKind, GpuContext, RenderError};
+pub use context::{BackendKind, GpuContext, GpuFault, RenderError};
 pub use pick::PickKind;
 pub use scene::{EntityRef, SceneBody, SceneData, SceneEdge, SceneError, SceneFace, SceneTables};
 #[cfg(not(target_arch = "wasm32"))]
 pub use viewport::read_buffer_blocking;
 pub use viewport::{
-    FrameStats, PickHit, PickRequest, RgbaImage, SectionPlane, ViewOptions, Viewport,
+    FrameStats, PickHit, PickRequest, RgbaImage, SectionPlane, ViewOptions, Viewport, ViewportError,
 };
 
 /// Re-exports of the wgpu and glam versions this crate is built on (hosts create

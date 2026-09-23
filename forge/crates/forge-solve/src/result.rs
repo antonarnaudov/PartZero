@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::analysis::RankMethod;
+use crate::error::SketchError;
 
 /// Solver options. Every tolerance is explicit and documented; defaults suit sketches
 /// in millimetres up to a few metres.
@@ -19,6 +20,21 @@ pub struct SolveOptions {
     /// Looser rank tolerance used only to *seed* conflict search at a least-squares point
     /// (the minimal conflicting set itself is verified by re-solving).
     pub conflict_rank_tolerance: f64,
+    /// Pivot threshold of the circuit extraction (redundancy and conflict diagnostics).
+    /// The basis of dependencies between equations (left null space of the scaled
+    /// Jacobian) is reduced to echelon form, each basis vector first scaled to a largest
+    /// coefficient of magnitude 1; a coefficient at most this large is treated as zero
+    /// and never chosen as a pivot. Default `1e-9` (the default `rank_tolerance` / 10):
+    /// such a coefficient is numerical noise of the orthonormal null-space basis, and a
+    /// decade below the rank threshold no dependency the rank decision found is lost for
+    /// want of a pivot.
+    pub circuit_pivot_tolerance: f64,
+    /// Support threshold of the circuit extraction: an equation belongs to a reduced
+    /// circuit (and is reported as part of a redundancy or conflict) when its coefficient
+    /// exceeds this × the circuit's largest coefficient. Default `1e-8`, the default
+    /// `rank_tolerance`: smaller coefficients are at the noise level of the null-space
+    /// basis the circuit comes from.
+    pub circuit_support_tolerance: f64,
     /// Absolute tolerance on an entity's share of the allowed motions (the singular values
     /// of its block of the orthonormal DOF basis lie in [0, 1]).
     pub dof_tolerance: f64,
@@ -34,17 +50,55 @@ pub struct SolveOptions {
 
 impl Default for SolveOptions {
     fn default() -> Self {
+        let rank_tolerance = 1e-8;
         Self {
             tolerance: 1e-10,
             max_iterations: 200,
-            rank_tolerance: 1e-8,
+            rank_tolerance,
             conflict_rank_tolerance: 1e-6,
+            // Exactly 1e-9 and 1e-8 (the values these thresholds always had).
+            circuit_pivot_tolerance: rank_tolerance / 10.0,
+            circuit_support_tolerance: rank_tolerance,
             dof_tolerance: 1e-7,
             rank_method: RankMethod::Qrcp,
             max_conflicts: 8,
             drag_weight: 1e6,
             drag_max_iterations: 50,
         }
+    }
+}
+
+impl SolveOptions {
+    /// Reject option values that would make the diagnostics silently wrong
+    /// ([`SketchError::InvalidOption`], `SKETCH_INVALID_OPTION`). Checked on entry of every
+    /// solve ([`crate::Solver::new`]), including options deserialized from JSON.
+    ///
+    /// The circuit tolerances must be finite and in (0, 1): the coefficients they are
+    /// compared with are relative, at most 1 in magnitude, so a threshold of 1 or more
+    /// (or NaN, which compares false) extracts no circuit at all and a redundant or
+    /// conflicting sketch would be reported as consistent; 0 or less would pivot on and
+    /// report pure rounding noise.
+    pub fn validate(&self) -> Result<(), SketchError> {
+        for (option, value) in [
+            ("circuit_pivot_tolerance", self.circuit_pivot_tolerance),
+            ("circuit_support_tolerance", self.circuit_support_tolerance),
+        ] {
+            let reason = if !value.is_finite() {
+                Some("must be finite")
+            } else if value <= 0.0 || value >= 1.0 {
+                Some("must be in (0, 1)")
+            } else {
+                None
+            };
+            if let Some(reason) = reason {
+                return Err(SketchError::InvalidOption {
+                    option,
+                    value,
+                    reason,
+                });
+            }
+        }
+        Ok(())
     }
 }
 

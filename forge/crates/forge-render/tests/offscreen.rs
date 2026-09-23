@@ -11,7 +11,8 @@ use std::path::PathBuf;
 use forge_mesh::TessParams;
 use forge_render::glam::DVec3;
 use forge_render::{
-    GpuContext, PickKind, Projection, SceneBody, SectionPlane, StandardView, Viewport, wgpu,
+    GpuContext, PickKind, Projection, SceneBody, SectionPlane, StandardView, Viewport,
+    ViewportError, read_buffer_blocking, wgpu,
 };
 
 const W: u32 = 480;
@@ -203,6 +204,7 @@ fn box_renders_with_shading_edges_and_exact_face_picking() {
         vp.set_view(view);
         let hit = vp
             .pick_blocking(f64::from(W) / 2.0, f64::from(H) / 2.0)
+            .expect("pick")
             .unwrap_or_else(|| panic!("{view:?}: no hit"));
         assert_eq!(hit.kind, PickKind::Face, "{view:?}");
         assert_eq!(
@@ -226,11 +228,12 @@ fn box_renders_with_shading_edges_and_exact_face_picking() {
     }
     // Background.
     vp.set_view(StandardView::Top);
-    assert!(vp.pick_blocking(2.0, 2.0).is_none());
+    assert!(vp.pick_blocking(2.0, 2.0).expect("pick").is_none());
     // Orthographic picks the same faces.
     vp.set_projection(Projection::Orthographic);
     let hit = vp
         .pick_blocking(f64::from(W) / 2.0, f64::from(H) / 2.0)
+        .expect("pick")
         .expect("hit");
     assert_eq!(hit.face.map(|f| f.1), Some("plate/cap:end".to_string()));
     vp.set_projection(Projection::Perspective);
@@ -241,7 +244,10 @@ fn box_renders_with_shading_edges_and_exact_face_picking() {
     vp.set_options(opts);
     vp.set_view(StandardView::Iso);
     let (ex, ey) = project(&vp, DVec3::new(10.0, -25.0, 8.0));
-    let hit = vp.pick_blocking(ex, ey + 2.0).expect("edge hit");
+    let hit = vp
+        .pick_blocking(ex, ey + 2.0)
+        .expect("pick")
+        .expect("edge hit");
     assert_eq!(hit.kind, PickKind::Edge, "{hit:?}");
     let edge = hit.edge.clone().expect("edge").1;
     let info = &vp.tables().bodies[0];
@@ -264,6 +270,9 @@ fn box_renders_with_shading_edges_and_exact_face_picking() {
         "{before:?} → {after:?}"
     );
     vp.set_selection(&[]);
+    // Uploads (write_buffer, no buffer mapped at creation), frames and picks raised no
+    // GPU error.
+    assert_eq!(vp.gpu_fault(), None, "{:?}", vp.gpu_faults());
 }
 
 #[test]
@@ -289,7 +298,7 @@ fn section_plane_shows_a_cap_and_picks_it() {
     let mut opts = vp.options().clone();
     opts.pick_radius = 0.0;
     vp.set_options(opts);
-    let hit = vp.pick_blocking(cx, cy).expect("cap hit");
+    let hit = vp.pick_blocking(cx, cy).expect("pick").expect("cap hit");
     assert_eq!(hit.kind, PickKind::SectionCap, "{hit:?}");
     let p = hit.point.expect("point");
     assert!(
@@ -300,7 +309,7 @@ fn section_plane_shows_a_cap_and_picks_it() {
     assert!(c[0] > c[2] + 40, "cap colour {c:?}");
     // Without the section the same pixel is the plate's side at x = 100.
     vp.set_section(None);
-    let hit = vp.pick_blocking(cx, cy).expect("side hit");
+    let hit = vp.pick_blocking(cx, cy).expect("pick").expect("side hit");
     assert_eq!(hit.kind, PickKind::Face);
     assert!((hit.point.expect("point")[0] - 100.0).abs() < 0.2);
 }
@@ -348,11 +357,174 @@ fn makerbench_like_parts_render_without_errors() {
         vp.set_view(StandardView::Iso);
         let img = vp.render_image().expect("image");
         screenshot(name, &img);
-        let hit = vp.pick_blocking(f64::from(W) / 2.0, f64::from(H) / 2.0);
+        let hit = vp
+            .pick_blocking(f64::from(W) / 2.0, f64::from(H) / 2.0)
+            .expect("pick");
         eprintln!(
             "{name}: {:?} {} triangles",
             hit.map(|h| (h.kind, h.face, h.edge)),
             vp.stats().triangles
         );
     }
+    assert_eq!(vp.gpu_fault(), None, "{:?}", vp.gpu_faults());
+}
+
+/// A validation error on `ctx`'s device, raised outside any viewport call: a buffer
+/// that is both MAP_READ and MAP_WRITE is invalid without MAPPABLE_PRIMARY_BUFFERS.
+fn inject_validation_error(ctx: &GpuContext) {
+    let _invalid = ctx.device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("invalid on purpose"),
+        size: 16,
+        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::MAP_WRITE,
+        mapped_at_creation: false,
+    });
+    let _ = ctx.device.poll(wgpu::PollType::wait_indefinitely());
+}
+
+/// Audit finding V3 (and its review): a GPU error is a structured, sticky `RENDER_GPU`
+/// fault — not wgpu's default panic, which aborts the whole WASM module on the web — and
+/// every result-producing entry point returns it: no image, no pick ("nothing hit" from a
+/// zeroed read-back), no upload is ever handed out from a faulted device.
+#[test]
+fn a_gpu_fault_is_reported_by_every_entry_point() {
+    let Some(ctx) = context() else { return };
+    let scene = bodies(&corpus("programs/extrude_box.json"));
+    let mut vp = Viewport::new_offscreen(&ctx, W, H, 1.0);
+    vp.set_bodies(&scene).expect("scene");
+    vp.set_view(StandardView::Top);
+    vp.render_image().expect("image");
+    let (cx, cy) = (f64::from(W) / 2.0, f64::from(H) / 2.0);
+    assert!(vp.pick_blocking(cx, cy).expect("pick").is_some());
+    // A pick in flight when the fault happens (its bytes are fine; the device is not).
+    let pending = vp.begin_pick(cx, cy).expect("begin").expect("inside");
+    let pending_bytes = read_buffer_blocking(&ctx.device, pending.buffer()).expect("bytes");
+    assert_eq!(vp.gpu_fault(), None);
+    assert!(vp.check_gpu().is_ok());
+
+    inject_validation_error(&ctx);
+    let fault = vp.gpu_fault().expect("the validation error is recorded");
+    assert_eq!(fault.code(), "RENDER_GPU");
+    assert_eq!(fault.kind, "validation");
+    assert!(!fault.message.is_empty());
+    assert_eq!(vp.check_gpu(), Err(fault.clone()));
+    let gpu = ViewportError::Gpu(fault.clone());
+    assert_eq!(gpu.code(), "RENDER_GPU");
+
+    assert_eq!(vp.render_image().expect_err("no image"), gpu);
+    assert_eq!(vp.pick_blocking(cx, cy).expect_err("no pick"), gpu);
+    assert_eq!(
+        vp.finish_pick(&pending, &pending_bytes)
+            .expect_err("no pick"),
+        fault
+    );
+    assert_eq!(vp.begin_pick(cx, cy).expect_err("no pick"), fault);
+    assert_eq!(vp.set_bodies(&scene).expect_err("no upload"), gpu);
+    let (out, _) = output_target(&ctx);
+    assert_eq!(vp.render(&out).expect_err("no frame"), fault);
+    // Invalid input is still reported as such, before the device is touched.
+    let bad = vec![SceneBody {
+        normals: Vec::new(),
+        ..scene[0].clone()
+    }];
+    assert_eq!(
+        vp.set_bodies(&bad).expect_err("invalid").code(),
+        "RENDER_NORMAL_COUNT"
+    );
+    // Sticky: the first fault stays the reported one.
+    inject_validation_error(&ctx);
+    assert_eq!(vp.gpu_fault(), Some(fault));
+    assert_eq!(vp.gpu_faults().len(), 2);
+}
+
+/// An `Rgba8UnormSrgb` render target and its view (what `render` draws into).
+fn output_target(ctx: &GpuContext) -> (wgpu::TextureView, wgpu::Texture) {
+    let t = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("test output"),
+        size: wgpu::Extent3d {
+            width: W,
+            height: H,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[],
+    });
+    (t.create_view(&wgpu::TextureViewDescriptor::default()), t)
+}
+
+/// A fault raised by the call itself is returned by that call (native and WebGL2 report
+/// errors synchronously): drawing into a view whose format differs from the viewport's
+/// output format is a validation error, and `render` returns it instead of `Ok`.
+#[test]
+fn a_fault_raised_by_a_frame_is_returned_by_that_frame() {
+    let Some(ctx) = context() else { return };
+    let mut vp = Viewport::new_offscreen(&ctx, W, H, 1.0);
+    let (ok, _t) = output_target(&ctx);
+    vp.render(&ok).expect("a matching output renders");
+    let wrong = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("wrong format"),
+        size: wgpu::Extent3d {
+            width: W,
+            height: H,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::R8Unorm,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[],
+    });
+    let fault = vp
+        .render(&wrong.create_view(&wgpu::TextureViewDescriptor::default()))
+        .expect_err("the frame's own validation error");
+    assert_eq!(fault.code(), "RENDER_GPU");
+    assert_eq!(fault.kind, "validation");
+    assert_eq!(vp.gpu_fault(), Some(fault.clone()));
+    assert_eq!(vp.render(&ok), Err(fault));
+}
+
+/// Review of V3: a device has one uncaptured-error handler, so the fault list belongs to
+/// the device's `GpuContext`, not to the latest viewport. Every viewport on a shared
+/// context — and every clone of the context — sees a fault raised after all exist.
+#[test]
+fn every_viewport_on_a_shared_context_sees_the_device_fault() {
+    let Some(ctx) = context() else { return };
+    let mut a = Viewport::new_offscreen(&ctx, W, H, 1.0);
+    let mut b = Viewport::new_offscreen(&ctx, W, H, 1.0);
+    let clone = ctx.clone();
+    a.render_image().expect("a");
+    b.render_image().expect("b");
+    assert_eq!((a.gpu_fault(), b.gpu_fault()), (None, None));
+    inject_validation_error(&clone);
+    let fault = ctx.gpu_fault().expect("recorded on the device's context");
+    for vp in [&mut a, &mut b] {
+        assert_eq!(vp.gpu_fault(), Some(fault.clone()));
+        assert_eq!(
+            vp.render_image().expect_err("faulted"),
+            ViewportError::Gpu(fault.clone())
+        );
+    }
+    assert_eq!(clone.gpu_fault(), Some(fault));
+}
+
+/// A lost device raises no further errors (on WebGPU every call becomes a no-op), so the
+/// loss itself is recorded as a fault and reported like one.
+#[test]
+fn a_lost_device_is_a_fault() {
+    let Some(ctx) = context() else { return };
+    let mut vp = Viewport::new_offscreen(&ctx, W, H, 1.0);
+    vp.render_image().expect("image");
+    ctx.device.destroy();
+    let _ = ctx.device.poll(wgpu::PollType::wait_indefinitely());
+    let fault = vp.gpu_fault().expect("the loss is recorded");
+    assert_eq!(fault.code(), "RENDER_GPU");
+    assert_eq!(fault.kind, "device-lost");
+    assert_eq!(
+        vp.render_image().expect_err("no image"),
+        ViewportError::Gpu(fault)
+    );
 }

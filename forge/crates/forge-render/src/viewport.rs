@@ -15,14 +15,23 @@
 //! to a small window around the cursor, and copies that window into a mappable buffer.
 //! The host maps it (blocking natively, asynchronously on the web) and calls
 //! [`Viewport::finish_pick`].
+//!
+//! ## GPU errors
+//! The device's errors are recorded as [`GpuFault`]s by the [`GpuContext`] (see
+//! [`crate::context`]) instead of reaching wgpu's default handler, which panics — and a
+//! panic aborts the whole WASM module, engine included. A viewport never hands out a
+//! result computed on a faulted device: [`Viewport::render`], [`Viewport::set_bodies`],
+//! [`Viewport::begin_pick`], [`Viewport::finish_pick`], [`Viewport::pick_blocking`] and
+//! [`Viewport::render_image`] return the fault (`RENDER_GPU`) instead — before any work
+//! when the device already faulted, and after it when the work itself raised one. Buffers
+//! are never mapped at creation: contents are uploaded with `Queue::write_buffer`.
 
 use std::collections::BTreeSet;
 
 use glam::{DMat4, DVec3, DVec4};
-use wgpu::util::DeviceExt;
 
 use crate::camera::{Camera, CameraFrame, Projection, Sphere, StandardView};
-use crate::context::{COLOR_FORMAT, DEPTH_FORMAT, GpuContext, ID_FORMAT};
+use crate::context::{COLOR_FORMAT, DEPTH_FORMAT, GpuContext, GpuFault, ID_FORMAT};
 use crate::pick::{self, PickKind, PickWindow};
 use crate::scene::{
     EntityRef, FACE_VERTEX_STRIDE, LINE_INSTANCE_STRIDE, SILHOUETTE_INSTANCE_STRIDE, SceneBody,
@@ -43,6 +52,74 @@ const STATE_SELECTED: u8 = 2;
 const FRAME_SIZE: u64 = 2 * 64 + 21 * 16;
 /// Capacity of the gizmo line buffer (segments).
 const GIZMO_CAPACITY: u64 = 32;
+
+/// Why a viewport call produced no result. Every variant has a stable
+/// [`ViewportError::code`].
+#[derive(Clone, Debug, PartialEq, thiserror::Error)]
+pub enum ViewportError {
+    /// The scene data is invalid (nothing was uploaded).
+    #[error(transparent)]
+    Scene(#[from] SceneError),
+    /// The GPU device reported an error (sticky; see the module docs).
+    #[error(transparent)]
+    Gpu(#[from] GpuFault),
+    /// A read-back buffer could not be mapped.
+    #[error("GPU read-back failed: {0}")]
+    Readback(&'static str),
+    /// [`Viewport::render_image`] on a viewport that does not render to
+    /// `Rgba8UnormSrgb` (see [`Viewport::new_offscreen`]).
+    #[error("render_image needs an offscreen viewport (Rgba8UnormSrgb output), not {0:?}")]
+    NotOffscreen(wgpu::TextureFormat),
+}
+
+impl ViewportError {
+    /// Stable machine-readable code (`RENDER_…`).
+    pub fn code(&self) -> &'static str {
+        match self {
+            ViewportError::Scene(e) => e.code(),
+            ViewportError::Gpu(f) => f.code(),
+            ViewportError::Readback(_) => "RENDER_READBACK",
+            ViewportError::NotOffscreen(_) => "RENDER_NOT_OFFSCREEN",
+        }
+    }
+}
+
+/// A buffer holding `bytes` (padded with zeros to `COPY_BUFFER_ALIGNMENT`), created
+/// **unmapped** and filled with `Queue::write_buffer`; the copy lands before the next
+/// submit.
+///
+/// Not `DeviceExt::create_buffer_init`: it creates the buffer with `mappedAtCreation`,
+/// which some WebGPU implementations reject with a JS `RangeError` that wgpu turns into
+/// a panic (audit V3: a SwiftShader adapter after a WebGL2 context existed on the page),
+/// aborting the WASM module.
+fn upload_buffer(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    label: &str,
+    bytes: &[u8],
+    usage: wgpu::BufferUsages,
+) -> wgpu::Buffer {
+    let align = wgpu::COPY_BUFFER_ALIGNMENT as usize;
+    let padded: Vec<u8>;
+    let data = if bytes.len().is_multiple_of(align) {
+        bytes
+    } else {
+        padded = bytes
+            .iter()
+            .copied()
+            .chain(std::iter::repeat_n(0, align - bytes.len() % align))
+            .collect();
+        &padded
+    };
+    let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some(label),
+        size: data.len() as u64,
+        usage: usage | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    queue.write_buffer(&buffer, 0, data);
+    buffer
+}
 
 /// Display options (all widths in CSS pixels).
 #[derive(Clone, Debug, PartialEq)]
@@ -802,13 +879,7 @@ fn create_scene_resources(
 ) -> GpuScene {
     let device = &ctx.device;
     let buf = |label: &str, bytes: &[u8], usage: wgpu::BufferUsages| {
-        (!bytes.is_empty()).then(|| {
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some(label),
-                contents: bytes,
-                usage,
-            })
-        })
+        (!bytes.is_empty()).then(|| upload_buffer(device, &ctx.queue, label, bytes, usage))
     };
     let v = wgpu::BufferUsages::VERTEX;
     let indices: Vec<u8> = data.indices.iter().flat_map(|i| i.to_le_bytes()).collect();
@@ -1005,6 +1076,24 @@ impl Viewport {
         }
     }
 
+    /// The first GPU error the viewport's device reported ([`GpuContext::gpu_fault`]:
+    /// shared by every viewport on the context), or `None` while the device is healthy.
+    /// Sticky. Hosts check it after [`Viewport::new`] (resource creation); the other
+    /// entry points check it themselves.
+    pub fn gpu_fault(&self) -> Option<GpuFault> {
+        self.ctx.gpu_fault()
+    }
+
+    /// [`Viewport::gpu_fault`] as a `Result`, for `?` in hosts.
+    pub fn check_gpu(&self) -> Result<(), GpuFault> {
+        self.ctx.check_gpu()
+    }
+
+    /// Every recorded GPU fault of the device (at most 16), oldest first.
+    pub fn gpu_faults(&self) -> Vec<GpuFault> {
+        self.ctx.gpu_faults()
+    }
+
     /// An offscreen viewport (output `Rgba8UnormSrgb`) for headless renders.
     pub fn new_offscreen(ctx: &GpuContext, width: u32, height: u32, dpr: f64) -> Self {
         Self::new(ctx, wgpu::TextureFormat::Rgba8UnormSrgb, width, height, dpr)
@@ -1068,14 +1157,20 @@ impl Viewport {
     /// Replace the scene. Keeps the camera; the first non-empty scene is framed.
     /// Hover and selection are re-resolved by *name* (provenance), so they survive
     /// re-evaluation when the entities still exist.
-    pub fn set_bodies(&mut self, bodies: &[SceneBody]) -> Result<(), SceneError> {
+    ///
+    /// Errors: invalid bodies ([`ViewportError::Scene`], nothing changes), or a GPU fault
+    /// ([`ViewportError::Gpu`]; see [`Viewport::set_scene_data`]).
+    pub fn set_bodies(&mut self, bodies: &[SceneBody]) -> Result<(), ViewportError> {
         let data = SceneData::build(bodies)?;
-        self.set_scene_data(&data);
+        self.set_scene_data(&data)?;
         Ok(())
     }
 
-    /// Replace the scene with pre-packed data (see [`Viewport::set_bodies`]).
-    pub fn set_scene_data(&mut self, data: &SceneData) {
+    /// Replace the scene with pre-packed data (see [`Viewport::set_bodies`]). Refuses
+    /// (keeping the previous scene) when the device already faulted; returns the fault
+    /// when the upload raised one — the scene is then replaced but cannot be drawn.
+    pub fn set_scene_data(&mut self, data: &SceneData) -> Result<(), GpuFault> {
+        self.ctx.check_gpu()?;
         let names = |t: &SceneTables, e: EntityRef| -> Option<(String, bool, String)> {
             match e {
                 EntityRef::Face(g) => t
@@ -1129,6 +1224,7 @@ impl Viewport {
                 self.fit_view();
             }
         }
+        self.ctx.check_gpu()
     }
 
     fn aspect(&self) -> f64 {
@@ -1383,8 +1479,11 @@ impl Viewport {
         pass.draw_indexed(0..s.index_count, 0, 0..1);
     }
 
-    /// Render a frame into `output` (a view of the output format).
-    pub fn render(&mut self, output: &wgpu::TextureView) {
+    /// Render a frame into `output` (a view of the output format). Refuses (drawing
+    /// nothing) when the device already faulted, and returns the fault when encoding or
+    /// submitting the frame raised one: the frame must not be presented as the scene.
+    pub fn render(&mut self, output: &wgpu::TextureView) -> Result<(), GpuFault> {
+        self.ctx.check_gpu()?;
         let cam = self.camera_frame();
         self.write_uniforms(&cam);
         let gizmo_count = if self.options.axes {
@@ -1512,23 +1611,28 @@ impl Viewport {
         self.stats.width = self.targets.width;
         self.stats.height = self.targets.height;
         self.stats.frames += 1;
+        self.ctx.check_gpu()
     }
 
     /// Start a pick at physical pixel `(x, y)`: renders the ID pass around the cursor
-    /// and schedules the copy. `None` when the point is outside the viewport.
-    pub fn begin_pick(&mut self, x_px: f64, y_px: f64) -> Option<PickRequest> {
+    /// and schedules the copy. `Ok(None)` when the point is outside the viewport; the GPU
+    /// fault when the device faulted (before or while encoding the pick).
+    pub fn begin_pick(&mut self, x_px: f64, y_px: f64) -> Result<Option<PickRequest>, GpuFault> {
+        self.ctx.check_gpu()?;
         let (w, h) = (self.targets.width, self.targets.height);
         let radius = (self.options.pick_radius * self.dpr)
             .round()
             .clamp(0.0, 64.0) as u32;
-        let window = PickWindow::around(x_px, y_px, radius, w, h)?;
+        let Some(window) = PickWindow::around(x_px, y_px, radius, w, h) else {
+            return Ok(None);
+        };
         let cam = self.camera_frame();
         self.write_uniforms(&cam);
         if self.targets.id.is_none() {
             self.targets.id = Some(create_id_targets(&self.ctx, w, h));
         }
         let Some(id) = &self.targets.id else {
-            return None;
+            return Ok(None);
         };
         let bpr = window.padded_bytes_per_row();
         let half = u64::from(bpr) * u64::from(window.height);
@@ -1633,19 +1737,31 @@ impl Viewport {
             );
         }
         self.ctx.queue.submit([enc.finish()]);
-        Some(PickRequest {
+        self.ctx.check_gpu()?;
+        Ok(Some(PickRequest {
             buffer,
             window,
             bytes_per_row: bpr,
             frame: cam,
             generation: self.generation,
             edge_radius: radius,
-        })
+        }))
     }
 
-    /// Interpret the mapped contents of a [`PickRequest`] buffer. `None` for the
-    /// background, or when the scene changed since the pick started.
-    pub fn finish_pick(&self, req: &PickRequest, bytes: &[u8]) -> Option<PickHit> {
+    /// Interpret the mapped contents of a [`PickRequest`] buffer. `Ok(None)` for the
+    /// background, or when the scene changed since the pick started. The GPU fault when
+    /// the device faulted: the bytes of a faulted device (typically all zero) would read
+    /// as "nothing under the cursor".
+    pub fn finish_pick(
+        &self,
+        req: &PickRequest,
+        bytes: &[u8],
+    ) -> Result<Option<PickHit>, GpuFault> {
+        self.ctx.check_gpu()?;
+        Ok(self.decode_pick(req, bytes))
+    }
+
+    fn decode_pick(&self, req: &PickRequest, bytes: &[u8]) -> Option<PickHit> {
         if req.generation != self.generation {
             return None;
         }
@@ -1685,37 +1801,50 @@ impl Viewport {
         })
     }
 
-    /// Pick synchronously (native hosts: tests, CLI, agents).
+    /// Pick synchronously (native hosts: tests, CLI, agents). `Ok(None)` for the
+    /// background or outside the viewport; an error for a GPU fault or a failed
+    /// read-back (never "nothing hit").
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn pick_blocking(&mut self, x_px: f64, y_px: f64) -> Option<PickHit> {
-        let req = self.begin_pick(x_px, y_px)?;
-        let bytes = read_buffer_blocking(&self.ctx.device, req.buffer())?;
-        self.finish_pick(&req, &bytes)
+    pub fn pick_blocking(
+        &mut self,
+        x_px: f64,
+        y_px: f64,
+    ) -> Result<Option<PickHit>, ViewportError> {
+        let Some(req) = self.begin_pick(x_px, y_px)? else {
+            return Ok(None);
+        };
+        let bytes = read_buffer_blocking(&self.ctx.device, req.buffer())
+            .ok_or(ViewportError::Readback("mapping the pick buffer failed"))?;
+        Ok(self.finish_pick(&req, &bytes)?)
     }
 
     /// Render into an internal `Rgba8UnormSrgb` texture and read it back (native).
-    /// Requires an offscreen viewport ([`Viewport::new_offscreen`]).
+    /// Requires an offscreen viewport ([`Viewport::new_offscreen`]). Never returns an
+    /// image of a faulted device ([`ViewportError::Gpu`]) or of a failed read-back.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn render_image(&mut self) -> Option<RgbaImage> {
+    pub fn render_image(&mut self) -> Result<RgbaImage, ViewportError> {
         if self.output_format != wgpu::TextureFormat::Rgba8UnormSrgb {
-            return None;
+            return Err(ViewportError::NotOffscreen(self.output_format));
         }
+        self.ctx.check_gpu()?;
         let (w, h) = (self.targets.width, self.targets.height);
-        if self.offscreen.is_none() {
-            let t = texture(
-                &self.ctx.device,
-                "offscreen output",
-                (w, h),
-                wgpu::TextureFormat::Rgba8UnormSrgb,
-                1,
-                wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
-            );
-            let v = view(&t);
-            self.offscreen = Some((t, v));
-        }
-        let (tex, v) = self.offscreen.as_ref()?;
-        let (tex, v) = (tex.clone(), v.clone());
-        self.render(&v);
+        let (tex, v) = match &self.offscreen {
+            Some((t, v)) => (t.clone(), v.clone()),
+            None => {
+                let t = texture(
+                    &self.ctx.device,
+                    "offscreen output",
+                    (w, h),
+                    wgpu::TextureFormat::Rgba8UnormSrgb,
+                    1,
+                    wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+                );
+                let v = view(&t);
+                self.offscreen = Some((t.clone(), v.clone()));
+                (t, v)
+            }
+        };
+        self.render(&v)?;
         let bpr = (w * 4).div_ceil(256) * 256;
         let buffer = self.ctx.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("image readback"),
@@ -1751,13 +1880,16 @@ impl Viewport {
             },
         );
         self.ctx.queue.submit([enc.finish()]);
-        let bytes = read_buffer_blocking(&self.ctx.device, &buffer)?;
+        let bytes = read_buffer_blocking(&self.ctx.device, &buffer)
+            .ok_or(ViewportError::Readback("mapping the image buffer failed"))?;
+        // The copy and the map itself may have raised a fault.
+        self.ctx.check_gpu()?;
         let mut pixels = Vec::with_capacity((w * h * 4) as usize);
         for row in 0..h as usize {
             let s = row * bpr as usize;
             pixels.extend_from_slice(&bytes[s..s + (w * 4) as usize]);
         }
-        Some(RgbaImage {
+        Ok(RgbaImage {
             width: w,
             height: h,
             pixels,
@@ -1983,6 +2115,33 @@ mod tests {
         // Looking along +Y: the Y axis points away and is drawn first.
         assert_eq!(segs[0].1, DVec3::Y);
         assert!(segs.len() <= GIZMO_CAPACITY as usize);
+    }
+
+    /// Audit finding V3: no buffer of the renderer is mapped at creation (wgpu's
+    /// `create_buffer_init` does that; on some WebGPU adapters it throws inside wgpu and
+    /// the panic aborts the WASM module). Uploads go through `upload_buffer`.
+    #[test]
+    fn no_buffer_is_mapped_at_creation() {
+        let sources = [
+            ("lib.rs", include_str!("lib.rs")),
+            ("camera.rs", include_str!("camera.rs")),
+            ("context.rs", include_str!("context.rs")),
+            ("lines.rs", include_str!("lines.rs")),
+            ("pick.rs", include_str!("pick.rs")),
+            ("scene.rs", include_str!("scene.rs")),
+            ("viewport.rs", include_str!("viewport.rs")),
+        ];
+        // Split so that this test's own source does not match.
+        let needles = [
+            concat!("create_buffer_init", "("),
+            concat!("mapped_at_creation: ", "true"),
+            concat!("util::", "DeviceExt"),
+        ];
+        for (file, src) in sources {
+            for n in needles {
+                assert!(!src.contains(n), "{file} uses `{n}`");
+            }
+        }
     }
 
     #[test]

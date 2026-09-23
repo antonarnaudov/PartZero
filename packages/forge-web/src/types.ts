@@ -246,7 +246,12 @@ export interface ControlsOptions {
 export type ViewportEvent =
   | { type: "hover"; pick: PickResult | null }
   | { type: "select"; selection: PickResult[]; pick: PickResult | null }
-  | { type: "frame"; stats: ViewportStats };
+  | { type: "frame"; stats: ViewportStats }
+  /**
+   * The device faulted (`error.code === "RENDER_GPU"`, emitted once): the viewport draws
+   * and picks nothing any more. Recreate it (on a new canvas) to recover.
+   */
+  | { type: "error"; error: ForgeError };
 
 /** Input accepted by {@link init}: a URL of the `.wasm`, its bytes, or a compiled module. */
 export type InitInput = string | URL | Request | Response | BufferSource | WebAssembly.Module;

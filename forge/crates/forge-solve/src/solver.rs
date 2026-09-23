@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use forge_core::math;
 
-use crate::analysis::{Analysis, Circuit, analyze};
+use crate::analysis::{Analysis, Circuit, CircuitTolerances, analyze};
 use crate::dense::block_rank;
 use crate::error::SketchError;
 use crate::explain;
@@ -23,6 +23,15 @@ const NONE: u32 = u32::MAX;
 const LAMBDA0_SOLVE: f64 = 1e-6;
 /// Initial relative LM damping for drag frames (warm start near a solution).
 const LAMBDA0_DRAG: f64 = 1e-9;
+/// A rank decision is reported as near-degenerate (`ClusterReport::near_degenerate`)
+/// when the smallest kept pivot is less than this factor above `rank_tolerance`, or the
+/// largest dropped pivot more than `rank_tolerance` / this factor: within three decades
+/// of the threshold, a small change of the geometry could flip the rank.
+const NEAR_DEGENERATE_MARGIN: f64 = 1e3;
+/// An inconsistent circuit seeds the conflict search when its irreducible residual
+/// `|yᵀ F_s|` exceeds this × `tolerance` × `max(1, Σ|y_j|)`: a decade above what the
+/// residuals of a solved sketch (each at most `tolerance`) can add up to.
+const CONFLICT_RESIDUAL_FACTOR: f64 = 10.0;
 
 /// One independent sub-system.
 #[derive(Clone, Debug)]
@@ -113,8 +122,10 @@ fn find(parent: &mut [u32], mut a: u32) -> u32 {
 }
 
 impl Solver {
-    /// Validate and compile `sketch`, and decompose it into independent clusters.
+    /// Validate `options` ([`SolveOptions::validate`]) and `sketch`, compile it, and
+    /// decompose it into independent clusters.
     pub fn new(sketch: &Sketch, options: &SolveOptions) -> Result<Self, SketchError> {
+        options.validate()?;
         let sys = compile(sketch)?;
         let nq = sys.nq();
         // Union–find over unknown quantities connected by an equation.
@@ -255,10 +266,18 @@ impl Solver {
     fn solve_cluster(&mut self, ci: usize, x: &mut [f64], x_start: &[f64]) -> ClusterOutcome {
         let lm = self.lm(self.options.max_iterations, LAMBDA0_SOLVE);
         let (rank_tol, method) = (self.options.rank_tolerance, self.options.rank_method);
+        let ct = CircuitTolerances::of(&self.options);
         let ones = vec![1.0; self.clusters[ci].problem.n()];
         let out = self.clusters[ci].problem.solve(&self.sys, x, &ones, &lm);
         if out.converged {
-            let analysis = analyze(&self.sys, &self.clusters[ci].problem, x, rank_tol, method);
+            let analysis = analyze(
+                &self.sys,
+                &self.clusters[ci].problem,
+                x,
+                rank_tol,
+                method,
+                ct,
+            );
             let status = if !analysis.circuits.is_empty() {
                 SolveStatus::OverConstrainedRedundant
             } else if analysis.dof() == 0 {
@@ -285,7 +304,14 @@ impl Solver {
             x[q as usize] = x_start[q as usize];
         }
         let loose = self.options.conflict_rank_tolerance.max(rank_tol);
-        let an_ls = analyze(&self.sys, &self.clusters[ci].problem, &x_ls, loose, method);
+        let an_ls = analyze(
+            &self.sys,
+            &self.clusters[ci].problem,
+            &x_ls,
+            loose,
+            method,
+            ct,
+        );
         let mut seed = self.conflicting_constraints(&an_ls);
         let all: Vec<usize> = self.clusters[ci].constraints.clone();
         let mut removed: BTreeSet<usize> = BTreeSet::new();
@@ -318,7 +344,7 @@ impl Solver {
                 break;
             }
             candidates_inconsistent = Verdict::of(&o) == Verdict::Inconsistent;
-            let an = analyze(&self.sys, &p, &xr, loose, method);
+            let an = analyze(&self.sys, &p, &xr, loose, method, ct);
             seed = self.conflicting_constraints(&an);
         }
         if conflicts.is_empty() {
@@ -328,6 +354,7 @@ impl Solver {
                 &x_ls,
                 rank_tol,
                 method,
+                ct,
             );
             return ClusterOutcome {
                 status: SolveStatus::FailedToConverge,
@@ -339,7 +366,7 @@ impl Solver {
         }
         let (analysis, redundant) = match repaired {
             Some((p, xr)) => {
-                let an = analyze(&self.sys, &p, &xr, rank_tol, method);
+                let an = analyze(&self.sys, &p, &xr, rank_tol, method, ct);
                 let red = an.circuits.clone();
                 (an, red)
             }
@@ -350,6 +377,7 @@ impl Solver {
                     &x_ls,
                     rank_tol,
                     method,
+                    ct,
                 ),
                 Vec::new(),
             ),
@@ -368,7 +396,7 @@ impl Solver {
         let tol = self.options.tolerance;
         let mut set = BTreeSet::new();
         for c in &an.circuits {
-            if c.inconsistency > 10.0 * tol * c.weight.max(1.0) {
+            if c.inconsistency > CONFLICT_RESIDUAL_FACTOR * tol * c.weight.max(1.0) {
                 for &e in &c.support {
                     if let Owner::Constraint(k) = self.sys.equations[e].owner {
                         set.insert(k);
@@ -785,8 +813,10 @@ impl Solver {
             iterations: o.iterations,
             max_residual,
             conditioning: o.analysis.kept_ratio,
-            near_degenerate: o.analysis.kept_ratio < 1e3 * self.options.rank_tolerance
-                || o.analysis.dropped_ratio > 1e-3 * self.options.rank_tolerance,
+            near_degenerate: o.analysis.kept_ratio
+                < NEAR_DEGENERATE_MARGIN * self.options.rank_tolerance
+                || o.analysis.dropped_ratio
+                    > (1.0 / NEAR_DEGENERATE_MARGIN) * self.options.rank_tolerance,
             entities,
             constraints: cl
                 .constraints

@@ -105,6 +105,17 @@ pub enum SketchError {
         /// Why.
         reason: &'static str,
     },
+    /// A [`crate::SolveOptions`] value outside its domain (e.g. a circuit tolerance that is
+    /// not finite or not in (0, 1)); nothing is solved.
+    #[error("invalid option `{option}` = {value}: {reason}")]
+    InvalidOption {
+        /// The option (field of `SolveOptions`).
+        option: &'static str,
+        /// The value given.
+        value: f64,
+        /// Why it is rejected.
+        reason: &'static str,
+    },
     /// Malformed JSON.
     #[error("invalid JSON: {message}")]
     Json {
@@ -128,6 +139,7 @@ impl SketchError {
             SketchError::UnsupportedCombination { .. } => "SKETCH_UNSUPPORTED_COMBINATION",
             SketchError::SelfReference { .. } => "SKETCH_SELF_REFERENCE",
             SketchError::InvalidDrag { .. } => "SKETCH_INVALID_DRAG",
+            SketchError::InvalidOption { .. } => "SKETCH_INVALID_OPTION",
             SketchError::Json { .. } => "SKETCH_JSON",
         }
     }

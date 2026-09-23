@@ -10,7 +10,8 @@
 //! - [`GeomKind`]: surface or curve type.
 //! - [`Support`]: the exact carrier (plane with oriented normal and offset, cylinder
 //!   axis/radius, line direction/position, circle centre/normal/radius, …) in world
-//!   coordinates, with sign-canonical axis directions so equal carriers compare equal.
+//!   coordinates. Axes of unoriented carriers are stored sign-canonically (for stable
+//!   output) and always *compared* sign-independently ([`support_gap`]).
 //! - `size`: face area (integrated on a deflection-bounded tessellation, a heuristic
 //!   only) or edge length (from a fine polyline).
 //! - `centroid` (world) and `local` (the centroid normalised to the body's bounding box,
@@ -82,8 +83,10 @@ impl GeomKind {
     }
 }
 
-/// The exact carrier of an entity, in world coordinates. Axis directions are
-/// sign-canonical (see [`canonical_axis`]); a plane keeps its *outward* normal.
+/// The exact carrier of an entity, in world coordinates. Axis directions of unoriented
+/// carriers (cylinder, cone, torus, line, circle) are stored sign-canonically (see
+/// [`canonical_axis`]) but compared up to sign ([`support_gap`]); a plane keeps its
+/// *outward* normal, which is compared with its sign.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Support {
     /// Plane `normal · p = offset` (outward normal).
@@ -151,8 +154,14 @@ pub enum Support {
 
 /// How far apart two carriers are: `(angle between directions, linear offset)`.
 /// `None` when they are of different types (or [`Support::Free`]).
+///
+/// Plane normals are oriented (outward), so opposite planes are far apart. The axes of
+/// cylinders, cones, tori, lines and circles are *unoriented*: their angle is
+/// `min(θ, π − θ)` ([`axis_angle`]), so two axes that are equal within tolerance but
+/// were canonicalised to opposite signs (a near-zero leading component) still match.
 pub fn support_gap(a: &Support, b: &Support) -> Option<(f64, f64)> {
     let ang = |x: &[f64; 3], y: &[f64; 3]| angle(v3(*x), v3(*y));
+    let axis = |x: &[f64; 3], y: &[f64; 3]| axis_angle(v3(*x), v3(*y));
     let dist = |x: &[f64; 3], y: &[f64; 3]| v3(*x).distance(v3(*y));
     Some(match (a, b) {
         (
@@ -176,7 +185,7 @@ pub fn support_gap(a: &Support, b: &Support) -> Option<(f64, f64)> {
                 point: p2,
                 radius: r2,
             },
-        ) => (ang(a1, a2), dist(p1, p2) + (r1 - r2).abs()),
+        ) => (axis(a1, a2), dist(p1, p2) + (r1 - r2).abs()),
         (
             Support::Cone {
                 axis: a1,
@@ -188,7 +197,7 @@ pub fn support_gap(a: &Support, b: &Support) -> Option<(f64, f64)> {
                 apex: p2,
                 half_angle: h2,
             },
-        ) => (ang(a1, a2) + (h1 - h2).abs(), dist(p1, p2)),
+        ) => (axis(a1, a2) + (h1 - h2).abs(), dist(p1, p2)),
         (
             Support::Sphere {
                 center: c1,
@@ -213,11 +222,11 @@ pub fn support_gap(a: &Support, b: &Support) -> Option<(f64, f64)> {
                 minor: n2,
             },
         ) => (
-            ang(a1, a2),
+            axis(a1, a2),
             dist(c1, c2) + (m1 - m2).abs() + (n1 - n2).abs(),
         ),
         (Support::Line { dir: d1, point: p1 }, Support::Line { dir: d2, point: p2 }) => {
-            (ang(d1, d2), dist(p1, p2))
+            (axis(d1, d2), dist(p1, p2))
         }
         (
             Support::Circle {
@@ -230,7 +239,7 @@ pub fn support_gap(a: &Support, b: &Support) -> Option<(f64, f64)> {
                 center: c2,
                 radius: r2,
             },
-        ) => (ang(n1, n2), dist(c1, c2) + (r1 - r2).abs()),
+        ) => (axis(n1, n2), dist(c1, c2) + (r1 - r2).abs()),
         _ => return None,
     })
 }
@@ -285,11 +294,27 @@ fn angle(a: Vec3, b: Vec3) -> f64 {
     math::atan2(a.cross(b).norm(), a.dot(b))
 }
 
-/// Sign-canonical direction: the first component with magnitude above 1e-9 is positive.
+/// Angle between two *unoriented* axes, `min(θ, π − θ)` in `[0, π/2]` where `θ` is the
+/// angle between the direction vectors. Computed as `atan2(|a × b|, |a · b|)`, which is
+/// accurate for tiny angles and bit-identical for `(a, b)`, `(a, −b)` and `(−a, b)`.
+pub fn axis_angle(a: Vec3, b: Vec3) -> f64 {
+    math::atan2(a.cross(b).norm(), a.dot(b).abs())
+}
+
+/// Components of a unit axis at most this large do not decide its canonical sign.
+///
+/// Derived from [`SUPPORT_ANGLE_TOL`]: a component of magnitude `≤ sin(tol) ≤ tol` can
+/// change sign under a rotation by `tol`, i.e. between two axes that are the same
+/// carrier. (Comparisons do not depend on it: [`support_gap`] is sign-independent.)
+pub const CANONICAL_SIGN_THRESHOLD: f64 = SUPPORT_ANGLE_TOL;
+
+/// Sign-canonical direction of an unoriented axis: the first component with magnitude
+/// above [`CANONICAL_SIGN_THRESHOLD`] is positive. Used for stable stored values only;
+/// compare axes with [`axis_angle`], never by their canonical signs.
 pub fn canonical_axis(d: Vec3) -> Vec3 {
     let s = [d.x, d.y, d.z]
         .into_iter()
-        .find(|c| c.abs() > 1e-9)
+        .find(|c| c.abs() > CANONICAL_SIGN_THRESHOLD)
         .map_or(1.0, |c| if c < 0.0 { -1.0 } else { 1.0 });
     d * s
 }
@@ -863,6 +888,141 @@ mod tests {
         };
         assert!(support_gap(&a, &b).is_none());
         assert!(!same_support(&a, &b, 1.0));
+    }
+
+    fn unit(x: f64, y: f64, z: f64) -> Vec3 {
+        Vec3::new(x, y, z).normalize().expect("non-zero")
+    }
+
+    fn cylinder_support(axis: Vec3) -> Support {
+        let frame = forge_core::Frame::from_normal(Vec3::new(1.0, 2.0, 3.0), axis)
+            .expect("frame from a unit axis");
+        let surface = Surface::Cylinder(
+            forge_core::geom::Cylinder::new(frame, 4.0).expect("positive radius"),
+        );
+        face_support(&surface, true).1
+    }
+
+    fn fingerprint(support: Support) -> Fingerprint {
+        Fingerprint {
+            kind: GeomKind::Cylinder,
+            support,
+            size: 10.0,
+            centroid: [1.0, 2.0, 3.0],
+            local: [0.5; 3],
+            body_center: [1.0, 2.0, 3.0],
+            bbox: ([0.0; 3], [2.0, 4.0, 6.0]),
+            scale: 10.0,
+            same_support_neighbors: 0,
+            family: 1,
+        }
+    }
+
+    /// Audit finding M2: the raw angle between d1 and d2 is 8e-8 ≤ SUPPORT_ANGLE_TOL,
+    /// but their leading components (±4e-8) straddled the old unnamed 1e-9 sign
+    /// threshold, so canonicalisation turned them into near-opposite axes (angle ≈ π):
+    /// `same_support` was false and `compare` scored 0, dropping a true match.
+    #[test]
+    fn carriers_equal_within_tolerance_match_despite_opposite_canonical_signs() {
+        let d1 = unit(4e-8, 0.6, 0.8);
+        let d2 = unit(-4e-8, 0.6, 0.8);
+        assert!(angle(d1, d2) <= SUPPORT_ANGLE_TOL);
+        let (a, b) = (cylinder_support(d1), cylinder_support(d2));
+        assert!(same_support(&a, &b, 10.0), "{a:?} vs {b:?}");
+        let (gap, _) = support_gap(&a, &b).expect("same type");
+        assert!(gap <= SUPPORT_ANGLE_TOL, "{gap}");
+        let c = compare(&fingerprint(a), &fingerprint(b));
+        assert!(c.same_support && c.identical, "{c:?}");
+        assert!((c.score - 1.0).abs() < 1e-12, "{c:?}");
+
+        // Leading components on either side of the (new) canonical-sign threshold: the
+        // canonical signs still differ, the comparison must not care.
+        let e1 = unit(1.05e-7, -0.6, 0.8);
+        let e2 = unit(0.95e-7, -0.6, 0.8);
+        assert!(angle(e1, e2) <= SUPPORT_ANGLE_TOL);
+        let (ca, cb) = (canonical_axis(e1), canonical_axis(e2));
+        assert!(angle(ca, cb) > 3.0, "canonical signs differ: {ca:?} {cb:?}");
+        assert!(same_support(
+            &cylinder_support(e1),
+            &cylinder_support(e2),
+            10.0
+        ));
+        for (x, y) in [
+            (
+                Support::Line {
+                    dir: ca.to_array(),
+                    point: [0.0; 3],
+                },
+                Support::Line {
+                    dir: cb.to_array(),
+                    point: [0.0; 3],
+                },
+            ),
+            (
+                Support::Circle {
+                    normal: ca.to_array(),
+                    center: [0.0; 3],
+                    radius: 2.0,
+                },
+                Support::Circle {
+                    normal: cb.to_array(),
+                    center: [0.0; 3],
+                    radius: 2.0,
+                },
+            ),
+            (
+                Support::Torus {
+                    axis: ca.to_array(),
+                    center: [0.0; 3],
+                    major: 3.0,
+                    minor: 1.0,
+                },
+                Support::Torus {
+                    axis: cb.to_array(),
+                    center: [0.0; 3],
+                    major: 3.0,
+                    minor: 1.0,
+                },
+            ),
+            (
+                Support::Cone {
+                    axis: ca.to_array(),
+                    apex: [0.0; 3],
+                    half_angle: 0.3,
+                },
+                Support::Cone {
+                    axis: cb.to_array(),
+                    apex: [0.0; 3],
+                    half_angle: 0.3,
+                },
+            ),
+        ] {
+            assert!(same_support(&x, &y, 10.0), "{x:?} vs {y:?}");
+        }
+    }
+
+    #[test]
+    fn axis_angle_is_sign_independent_and_folds_to_a_right_angle() {
+        let a = unit(0.3, -0.4, 0.5);
+        let b = unit(0.31, -0.39, 0.52);
+        let t = axis_angle(a, b);
+        for (x, y) in [(a, -b), (-a, b), (-a, -b)] {
+            assert_eq!(axis_angle(x, y).to_bits(), t.to_bits());
+        }
+        assert!((t - angle(a, b)).abs() < 1e-15);
+        assert!(axis_angle(a, -a) == 0.0);
+        let p = axis_angle(Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0));
+        assert!((p - math::FRAC_PI_2).abs() < 1e-15);
+        // Planes stay oriented: opposite outward normals are not the same carrier.
+        let up = Support::Plane {
+            normal: [0.0, 0.0, 1.0],
+            offset: 0.0,
+        };
+        let down = Support::Plane {
+            normal: [0.0, 0.0, -1.0],
+            offset: 0.0,
+        };
+        assert!(!same_support(&up, &down, 1.0));
     }
 
     #[test]

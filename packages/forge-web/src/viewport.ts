@@ -11,6 +11,7 @@ import type {
   ControlsOptions,
   DisplayOptions,
   EntityRef,
+  ForgeError,
   IrInput,
   LoadResult,
   PickResult,
@@ -54,6 +55,173 @@ type Drag = { mode: "orbit" | "pan"; x: number; y: number; startX: number; start
 /** Pointer travel (CSS px) below which a press–release counts as a click. */
 const CLICK_SLOP = 4;
 
+/**
+ * Normalise anything thrown by the WASM bindings into a {@link ForgeError}: errors that
+ * already carry a string `code` (e.g. `RENDER_NO_ADAPTER`, `RENDER_CANVAS`) pass through
+ * unchanged; a WebAssembly trap becomes `FORGE_WASM_TRAP`; anything else gets `fallback`.
+ */
+export function asForgeError(e: unknown, fallback: string): ForgeError {
+  if (e instanceof Error && typeof (e as Partial<ForgeError>).code === "string") return e as ForgeError;
+  if (typeof WebAssembly !== "undefined" && e instanceof WebAssembly.RuntimeError) {
+    const err = forgeError("FORGE_WASM_TRAP", `the Forge WASM module trapped: ${e.message}`);
+    (err as Error & { cause?: unknown }).cause = e;
+    return err;
+  }
+  const message = e instanceof Error ? e.message : String(e);
+  const err = forgeError(fallback, message);
+  (err as Error & { cause?: unknown }).cause = e;
+  return err;
+}
+
+// Minimal structural WebGPU types for the probe (the package does not depend on
+// @webgpu/types).
+interface ProbeBuffer {
+  mapAsync(mode: number): Promise<void>;
+  getMappedRange(): ArrayBuffer;
+  unmap(): void;
+  destroy(): void;
+}
+interface ProbeDevice {
+  createBuffer(d: { size: number; usage: number }): ProbeBuffer;
+  createCommandEncoder(): { copyBufferToBuffer(a: ProbeBuffer, ao: number, b: ProbeBuffer, bo: number, n: number): void; finish(): unknown };
+  queue: { writeBuffer(b: ProbeBuffer, offset: number, data: Uint32Array): void; submit(c: unknown[]): void };
+  pushErrorScope(filter: string): void;
+  popErrorScope(): Promise<{ message: string } | null>;
+  destroy(): void;
+}
+interface ProbeGpu {
+  requestAdapter(o?: { powerPreference?: string }): Promise<{ requestDevice(): Promise<ProbeDevice> } | null>;
+}
+
+/** WebGPU buffer usage / map-mode bits (WebGPU spec constants). */
+const MAP_READ = 0x0001;
+const COPY_SRC = 0x0004;
+const COPY_DST = 0x0008;
+const MAP_MODE_READ = 0x0001;
+/** How long each probe step may take before the device is called broken. */
+const PROBE_TIMEOUT_MS = 3000;
+
+/** `p`, or a rejection after {@link PROBE_TIMEOUT_MS} (a late rejection of `p` is ignored). */
+async function withTimeout<T>(p: Promise<T>, what: string): Promise<T> {
+  p.catch(() => undefined);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what} did not complete in ${PROBE_TIMEOUT_MS} ms`)), PROBE_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([p, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** The device check's verdict, per `navigator.gpu` object. */
+let webgpuHealth: { gpu: ProbeGpu; verdict: Promise<ForgeError | null> } | null = null;
+
+/**
+ * Is the browser's WebGPU device fit for forge-render? Checked **before** a canvas is
+ * committed to WebGPU, because a canvas keeps its first context type: WebGL2 is only
+ * possible on a canvas WebGPU never touched.
+ *
+ * Audit V3: a broken adapter (Chromium's SwiftShader WebGPU with unsafe flags) created a
+ * device whose buffer mappings failed — blank canvas, `RENDER_READBACK` on every pick —
+ * and `backend: "auto"` never fell back to WebGL2. The probe uploads with
+ * `writeBuffer`, copies, and maps a read-back buffer, the operations forge-render relies
+ * on (scene uploads, pick read-back), inside a validation error scope.
+ *
+ * Resolves to `null` when the device is healthy **or** WebGPU is absent (forge-wasm then
+ * falls back to WebGL2 itself), else to the reason (`RENDER_WEBGPU_UNHEALTHY`). Runs
+ * once per `navigator.gpu`. The verdict only orders the attempts (see
+ * {@link Viewport.create}); forge-wasm's own self-test of the device it would render with
+ * is authoritative.
+ */
+export function probeWebGpu(): Promise<ForgeError | null> {
+  const gpu = (globalThis as { navigator?: { gpu?: ProbeGpu | null } }).navigator?.gpu;
+  if (!gpu) return Promise.resolve(null);
+  if (webgpuHealth?.gpu !== gpu) webgpuHealth = { gpu, verdict: checkWebGpu(gpu) };
+  return webgpuHealth.verdict;
+}
+
+async function checkWebGpu(gpu: ProbeGpu): Promise<ForgeError | null> {
+  const bad = (why: string) => forgeError("RENDER_WEBGPU_UNHEALTHY", `WebGPU device check failed: ${why}`);
+  let device: ProbeDevice | null = null;
+  try {
+    const adapter = await withTimeout(gpu.requestAdapter({ powerPreference: "high-performance" }), "requestAdapter");
+    if (!adapter) return null;
+    device = await withTimeout(adapter.requestDevice(), "requestDevice");
+    device.pushErrorScope("validation");
+    const pattern = new Uint32Array([0x464f5247, 0x45524e44, 0x00c0ffee, 0xdeadbeef]);
+    const src = device.createBuffer({ size: pattern.byteLength, usage: COPY_SRC | COPY_DST });
+    const dst = device.createBuffer({ size: pattern.byteLength, usage: MAP_READ | COPY_DST });
+    device.queue.writeBuffer(src, 0, pattern);
+    const enc = device.createCommandEncoder();
+    enc.copyBufferToBuffer(src, 0, dst, 0, pattern.byteLength);
+    device.queue.submit([enc.finish()]);
+    await withTimeout(dst.mapAsync(MAP_MODE_READ), "the read-back");
+    const got = new Uint32Array(dst.getMappedRange().slice(0));
+    dst.unmap();
+    src.destroy();
+    dst.destroy();
+    const scope = await withTimeout(device.popErrorScope(), "popErrorScope");
+    if (scope) return bad(`validation error: ${scope.message}`);
+    if (got.length !== pattern.length || got.some((v, i) => v !== pattern[i])) return bad("read-back returned wrong data");
+    return null;
+  } catch (e) {
+    return bad(e instanceof Error ? e.message : String(e));
+  } finally {
+    try {
+      device?.destroy();
+    } catch {
+      // A broken device may throw on destroy too; nothing else holds it.
+    }
+  }
+}
+
+/**
+ * `raw.createViewport` for `backend`, honouring the WebGPU device check (`probe`, set only
+ * for `"auto"` when the check failed): WebGL2 is tried first, and WebGPU — decided by
+ * forge-wasm's self-test of the real device — only when WebGL2 cannot start, so a slow
+ * but working WebGPU (a check step over its time budget) is still used on a browser
+ * without WebGL2. A failed WebGL2 context request leaves the canvas free for WebGPU.
+ *
+ * Rejects with a {@link ForgeError}; when no backend starts, `RENDER_NO_ADAPTER` whose
+ * message lists every reason, the device check's included.
+ */
+async function createRaw(
+  canvas: Canvas,
+  backend: "auto" | Backend,
+  probe: ForgeError | null,
+  pw: number,
+  ph: number,
+  dpr: number,
+): Promise<raw.RawViewport> {
+  if (!probe) {
+    try {
+      return await raw.createViewport(canvas, backend, pw, ph, dpr);
+    } catch (e) {
+      throw asForgeError(e, "RENDER_INIT");
+    }
+  }
+  const reasons = [probe.message];
+  for (const b of ["webgl2", "webgpu"] as const) {
+    try {
+      return await raw.createViewport(canvas, b, pw, ph, dpr);
+    } catch (e) {
+      const err = asForgeError(e, "RENDER_INIT");
+      if (err.code !== "RENDER_NO_ADAPTER") {
+        // The canvas may hold a context now: stop, but keep why WebGPU was not used.
+        const out = forgeError(err.code, `${err.message} (${reasons.join("; ")})`);
+        (out as Error & { cause?: unknown }).cause = err;
+        throw out;
+      }
+      reasons.push(err.message);
+    }
+  }
+  const out = forgeError("RENDER_NO_ADAPTER", reasons.join("; "));
+  (out as Error & { cause?: unknown }).cause = probe;
+  throw out;
+}
+
 export class Viewport {
   readonly canvas: Canvas;
   #raw: raw.RawViewport;
@@ -76,20 +244,41 @@ export class Viewport {
   #hoverPending: { x: number; y: number } | null = null;
   #controlsCleanup: (() => void) | null = null;
   #resizeObserver: ResizeObserver | null = null;
+  #fallback: ForgeError | null;
+  #fault: ForgeError | null = null;
 
-  private constructor(r: raw.RawViewport, canvas: Canvas, cssW: number, cssH: number, dpr: number, autoRender: boolean) {
+  private constructor(
+    r: raw.RawViewport,
+    canvas: Canvas,
+    cssW: number,
+    cssH: number,
+    dpr: number,
+    autoRender: boolean,
+    fallback: ForgeError | null,
+  ) {
     this.#raw = r;
     this.canvas = canvas;
     this.#cssW = cssW;
     this.#cssH = cssH;
     this.#dpr = dpr;
     this.#autoRender = autoRender;
+    this.#fallback = fallback;
   }
 
   /**
    * Create a viewport on `canvas` (an `HTMLCanvasElement`, or an `OffscreenCanvas` — then
    * pass `width`/`height`). Loads the WASM module if needed. With `backend: "auto"`,
-   * WebGPU is used when the browser offers an adapter, else WebGL2.
+   * WebGPU is used when the browser offers an adapter whose device passes a read-back
+   * check ({@link probeWebGpu}) and forge-wasm's self-test (a frame and a pick read-back
+   * before the canvas is committed), else WebGL2 ({@link Viewport.backendFallback} says
+   * why). When the check fails, WebGL2 is tried first and WebGPU only if WebGL2 cannot
+   * start.
+   *
+   * Rejects with a {@link ForgeError}: `RENDER_NO_ADAPTER` when no backend could start
+   * (the message lists each backend's reason, the device check's included), `RENDER_GPU`
+   * when the device faulted setting up the canvas or drawing the first frame,
+   * `RENDER_CANVAS`, `RENDER_BACKEND`, `RENDER_SURFACE`, `FORGE_WASM_TRAP` if the module
+   * trapped, else `RENDER_INIT`.
    */
   static async create(canvas: Canvas, options: ViewportOptions = {}): Promise<Viewport> {
     await init(options.wasm);
@@ -109,8 +298,21 @@ export class Viewport {
     const ph = Math.max(1, Math.round(cssH * dpr));
     canvas.width = pw;
     canvas.height = ph;
-    const r = await raw.createViewport(canvas, options.backend ?? "auto", pw, ph, dpr);
-    const vp = new Viewport(r, canvas, cssW, cssH, dpr, options.autoRender ?? true);
+    const backend = options.backend ?? "auto";
+    // Decide before the canvas gets any context (see probeWebGpu).
+    const probe = backend === "auto" ? await probeWebGpu() : null;
+    const r = await createRaw(canvas, backend, probe, pw, ph, dpr);
+    let fallback: ForgeError | null = null;
+    if (backend === "auto" && r.backend() === "webgl2") {
+      const why = r.backendFallback();
+      fallback = probe ?? (why ? forgeError("RENDER_WEBGPU_UNHEALTHY", why) : null);
+    }
+    const vp = new Viewport(r, canvas, cssW, cssH, dpr, options.autoRender ?? true, fallback);
+    // WebGPU reports some faults after the call that caused them returned.
+    r.onGpuFault((e: unknown) => {
+      if (vp.#disposed || vp.#fault) return;
+      vp.#unhandled(vp.#noteFault(asForgeError(e, "RENDER_GPU")));
+    });
     if (options.display) vp.setDisplayOptions(options.display);
     if ((options.autoResize ?? true) && isHtmlCanvas(canvas) && typeof ResizeObserver !== "undefined") {
       vp.#resizeObserver = new ResizeObserver(() => {
@@ -129,7 +331,11 @@ export class Viewport {
   /** Replace the scene with `evaluate(...).bodies`. Keeps the camera (the first scene is framed). */
   setBodies(bodies: RenderBody[]): void {
     this.#live();
-    this.#raw.setBodies(bodies);
+    try {
+      this.#raw.setBodies(bodies);
+    } catch (e) {
+      throw this.#noteFault(asForgeError(e, "RENDER_BODY"));
+    }
     this.requestRender();
   }
 
@@ -139,7 +345,12 @@ export class Viewport {
    */
   loadIr(ir: IrInput, options: TessellationOptions = {}): LoadResult {
     this.#live();
-    const r = this.#raw.loadIr(irText(ir), options.chordalDeflection, options.angularDeflection) as LoadResult;
+    let r: LoadResult;
+    try {
+      r = this.#raw.loadIr(irText(ir), options.chordalDeflection, options.angularDeflection) as LoadResult;
+    } catch (e) {
+      throw this.#noteFault(asForgeError(e, "RENDER_LOAD"));
+    }
     this.requestRender();
     return r;
   }
@@ -152,7 +363,12 @@ export class Viewport {
    */
   async pick(x: number, y: number): Promise<PickResult | null> {
     this.#live();
-    const p = (await this.#raw.pick(x * this.#dpr, y * this.#dpr)) as RawPick | null;
+    let p: RawPick | null;
+    try {
+      p = (await this.#raw.pick(x * this.#dpr, y * this.#dpr)) as RawPick | null;
+    } catch (e) {
+      throw this.#noteFault(asForgeError(e, "RENDER_PICK"));
+    }
     if (!p) return null;
     return { ...p, pixel: [p.pixel[0] / this.#dpr, p.pixel[1] / this.#dpr] };
   }
@@ -249,6 +465,34 @@ export class Viewport {
     return this.#raw.backend() as Backend;
   }
 
+  /**
+   * Why `backend: "auto"` chose WebGL2 although the browser offers WebGPU
+   * (`RENDER_WEBGPU_UNHEALTHY`: the device failed {@link probeWebGpu}); `null` otherwise.
+   */
+  backendFallback(): ForgeError | null {
+    return this.#fallback;
+  }
+
+  /**
+   * The first GPU fault of the device (`RENDER_GPU`: a validation, out-of-memory or
+   * internal error, or a lost device), or `null` while it is healthy. A faulted viewport
+   * draws and picks nothing: {@link Viewport.render}, {@link Viewport.pick},
+   * {@link Viewport.setBodies} and {@link Viewport.loadIr} throw the fault, automatic
+   * rendering stops, and the fault is emitted once as an `error` event (or, with no
+   * listener, thrown asynchronously) — it is never silent.
+   *
+   * Reads the device's own record too, so a fault no call has reported yet (a WebGPU
+   * error from {@link Viewport.resize}'s texture recreation, a lost device) is returned
+   * — and emitted — at once rather than at the next render, pick or upload.
+   */
+  gpuFault(): ForgeError | null {
+    if (!this.#fault && !this.#disposed) {
+      const f: unknown = this.#raw.gpuFault();
+      if (f) this.#noteFault(asForgeError(f, "RENDER_GPU"));
+    }
+    return this.#fault;
+  }
+
   // ---- Size and frames -------------------------------------------------------------------
 
   /** Resize to `width × height` CSS px at device-pixel ratio `dpr` (default: unchanged). */
@@ -262,25 +506,35 @@ export class Viewport {
     if (this.canvas.width !== pw) this.canvas.width = pw;
     if (this.canvas.height !== ph) this.canvas.height = ph;
     this.#raw.resize(pw, ph, this.#dpr);
-    // Render synchronously: the canvas was cleared by the size change.
-    this.render();
+    // Render synchronously: the canvas was cleared by the size change. A faulted device
+    // draws nothing (the fault was reported when it happened).
+    if (!this.#fault) this.render();
   }
 
   /** Schedule one frame on the next animation frame (no-op with `autoRender: false`). */
   requestRender(): void {
-    if (!this.#autoRender || this.#frameQueued || this.#disposed) return;
+    if (!this.#autoRender || this.#frameQueued || this.#disposed || this.#fault) return;
     this.#frameQueued = true;
     requestFrame(() => {
       this.#frameQueued = false;
-      if (!this.#disposed) this.render();
+      if (this.#disposed) return;
+      try {
+        this.render();
+      } catch (e) {
+        this.#unhandled(e);
+      }
     });
   }
 
-  /** Render and present one frame now. */
+  /** Render and present one frame now. Throws `RENDER_GPU` once the device faulted. */
   render(): void {
     this.#live();
     const t0 = now();
-    this.#raw.render();
+    try {
+      this.#raw.render();
+    } catch (e) {
+      throw this.#noteFault(asForgeError(e, "RENDER_FRAME"));
+    }
     const t1 = now();
     this.#lastFrameMs = t1 - t0;
     this.#avgFrameMs = this.#avgFrameMs === 0 ? this.#lastFrameMs : this.#avgFrameMs * 0.9 + this.#lastFrameMs * 0.1;
@@ -313,6 +567,7 @@ export class Viewport {
     this.#resizeObserver?.disconnect();
     this.#listeners.clear();
     this.#disposed = true;
+    this.#raw.onGpuFault(undefined);
     this.#raw.free();
   }
 
@@ -360,7 +615,7 @@ export class Viewport {
     const d = this.#drag;
     this.#drag = null;
     (e.target as Element | null)?.releasePointerCapture?.(e.pointerId);
-    if (!d || d.moved || e.button !== 0 || !(options.select ?? true)) return;
+    if (!d || d.moved || e.button !== 0 || !(options.select ?? true) || this.#fault) return;
     const additive = e.shiftKey || e.ctrlKey || e.metaKey;
     void this.pick(e.offsetX, e.offsetY).then((p) => {
       if (this.#disposed) return;
@@ -375,7 +630,7 @@ export class Viewport {
       }
       this.setSelection(this.#selection);
       this.#emit({ type: "select", selection: this.selection(), pick: p });
-    });
+    }, (err: unknown) => this.#unhandled(err));
   }
 
   /** Wheel handler: zoom to the cursor. */
@@ -434,6 +689,7 @@ export class Viewport {
 
   /** At most one hover pick in flight; the latest pointer position wins. */
   #queueHover(x: number, y: number): void {
+    if (this.#fault) return;
     this.#hoverPending = { x, y };
     if (this.#hoverBusy) return;
     this.#hoverBusy = true;
@@ -442,7 +698,12 @@ export class Viewport {
         const { x: px, y: py } = this.#hoverPending;
         this.#hoverPending = null;
         const seq = ++this.#hoverSeq;
-        const p = await this.pick(px, py).catch(() => null);
+        // Hover is best effort (a failed read-back just highlights nothing), but a GPU
+        // fault is reported.
+        const p = await this.pick(px, py).catch((e: unknown) => {
+          if ((e as Partial<ForgeError>).code === "RENDER_GPU") this.#unhandled(e);
+          return null;
+        });
         if (seq === this.#hoverSeq && !this.#drag) this.#setHoverPick(p);
       }
       this.#hoverBusy = false;
@@ -459,6 +720,29 @@ export class Viewport {
 
   #emit(e: ViewportEvent): void {
     for (const l of this.#listeners) l(e);
+  }
+
+  /** Keep the first GPU fault and emit it once as an `error` event; returns `err`. */
+  #noteFault(err: ForgeError): ForgeError {
+    if (err.code === "RENDER_GPU" && !this.#fault && !this.#disposed) {
+      this.#fault = err;
+      this.#emit({ type: "error", error: err });
+    }
+    return err;
+  }
+
+  /**
+   * A failure of work nobody awaits (a scheduled frame, a hover or click pick, a fault
+   * WebGPU reported late). A GPU fault already reached the `error` listeners; anything
+   * else — or a fault nobody listens to — is thrown asynchronously, so it is never
+   * swallowed.
+   */
+  #unhandled(e: unknown): void {
+    const err = asForgeError(e, "RENDER_INIT");
+    if (err.code === "RENDER_GPU" && this.#listeners.size > 0) return;
+    queueMicrotask(() => {
+      throw err;
+    });
   }
 
   #live(): void {

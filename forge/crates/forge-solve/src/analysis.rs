@@ -31,6 +31,30 @@ pub enum RankMethod {
     Svd,
 }
 
+/// Thresholds of the circuit extraction ([`SolveOptions::circuit_pivot_tolerance`] and
+/// [`SolveOptions::circuit_support_tolerance`]).
+///
+/// [`SolveOptions::circuit_pivot_tolerance`]: crate::SolveOptions::circuit_pivot_tolerance
+/// [`SolveOptions::circuit_support_tolerance`]: crate::SolveOptions::circuit_support_tolerance
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct CircuitTolerances {
+    /// Smallest coefficient magnitude that may pivot the echelon reduction.
+    pub pivot: f64,
+    /// Relative magnitude (× the circuit's largest coefficient) above which an equation
+    /// belongs to the circuit's support.
+    pub support: f64,
+}
+
+impl CircuitTolerances {
+    /// The thresholds configured in `options`.
+    pub(crate) fn of(options: &crate::SolveOptions) -> Self {
+        Self {
+            pivot: options.circuit_pivot_tolerance,
+            support: options.circuit_support_tolerance,
+        }
+    }
+}
+
 /// A dependency between equations.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Circuit {
@@ -68,13 +92,15 @@ impl Analysis {
     }
 }
 
-/// Analyze `prob` at `x`.
+/// Analyze `prob` at `x`: rank decision with relative tolerance `tol`, circuits
+/// extracted with `circuit`.
 pub(crate) fn analyze(
     sys: &System,
     prob: &Problem,
     x: &[f64],
     tol: f64,
     method: RankMethod,
+    circuit: CircuitTolerances,
 ) -> Analysis {
     let (m, n) = (prob.m(), prob.n());
     let (j, f) = prob.dense_jacobian(sys, x);
@@ -101,7 +127,7 @@ pub(crate) fn analyze(
         RankMethod::Qrcp => qrcp(&mt, tol),
         RankMethod::Svd => jacobi_svd(&mt, tol),
     };
-    let circuits = circuits(&rr.left_null, &fs, &prob.eqs);
+    let circuits = circuits(&rr.left_null, &fs, &prob.eqs, circuit);
     Analysis {
         rank: rr.rank,
         n,
@@ -114,7 +140,12 @@ pub(crate) fn analyze(
 
 /// Reduce the dependency basis `y` (`m × k`) to echelon form with pivots taken from the
 /// last equation backwards and extract the circuits.
-fn circuits(y: &Mat, fs: &[f64], eqs: &[usize]) -> Vec<Circuit> {
+///
+/// Each basis vector is first scaled to a largest coefficient of magnitude 1. A column
+/// can only pivot on a coefficient larger than `tol.pivot`; an equation belongs to a
+/// reduced circuit when its coefficient exceeds `tol.support` × the circuit's largest
+/// coefficient.
+fn circuits(y: &Mat, fs: &[f64], eqs: &[usize], tol: CircuitTolerances) -> Vec<Circuit> {
     let (m, k) = (y.rows, y.cols);
     let mut rows: Vec<Vec<f64>> = (0..k)
         .map(|c| {
@@ -132,7 +163,7 @@ fn circuits(y: &Mat, fs: &[f64], eqs: &[usize]) -> Vec<Circuit> {
     let mut pivots: Vec<(usize, usize)> = Vec::new();
     for col in (0..m).rev() {
         let mut best = None;
-        let mut best_val = 1e-9;
+        let mut best_val = tol.pivot;
         for (i, r) in rows.iter().enumerate() {
             if !used[i] && r[col].abs() > best_val {
                 best_val = r[col].abs();
@@ -166,7 +197,7 @@ fn circuits(y: &Mat, fs: &[f64], eqs: &[usize]) -> Vec<Circuit> {
             let r = &rows[i];
             let mx = r.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
             let support: Vec<usize> = (0..m)
-                .filter(|&j| r[j].abs() > 1e-8 * mx)
+                .filter(|&j| r[j].abs() > tol.support * mx)
                 .map(|j| eqs[j])
                 .collect();
             let mut dotf = 0.0;
@@ -185,4 +216,144 @@ fn circuits(y: &Mat, fs: &[f64], eqs: &[usize]) -> Vec<Circuit> {
         .collect();
     out.sort_by_key(|c| c.pivot);
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Constraint, Entity, Sketch, SolveOptions, SolveResult, SolveStatus, c, solve};
+
+    /// Point `b` at (3, 4) on the fixed lines x = 3 (`on_x`) and y = 4 (`on_y`), then
+    /// `d`: distance 5 from the fixed origin, which the two lines already imply. With unit
+    /// Jacobian rows the dependency is `0.6·on_x + 0.8·on_y − d = 0`.
+    fn implied_distance() -> Sketch {
+        let mut s = Sketch::default();
+        for (id, x, y) in [
+            ("o", 0.0, 0.0),
+            ("v0", 3.0, -10.0),
+            ("v1", 3.0, 10.0),
+            ("h0", -10.0, 4.0),
+            ("h1", 10.0, 4.0),
+        ] {
+            s.entities.push(Entity::point(id, x, y).fixed());
+        }
+        s.entities.push(Entity::point("b", 3.0, 4.0));
+        s.entities.push(Entity::line("lx", "v0", "v1"));
+        s.entities.push(Entity::line("ly", "h0", "h1"));
+        for (id, k) in [
+            ("on_x", c::point_on_line("b", "lx")),
+            ("on_y", c::point_on_line("b", "ly")),
+            ("d", c::distance("o", "b", 5.0)),
+        ] {
+            s.constraints.push(Constraint::new(id, k));
+        }
+        s
+    }
+
+    fn run(o: &SolveOptions) -> SolveResult {
+        solve(&implied_distance(), o).expect("valid sketch")
+    }
+
+    #[test]
+    fn default_circuit_tolerances_are_the_historical_constants() {
+        let o = SolveOptions::default();
+        assert_eq!(o.circuit_pivot_tolerance.to_bits(), 1e-9f64.to_bits());
+        assert_eq!(o.circuit_support_tolerance.to_bits(), 1e-8f64.to_bits());
+        // Options JSON written before the fields existed still loads with the defaults.
+        let old: SolveOptions =
+            serde_json::from_str(r#"{"rank_tolerance": 1e-8}"#).expect("options json");
+        assert_eq!(old, o);
+    }
+
+    /// Audit finding L5: the circuit thresholds come from `SolveOptions`, not from
+    /// constants hidden in `analysis.rs`.
+    #[test]
+    fn circuit_tolerances_from_options_drive_the_redundancy_diagnostics() {
+        let r = run(&SolveOptions::default());
+        assert_eq!(
+            r.status,
+            SolveStatus::OverConstrainedRedundant,
+            "{}",
+            r.explanation
+        );
+        assert_eq!(r.redundant.len(), 1);
+        assert_eq!(r.redundant[0].constraint, "d");
+        assert_eq!(r.redundant[0].implied_by, ["on_x", "on_y"]);
+
+        // Support threshold above 0.6: `on_x` (coefficient 0.6) leaves the circuit.
+        let r = run(&SolveOptions {
+            circuit_support_tolerance: 0.7,
+            ..SolveOptions::default()
+        });
+        assert_eq!(r.redundant.len(), 1);
+        assert_eq!(r.redundant[0].implied_by, ["on_y"]);
+
+        // The pivot threshold: with `d` first, the dependency is `−d + 0.6·on_x +
+        // 0.8·on_y` and the latest equation, `on_y`, pivots by default. Above 0.8 it
+        // cannot, and neither can `on_x` (0.6): `d` (1) becomes the pivot.
+        let mut s = implied_distance();
+        s.constraints.rotate_right(1);
+        let r = solve(&s, &SolveOptions::default()).expect("valid sketch");
+        assert_eq!(r.redundant.len(), 1, "{}", r.explanation);
+        assert_eq!(r.redundant[0].constraint, "on_y");
+        assert_eq!(r.redundant[0].implied_by, ["d", "on_x"]);
+        let o = SolveOptions {
+            circuit_pivot_tolerance: 0.85,
+            ..SolveOptions::default()
+        };
+        let r = solve(&s, &o).expect("valid sketch");
+        assert_eq!(r.redundant.len(), 1, "{}", r.explanation);
+        assert_eq!(r.redundant[0].constraint, "d");
+        assert_eq!(r.redundant[0].implied_by, ["on_x", "on_y"]);
+    }
+
+    /// Review of L5: a circuit tolerance that cannot select any circuit (NaN, ≥ 1) or
+    /// selects noise (≤ 0) is rejected with `SKETCH_INVALID_OPTION` before solving —
+    /// before this check, `circuit_pivot_tolerance: 1.5` reported this redundant sketch
+    /// as `FullyConstrained` with no diagnostic.
+    #[test]
+    fn invalid_circuit_tolerances_are_rejected_with_a_code() {
+        let bad = [f64::NAN, 1.5, 1.0, 0.0, -1e-9, f64::INFINITY];
+        for v in bad {
+            for o in [
+                SolveOptions {
+                    circuit_pivot_tolerance: v,
+                    ..SolveOptions::default()
+                },
+                SolveOptions {
+                    circuit_support_tolerance: v,
+                    ..SolveOptions::default()
+                },
+            ] {
+                let e = solve(&implied_distance(), &o).expect_err("rejected");
+                assert_eq!(e.code(), "SKETCH_INVALID_OPTION", "{v}: {e}");
+                assert!(
+                    matches!(e, crate::SketchError::InvalidOption { option, .. }
+                        if option.starts_with("circuit_")),
+                    "{e:?}"
+                );
+                // Every entry point: drag and the JSON API too.
+                let d = crate::drag(&implied_distance(), "b", &[[3.0, 4.0]], &o);
+                assert_eq!(d.expect_err("rejected").code(), "SKETCH_INVALID_OPTION");
+            }
+        }
+        // Options from JSON (NaN is not JSON; out-of-range values are).
+        for field in ["circuit_pivot_tolerance", "circuit_support_tolerance"] {
+            let req = serde_json::json!({
+                "sketch": serde_json::to_value(implied_distance()).expect("sketch"),
+                "options": { field: 1.5 },
+            });
+            let out: serde_json::Value =
+                serde_json::from_str(&crate::solve_json(&req.to_string())).expect("json");
+            assert_eq!(out["error"]["code"], "SKETCH_INVALID_OPTION", "{out}");
+            assert_eq!(out["error"]["details"]["option"], field, "{out}");
+        }
+        // The defaults and in-range values solve.
+        assert!(SolveOptions::default().validate().is_ok());
+        let ok = SolveOptions {
+            circuit_pivot_tolerance: 0.5,
+            circuit_support_tolerance: 0.5,
+            ..SolveOptions::default()
+        };
+        assert_eq!(run(&ok).status, SolveStatus::OverConstrainedRedundant);
+    }
 }

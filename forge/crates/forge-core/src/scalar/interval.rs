@@ -62,6 +62,19 @@ fn up_n(mut x: f64, n: u32) -> f64 {
     x
 }
 
+/// Smallest of four bounds, folded left to right with [`math::min`] (deterministic ±0,
+/// NaN corners ignored).
+#[inline]
+fn min4(x: [f64; 4]) -> f64 {
+    math::min(math::min(math::min(x[0], x[1]), x[2]), x[3])
+}
+
+/// Largest of four bounds, folded left to right with [`math::max`].
+#[inline]
+fn max4(x: [f64; 4]) -> f64 {
+    math::max(math::max(math::max(x[0], x[1]), x[2]), x[3])
+}
+
 /// Product of two bounds with the interval-arithmetic convention `0 · ∞ = 0`.
 #[inline]
 fn mul_bound(a: f64, b: f64) -> f64 {
@@ -122,8 +135,8 @@ impl Interval {
             return Self::EMPTY;
         }
         Self {
-            lo: a.min(b),
-            hi: a.max(b),
+            lo: math::min(a, b),
+            hi: math::max(a, b),
         }
     }
 
@@ -174,7 +187,7 @@ impl Interval {
     }
     /// Magnitude: the largest `|x|` in the interval.
     pub fn mag(self) -> f64 {
-        self.lo.abs().max(self.hi.abs())
+        math::max(self.lo.abs(), self.hi.abs())
     }
     /// `true` if the real number `x` lies in the interval.
     #[inline]
@@ -192,8 +205,8 @@ impl Interval {
     }
     /// Intersection (empty if disjoint).
     pub fn intersect(self, other: Interval) -> Interval {
-        let lo = self.lo.max(other.lo);
-        let hi = self.hi.min(other.hi);
+        let lo = math::max(self.lo, other.lo);
+        let hi = math::min(self.hi, other.hi);
         if self.is_empty() || other.is_empty() || lo > hi {
             Self::EMPTY
         } else {
@@ -209,8 +222,8 @@ impl Interval {
             return self;
         }
         Self {
-            lo: self.lo.min(other.lo),
-            hi: self.hi.max(other.hi),
+            lo: math::min(self.lo, other.lo),
+            hi: math::max(self.hi, other.hi),
         }
     }
     /// `true` if every point of `self` is `<` every point of `other`.
@@ -236,7 +249,10 @@ impl Interval {
     /// Widen the result of a monotone libm evaluation.
     #[inline]
     fn libm_hull(a: f64, b: f64) -> Self {
-        Self::from_bounds(down_n(a.min(b), LIBM_ULPS), up_n(a.max(b), LIBM_ULPS))
+        Self::from_bounds(
+            down_n(math::min(a, b), LIBM_ULPS),
+            up_n(math::max(a, b), LIBM_ULPS),
+        )
     }
 
     /// `true` if the width is `>= w` (or NaN/infinite).
@@ -247,8 +263,8 @@ impl Interval {
 
     fn clamp_to(self, lo: f64, hi: f64) -> Self {
         Self {
-            lo: self.lo.max(lo),
-            hi: self.hi.min(hi),
+            lo: math::max(self.lo, lo),
+            hi: math::min(self.hi, hi),
         }
     }
 }
@@ -310,8 +326,7 @@ impl Mul for Interval {
             mul_bound(self.hi, o.lo),
             mul_bound(self.hi, o.hi),
         ];
-        let lo = p[0].min(p[1]).min(p[2]).min(p[3]);
-        let hi = p[0].max(p[1]).max(p[2]).max(p[3]);
+        let (lo, hi) = (min4(p), max4(p));
         Self::from_bounds(down(lo), up(hi))
     }
 }
@@ -325,15 +340,14 @@ impl Div for Interval {
         if o.contains_zero() {
             return Self::ENTIRE;
         }
-        // `f64::min`/`max` ignore NaN corners (∞/∞); the remaining corners bound the set.
+        // `math::min`/`max` ignore NaN corners (∞/∞); the remaining corners bound the set.
         let q = [
             self.lo / o.lo,
             self.lo / o.hi,
             self.hi / o.lo,
             self.hi / o.hi,
         ];
-        let lo = q[0].min(q[1]).min(q[2]).min(q[3]);
-        let hi = q[0].max(q[1]).max(q[2]).max(q[3]);
+        let (lo, hi) = (min4(q), max4(q));
         Self::from_bounds(down(lo), up(hi))
     }
 }
@@ -401,7 +415,7 @@ impl Scalar for Interval {
         } else {
             Self {
                 lo: 0.0,
-                hi: (-self.lo).max(self.hi),
+                hi: math::max(-self.lo, self.hi),
             }
         }
     }
@@ -412,7 +426,7 @@ impl Scalar for Interval {
         let lo = if self.lo <= 0.0 {
             0.0
         } else {
-            down(self.lo.sqrt()).max(0.0)
+            math::max(down(self.lo.sqrt()), 0.0)
         };
         Self {
             lo,
@@ -426,18 +440,18 @@ impl Scalar for Interval {
         let (a, b) = (self.lo * self.lo, self.hi * self.hi);
         if self.lo >= 0.0 {
             Self {
-                lo: down(a).max(0.0),
+                lo: math::max(down(a), 0.0),
                 hi: up(b),
             }
         } else if self.hi <= 0.0 {
             Self {
-                lo: down(b).max(0.0),
+                lo: math::max(down(b), 0.0),
                 hi: up(a),
             }
         } else {
             Self {
                 lo: 0.0,
-                hi: up(a.max(b)),
+                hi: up(math::max(a, b)),
             }
         }
     }
@@ -466,7 +480,7 @@ impl Scalar for Interval {
             }
             return Self {
                 lo: 0.0,
-                hi: top.hi.max(0.0),
+                hi: math::max(top.hi, 0.0),
             };
         }
         Self::ENTIRE
@@ -553,8 +567,7 @@ impl Scalar for Interval {
             math::atan2(y.hi, x.lo),
             math::atan2(y.hi, x.hi),
         ];
-        let lo = c[0].min(c[1]).min(c[2]).min(c[3]);
-        let hi = c[0].max(c[1]).max(c[2]).max(c[3]);
+        let (lo, hi) = (min4(c), max4(c));
         Self::libm_hull(lo, hi).clamp_to(-p, p)
     }
     fn exp(self) -> Self {
@@ -563,7 +576,7 @@ impl Scalar for Interval {
         }
         let r = Self::libm_hull(math::exp(self.lo), math::exp(self.hi));
         Self {
-            lo: r.lo.max(0.0),
+            lo: math::max(r.lo, 0.0),
             hi: r.hi,
         }
     }
@@ -586,8 +599,8 @@ impl Scalar for Interval {
             return Self::EMPTY;
         }
         Self {
-            lo: self.lo.min(other.lo),
-            hi: self.hi.min(other.hi),
+            lo: math::min(self.lo, other.lo),
+            hi: math::min(self.hi, other.hi),
         }
     }
     fn max(self, other: Self) -> Self {
@@ -595,8 +608,8 @@ impl Scalar for Interval {
             return Self::EMPTY;
         }
         Self {
-            lo: self.lo.max(other.lo),
-            hi: self.hi.max(other.hi),
+            lo: math::max(self.lo, other.lo),
+            hi: math::max(self.hi, other.hi),
         }
     }
     fn is_finite(self) -> bool {
