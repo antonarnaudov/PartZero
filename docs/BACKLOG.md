@@ -48,8 +48,16 @@ This list collects follow-ups from agent reports and reviews. Items are grouped 
 - **P1 Sonnet 5 and Haiku 4.5 prices** in the gateway profiles came from the brief and are not verified against docs. The Opus 5.5 cache-write prices are marked "confirm at launch".
 - **P2 Gateway features not implemented yet:** mid-conversation system messages, per-message effort, compaction, Gemini explicit caching, OpenAI `configuration_update`.
 - ~~**P1 MakerBench needs 20 more tasks.**~~ Done: 61 tasks, validated on Forge and OCCT, with arc-drawn holes and edge-offset checks.
-- **P1 The spec writer's check schema drops `relative_to`,** and the spec writer prompt doesn't document edge offsets or holes drawn as arcs. Fix in `packages/agent-tools/src/spec.ts` and `packages/agent/prompts/spec_writer.v1.md`.
+- ~~**P1 The spec writer's check schema drops `relative_to`.**~~ Fixed: the schema and the spec writer prompt now cover edge offsets and holes drawn as arcs.
 - **P2 MakerBench should record a rendered image per task** once the agent's L5 visual judge exists.
+## App
+- **P1 Packaged builds can't run the agent yet.** electron-builder needs a bundling step for the agent worker, gateway, forge-web WASM and prompts.
+- **P1 The agent doesn't pause when the user edits mid-run.** Conflicts are only detected at accept time.
+- **P1 Assumption chips aren't editable yet.** This needs IR v1 parameters.
+- **P1 The L5 visual judge isn't wired.** The judge model setting is stored, but nothing calls it yet.
+- **P2 Transparent ghost overlay for proposals** in forge-render. Today it's a tinted toggle.
+- **P2 Scripted and replay transports only speak the Anthropic format.**
+
 ## Product / legal
 - **P0 Naming and trademark review** before any public launch. "Forge" and "aicad" are codenames.
 - **P1 CLA bot** before accepting outside contributions.

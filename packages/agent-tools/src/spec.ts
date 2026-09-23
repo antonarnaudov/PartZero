@@ -48,7 +48,16 @@ export const specTestSchema = z.object({
   body: z.number().int().optional().describe("Measure one body: 0 = largest by volume, -1 = smallest. Omit for all bodies together."),
   kind: z.enum(["line", "arc", "circle"]).optional().describe("curve_count: which curve kind."),
   diameter: z.array(z.number()).optional().describe("curve_count / hole_pattern / hole_positions: inclusive [min, max] diameter, mm."),
-  points: z.array(z.array(z.number())).optional().describe("hole_pattern: 2D/3D centres (spacing only matters); hole_positions: 3D points on hole axes."),
+  points: z
+    .array(z.array(z.number()))
+    .optional()
+    .describe(
+      "hole_pattern: 2D/3D centres (spacing only matters); hole_positions: 3D points on hole axes, or with relative_to \"edges\" [a, b] distances from the hole to the nearest part edge along the two directions across it.",
+    ),
+  relative_to: z
+    .enum(["model", "edges"])
+    .optional()
+    .describe('hole_positions: "model" (default) = absolute 3D points; "edges" = [a, b] offsets from the part edges (placement-independent, e.g. a 3.5 mm inset).'),
   tol: z.number().optional().describe("hole_pattern / hole_positions distance tolerance, mm (default 0.05)."),
   where: z.array(bodyConditionSchema).optional().describe("bodies_matching: per-body conditions; the measure is how many bodies meet all of them."),
 });

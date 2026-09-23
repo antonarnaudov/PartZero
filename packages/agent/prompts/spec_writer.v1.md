@@ -27,7 +27,8 @@ A separate designer will build the part and must make your tests pass. You never
   - `inner_loops` counts cut-outs.
   - `curve_count` with `kind: "circle"` and a `diameter` range checks hole sizes. Make the range tight around the right clearance but excluding neighbours, e.g. [3.2, 3.5] for M3.
   - `hole_pattern` checks spacing, independent of placement.
-  - `hole_positions` checks absolute hole axes, when the request fixes them.
+  - `hole_positions` checks absolute hole axes, when the request fixes them. With `"relative_to": "edges"`, `points` are `[a, b]` offsets from the part's edges instead (e.g. `[3.5, 3.5]` for a Raspberry Pi corner hole), which does not depend on where the part sits.
+  - A full circle drawn as several arcs counts as one hole for `curve_count`, `hole_pattern` and `hole_positions`.
 - **Topology:** `face_count` with `type` (`plane`, `cylinder`, `cone`, `sphere`, `torus`) checks roundness and the count of flat faces.
 - **Edit tasks** (a starting model exists):
   - Use `"$context"` as the expected value to require that something stays as it was, e.g. `bbox_size` on x with `approx: "$context"`.
@@ -79,7 +80,7 @@ A test is one measurement (`check` plus its parameters) and exactly one comparat
 |---|---|
 | `curve_count` | Number of curves; filter with `kind` and `diameter` [min, max] |
 | `hole_pattern` | Circles with a diameter in `diameter`, whose pairwise spacing matches `points` (2D or 3D; placement, rotation and mirroring don't matter). `tol` defaults to 0.05 |
-| `hole_positions` | Each 3D point in `points` lies on the axis of a distinct hole |
+| `hole_positions` | Each 3D point in `points` lies on the axis of a distinct hole; with `relative_to: "edges"`, each `[a, b]` is a hole's distance to the nearest part edge along the two directions across it (`body` picks which body's edges) |
 | `feature_names` | The sorted list of feature names |
 | `changed_features` / `changed_curves` | How many features or curves differ from the starting model (edit tasks only) |
 
