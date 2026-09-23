@@ -329,9 +329,13 @@ export function cargoNotices({ metadata, rootPackage, artifact, target, repoRoot
   return `${out.join("\n").trimEnd()}\n`;
 }
 
-/** `cargo metadata` for the Forge workspace, resolved for `target` (no network, lockfile as is). */
+/**
+ * `cargo metadata` for the Forge workspace, resolved for `target`. `--locked` keeps the
+ * lockfile authoritative; network access is allowed so a fresh CI machine can fetch the
+ * packages of crates the wasm build itself did not need (e.g. forge-cli's clap tree).
+ */
 export function cargoMetadata({ forgeDir, target }) {
-  const json = execFileSync("cargo", ["metadata", "--format-version", "1", "--locked", "--offline", "--filter-platform", target], {
+  const json = execFileSync("cargo", ["metadata", "--format-version", "1", "--locked", "--filter-platform", target], {
     cwd: forgeDir,
     encoding: "utf8",
     maxBuffer: 256 * 1024 * 1024,

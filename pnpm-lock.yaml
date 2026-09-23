@@ -82,6 +82,9 @@ importers:
       '@aicad/cadscript':
         specifier: workspace:*
         version: link:../cadscript
+      '@aicad/forge-web':
+        specifier: workspace:*
+        version: link:../forge-web
       '@aicad/ir-types':
         specifier: workspace:*
         version: link:../ir-types

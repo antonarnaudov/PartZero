@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@aicad/cadscript": "workspace:*",
+    "@aicad/forge-web": "workspace:*",
     "@aicad/ir-types": "workspace:*",
     "monaco-editor": "^0.56.0",
     "react": "^19.3.0",
