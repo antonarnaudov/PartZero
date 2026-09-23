@@ -332,3 +332,49 @@ describe("ask mode", () => {
     expect(r.cadscript).toBe(PLATE_OK);
   });
 });
+
+describe("interactive hooks: drafts and Stop", () => {
+  it("reports a draft after every apply and stops with `cancelled` when aborted while the user is asked", async () => {
+    const controller = new AbortController();
+    const drafts: Array<{ source: string; applyIndex: number; verified: boolean; reason: string }> = [];
+    const asked: string[] = [];
+    const { transport, agent } = setup(
+      {
+        designer: [
+          apply({ patches: [SLAB_10] }, "Thicken the slab."),
+          { tools: [{ name: "ask_user", input: { questions: [{ id: "q1", question: "Keep the bottom face fixed?", options: ["yes", "no"], default: "yes" }] } }] },
+          propose("never reached"),
+        ],
+      },
+      {
+        kind: "quick_edit",
+        mode: "interactive",
+        signal: controller.signal,
+        askUser: (qs) => {
+          asked.push(...qs.map((q) => q.question));
+          controller.abort(); // the user pressed Stop while the question was open
+          return qs.map((q) => q.default);
+        },
+        hooks: { onDraft: (d) => drafts.push(d) },
+      },
+    );
+    const r = await agent.run({ prompt: "Make the plate 10 mm thick.", context: PLATE_OK, name: "plate" });
+    expect(asked).toEqual(["Keep the bottom face fixed?"]);
+    expect(r.status).toBe("stopped");
+    expect(r.stopReason).toBe("cancelled");
+    expect(r.message).toBe("stopped by the user");
+    expect(drafts).toEqual([{ source: PLATE_THICK, applyIndex: 1, verified: true, reason: "apply" }]);
+    // The best verified state is handed back, like any other stop.
+    expect(r.cadscript).toBe(PLATE_THICK);
+    expect(transport.remaining().designer).toBe(1);
+  });
+
+  it("an already-aborted signal stops before any model call is made", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const { gateway, agent } = setup({ designer: [propose("never")] }, { kind: "quick_edit", signal: controller.signal });
+    const r = await agent.run({ prompt: "Make the plate 10 mm thick.", context: PLATE_OK, name: "plate" });
+    expect(r).toMatchObject({ status: "stopped", stopReason: "cancelled", cadscript: PLATE_OK });
+    expect(gateway.ledger).toHaveLength(0);
+  });
+});

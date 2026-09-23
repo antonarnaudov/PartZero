@@ -21,6 +21,7 @@ const r = spawnSync("pnpm", ["exec", "playwright", "test", "-c", "e2e/playwright
     AICAD_APP_DIST: outDir,
     AICAD_E2E_EXPECT: "fallback",
     AICAD_E2E_SCREENSHOT: process.env.AICAD_E2E_SCREENSHOT ?? join(desktopRoot, "test-results", "app-shell-fallback.png"),
+    AICAD_E2E_AGENT_SCREENSHOT: process.env.AICAD_E2E_AGENT_SCREENSHOT ?? join(desktopRoot, "test-results", "agent-proposal-fallback.png"),
   },
   shell: process.platform === "win32",
 });

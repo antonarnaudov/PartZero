@@ -11,7 +11,7 @@
  */
 import { z } from "zod";
 
-export type CommandCategory = "File" | "Edit" | "Selection" | "View" | "Model" | "Engine" | "Chat" | "Help";
+export type CommandCategory = "File" | "Edit" | "Selection" | "View" | "Model" | "Engine" | "Chat" | "Agent" | "Settings" | "Help";
 
 /** Who issued a command (for logs, permissions later, and the agent's "who changed what"). */
 export type CommandSource = "ui" | "keyboard" | "menu" | "palette" | "agent" | "mcp" | "test" | "api";
@@ -34,6 +34,11 @@ export interface CommandSpec<S extends z.ZodType, R, C> {
    * an array lists fixed-argument variants (e.g. "View: Top"); `false` hides it.
    */
   palette?: boolean | ReadonlyArray<PaletteEntry<z.input<S>>>;
+  /**
+   * Arguments carry a secret (an API key): execution records and listeners see `"[redacted]"`
+   * instead of the arguments, so no logger or telemetry hook can leak them.
+   */
+  sensitiveArgs?: boolean;
   /** Whether the command can run now (disabled commands return `DISABLED`). */
   enabled?: (ctx: C) => boolean;
   run(args: z.output<S>, ctx: C, meta: ExecuteMeta): R | Promise<R>;
@@ -138,15 +143,16 @@ export class CommandRegistry<M extends SpecMap<C>, C> {
         error: { code: "INVALID_ARGS", message: "a command is { id: string, args?: object }" },
       });
     }
-    const { id, args } = shape.data;
+    const { id } = shape.data;
     const spec = this.get(id);
+    const args = spec?.sensitiveArgs ? "[redacted]" : shape.data.args;
     if (!spec) {
       return this.finish({ id, args, source: meta.source }, t0, {
         ok: false,
         error: { code: "UNKNOWN_COMMAND", message: `unknown command: ${id}` },
       });
     }
-    const parsed = spec.args.safeParse(args ?? {});
+    const parsed = spec.args.safeParse(shape.data.args ?? {});
     if (!parsed.success) {
       const issues = parsed.error.issues.map((i) => ({ path: i.path.map(String).join("."), message: i.message }));
       return this.finish({ id, args, source: meta.source }, t0, {

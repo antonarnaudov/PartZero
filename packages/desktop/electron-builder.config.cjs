@@ -1,7 +1,11 @@
 /**
  * electron-builder configuration (`pnpm --filter @aicad/desktop package[:mac|:win|:linux]`).
- * The main process has no runtime npm dependencies; the web app and the Forge CLI are shipped as
- * extra resources (`resources/app-web`, `resources/bin/aicad[.exe]`).
+ * The web app and the Forge CLI are shipped as extra resources (`resources/app-web`,
+ * `resources/bin/aicad[.exe]`).
+ * OPEN: the agent utility process (`dist/agent/worker.js`) has runtime dependencies (@aicad/agent,
+ * llm-gateway, forge-web + its .wasm, the agent's prompts/). Packaged builds need them bundled
+ * (e.g. an esbuild step for the worker) — see docs/AGENT-IN-APP.md "Open issues". Dev and e2e runs
+ * resolve them from the pnpm workspace.
  * @type {import("electron-builder").Configuration}
  */
 module.exports = {

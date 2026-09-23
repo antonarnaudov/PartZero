@@ -46,9 +46,12 @@ const ENGINE_LABEL = /forge-web · wasm|Forge CLI · native/;
 
 test.beforeAll(async () => {
   userData = mkdtempSync(join(tmpdir(), "aicad-e2e-"));
+  // No provider keys reach this suite (the chat message below must never start a paid run).
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) if (v !== undefined && !/_API_KEY$/.test(k)) env[k] = v;
   app = await electron.launch({
-    args: [desktopRoot],
-    env: { ...process.env, AICAD_USER_DATA_DIR: userData, AICAD_SKIP_CLOSE_PROMPT: "1" },
+    args: [desktopRoot, "--use-mock-keychain"],
+    env: { ...env, AICAD_USER_DATA_DIR: userData, AICAD_SKIP_CLOSE_PROMPT: "1", AICAD_AGENT_DOTENV: "off", AICAD_AGENT_TRANSPORT: "live" },
   });
   page = await app.firstWindow();
   page.on("pageerror", (e) => pageErrors.push(e.message));
@@ -188,6 +191,9 @@ test("screenshot of the main window", async () => {
   await page.getByLabel("Message").fill("Make the plate 1 mm thicker and add a chamfer on the top edges");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.locator(".msg-user")).toHaveCount(1);
+  // Without keys the run is refused up front, with a way to fix it.
+  await expect(page.locator(".msg-error")).toContainText("No API key for Anthropic");
+  await expect(page.locator(".msg-error").getByRole("button", { name: "Open Settings" })).toBeVisible();
   await page.locator(".toast").evaluateAll((els) => els.forEach((e) => e.remove()));
   await page.mouse.move(5, 300);
   await page.waitForTimeout(300);

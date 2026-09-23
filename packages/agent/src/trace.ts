@@ -17,7 +17,9 @@ export type AgentStopReason =
   | "refusal"
   | "no_progress"
   | "engine_unavailable"
-  | "model_error";
+  | "model_error"
+  /** The caller aborted the run (`AgentOptions.signal`), e.g. the user pressed Stop. */
+  | "cancelled";
 
 export interface LlmCallRecord {
   role: AgentRole;

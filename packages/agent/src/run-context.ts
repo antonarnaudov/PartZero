@@ -56,12 +56,21 @@ export interface RunContext {
   trace: TraceRecorder;
   limits: AgentLimits;
   now: () => number;
+  /** Aborts the run: checked before every model call and passed to the provider request. */
+  signal?: AbortSignal | undefined;
+}
+
+/** Throw the `cancelled` stop when the run's signal has been aborted. */
+export function throwIfCancelled(rc: Pick<RunContext, "signal">): void {
+  if (rc.signal?.aborted) throw new AgentStop("cancelled", "stopped by the user");
 }
 
 /** One model call as a role: routing, budget, trace. Gateway errors become {@link AgentStop}s. */
 export async function callModel(rc: RunContext, role: AgentRole, request: Omit<ChatRequest, "model" | "maxOutputTokens" | "reasoning">): Promise<ChatResponse> {
+  throwIfCancelled(rc);
   const m = rc.models[role];
   const req: ChatRequest = { ...request, model: m.model };
+  if (rc.signal !== undefined) req.signal = rc.signal;
   if (m.maxOutputTokens !== undefined) req.maxOutputTokens = m.maxOutputTokens;
   if (m.effort !== undefined) req.reasoning = { effort: m.effort };
   const t0 = rc.now();
@@ -70,6 +79,7 @@ export async function callModel(rc: RunContext, role: AgentRole, request: Omit<C
     res = await rc.task.chat(req);
   } catch (e) {
     if (e instanceof BudgetExceededError) throw new AgentStop("budget", e.message);
+    if (rc.signal?.aborted || (e instanceof GatewayError && e.code === "aborted" && rc.signal !== undefined)) throw new AgentStop("cancelled", "stopped by the user");
     if (e instanceof GatewayError) throw new AgentStop("model_error", `${role} call failed (${e.code}): ${e.message}`);
     throw e;
   }

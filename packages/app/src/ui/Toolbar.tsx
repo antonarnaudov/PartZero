@@ -72,6 +72,9 @@ export function Toolbar(): ReactElement {
       <ToolButton cmd={{ id: "view.toggleTheme" }} title={theme === "dark" ? "Light theme" : "Dark theme"} keyHint="Mod+Shift+L">
         {theme === "dark" ? <Icon.Sun /> : <Icon.Moon />}
       </ToolButton>
+      <ToolButton cmd={{ id: "settings.open" }} title="Settings" keyHint="Mod+,">
+        <Icon.Gear />
+      </ToolButton>
     </header>
   );
 }

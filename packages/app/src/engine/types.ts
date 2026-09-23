@@ -35,6 +35,8 @@ export interface RenderBody {
   indices: Uint32Array;
   faceRanges: FaceRange[];
   edges: EdgePolyline[];
+  /** Optional display colour (sRGB 0..1), e.g. the proposal preview tint. Not produced by engines. */
+  color?: [number, number, number];
 }
 
 /** What is under the cursor in the viewport. */

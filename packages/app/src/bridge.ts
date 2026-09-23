@@ -9,7 +9,24 @@
  * Security model: the renderer never gets general file-system access. Paths become readable or
  * writable only after the user picked them in a native dialog (or earlier did so: recent files),
  * and the Forge CLI is exposed as two fixed operations whose temp files the main process owns.
+ * The design agent runs in a utility process behind the main process; API keys stay there (see
+ * `agent-protocol.ts`).
  */
+import type {
+  AgentAnswerRequest,
+  AgentBridge,
+  AgentEvent,
+  AgentSettingsView,
+  AgentStartRequest,
+  AgentStartResponse,
+  AgentStopRequest,
+  ClearApiKeyRequest,
+  SetApiKeyRequest,
+  SettingsBridge,
+  SettingsUpdate,
+} from "./agent-protocol.js";
+
+export type * from "./agent-protocol.js";
 
 export type MeshFormat = "3mf" | "stl" | "obj";
 
@@ -124,6 +141,10 @@ export interface AicadBridge {
   setDocumentState(state: DocumentStateMessage): void;
   /** Subscribe to native menu commands; returns an unsubscribe function. */
   onMenuCommand(listener: (message: MenuCommandMessage) => void): () => void;
+  /** The design agent (runs in a utility process; see `agent-protocol.ts`). */
+  agent: AgentBridge;
+  /** Agent settings: models, budget and API keys (keys are write-only from here). */
+  settings: SettingsBridge;
 }
 
 /** Every `ipcRenderer.invoke` channel with its argument tuple and result. */
@@ -138,6 +159,13 @@ export interface IpcContract {
   "forge:info": { args: []; result: ForgeCliInfo };
   "forge:eval": { args: [ForgeEvalRequest]; result: ForgeEvalResponse };
   "forge:export": { args: [ForgeExportRequest]; result: ForgeExportResponse };
+  "agent:start": { args: [AgentStartRequest]; result: AgentStartResponse };
+  "agent:answer": { args: [AgentAnswerRequest]; result: { ok: boolean } };
+  "agent:stop": { args: [AgentStopRequest]; result: { ok: boolean } };
+  "settings:get": { args: []; result: AgentSettingsView };
+  "settings:update": { args: [SettingsUpdate]; result: AgentSettingsView };
+  "settings:setApiKey": { args: [SetApiKeyRequest]; result: AgentSettingsView };
+  "settings:clearApiKey": { args: [ClearApiKeyRequest]; result: AgentSettingsView };
 }
 
 export type IpcChannel = keyof IpcContract;
@@ -152,6 +180,7 @@ export type IpcSendChannel = keyof IpcSendContract;
 /** Main → renderer events (`webContents.send`). */
 export interface IpcEventContract {
   "menu:command": [MenuCommandMessage];
+  "agent:event": [AgentEvent];
 }
 
 export type IpcEventChannel = keyof IpcEventContract;

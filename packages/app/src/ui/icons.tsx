@@ -203,4 +203,37 @@ export const Icon = {
       <path d="M8 2a6 6 0 1 1-6 6" />
     </Svg>
   ),
+  Gear: (p: IconProps) => (
+    <Svg {...p}>
+      <circle cx={8} cy={8} r={2} />
+      <path
+        strokeWidth={1.3}
+        d="M12.79 6.95 L14.25 7.21 L14.25 8.79 L12.79 9.05 L12.13 10.64 L12.98 11.86 L11.86 12.98 L10.64 12.13 L9.05 12.79 L8.79 14.25 L7.21 14.25 L6.95 12.79 L5.36 12.13 L4.14 12.98 L3.02 11.86 L3.87 10.64 L3.21 9.05 L1.75 8.79 L1.75 7.21 L3.21 6.95 L3.87 5.36 L3.02 4.14 L4.14 3.02 L5.36 3.87 L6.95 3.21 L7.21 1.75 L8.79 1.75 L9.05 3.21 L10.64 3.87 L11.86 3.02 L12.98 4.14 L12.13 5.36Z"
+      />
+    </Svg>
+  ),
+  Stop: (p: IconProps) => (
+    <Svg {...p}>
+      <rect x={4} y={4} width={8} height={8} rx={1.2} fill="currentColor" stroke="none" />
+    </Svg>
+  ),
+  Key: (p: IconProps) => (
+    <Svg {...p}>
+      <circle cx={5.2} cy={10.8} r={2.7} />
+      <path d="m7.2 8.8 5.8-5.8M11 5l1.8 1.8M9.4 6.6l1.4 1.4" />
+    </Svg>
+  ),
+  Diff: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M5 2.5v6M2 5.5h6M2.5 11.5h6" />
+      <path d="M11 3v10" opacity={0.5} />
+    </Svg>
+  ),
+  Question: (p: IconProps) => (
+    <Svg {...p}>
+      <circle cx={8} cy={8} r={5.8} />
+      <path d="M6.3 6.3a1.8 1.8 0 1 1 2.6 1.6c-.6.3-.9.7-.9 1.3v.3" />
+      <path d="M8 11.4v.1" />
+    </Svg>
+  ),
 };

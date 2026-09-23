@@ -11,10 +11,14 @@
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { app, BrowserWindow, dialog, Menu, screen, session, shell } from "electron";
-import type { AppInfo, DocumentStateMessage, MenuCommandMessage } from "@aicad/app/bridge";
+import { app, BrowserWindow, dialog, Menu, safeStorage, screen, session, shell, utilityProcess } from "electron";
+import type { AgentEvent, AppInfo, DocumentStateMessage, MenuCommandMessage } from "@aicad/app/bridge";
+import type { WorkerHandle } from "./agent/host.js";
+import { sanitizedEnv, type Cipher } from "./agent/keys.js";
+import { scrubKeyLike } from "./agent/protocol.js";
+import { setupAgent, type AgentSetup } from "./agent/setup.js";
 import { PathGrants, RecentFiles } from "./files.js";
-import { forgeInfo, locateForgeBinary } from "./forge-cli.js";
+import { findRepoRoot, forgeInfo, locateForgeBinary } from "./forge-cli.js";
 import { registerIpc } from "./ipc.js";
 import { buildMenuTemplate } from "./menu.js";
 import { APP_ENTRY_URL, APP_ORIGIN } from "./protocol-core.js";
@@ -48,6 +52,42 @@ let mainWindow: BrowserWindow | null = null;
 let docState: DocumentStateMessage = { title: "untitled", path: null, dirty: false };
 const grants = new PathGrants();
 let recent: RecentFiles;
+let agent: AgentSetup | null = null;
+
+/** Electron `safeStorage` (OS keychain) as the key store's cipher. */
+const safeStorageCipher: Cipher = {
+  isEncryptionAvailable: () => safeStorage.isEncryptionAvailable(),
+  encryptString: (plain) => safeStorage.encryptString(plain),
+  decryptString: (encrypted) => safeStorage.decryptString(encrypted),
+  backend: () =>
+    process.platform === "linux" ? safeStorage.getSelectedStorageBackend() : process.platform === "darwin" ? "macOS Keychain" : "Windows DPAPI",
+};
+
+/** Fork the agent utility process (see agent/worker.ts for why it is not the main process). */
+function spawnAgentWorker(): WorkerHandle {
+  const child = utilityProcess.fork(join(here, "agent", "worker.js"), [], {
+    serviceName: "aicad-agent",
+    env: sanitizedEnv(process.env),
+    stdio: "pipe",
+  });
+  const forward = (stream: NodeJS.ReadableStream | null, level: "log" | "error"): void => {
+    stream?.on("data", (d: Buffer) => {
+      for (const line of d.toString("utf8").split("\n")) if (line.trim()) console[level](`[aicad-agent] ${scrubKeyLike(line)}`);
+    });
+  };
+  forward(child.stdout, "log");
+  forward(child.stderr, "error");
+  return {
+    postMessage: (m) => child.postMessage(m),
+    kill: () => child.kill(),
+    onMessage: (l) => child.on("message", l),
+    onExit: (l) => child.on("exit", l),
+  };
+}
+
+function sendAgentEvent(event: AgentEvent): void {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("agent:event", event);
+}
 
 function sendMenuCommand(message: MenuCommandMessage): void {
   mainWindow?.webContents.send("menu:command", message);
@@ -126,6 +166,7 @@ function createWindow(): BrowserWindow {
   });
   win.on("closed", () => {
     if (mainWindow === win) mainWindow = null;
+    agent?.host.stopAll();
   });
 
   // No new windows, no navigation away from the app; external links open in the browser.
@@ -137,6 +178,7 @@ function createWindow(): BrowserWindow {
     if (!isTrustedSender(url)) event.preventDefault();
   });
   win.webContents.on("render-process-gone", (_event, details) => {
+    agent?.host.stopAll();
     console.error(`[aicad] renderer process gone: ${details.reason} (exit code ${details.exitCode})`);
   });
   win.webContents.on("did-fail-load", (_event, code, description, url) => {
@@ -182,7 +224,19 @@ if (!gotLock) {
     for (const p of recent.list()) grants.grant(p);
 
     const forgeBin = locateForgeBinary({ env: process.env, isPackaged: app.isPackaged, resourcesPath: process.resourcesPath, appPath: app.getAppPath() });
+    agent = setupAgent({
+      userData: app.getPath("userData"),
+      env: process.env,
+      isPackaged: app.isPackaged,
+      repoRoot: app.isPackaged ? null : findRepoRoot(app.getAppPath()),
+      forgeBin,
+      cipher: safeStorageCipher,
+      spawnWorker: spawnAgentWorker,
+      send: sendAgentEvent,
+      log: (level, message) => console[level === "info" ? "log" : level](`[aicad-agent] ${message}`),
+    });
     registerIpc({
+      agent,
       window: () => mainWindow,
       isTrustedSender,
       grants,
@@ -211,6 +265,8 @@ if (!gotLock) {
       if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow();
     });
   });
+
+  app.on("will-quit", () => agent?.host.dispose());
 
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();

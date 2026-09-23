@@ -3,6 +3,7 @@
  * which commands reach UI surfaces that React owns (the code editor and the viewport).
  */
 import type { Span } from "@aicad/cadscript";
+import type { AgentService } from "./agent/agent-service";
 import type { CadScriptService } from "./cadscript/service";
 import type { DocStore } from "./doc/doc-store";
 import type { EngineManager } from "./engine/engine-manager";
@@ -73,6 +74,8 @@ export interface AppServices {
   editor: EditorController;
   viewport: ViewportController;
   templates: readonly TemplateInfo[];
+  /** The design agent: runs, proposal review, settings. */
+  agent: AgentService;
   /** Ask the user to confirm (e.g. discarding unsaved changes). Agents/tests inject a policy. */
   confirm(message: string): Promise<boolean>;
 }

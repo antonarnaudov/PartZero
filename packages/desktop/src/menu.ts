@@ -52,6 +52,8 @@ export function buildMenuTemplate(deps: MenuDeps): MenuItemConstructorOptions[] 
           submenu: [
             cmd(`About ${deps.appName}`, "help.about"),
             sep,
+            cmd("Settings…", "settings.open", undefined, "CmdOrCtrl+,"),
+            sep,
             { role: "services" },
             sep,
             { role: "hide" },
@@ -78,6 +80,7 @@ export function buildMenuTemplate(deps: MenuDeps): MenuItemConstructorOptions[] 
         cmd("Save", "file.save", undefined, "CmdOrCtrl+S"),
         cmd("Save As…", "file.saveAs", undefined, "CmdOrCtrl+Shift+S"),
         sep,
+        ...(isMac ? [] : [cmd("Settings…", "settings.open", undefined, "CmdOrCtrl+,"), sep]),
         {
           label: "Export",
           submenu: [
@@ -102,6 +105,18 @@ export function buildMenuTemplate(deps: MenuDeps): MenuItemConstructorOptions[] 
         { role: "selectAll" },
         sep,
         cmd("Command Palette…", "view.commandPalette", undefined, "CmdOrCtrl+K"),
+      ],
+    },
+    {
+      label: "&Agent",
+      submenu: [
+        cmd("Ask the Agent…", "chat.focus", undefined, "CmdOrCtrl+L"),
+        cmd("Stop", "agent.stop", undefined, "CmdOrCtrl+."),
+        sep,
+        cmd("Accept Proposal", "agent.accept"),
+        cmd("Reject Proposal", "agent.reject"),
+        sep,
+        cmd("Settings…", "settings.open"),
       ],
     },
     {

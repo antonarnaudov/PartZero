@@ -28,6 +28,8 @@ const ProjectionSchema = z.enum(["perspective", "orthographic"]);
 const ThemeSchema = z.enum(["dark", "light", "system"]);
 const PanelSchema = z.enum(["left", "right", "chat", "problems"]);
 const EngineSchema = z.enum(["auto", "forge-web", "forge-cli"]);
+const ProviderSchema = z.enum(["anthropic", "openai", "google", "openai-compat"]);
+const RoleSchema = z.enum(["designer", "judge", "triage", "spec_writer"]);
 
 const OPEN_FILTERS = [
   { name: "CAD documents (CadScript, IR JSON)", extensions: ["ts", "json"] },
@@ -602,16 +604,221 @@ export const COMMANDS = {
     id: "chat.send",
     title: "Send Chat Message",
     category: "Chat",
-    description: "Send a message to the design agent, with the current selection as context chips.",
+    description: "Send a message to the design agent, with the current selection as context chips (starts an agent run).",
     args: z.strictObject({ text: z.string().trim().min(1).max(20_000), chips: z.array(ChipSchema).optional() }),
     palette: false,
-    run({ text, chips }, ctx) {
-      ctx.ui.addChatMessage("user", text, chips ?? chipsFromSelection(ctx));
-      ctx.ui.addChatMessage(
-        "system",
-        "Agent not connected. This build ships the chat UI only; your message was not sent anywhere.",
-      );
-      return { delivered: false, reason: "AGENT_NOT_CONNECTED" as const };
+    async run({ text, chips }, ctx) {
+      const c = chips ?? chipsFromSelection(ctx);
+      if (!ctx.agent.getState().available) {
+        ctx.ui.addChatMessage("user", text, c);
+        ctx.ui.addChatMessage("system", "The design agent runs in the desktop app; your message was not sent anywhere.");
+        return { delivered: false as const, reason: "AGENT_UNAVAILABLE" as const };
+      }
+      const { runId } = await ctx.agent.start({ prompt: text, chips: c });
+      return { delivered: true as const, runId };
+    },
+  }),
+
+  // ─── Agent ─────────────────────────────────────────────────────────────────────────────────
+  "agent.run": command({
+    id: "agent.run",
+    title: "Run the Design Agent",
+    category: "Agent",
+    description:
+      "Start an agent run on the open document. `chips` (default: the current selection) are passed as semantic context. The agent works on a draft branch and ends with a proposal to review.",
+    args: z.strictObject({ prompt: z.string().trim().min(1).max(20_000), chips: z.array(ChipSchema).optional() }),
+    palette: false,
+    run({ prompt, chips }, ctx) {
+      return ctx.agent.start({ prompt, chips: chips ?? chipsFromSelection(ctx) });
+    },
+  }),
+
+  "agent.stop": command({
+    id: "agent.stop",
+    title: "Stop the Agent",
+    category: "Agent",
+    description: "Stop the running agent. It hands back its best verified state as a proposal (if it changed anything).",
+    args: NoArgs,
+    keys: ["Mod+."],
+    enabled: (ctx) => ctx.agent.activeRun !== undefined,
+    run(_args, ctx) {
+      return ctx.agent.stop();
+    },
+  }),
+
+  "agent.answer": command({
+    id: "agent.answer",
+    title: "Answer the Agent",
+    category: "Agent",
+    description: "Answer the agent's open clarifying question(s), one answer per question; empty answers take the default.",
+    args: z.strictObject({ answers: z.array(z.string().max(2000)).min(1).max(10) }),
+    palette: false,
+    run({ answers }, ctx) {
+      return ctx.agent.answer(answers);
+    },
+  }),
+
+  "agent.accept": command({
+    id: "agent.accept",
+    title: "Accept Proposal",
+    category: "Agent",
+    description: "Apply the whole proposal to the document as one undoable transaction.",
+    args: z.strictObject({ force: z.boolean().optional() }),
+    palette: [{ title: "Agent: Accept Proposal", args: {} }],
+    enabled: (ctx) => ctx.agent.reviewPending,
+    run({ force }, ctx) {
+      return ctx.agent.accept(force ? { force } : {});
+    },
+  }),
+
+  "agent.acceptFeatures": command({
+    id: "agent.acceptFeatures",
+    title: "Accept Selected Changes",
+    category: "Agent",
+    description:
+      "Apply only some of the proposal's changes (feature names or part/feature keys) as one undoable transaction; the rest is rejected. Refuses selections that break dependencies unless `force`.",
+    args: z.strictObject({ features: z.array(z.string().min(1)).min(1), force: z.boolean().optional() }),
+    palette: false,
+    enabled: (ctx) => ctx.agent.reviewPending,
+    run({ features, force }, ctx) {
+      return ctx.agent.accept({ features, ...(force ? { force } : {}) });
+    },
+  }),
+
+  "agent.setAccepted": command({
+    id: "agent.setAccepted",
+    title: "Tick Proposal Changes",
+    category: "Agent",
+    description: "Choose which changes of the proposal are ticked (updates the diff, the warnings and the preview; changes nothing yet).",
+    args: z.strictObject({ features: z.array(z.string().min(1)) }),
+    palette: false,
+    enabled: (ctx) => ctx.agent.reviewPending,
+    run({ features }, ctx) {
+      return ctx.agent.setAccepted(features);
+    },
+  }),
+
+  "agent.reject": command({
+    id: "agent.reject",
+    title: "Reject Proposal",
+    category: "Agent",
+    description: "Discard the proposal; the document stays unchanged.",
+    args: NoArgs,
+    palette: [{ title: "Agent: Reject Proposal", args: {} }],
+    enabled: (ctx) => ctx.agent.reviewPending,
+    run(_args, ctx) {
+      return ctx.agent.reject();
+    },
+  }),
+
+  "agent.setPreview": command({
+    id: "agent.setPreview",
+    title: "Preview Proposal in Viewport",
+    category: "Agent",
+    description: "Show the proposal (tinted) in the viewport instead of the current document, or switch back.",
+    args: z.strictObject({ enabled: z.boolean().optional() }),
+    palette: [{ title: "Agent: Toggle Proposal Preview", args: {} }],
+    enabled: (ctx) => ctx.agent.reviewPending,
+    run({ enabled }, ctx) {
+      const next = enabled ?? !ctx.agent.getState().review?.previewEnabled;
+      return { preview: ctx.agent.setPreview(next) };
+    },
+  }),
+
+  "agent.showProposal": command({
+    id: "agent.showProposal",
+    title: "Show Proposal Diff",
+    category: "Agent",
+    args: z.strictObject({ visible: z.boolean().optional() }),
+    palette: [{ title: "Agent: Show Proposal Diff", args: { visible: true } }],
+    run({ visible }, ctx) {
+      const show = visible ?? ctx.agent.getState().codeTab !== "proposal";
+      ctx.ui.setPanel("right", true);
+      ctx.agent.setCodeTab(show ? "proposal" : "code");
+      return { tab: ctx.agent.getState().codeTab };
+    },
+  }),
+
+  // ─── Settings ──────────────────────────────────────────────────────────────────────────────
+  "settings.open": command({
+    id: "settings.open",
+    title: "Settings…",
+    category: "Settings",
+    description: "Open the agent settings: API keys, models per role, budget.",
+    args: NoArgs,
+    keys: ["Mod+,"],
+    async run(_args, ctx) {
+      ctx.ui.openDialog("settings");
+      if (ctx.host.settings) await ctx.agent.refreshSettings().catch(() => undefined);
+      return { open: true };
+    },
+  }),
+
+  "settings.setApiKey": command({
+    id: "settings.setApiKey",
+    title: "Set API Key",
+    category: "Settings",
+    description: "Store an API key for a provider, encrypted with the OS keychain in the desktop app. The key is never shown again (only its last 4 characters).",
+    args: z.strictObject({ provider: ProviderSchema, key: z.string().trim().min(8).max(512) }),
+    palette: false,
+    sensitiveArgs: true,
+    async run({ provider, key }, ctx) {
+      const view = await ctx.agent.setApiKey(provider, key);
+      const p = view.providers.find((x) => x.id === provider);
+      return { provider, configured: p?.configured ?? false, last4: p?.last4 ?? null };
+    },
+  }),
+
+  "settings.clearApiKey": command({
+    id: "settings.clearApiKey",
+    title: "Remove API Key",
+    category: "Settings",
+    description: "Remove the stored API key of a provider (environment variables still apply in development).",
+    args: z.strictObject({ provider: ProviderSchema }),
+    palette: false,
+    async run({ provider }, ctx) {
+      const view = await ctx.agent.clearApiKey(provider);
+      const p = view.providers.find((x) => x.id === provider);
+      return { provider, configured: p?.configured ?? false, source: p?.source ?? null };
+    },
+  }),
+
+  "settings.setModel": command({
+    id: "settings.setModel",
+    title: "Set Model for Role",
+    category: "Settings",
+    description: "Choose the model (gateway profile id) for an agent role; null restores the default routing.",
+    args: z.strictObject({ role: RoleSchema, model: z.string().min(1).max(100).nullable() }),
+    palette: false,
+    async run({ role, model }, ctx) {
+      const view = await ctx.agent.updateSettings({ models: { [role]: model } });
+      return { role, model: view.models[role], warnings: view.warnings };
+    },
+  }),
+
+  "settings.setBudget": command({
+    id: "settings.setBudget",
+    title: "Set Task Budget",
+    category: "Settings",
+    description: "Per-task budget in USD (a run stops at 80 % and asks before continuing to the cap).",
+    args: z.strictObject({ usd: z.number().min(0.01).max(100) }),
+    palette: false,
+    async run({ usd }, ctx) {
+      const view = await ctx.agent.updateSettings({ budgetUsd: usd });
+      return { budgetUsd: view.budgetUsd };
+    },
+  }),
+
+  "settings.setCompatBaseUrl": command({
+    id: "settings.setCompatBaseUrl",
+    title: "Set OpenAI-compatible Base URL",
+    category: "Settings",
+    description: "Base URL of an OpenAI-compatible endpoint (vLLM, Ollama, OpenRouter, …); null uses each profile's default.",
+    args: z.strictObject({ url: z.string().url().max(500).nullable() }),
+    palette: false,
+    async run({ url }, ctx) {
+      const view = await ctx.agent.updateSettings({ compatBaseUrl: url });
+      return { compatBaseUrl: view.compatBaseUrl };
     },
   }),
 

@@ -9,6 +9,8 @@ export class BrowserHost implements AppHost {
   readonly kind = "browser" as const;
   readonly platform = "web";
   readonly forgeCli = null;
+  readonly agent = null;
+  readonly settings = null;
   private readonly files = new Map<string, string>();
 
   appInfo(): Promise<AppInfo> {

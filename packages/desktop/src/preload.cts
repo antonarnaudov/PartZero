@@ -5,6 +5,7 @@
  */
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 import type {
+  AgentEvent,
   AicadBridge,
   IpcChannel,
   IpcContract,
@@ -23,6 +24,7 @@ function send<C extends IpcSendChannel>(channel: C, ...args: IpcSendContract[C])
 }
 
 const MENU_COMMAND: keyof IpcEventContract = "menu:command";
+const AGENT_EVENT: keyof IpcEventContract = "agent:event";
 
 const bridge: AicadBridge = {
   platform: process.platform,
@@ -45,6 +47,24 @@ const bridge: AicadBridge = {
     return () => {
       ipcRenderer.removeListener(MENU_COMMAND, handler);
     };
+  },
+  agent: {
+    start: (request) => invoke("agent:start", request),
+    answer: (request) => invoke("agent:answer", request),
+    stop: (request) => invoke("agent:stop", request),
+    onEvent(listener) {
+      const handler = (_event: IpcRendererEvent, e: AgentEvent): void => listener(e);
+      ipcRenderer.on(AGENT_EVENT, handler);
+      return () => {
+        ipcRenderer.removeListener(AGENT_EVENT, handler);
+      };
+    },
+  },
+  settings: {
+    get: () => invoke("settings:get"),
+    update: (update) => invoke("settings:update", update),
+    setApiKey: (request) => invoke("settings:setApiKey", request),
+    clearApiKey: (request) => invoke("settings:clearApiKey", request),
   },
 };
 

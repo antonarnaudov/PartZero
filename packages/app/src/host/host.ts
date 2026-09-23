@@ -3,12 +3,14 @@
  * desktop preload bridge (`window.aicad`); `BrowserHost` uses web APIs (file input, downloads).
  */
 import type {
+  AgentBridge,
   AicadBridge,
   AppInfo,
   DocumentStateMessage,
   MenuCommandMessage,
   OpenDialogOptions,
   SaveDialogOptions,
+  SettingsBridge,
 } from "../bridge";
 
 export interface AppHost {
@@ -25,6 +27,10 @@ export interface AppHost {
   clearRecentFiles(): Promise<void>;
   /** The native Forge CLI, when the host has one. */
   readonly forgeCli: AicadBridge["forge"] | null;
+  /** The design agent (desktop only: it runs in a utility process with the user's API keys). */
+  readonly agent: AgentBridge | null;
+  /** Agent settings and API keys (desktop only). */
+  readonly settings: SettingsBridge | null;
   setDocumentState(state: DocumentStateMessage): void;
   onMenuCommand(listener: (message: MenuCommandMessage) => void): () => void;
 }

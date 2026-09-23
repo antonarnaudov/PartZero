@@ -1,5 +1,24 @@
 import type { EvalReport, FeatureReport, IrDocument } from "@aicad/ir-types";
-import type { AppInfo, DocumentStateMessage, MenuCommandMessage, OpenDialogOptions, SaveDialogOptions } from "../src/bridge";
+import type {
+  AgentAnswerRequest,
+  AgentBridge,
+  AgentEvent,
+  AgentEventBody,
+  AgentSettingsView,
+  AgentStartRequest,
+  AgentStartResponse,
+  AgentStopRequest,
+  AppInfo,
+  ClearApiKeyRequest,
+  DocumentStateMessage,
+  MenuCommandMessage,
+  OpenDialogOptions,
+  SaveDialogOptions,
+  SetApiKeyRequest,
+  SettingsBridge,
+  SettingsUpdate,
+} from "../src/bridge";
+import { AgentService } from "../src/agent/agent-service";
 import { InlineCadScriptService } from "../src/cadscript/inline-service";
 import { createCommandRegistry, type AppCommandRegistry } from "../src/commands/commands";
 import { DocStore } from "../src/doc/doc-store";
@@ -97,10 +116,92 @@ export class FakeEngine implements ForgeEngine {
   dispose(): void {}
 }
 
+/** A stand-in for the desktop agent bridge: records requests, lets tests push events. */
+export class FakeAgentBridge implements AgentBridge {
+  starts: AgentStartRequest[] = [];
+  answers: AgentAnswerRequest[] = [];
+  stops: AgentStopRequest[] = [];
+  nextStart: AgentStartResponse | null = null;
+  private listeners = new Set<(e: AgentEvent) => void>();
+  private seq = new Map<string, number>();
+  private runs = 0;
+
+  start(request: AgentStartRequest): Promise<AgentStartResponse> {
+    this.starts.push(request);
+    const r = this.nextStart ?? { ok: true as const, runId: `run-${++this.runs}` };
+    this.nextStart = null;
+    return Promise.resolve(r);
+  }
+  answer(request: AgentAnswerRequest): Promise<{ ok: boolean }> {
+    this.answers.push(request);
+    return Promise.resolve({ ok: true });
+  }
+  stop(request: AgentStopRequest): Promise<{ ok: boolean }> {
+    this.stops.push(request);
+    return Promise.resolve({ ok: true });
+  }
+  onEvent(listener: (e: AgentEvent) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+  /** Deliver an event of `runId` (seq and t are filled in). */
+  emit(runId: string, body: AgentEventBody): void {
+    const seq = (this.seq.get(runId) ?? 0) + 1;
+    this.seq.set(runId, seq);
+    const e = { v: 1, runId, seq, t: seq * 100, ...body } as AgentEvent;
+    for (const l of [...this.listeners]) l(e);
+  }
+}
+
+export function settingsView(overrides: Partial<AgentSettingsView> = {}): AgentSettingsView {
+  return {
+    v: 1,
+    providers: [
+      { id: "anthropic", label: "Anthropic", configured: false, source: null, last4: null, envVar: "ANTHROPIC_API_KEY", keyRequired: true },
+      { id: "openai", label: "OpenAI", configured: false, source: null, last4: null, envVar: "OPENAI_API_KEY", keyRequired: true },
+    ],
+    secureStorage: { available: true, detail: "test" },
+    models: { designer: "claude-opus-5-5", judge: "claude-fable-5-1", triage: "claude-haiku-4-5", spec_writer: "claude-opus-5-5" },
+    defaults: { designer: "claude-opus-5-5", judge: "claude-fable-5-1", triage: "claude-haiku-4-5", spec_writer: "claude-opus-5-5" },
+    profiles: [],
+    budgetUsd: 1,
+    compatBaseUrl: null,
+    transport: "live",
+    warnings: [],
+    ...overrides,
+  };
+}
+
+/** Settings bridge double: keeps keys in a map (to assert they never come back). */
+export class FakeSettingsBridge implements SettingsBridge {
+  view = settingsView();
+  readonly received: Array<{ provider: string; key: string }> = [];
+  get(): Promise<AgentSettingsView> {
+    return Promise.resolve(this.view);
+  }
+  update(u: SettingsUpdate): Promise<AgentSettingsView> {
+    const models = { ...this.view.models };
+    for (const [role, m] of Object.entries(u.models ?? {})) models[role as keyof typeof models] = m ?? this.view.defaults[role as keyof typeof models];
+    this.view = { ...this.view, models, ...(u.budgetUsd !== undefined ? { budgetUsd: u.budgetUsd } : {}), ...(u.compatBaseUrl !== undefined ? { compatBaseUrl: u.compatBaseUrl } : {}) };
+    return Promise.resolve(this.view);
+  }
+  setApiKey(r: SetApiKeyRequest): Promise<AgentSettingsView> {
+    this.received.push({ provider: r.provider, key: r.key });
+    this.view = { ...this.view, providers: this.view.providers.map((p) => (p.id === r.provider ? { ...p, configured: true, source: "keychain", last4: r.key.slice(-4) } : p)) };
+    return Promise.resolve(this.view);
+  }
+  clearApiKey(r: ClearApiKeyRequest): Promise<AgentSettingsView> {
+    this.view = { ...this.view, providers: this.view.providers.map((p) => (p.id === r.provider ? { ...p, configured: false, source: null, last4: null } : p)) };
+    return Promise.resolve(this.view);
+  }
+}
+
 export class FakeHost implements AppHost {
   readonly kind = "browser" as const;
   readonly platform = "test";
   readonly forgeCli = null;
+  agent: FakeAgentBridge | null = null;
+  settings: FakeSettingsBridge | null = null;
   files = new Map<string, string | Uint8Array>();
   nextOpenPath: string | null = null;
   nextSavePath: string | null = null;
@@ -161,15 +262,22 @@ export interface Harness {
   host: FakeHost;
   reveals: Array<{ line: number; select: boolean }>;
   confirmAnswer: { value: boolean };
+  /** Set when the harness was made with `agent: true`. */
+  agentBridge: FakeAgentBridge | null;
+  settingsBridge: FakeSettingsBridge | null;
 }
 
-export async function makeHarness(options: { source?: string } = {}): Promise<Harness> {
+export async function makeHarness(options: { source?: string; agent?: boolean } = {}): Promise<Harness> {
   const engine = new FakeEngine();
   const engines = new EngineManager({ "forge-cli": () => Promise.resolve(engine) });
   await engines.select("auto");
   const cadscript = new InlineCadScriptService();
   const doc = new DocStore({ cadscript, engine: () => engines.active, debounceMs: 0 });
   const host = new FakeHost();
+  if (options.agent) {
+    host.agent = new FakeAgentBridge();
+    host.settings = new FakeSettingsBridge();
+  }
   const reveals: Harness["reveals"] = [];
   const editor = new EditorController();
   const api: EditorApi = {
@@ -178,9 +286,11 @@ export async function makeHarness(options: { source?: string } = {}): Promise<Ha
   };
   editor.attach(api);
   const confirmAnswer = { value: true };
+  const ui = new UiStore({ agentAvailable: host.agent !== null });
   const services: AppServices = {
     doc,
-    ui: new UiStore(),
+    ui,
+    agent: new AgentService({ agent: host.agent, settings: host.settings, cadscript, engine: () => engines.active, doc, ui }),
     host,
     engines,
     cadscript,
@@ -194,5 +304,5 @@ export async function makeHarness(options: { source?: string } = {}): Promise<Ha
     doc.load({ path: null, name: "test", format: "cadscript", source: options.source });
     await doc.idle();
   }
-  return { services, commands, engine, host, reveals, confirmAnswer };
+  return { services, commands, engine, host, reveals, confirmAnswer, agentBridge: host.agent, settingsBridge: host.settings };
 }

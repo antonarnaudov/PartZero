@@ -2,10 +2,11 @@
  * The viewport host: owns the adapter (forge-web or placeholder), feeds it bodies, selection and
  * hover, forwards clicks as `selection.selectEntity`, and shows view controls and a hover readout.
  */
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { PREVIEW_TINT } from "../agent/agent-service";
 import { facesOfFeature, findFeature } from "../doc/provenance";
 import type { Projection, ViewName } from "../engine/forge-web-contract";
-import type { PickResult } from "../engine/types";
+import type { PickResult, RenderBody } from "../engine/types";
 import { createViewportAdapter, type ViewportAdapter, type ViewportColors } from "../viewport/adapter";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
@@ -24,6 +25,22 @@ function readColors(el: HTMLElement): ViewportColors {
     hover: v("--vp-hover", "#f0b35a"),
     text: v("--text", "#d7dae0"),
   };
+}
+
+const TINT_CSS = `rgb(${PREVIEW_TINT.map((c) => Math.round(c * 255)).join(", ")})`;
+
+/** Z extent of the displayed triangles (e2e and debugging: shows which geometry is on screen). */
+function zExtent(bodies: readonly RenderBody[]): string {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const b of bodies) {
+    for (let i = 2; i < b.positions.length; i += 3) {
+      const z = b.positions[i]!;
+      if (z < lo) lo = z;
+      if (z > hi) hi = z;
+    }
+  }
+  return hi >= lo ? (hi - lo).toFixed(2) : "";
 }
 
 const VIEWS: Array<{ view: ViewName; label: string; title: string }> = [
@@ -48,6 +65,11 @@ export function Viewport(): ReactElement {
   const phase = useStore(doc, (s) => s.phase);
   const engineError = useStore(doc, (s) => s.engineError);
   const hasReport = useStore(doc, (s) => s.report !== null);
+  const review = useStore(services.agent, (s) => s.review);
+  const reviewOpen = !!review && review.status === "ready" && review.resolution === null;
+  const showPreview = reviewOpen && review.previewEnabled && review.preview.status === "ready";
+  const shown = showPreview ? review.preview.bodies : bodies;
+  const extent = useMemo(() => zExtent(shown), [shown]);
 
   // Create the adapter once.
   useEffect(() => {
@@ -98,22 +120,27 @@ export function Viewport(): ReactElement {
     return () => ro.disconnect();
   }, [adapter]);
 
-  // Theme colors (after the CSS variables switched).
+  // Theme colors (after the CSS variables switched). The proposal preview tints the bodies (the
+  // placeholder has one body colour; forge-render takes the per-body colour of the preview bodies).
   useEffect(() => {
     const container = containerRef.current;
-    if (adapter && container) requestAnimationFrame(() => adapter.setColors(readColors(container)));
-  }, [adapter, theme]);
+    if (!adapter || !container) return;
+    requestAnimationFrame(() => {
+      const colors = readColors(container);
+      adapter.setColors(showPreview ? { ...colors, body: TINT_CSS } : colors);
+    });
+  }, [adapter, theme, showPreview]);
 
-  // Bodies; refit when another document was loaded.
+  // Bodies (the document's, or the proposal preview's); refit when another document was loaded.
   const lastFitDoc = useRef(0);
   useEffect(() => {
     if (!adapter) return;
-    adapter.setBodies(bodies);
-    if (bodies.length > 0 && lastFitDoc.current !== docId) {
+    adapter.setBodies(shown);
+    if (shown.length > 0 && lastFitDoc.current !== docId) {
       lastFitDoc.current = docId;
       adapter.fitView();
     }
-  }, [adapter, bodies, docId]);
+  }, [adapter, shown, docId]);
 
   // Selection: a picked entity, or every face of the selected feature.
   useEffect(() => {
@@ -196,7 +223,7 @@ export function Viewport(): ReactElement {
   const setProjection = (projection: Projection): void => run({ id: "view.setProjection", args: { projection } });
 
   return (
-    <div className="viewport" data-testid="viewport">
+    <div className="viewport" data-testid="viewport" data-shown={showPreview ? "proposal" : "current"} data-extent-z={extent}>
       <div ref={containerRef} className="viewport-surface" />
       <div className="vp-toolbar" role="toolbar" aria-label="View">
         {VIEWS.map((v) => (
@@ -232,7 +259,26 @@ export function Viewport(): ReactElement {
           <Icon.Spinner size={12} /> Evaluating
         </div>
       )}
-      {empty && <div className="vp-empty">{empty}</div>}
+      {empty && !showPreview && <div className="vp-empty">{empty}</div>}
+      {reviewOpen && (
+        <div className={`vp-proposal${showPreview ? "" : " off"}`} data-testid="proposal-preview-chip">
+          {showPreview ? (
+            <>
+              <span className="swatch" /> Proposal preview (not applied)
+              <button type="button" className="ghost-btn tiny" onClick={() => run({ id: "agent.setPreview", args: { enabled: false } })}>
+                Show current
+              </button>
+            </>
+          ) : (
+            <>
+              Current document
+              <button type="button" className="ghost-btn tiny" onClick={() => run({ id: "agent.setPreview", args: { enabled: true } })} disabled={review.preview.status !== "ready"}>
+                {review.preview.status === "evaluating" ? "Evaluating…" : review.preview.status === "error" ? "Preview failed" : "Preview proposal"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

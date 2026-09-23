@@ -19,10 +19,15 @@ export interface SelectionChip {
 
 export interface ChatMessage {
   id: string;
-  role: "user" | "assistant" | "system";
+  /** `agent`: a live run card (progress, questions, result) for `runId`. */
+  role: "user" | "assistant" | "system" | "agent";
   text: string;
   chips: SelectionChip[];
   time: number;
+  runId?: string;
+  tone?: "error";
+  /** A command button under the message (e.g. "Open Settings"). */
+  action?: { label: string; command: string };
 }
 
 export interface Toast {
@@ -31,7 +36,7 @@ export interface Toast {
   message: string;
 }
 
-export type DialogId = "palette" | "templates" | "about" | null;
+export type DialogId = "palette" | "templates" | "about" | "settings" | null;
 
 export interface ViewportStatus {
   kind: "placeholder" | "forge-web" | "none";
@@ -90,18 +95,22 @@ export const WELCOME_MESSAGE: ChatMessage = {
   id: "welcome",
   role: "system",
   text:
-    "The design agent is not connected in this build. The chat UI is here so the co-editing flow can be designed: " +
-    "select a feature or a face and it appears as a chip on your message. Once packages/agent is wired in, " +
-    "it will edit this document through the same command layer you use.",
+    "Describe a change and the design agent drafts it as a proposal you can review, preview and accept feature by feature. " +
+    "Select a feature or a face first and it travels with your message as context.",
   chips: [],
   time: 0,
+};
+
+export const WELCOME_MESSAGE_WEB: ChatMessage = {
+  ...WELCOME_MESSAGE,
+  text: "The design agent runs in the desktop app (it needs the agent process and your API keys). The chat UI is shown so the co-editing flow can be tried.",
 };
 
 export class UiStore extends Store<UiState> {
   private toastSeq = 1;
   private msgSeq = 1;
 
-  constructor() {
+  constructor(options: { agentAvailable?: boolean } = {}) {
     const stored = readLocal(THEME_KEY);
     const theme: ThemePreference = stored === "light" || stored === "dark" || stored === "system" ? stored : "dark";
     let panels = DEFAULT_PANELS;
@@ -116,7 +125,7 @@ export class UiStore extends Store<UiState> {
       resolvedTheme: theme === "system" ? systemTheme() : theme,
       panels,
       dialog: null,
-      chat: [WELCOME_MESSAGE],
+      chat: [options.agentAvailable === false ? WELCOME_MESSAGE_WEB : WELCOME_MESSAGE],
       chatFocusTick: 0,
       toasts: [],
       hover: null,
@@ -152,8 +161,13 @@ export class UiStore extends Store<UiState> {
     this.setState({ dialog: null });
   }
 
-  addChatMessage(role: ChatMessage["role"], text: string, chips: SelectionChip[] = []): ChatMessage {
-    const msg: ChatMessage = { id: `m${this.msgSeq++}`, role, text, chips, time: Date.now() };
+  addChatMessage(
+    role: ChatMessage["role"],
+    text: string,
+    chips: SelectionChip[] = [],
+    extra: { runId?: string; tone?: "error"; action?: { label: string; command: string } } = {},
+  ): ChatMessage {
+    const msg: ChatMessage = { id: `m${this.msgSeq++}`, role, text, chips, time: Date.now(), ...extra };
     this.setState((s) => ({ chat: [...s.chat, msg] }));
     return msg;
   }

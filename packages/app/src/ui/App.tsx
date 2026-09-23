@@ -7,6 +7,8 @@ import { AboutDialog, TemplateDialog, Toasts } from "./Dialogs";
 import { useProblems, useTimeline } from "./doc-hooks";
 import { Icon } from "./icons";
 import { ProblemsPanel } from "./ProblemsPanel";
+import { ProposalView } from "./ProposalView";
+import { SettingsDialog } from "./SettingsDialog";
 import { StatusBar } from "./StatusBar";
 import { ParametersPanel, Timeline } from "./Timeline";
 import { Toolbar } from "./Toolbar";
@@ -60,6 +62,8 @@ export function App(): ReactElement {
   const panels = useStore(services.ui, (s) => s.panels);
   const dialog = useStore(services.ui, (s) => s.dialog);
   const docName = useStore(services.doc, (s) => s.name);
+  const codeTab = useStore(services.agent, (s) => s.codeTab);
+  const reviewStatus = useStore(services.agent, (s) => (s.review ? (s.review.resolution ? "resolved" : s.review.status) : null));
   const problems = useProblems();
   const timeline = useTimeline(problems);
   const [sizes, setSizes] = useState<Sizes>(loadSizes);
@@ -108,16 +112,47 @@ export function App(): ReactElement {
         {panels.right && (
           <aside className="col-right" style={rightStyle} aria-label="Code and chat">
             <section className="panel code-panel" aria-label="Code">
-              <header className="panel-header">
-                <Icon.Code size={14} />
-                <span className="panel-title">Code</span>
-                <span className="panel-meta mono">{docName}.cad.ts</span>
+              <header className="panel-header code-tabs" role="tablist">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={codeTab === "code"}
+                  className={`code-tab${codeTab === "code" ? " active" : ""}`}
+                  onClick={() => services.agent.setCodeTab("code")}
+                >
+                  <Icon.Code size={14} />
+                  <span className="panel-title">Code</span>
+                </button>
+                {reviewStatus && (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={codeTab === "proposal"}
+                    data-testid="proposal-tab"
+                    className={`code-tab proposal-tab st-${reviewStatus}${codeTab === "proposal" ? " active" : ""}`}
+                    onClick={() => services.agent.setCodeTab("proposal")}
+                  >
+                    <Icon.Diff size={13} />
+                    <span className="panel-title">{reviewStatus === "draft" ? "Draft" : "Proposal"}</span>
+                    {(reviewStatus === "ready" || reviewStatus === "draft") && <span className="tab-dot" />}
+                  </button>
+                )}
+                {codeTab === "code" && <span className="panel-meta mono">{docName}.cad.ts</span>}
                 <span className="spacer" />
                 <span className={`lang-pill${errorCount ? " err" : ""}`} title="CadScript v0 — compiled, never executed">
                   CadScript{errorCount ? ` · ${errorCount} error${errorCount === 1 ? "" : "s"}` : ""}
                 </span>
               </header>
-              <CodeEditor />
+              <div className="code-stack">
+                <div className={`code-layer${codeTab === "code" ? "" : " hidden"}`}>
+                  <CodeEditor />
+                </div>
+                {codeTab === "proposal" && reviewStatus && (
+                  <div className="code-layer">
+                    <ProposalView />
+                  </div>
+                )}
+              </div>
             </section>
             {panels.chat && <Splitter axis="y" label="Resize chat" onDrag={(d) => resize("chat", -d)} />}
             {panels.chat && <ChatPanel />}
@@ -134,6 +169,7 @@ export function App(): ReactElement {
       {dialog === "palette" && <CommandPalette />}
       {dialog === "templates" && <TemplateDialog />}
       {dialog === "about" && <AboutDialog />}
+      {dialog === "settings" && <SettingsDialog />}
       <Toasts />
     </div>
   );

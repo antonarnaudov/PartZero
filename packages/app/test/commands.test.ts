@@ -280,15 +280,15 @@ describe("app commands", () => {
     await services.doc.idle();
   });
 
-  it("chat.send records the message with selection chips and reports the agent as not connected", async () => {
+  it("chat.send without an agent host (web) records the message with selection chips and says the agent is unavailable", async () => {
     const { commands, services } = await makeHarness({ source: BOX });
     await commands.execute({ id: "selection.selectEntity", args: { body: "plate/plate", face: "plate/cap:end" } });
     const r = await commands.execute({ id: "chat.send", args: { text: "make this 2 mm thicker" } });
-    expect(r).toEqual({ ok: true, value: { delivered: false, reason: "AGENT_NOT_CONNECTED" } });
+    expect(r).toEqual({ ok: true, value: { delivered: false, reason: "AGENT_UNAVAILABLE" } });
     const chat = services.ui.getState().chat;
     const user = chat.find((m) => m.role === "user")!;
     expect(user.chips.map((c) => `${c.kind}:${c.label}`)).toEqual(["feature:plate", "face:plate/cap:end"]);
-    expect(chat.at(-1)?.text).toMatch(/Agent not connected/);
+    expect(chat.at(-1)?.text).toMatch(/runs in the desktop app/);
     expect(await commands.executeUnknown({ id: "chat.send", args: { text: "   " } })).toMatchObject({ ok: false, error: { code: "INVALID_ARGS" } });
   });
 

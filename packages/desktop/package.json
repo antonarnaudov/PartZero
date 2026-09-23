@@ -21,6 +21,14 @@
     "package:linux": "pnpm run package --linux",
     "test:e2e:fallback": "node scripts/ensure-electron.mjs && pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && node scripts/e2e-fallback.mjs"
   },
+  "dependencies": {
+    "@aicad/agent": "workspace:*",
+    "@aicad/agent-tools": "workspace:*",
+    "@aicad/evals": "workspace:*",
+    "@aicad/forge-web": "workspace:*",
+    "@aicad/ir-types": "workspace:*",
+    "@aicad/llm-gateway": "workspace:*"
+  },
   "devDependencies": {
     "@aicad/app": "workspace:*",
     "@playwright/test": "^1.63.0",

@@ -3,6 +3,7 @@
  * selects the engine (forge-web → Forge CLI → none), creates the stores and the command registry,
  * and connects the native menu and the automation hook.
  */
+import { AgentService } from "./agent/agent-service";
 import type { CadScriptService } from "./cadscript/service";
 import { WorkerCadScriptService } from "./cadscript/worker-service";
 import { createCommandRegistry, type AppCommandRegistry } from "./commands/commands";
@@ -27,6 +28,26 @@ export interface AutomationApi {
   /** Resolves when compile + evaluation settled; returns a JSON summary of the document. */
   idle(): Promise<DocSummary>;
   summary(): DocSummary;
+  /** The agent's state: active run, last run, proposal under review. */
+  agent(): AgentSummary;
+}
+
+export interface AgentSummary {
+  available: boolean;
+  activeRunId: string | null;
+  lastRun: { runId: string; status: string; phases: string[]; spentUsd: number; budgetUsd: number; result: { status: string; stopReason: string; changed: boolean } | null; error: string | null } | null;
+  review: {
+    status: string;
+    changes: Array<{ key: string; kind: string; summary: string }>;
+    accepted: string[];
+    warnings: string[];
+    /** CadScript of the ticked changes (the right side of the diff). */
+    variantSource: string;
+    previewEnabled: boolean;
+    preview: string;
+    resolution: string | null;
+  } | null;
+  codeTab: string;
 }
 
 export interface DocSummary {
@@ -41,6 +62,8 @@ export interface DocSummary {
   problems: Array<{ code: string; severity: string; message: string }>;
   evalMs: number | null;
   selection: { feature: string | null; entity: { body: string; face?: string; edge?: string } | null };
+  /** Overall bounding box of every body in the report (mm), null without bodies. */
+  bbox: { min: [number, number, number]; max: [number, number, number] } | null;
 }
 
 declare global {
@@ -71,6 +94,52 @@ async function createCadScriptService(): Promise<CadScriptService> {
   return new InlineCadScriptService();
 }
 
+function reportBbox(s: ReturnType<AppServices["doc"]["getState"]>): DocSummary["bbox"] {
+  let min: [number, number, number] | null = null;
+  let max: [number, number, number] | null = null;
+  for (const f of s.report?.features ?? []) {
+    for (const b of f.bodies ?? []) {
+      min = min ? [Math.min(min[0], b.bbox_min[0]), Math.min(min[1], b.bbox_min[1]), Math.min(min[2], b.bbox_min[2])] : [...b.bbox_min];
+      max = max ? [Math.max(max[0], b.bbox_max[0]), Math.max(max[1], b.bbox_max[1]), Math.max(max[2], b.bbox_max[2])] : [...b.bbox_max];
+    }
+  }
+  return min && max ? { min, max } : null;
+}
+
+function summarizeAgent(services: AppServices): AgentSummary {
+  const a = services.agent.getState();
+  const last = a.runs[a.runs.length - 1];
+  const r = a.review;
+  return {
+    available: a.available,
+    activeRunId: a.activeRunId,
+    lastRun: last
+      ? {
+          runId: last.runId,
+          status: last.status,
+          phases: last.phases,
+          spentUsd: last.spentUsd,
+          budgetUsd: last.budgetUsd,
+          result: last.result ? { status: last.result.status, stopReason: last.result.stopReason, changed: last.result.changed } : null,
+          error: last.error?.message ?? null,
+        }
+      : null,
+    review: r
+      ? {
+          status: r.status,
+          changes: r.changes.map((c) => ({ key: c.key, kind: c.kind, summary: c.summary })),
+          accepted: r.accepted,
+          warnings: r.warnings.map((w) => `${w.severity}: ${w.message}`),
+          variantSource: r.variantSource,
+          previewEnabled: r.previewEnabled,
+          preview: r.preview.status,
+          resolution: r.resolution?.kind ?? null,
+        }
+      : null,
+    codeTab: a.codeTab,
+  };
+}
+
 function summarize(services: AppServices): DocSummary {
   const s = services.doc.getState();
   const byName = new Map((s.report?.features ?? []).map((f) => [`${f.part}/${f.feature}`, f.status]));
@@ -96,6 +165,7 @@ function summarize(services: AppServices): DocSummary {
       feature: s.selection.featureId ? (findFeature(s.model?.ir, s.selection.featureId)?.feature.name ?? null) : null,
       entity: s.selection.entity,
     },
+    bbox: reportBbox(s),
   };
 }
 
@@ -118,8 +188,9 @@ export async function bootstrap(): Promise<Bootstrapped> {
     "forge-cli": "only available in the desktop app",
   });
 
-  const ui = new UiStore();
+  const ui = new UiStore({ agentAvailable: host.agent !== null });
   const doc = new DocStore({ cadscript, engine: () => engines.active });
+  const agent = new AgentService({ agent: host.agent, settings: host.settings, cadscript, engine: () => engines.active, doc, ui });
   const services: AppServices = {
     doc,
     ui,
@@ -129,6 +200,7 @@ export async function bootstrap(): Promise<Bootstrapped> {
     editor: new EditorController(),
     viewport: new ViewportController(),
     templates: TEMPLATES,
+    agent,
     confirm: (message) => Promise.resolve(window.confirm(message)),
   };
   const commands = createCommandRegistry(() => services);
@@ -171,6 +243,7 @@ export async function bootstrap(): Promise<Bootstrapped> {
       return summarize(services);
     },
     summary: () => summarize(services),
+    agent: () => summarizeAgent(services),
   };
 
   // Pick the engine before the first evaluation, then open the starter document.

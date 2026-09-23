@@ -43,7 +43,7 @@ import type { EvalReport, IrDocument } from "@aicad/ir-types";
 import { resolveModels, type AgentModels, type ModelOverrides } from "./models.js";
 import { loadPrompt, type PromptInfo } from "./prompts.js";
 import { cadscriptReference } from "./reference.js";
-import { AgentStop, callModel, DEFAULT_LIMITS, responseText, type AgentLimits, type RunContext } from "./run-context.js";
+import { AgentStop, callModel, DEFAULT_LIMITS, responseText, throwIfCancelled, type AgentLimits, type RunContext } from "./run-context.js";
 import { clarificationsBlock, processLine, runSpecWriter, type Clarification } from "./spec-writer.js";
 import { TraceRecorder, type AgentState, type AgentStopReason, type TraceEvent, type TraceSummary } from "./trace.js";
 import { fallbackTriage, runTriage, type TriageKind, type TriageResult } from "./triage.js";
@@ -59,6 +59,16 @@ export interface AgentRequest {
   process?: string | undefined;
 }
 
+/** A snapshot of the design session's CadScript after an apply or a rollback (live progress in the app). */
+export interface AgentDraft {
+  source: string;
+  /** Number of applies so far. */
+  applyIndex: number;
+  /** The draft passes L0–L2. */
+  verified: boolean;
+  reason: "apply" | "rollback";
+}
+
 /** L5 visual judge verdict (hook; rendering does not exist yet). */
 export interface JudgeVerdict {
   pass: boolean;
@@ -67,6 +77,8 @@ export interface JudgeVerdict {
 
 export interface AgentHooks {
   onEvent?(e: TraceEvent): void;
+  /** Called with the current CadScript after every apply and rollback (the "draft branch" as it grows). */
+  onDraft?(draft: AgentDraft): void;
   /**
    * L5 VISUAL JUDGE — OUT OF SCOPE until forge-render exists. When set, it is called at PROPOSE
    * after L3 passes, with the model to judge; a failing verdict sends the proposal back (REFINE).
@@ -100,6 +112,12 @@ export interface AgentOptions {
   /** Task id for the gateway ledger. */
   taskId?: string;
   now?: () => number;
+  /**
+   * Abort the run (e.g. the user pressed Stop): checked before every model call and tool call and
+   * passed to the provider request. The run then ends with stop reason `cancelled` and hands back
+   * the best verified state, like any other stop.
+   */
+  signal?: AbortSignal;
 }
 
 export type AgentStatus = "proposed" | "answered" | "stopped" | "failed";
@@ -218,7 +236,7 @@ class AgentRun {
       budgetUsd: o.budgetUsd ?? 1.5,
       projectionOutputTokens: this.#limits.projectionOutputTokens,
     });
-    this.#rc = { gateway: o.gateway, task, models: this.#models, trace: this.#trace, limits: this.#limits, now: this.#now };
+    this.#rc = { gateway: o.gateway, task, models: this.#models, trace: this.#trace, limits: this.#limits, now: this.#now, signal: o.signal };
     const variant = (role: "designer" | "spec_writer" | "triage") => o.gateway.profile(this.#models[role].model).promptVariant;
     const load = (role: "designer" | "spec_writer" | "triage") =>
       loadPrompt(role, { variant: variant(role), ...(o.promptVersion ? { version: o.promptVersion } : {}), ...(o.promptsDir ? { dir: o.promptsDir } : {}) });
@@ -278,6 +296,7 @@ class AgentRun {
       readOnly,
       askUser: async (qs) => {
         const answers = await answer(qs);
+        throwIfCancelled(this.#rc);
         qs.forEach((q, i) => this.#clarifications.push({ question: q.question, answer: answers[i] ?? q.default }));
         return answers;
       },
@@ -397,7 +416,7 @@ class AgentRun {
         const results: ToolResultBlock[] = [];
         const notes: string[] = [];
         for (const call of calls) {
-          if (this.#ended || this.#pendingStop) {
+          if (this.#ended || this.#pendingStop || this.#o.signal?.aborted) {
             results.push({ type: "tool_result", toolUseId: call.id, content: "Not executed: the task has ended.", isError: true });
             continue;
           }
@@ -408,6 +427,7 @@ class AgentRun {
         if (notes.length > 0) content.push({ type: "text", text: notes.join("\n\n") });
         convo.appendUser(content);
         if (this.#pendingStop) throw this.#pendingStop;
+        throwIfCancelled(this.#rc);
       }
     } finally {
       this.#conversations.designer = [...convo.messages];
@@ -462,10 +482,13 @@ class AgentRun {
         this.#toolCtx(),
       );
       const data = out.data;
-      if (data?.kind === "apply") this.#afterApply(data, notes);
-      else if (data?.kind === "rollback") {
+      if (data?.kind === "apply") {
+        this.#afterApply(data, notes);
+        this.#emitDraft("apply");
+      } else if (data?.kind === "rollback") {
         this.#failedStreak = 0;
         this.#lastFailSig = "";
+        this.#emitDraft("rollback");
       } else if (data?.kind === "propose") out = await this.#onPropose(data["proposal"] as Proposal);
     }
     this.#trace.tool({ name: call.name, ok: !out.isError, ms: Math.round(this.#now() - t0), phase: this.#trace.state }, out.text.split("\n")[0] ?? "");
@@ -513,6 +536,7 @@ class AgentRun {
       this.#failedStreak = 0;
       this.#lastFailSig = "";
       t.enter("REPLAN", `rolled back to ${target.id}`);
+      this.#emitDraft("rollback");
       const state = target.state.ir ? `\nCurrent state:\n${irSummary(target.state.ir, target.state.report, { maxChars: 4000 })}` : "\nCurrent state: empty file.";
       notes.push(
         `${ORCH} ${max} repairs failed, so the design was rolled back to ${target.id} "${target.label}". REPLAN: build this step a different way (another construction or simpler geometry), not another variation of the failed attempt.${state}`,
@@ -520,6 +544,16 @@ class AgentRun {
       return;
     }
     this.#pendingStop = new AgentStop("repairs_exhausted", `${max} repairs and ${this.#limits.maxReplans} replan failed; last error: ${sig.slice(0, 300)}`);
+  }
+
+  #emitDraft(reason: AgentDraft["reason"]): void {
+    const onDraft = this.#o.hooks?.onDraft;
+    if (!onDraft) return;
+    try {
+      onDraft({ source: this.#session.source, applyIndex: this.#session.applies, verified: this.#session.verification.ok, reason });
+    } catch {
+      // A failing observer must not break the run.
+    }
   }
 
   async #onPropose(proposal: Proposal): Promise<ToolOutput> {

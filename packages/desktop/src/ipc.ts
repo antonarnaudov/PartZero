@@ -16,6 +16,8 @@ import type {
   OpenDialogOptions,
   SaveDialogOptions,
 } from "@aicad/app/bridge";
+import type { AgentSetup } from "./agent/setup.js";
+import { parseClearApiKey, parseSetApiKey, parseSettingsUpdate } from "./agent/protocol.js";
 import { isDocumentPath, type PathGrants, type RecentFiles } from "./files.js";
 import { forgeEval, forgeExport, forgeInfo, MESH_FORMATS } from "./forge-cli.js";
 
@@ -28,6 +30,8 @@ export interface IpcDeps {
   appInfo: () => Promise<AppInfo>;
   onRecentChanged: () => void;
   onDocState: (state: DocumentStateMessage) => void;
+  /** The in-app design agent (host, keys, settings). */
+  agent: AgentSetup;
 }
 
 type Handler<C extends IpcChannel> = (
@@ -140,6 +144,28 @@ export function registerIpc(deps: IpcDeps): void {
     const info = await forgeInfo(deps.forgeBin);
     if (!info.available) return { data: null, exitCode: null, stderr: "", error: info.detail };
     return forgeExport(deps.forgeBin, { irJson: str(r.irJson, "IR", 32 * 1024 * 1024), format: r.format, allowPartial: r.allowPartial === true });
+  });
+
+  // ─── Design agent ─────────────────────────────────────────────────────────────────────────
+  // Requests are validated by the host (protocol.ts). Keys go in (setApiKey) but never come back:
+  // every settings handler returns the redacted view.
+  const { host, keys, settings } = deps.agent;
+  handle("agent:start", (_e, req) => host.start(req));
+  handle("agent:answer", (_e, req) => host.answer(req));
+  handle("agent:stop", (_e, req) => host.stop(req));
+  handle("settings:get", () => host.settingsView());
+  handle("settings:update", (_e, req) => {
+    settings.update(parseSettingsUpdate(req), host.registry);
+    return host.settingsView();
+  });
+  handle("settings:setApiKey", (_e, req) => {
+    const { provider, key } = parseSetApiKey(req);
+    keys.store.set(provider, key);
+    return host.settingsView();
+  });
+  handle("settings:clearApiKey", (_e, req) => {
+    keys.store.clear(parseClearApiKey(req).provider);
+    return host.settingsView();
   });
 
   ipcMain.on("doc:state", (event: IpcMainEvent, state: unknown) => {
