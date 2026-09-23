@@ -1,0 +1,23 @@
+[package]
+name = "forge-ssi"
+description = "Forge surface-surface and curve-surface intersection: closed forms for analytic pairs, certified subdivision + marching with B-spline fitting, tangency classification"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MPL-2.0"
+publish.workspace = true
+
+[dependencies]
+forge-core.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+# proptest (and its process helpers) only on native targets: the fingerprint example is
+# also built for wasm32 to check bit-identical results under Node.
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true

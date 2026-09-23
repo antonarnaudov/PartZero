@@ -1,6 +1,7 @@
 //! Surfaces: the geometry carried by faces.
 
 mod analytic;
+pub mod implicit;
 
 pub use analytic::{Cone, Cylinder, Plane, Sphere, SpindlePatch, Torus};
 
