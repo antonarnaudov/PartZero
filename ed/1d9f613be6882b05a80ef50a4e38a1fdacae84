@@ -1,0 +1,146 @@
+forge/crates/forge-mesh/src/lib.rs
+  s_59c0dd2af30db2::t_3ce2cbc72a0200 332-333,383-393
+forge/crates/forge-render/src/shaders/common.wgsl
+  s_59c0dd2af30db2::t_68800a86540838 128-133
+  s_59c0dd2af30db2::t_8bcdc2228072a9 1-127
+forge/crates/forge-render/src/shaders/grid.wgsl
+  s_59c0dd2af30db2::t_68800a86540838 1-44,47-91
+  s_59c0dd2af30db2::t_920682e40bc2af 45-46
+packages/forge-web/demo/env.d.ts
+  s_59c0dd2af30db2::t_59b4ee0f58aee3 1-4
+forge/crates/forge-render/src/shaders/faces.wgsl
+  s_59c0dd2af30db2::t_8351596e769aa4 47-48,52-57
+  s_59c0dd2af30db2::t_68800a86540838 1-46,49-51,58-66,112-125,131-132,135-136,140-142,145-146,158-163,165-170,173-174,178-180
+  s_59c0dd2af30db2::t_bba024e5334b4f 67-111,126-130,133-134,137-139,143-144,147-157,164,171-172,175-177
+packages/forge-web/src/engine.ts
+  s_59c0dd2af30db2::t_d0f94be5b6867a 1-115
+packages/forge-web/README.md
+  s_59c0dd2af30db2::t_119a2b25434b42 1-152
+packages/forge-web/demo/style.css
+  s_59c0dd2af30db2::t_59fbbab8666a21 1-32
+packages/forge-web/src/types.ts
+  s_59c0dd2af30db2::t_6f3b0810a1c3a3 1-252
+forge/crates/forge-render/src/lines.rs
+  s_59c0dd2af30db2::t_1ce53f7b86c319 66-70
+  s_59c0dd2af30db2::t_590c476233f901 1-65,71-100,102-107,109-161,164,166-167
+  s_59c0dd2af30db2::t_2bdeada0a2cb4f 101,108,162-163,165
+packages/forge-web/test/engine.test.mjs
+  s_59c0dd2af30db2::t_0c7178ea3672bc 1-32,34-101
+  s_59c0dd2af30db2::t_0a3072bdc42bf8 33
+packages/forge-web/demo/index.html
+  s_59c0dd2af30db2::t_59fbbab8666a21 1-66
+forge/crates/forge-render/src/camera.rs
+  s_59c0dd2af30db2::t_d1bc8f5f1bf0ec 406-412,468-472,484-487,529,562,581,601,603
+  s_59c0dd2af30db2::t_3efc8624494e9d 1-405,413-448,454-458,464-467,473-483,488-504,506-515,517-528,535-542,552-561,563-570,575-580,582-585,590-600,602,604-632
+  s_59c0dd2af30db2::t_2bdeada0a2cb4f 505
+  s_59c0dd2af30db2::t_1ce53f7b86c319 449-453,459-463,516,530-534,543-551,571-574,586-589
+forge/crates/forge-wasm/src/engine.rs
+  s_59c0dd2af30db2::t_1ce53f7b86c319 1-344
+packages/forge-web/demo/main.ts
+  s_59c0dd2af30db2::t_04d7b12c1f8fc3 81,93,237
+  s_59c0dd2af30db2::t_ae21f158f26803 41,102-107,116-119,121-122,156,264,272,274-281
+  s_59c0dd2af30db2::t_8351596e769aa4 190
+  s_59c0dd2af30db2::t_6052810330f805 1-40,42-80,82-92,94-101,108-115,120,123-155,157-189,191-236,238-263,265-271,273,282-323
+packages/forge-web/tsconfig.json
+  s_59c0dd2af30db2::t_7f1670ecffe414 1-9
+forge/crates/forge-render/src/viewport.rs
+  s_59c0dd2af30db2::t_3c1e7de9b9b992 178-180,186-187,208-210,237,281-296,388,396-400,459,472-473,476,491-493,496,543-562,585,927-939,951-958,976,989,1063,1815-1821,1857-1858,1867-1872,1883-1884
+  s_59c0dd2af30db2::t_1ce53f7b86c319 311-315,439-458,460-471,498-542,563-584,586-636,644-648,770-775,851,977-983,1081-1086,1091-1095,1097-1103,1106-1110,1113-1116,1172-1175,1243-1246,1275-1277,1284-1288,1336-1338,1390-1394,1398-1400,1521-1523,1544-1546,1729-1731,1803-1807,1824-1849,1859-1866,1893-1900,1920-1929
+  s_59c0dd2af30db2::t_c283d3ed0e964d 852,1253-1254
+  s_59c0dd2af30db2::t_2bdeada0a2cb4f 1991
+  s_59c0dd2af30db2::t_928f7b2b33338a 1352-1385,1402-1406,1446-1457,1547-1550,1588-1597
+  s_59c0dd2af30db2::t_c3683a93581cae 1-177,181-185,188-207,211-236,238-280,297-310,316-387,389-395,401-438,474-475,477-490,494-495,497,637-643,649-769,776-850,853-926,940-950,959-975,984-988,990-1062,1064-1080,1087-1090,1096,1104-1105,1111-1112,1117-1171,1176-1242,1247-1252,1255-1274,1278-1283,1289-1335,1339-1351,1386-1389,1395-1397,1401,1407-1445,1458-1520,1524-1543,1551-1587,1598-1728,1732-1802,1808-1814,1822-1823,1850-1856,1873-1882,1885-1892,1901-1919,1930-1990,1992-1995
+docs/spikes/05-renderer.md
+  s_59c0dd2af30db2::t_c09e4d24607373 180,193
+  s_59c0dd2af30db2::t_ed18c4a9a37782 1-179,181-192,194-257
+forge/crates/forge-wasm/src/web.rs
+  s_59c0dd2af30db2::t_1059318edfdf8b 863
+  s_59c0dd2af30db2::t_1bfa7a6413f8c2 1-7,9-18,20-31,33-64,66-67,83-103,105-115,117-128,134,136-163,165-169,171-172,174-238,242-262,266-278,291-374,378-385,387-397,399-537,542-545,550-567,570-575,579-615,622,626-688,696-724,731-811,819-862,864-874
+  s_59c0dd2af30db2::t_1ce53f7b86c319 68-82,129-133,239-241,263-265,279-290,375-377,538-541,546-549,568-569,576-578,616-621,623-625,689-695,725-730,812-818
+  s_59c0dd2af30db2::t_2bdeada0a2cb4f 386,398
+  s_59c0dd2af30db2::t_afc46e6d65a716 8,19,32,65,104,116,135,164,170,173
+forge/crates/forge-render/src/shaders/blit.wgsl
+  s_59c0dd2af30db2::t_68800a86540838 1-30
+packages/forge-web/demo/bench-doc.js
+  s_59c0dd2af30db2::t_1deb53cfdc45b2 1-115
+forge/crates/forge-render/src/shaders/lines.wgsl
+  s_59c0dd2af30db2::t_68800a86540838 1-162
+forge/crates/forge-render/src/context.rs
+  s_59c0dd2af30db2::t_e8b7bee6da3188 174
+  s_59c0dd2af30db2::t_df32a3b65aa571 1-173,175-184
+packages/forge-web/src/viewport.ts
+  s_59c0dd2af30db2::t_efce952baa895a 1-471
+forge/crates/forge-render/tests/offscreen.rs
+  s_59c0dd2af30db2::t_daeaa9cea1246c 1-33,38-71,77-98,104-109,116-175,184-207,213-231,235-251,256-261,266-294,299-339,346-351,357-358
+  s_59c0dd2af30db2::t_1ce53f7b86c319 34-37,72-76,99-103,110-115,176-183,208-212,232-234,252-255,262-265,295-298,340-345,352-356
+forge/crates/forge-mesh/tests/tessellate.rs
+  s_59c0dd2af30db2::t_de3fccb48c259f 357-358
+forge/crates/forge-wasm/src/lib.rs
+  s_59c0dd2af30db2::t_efc02712ccb4f3 1-13,15-16,18-20
+  s_59c0dd2af30db2::t_afc46e6d65a716 14,17
+.claude/launch.json
+  s_59c0dd2af30db2::t_9678324ee13ac7 1-11
+packages/forge-web/.gitignore
+  s_59c0dd2af30db2::t_96184c1b195e4e 1-4
+packages/forge-web/scripts/build.mjs
+  s_59c0dd2af30db2::t_7f1670ecffe414 4,6-8,41-47
+  s_59c0dd2af30db2::t_96184c1b195e4e 1-3,5,9-40,48-104
+packages/forge-web/tsconfig.build.json
+  s_59c0dd2af30db2::t_7f1670ecffe414 1-9
+forge/crates/forge-wasm/Cargo.toml
+  s_59c0dd2af30db2::t_7e9fb4437ff87f 1-30
+forge/crates/forge-render/src/pick.rs
+  s_59c0dd2af30db2::t_d1bc8f5f1bf0ec 52
+  s_59c0dd2af30db2::t_49d76500cd03c3 1-51,53-201,214-221,226-302
+  s_59c0dd2af30db2::t_1ce53f7b86c319 202-213,222-225
+forge/crates/forge-render/src/scene.rs
+  s_59c0dd2af30db2::t_d1bc8f5f1bf0ec 551-552
+  s_59c0dd2af30db2::t_afc46e6d65a716 77-109
+  s_59c0dd2af30db2::t_1ce53f7b86c319 508-512,611-640,729-732,740-745,765-768,776-779,782-785,788-791,794-797,800-803
+  s_59c0dd2af30db2::t_2bdeada0a2cb4f 609-610
+  s_59c0dd2af30db2::t_82d7c1adf830e5 1-76,110-507,513-550,553-608,641-728,733-739,746-764,769-775,780-781,786-787,792-793,798-799,804-821
+packages/forge-web/demo/vite.config.ts
+  s_59c0dd2af30db2::t_59fbbab8666a21 1-48
+packages/forge-web/turbo.json
+  s_59c0dd2af30db2::t_7f1670ecffe414 1-13
+forge/crates/forge-render/src/lib.rs
+  s_59c0dd2af30db2::t_1ce53f7b86c319 47,50-51
+  s_59c0dd2af30db2::t_afc46e6d65a716 56-58
+  s_59c0dd2af30db2::t_c283d3ed0e964d 1-46,48-49,52-55
+packages/forge-web/demo/bench-doc.d.ts
+  s_59c0dd2af30db2::t_59b4ee0f58aee3 1-3
+packages/forge-web/src/worker.ts
+  s_59c0dd2af30db2::t_96a39a386dd9e0 1-40
+forge/crates/forge-render/Cargo.toml
+  s_59c0dd2af30db2::t_fbf40a092910ba 1-10,12,14-26,29-31
+  s_59c0dd2af30db2::t_c283d3ed0e964d 11,13,27-28
+forge/crates/forge-mesh/src/mesh.rs
+  s_59c0dd2af30db2::t_3ce2cbc72a0200 173-176
+packages/forge-web/package.json
+  s_59c0dd2af30db2::t_98e1edaae3c79a 34
+  s_59c0dd2af30db2::t_7f1670ecffe414 1-33,35-51
+packages/forge-web/src/evaluator.ts
+  s_59c0dd2af30db2::t_96a39a386dd9e0 1-75
+packages/forge-web/src/index.ts
+  s_59c0dd2af30db2::t_96a39a386dd9e0 1-20
+forge/Cargo.lock
+  s_59c0dd2af30db2::t_0e8194dfa9e1cf 11-25,76-90,103-112,121-126,133-167,174-179,220-230,237-280,287-292,315-320,388-400,424-438,450-500,524-607,614-623,636-691,698-707,720-740,756-802,837-983,986-987,989,992-993,995-998,1009-1014,1024-1029,1036-1037,1114-1146,1173-1184,1198-1203,1241-1246,1301-1315,1322-1336,1378-1386,1419-1424,1431-1436,1455-1790,1797-1824,1834-1842,1849-1854
+packages/forge-web/scripts/bench.mjs
+  s_59c0dd2af30db2::t_bed2ee63005227 1-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ed1d9f613be6882b05a80ef50a4e38a1fdacae84",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
