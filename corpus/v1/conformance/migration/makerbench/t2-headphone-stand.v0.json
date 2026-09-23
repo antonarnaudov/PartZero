@@ -1,0 +1,207 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "headphone_stand",
+    "description": "Headphone stand: 120x6 base disc, 30x20x250 post, 100x30x8 rounded saddle on top"
+  },
+  "parts": [
+    {
+      "id": "p_stand",
+      "name": "stand",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_base_outline",
+          "name": "base_outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "rim",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 60
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_base",
+          "name": "base",
+          "sketch": "base_outline",
+          "distance": 6
+        },
+        {
+          "type": "sketch",
+          "id": "f_post_outline",
+          "name": "post_outline",
+          "plane": {
+            "origin": [
+              0,
+              0,
+              6
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "x_dir": [
+              1,
+              0,
+              0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -15,
+                -10
+              ],
+              "end": [
+                15,
+                -10
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                15,
+                -10
+              ],
+              "end": [
+                15,
+                10
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                15,
+                10
+              ],
+              "end": [
+                -15,
+                10
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -15,
+                10
+              ],
+              "end": [
+                -15,
+                -10
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_post",
+          "name": "post",
+          "sketch": "post_outline",
+          "distance": 250
+        },
+        {
+          "type": "sketch",
+          "id": "f_saddle_outline",
+          "name": "saddle_outline",
+          "plane": {
+            "origin": [
+              0,
+              0,
+              256
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "x_dir": [
+              1,
+              0,
+              0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "side_a",
+              "start": [
+                -35,
+                -15
+              ],
+              "end": [
+                35,
+                -15
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "end_r",
+              "start": [
+                35,
+                -15
+              ],
+              "end": [
+                35,
+                15
+              ],
+              "center": [
+                35,
+                0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "side_b",
+              "start": [
+                35,
+                15
+              ],
+              "end": [
+                -35,
+                15
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "end_l",
+              "start": [
+                -35,
+                15
+              ],
+              "end": [
+                -35,
+                -15
+              ],
+              "center": [
+                -35,
+                0
+              ],
+              "ccw": true
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_saddle",
+          "name": "saddle",
+          "sketch": "saddle_outline",
+          "distance": 8
+        }
+      ]
+    }
+  ]
+}

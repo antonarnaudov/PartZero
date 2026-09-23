@@ -1,9 +1,26 @@
 # IR v1: normative semantics (`aicad.ir/1`) — DRAFT
 
-> **Status: DRAFT for review (2026-09-23).** Not yet implemented. When accepted, this file replaces
-> [SPEC.md](SPEC.md) as the normative spec, and SPEC.md is kept as the v0 reference.
-> Decisions and rejected alternatives: [ADR 0013](../../../docs/adr/0013-ir-v1-references-and-parameters.md).
-> Work split: [IR-V1-IMPLEMENTATION-PLAN.md](../../../docs/IR-V1-IMPLEMENTATION-PLAN.md).
+> **Status: DRAFT (2026-09-23), with interfaces I1, I5 and I9 FROZEN on 2026-09-23 (W0).**
+> - **FROZEN — I1** (the contract types): the Rust types in `forge_ir::v1`,
+>   [`schema/ir-v1.schema.json`](schema/ir-v1.schema.json),
+>   [`schema/ir-v1.constants.json`](schema/ir-v1.constants.json) (tolerances, `RESERVED_NAMES`,
+>   `ID_PATTERN`, `ERROR_CODES`, `HOLE_SIZES` with sources) and the structural validation
+>   (`forge_ir::v1::validate`, every **R** code of §7.5 except the W1 expression codes).
+> - **FROZEN — I5** (`aicad.metrics/1`): [`schema/metrics-v1.schema.json`](schema/metrics-v1.schema.json)
+>   (`forge_ir::v1::metrics`).
+> - **FROZEN — I9** (conformance fixtures): [`corpus/v1/conformance/`](../../../corpus/v1/conformance),
+>   append-only from now on (§9.4).
+>
+> A change to a frozen interface is a SPEC PR plus a fixture update, reviewed by its consumers
+> (IR-V1 plan §3). The rest of the text stays a draft until W1–W11 have implemented it. When
+> accepted, this file replaces [SPEC.md](SPEC.md) as the normative spec, and SPEC.md is kept as the
+> v0 reference. Decisions and rejected alternatives: [ADR 0013](../../../docs/adr/0013-ir-v1-references-and-parameters.md)
+> (its "Decisions on the open questions" are folded in below). Work split:
+> [IR-V1-IMPLEMENTATION-PLAN.md](../../../docs/IR-V1-IMPLEMENTATION-PLAN.md).
+>
+> **Revision log.** 2026-09-23 W0 freeze: ADR 0013 decisions 1–7 applied (§6.5 table verified,
+> §0.6 capture refresh, measured parameters deferred to v1.1, §10 closed); ambiguities resolved
+> while encoding the types are tagged **[W0-n]** and listed in §11.
 
 IR v1 keeps every rule of IR v0 ([SPEC.md](SPEC.md)) unless a rule below overrides it. Rules new in
 this draft carry a **[D-n]** tag so reviewers and implementers can cite them. The words MUST, MUST
@@ -25,7 +42,8 @@ instead of recomputing it. Nothing in the trace is trusted without an independen
 - [7. Evaluation and report (`aicad.metrics/1`)](#7-evaluation-and-report-aicadmetrics1)
 - [8. Diff rules (`kernel-diff` v1)](#8-diff-rules-kernel-diff-v1)
 - [9. Versioning and migration](#9-versioning-and-migration)
-- [10. Open points in this draft](#10-open-points-in-this-draft)
+- [10. Open points (resolved)](#10-open-points-resolved-2026-09-23)
+- [11. W0 resolutions and notes for W1–W11](#11-w0-resolutions-and-notes-for-w1w11)
 
 ---
 
@@ -56,7 +74,9 @@ expressions over bodies (e.g. `plate.volume`), `expect` clauses.
    evaluating every older `v` they have ever accepted.
 3. An engine that does not implement a feature's `v` rejects the document with
    `UNSUPPORTED_FEATURE_VERSION` (path of the `v` field). An unknown `type` is rejected with
-   `UNSUPPORTED_FEATURE`.
+   `UNSUPPORTED_FEATURE`. [W0-1] A `v` that is not a positive integer (`0`, `1.5`, `"1"`) is also
+   `UNSUPPORTED_FEATURE_VERSION`. This revision defines `v: 1` for every feature type
+   (`FEATURE_VERSIONS` in the constants file).
 4. v1 engines MUST also accept `aicad.ir/0` documents. They migrate them with §9.1 before
    evaluating; the report is then a v1 report. Engines never write `aicad.ir/0`.
 5. Additive revisions of v1 (a new feature type, a new optional field whose default preserves
@@ -64,21 +84,37 @@ expressions over bodies (e.g. `plate.volume`), `expect` clauses.
 
 ### 0.3 Identity [D-2]
 
-1. **Ids.** Part ids, feature ids, and the ids of curves, points, constraints and hole positions
-   are non-empty strings (`INVALID_ID` otherwise). As decided in BACKLOG ("curve ids containing
-   provenance-reserved characters"), ids stay free: characters that the provenance grammar reserves
-   are **escaped** when an id is rendered into a provenance key (§5.2 rule 5), never rejected.
-   Feature ids are unique across the document; curve, point and constraint ids are unique within
-   their sketch, where they share one namespace together with the derived point ids of §4.3
-   (`DUPLICATE_ID`).
+1. **Ids.** [W0-12] Part ids, feature ids, and the ids of curves, points, constraints and hole
+   positions match the **id grammar** `ID_PATTERN` = `[A-Za-z_][A-Za-z0-9_]*`, 1 to `MAX_ID_LEN` =
+   64 bytes (`INVALID_ID`, details `{ "path", "reason": "empty" | "charset" | "too-long", "length" }`).
+   This **replaces** the earlier "ids stay free and are escaped" rule (BACKLOG): ids flow into
+   provenance keys and, through reports and messages, into LLM prompts, where unrestricted ids were
+   shown to inject orchestrator control lines (security audit, 2026-09-23). The escaping of §5.2
+   rule 5 remains as defence in depth. Feature ids are unique across the document; curve, point
+   and constraint ids are unique within their sketch, where they share one namespace together with
+   the derived ids of §4.3 (`DUPLICATE_ID`; a declared id cannot contain `.`, so it never clashes
+   with a derived or member id).
+   - **References** to ids (a sketch or datum id, a query's `feature`, `curve`, `member`, `at` and
+     `role`, a region curve id, a pattern seed, a hole's point ids, a constraint argument) are 1 to
+     `MAX_REF_SEGMENTS` = 3 ids joined by `.` (`l.start`, `outline.bottom`, `outline.c_br.start`);
+     anything else is `INVALID_ID` at the reference's path, and the reference is not resolved
+     further.
+   - **No echo.** A string that fails the id grammar, the name grammar or an expression grammar is
+     never copied into a `message` or `details` (they give its path, reason and length). Free-text
+     fields (`meta`, `note`, `intent`, `author`, `assumptions`) are not restricted; tools that show
+     them to a model MUST mark them as untrusted data (W10).
 2. **Features are referenced by id, never by name.** Every cross-feature reference in v1 (a sketch
    consumed by an extrude, a datum used as a plane, a feature named by a query, a pattern seed)
    stores the target's **feature id**. Renaming a feature changes its `name` only and never breaks a
    reference. (v0 stored the sketch *name*; §9.1 rewrites it.)
 3. **Names.** Feature names and parameter names share **one namespace** (they are all CadScript
-   `const`s in one file): they are unique across the document, match `[A-Za-z_][A-Za-z0-9_]*`, and
-   are not in `RESERVED_NAMES` (`RESERVED_NAME`). v1 adds its builtins to `RESERVED_NAMES`
-   (`schema/ir-v1.constants.json`, see §10 for the list).
+   `const`s in one file): they are unique across the document (`DUPLICATE_NAME`) and match the id
+   grammar of rule 1, at most 64 bytes (`INVALID_NAME`). Part names follow the same grammar
+   ([W0-12]; unique among parts). [W0-2] v1 adds its builtins to `RESERVED_NAMES`
+   (`schema/ir-v1.constants.json`, list in §9.3). IR validation rejects (`RESERVED_NAME`) a
+   **parameter** name in the full v1 list, and a **feature** name in the v0 list
+   (`RESERVED_NAMES_V0`) only: §9.3 keeps migrated v0 documents that name a feature `hole` or
+   `fillet` valid, and CadScript reports those with `CS_RESERVED_NAME`.
 4. **References to a feature must point backwards** in the same part's timeline
    (`UNRESOLVED_FEATURE`). A reference to a feature of another part is `UNRESOLVED_FEATURE`.
    (Parameters are referenced by name, not id, and follow the scope rules of §2.8.)
@@ -96,8 +132,24 @@ expressions over bodies (e.g. `plate.volume`), `expect` clauses.
 - A value that is a plain literal number is written as a JSON **number**; an expression is written as
   a JSON **string** in the canonical expression form (§2.4). `"8"` is not canonical; `8` is.
 - JSON numbers MUST be parsed correctly rounded and printed in shortest round-trip form, so that
-  print → parse is bit-exact (this requires serde_json's `float_roundtrip`; see BACKLOG).
-- Readers accept both the explicit and the omitted form of every default.
+  print → parse is bit-exact. [W0-11] serde_json's default parser is off by one ulp for about one
+  in eight 17-digit decimals, and enabling its `float_roundtrip` feature would change how every
+  crate in a build parses v0 documents; so the v1 loader reads JSON text with its own strict
+  RFC 8259 reader (`forge_ir::v1::json`, correctly rounded, duplicate keys rejected). v0 documents
+  keep serde_json's parser (bit-for-bit v0 behavior).
+- [W0-11] **Canonical text** is exactly `forge_ir::v1::to_json`: serde_json's pretty printer
+  (2-space indent, `": "` separators), object keys in schema declaration order (the order of the
+  JSON Schema's `properties`, required ones first as declared), JSON numbers printed by Ryū:
+  decimal notation for `1e-5 ≤ |x| < 1e16` with integral values ending in `.0` (`8.0`, `0.00001`),
+  otherwise `<digits>e<sign><exp>` with an explicit `+` (`1e-7`, `1.5e+16`). Numbers **inside
+  expression strings** use the ECMAScript `Number::toString` form instead (§2.4). The TypeScript
+  and Python ports reproduce this byte for byte.
+- Readers accept both the explicit and the omitted form of every default. [W0-11] Context-dependent
+  defaults are omitted too: a Ref's `card` equal to its field's default, `thread: false`, a linear
+  pattern's `count2: 1`, `rotation: 0`, grid and bolt-circle `center: [0, 0]`, bolt-circle
+  `start: 0`, custom countersink `angle: 90`, circular pattern `angle: 360`.
+- [W0-1] IR v1 has **no nullable field**: an optional field is omitted, never `null` (a `null`
+  anywhere is a parse error).
 
 ### 0.5 Rejection versus evaluation errors [D-4]
 
@@ -110,7 +162,25 @@ expressions over bodies (e.g. `plate.volume`), `expect` clauses.
    and path** as the literal check would, but are raised at evaluation time, as a feature error.
    Example: `"distance": "t - 10"` with `t = 8` fails the extrude with `INVALID_DISTANCE`, detail
    `{"value": -2, "expected": "> 1e-6"}`.
-3. Validation returns every problem, not just the first (as in v0).
+3. Validation returns every problem, not just the first (as in v0). [W0-1] The set of
+   `{ code, path }` is normative; its order is not (fixtures compare multisets).
+4. [W0-1] **Rejection pipeline** (every implementation runs the same steps, so the same document
+   gets the same codes):
+   1. JSON text → value (correctly rounded numbers, duplicate keys rejected);
+   2. dispatch on `schema`: `aicad.ir/0` → v0 parse and v0 validation (same codes and paths as v0),
+      then §9.1; `aicad.ir/1` → the steps below; anything else → `UNSUPPORTED_SCHEMA` at `/schema`;
+   3. **raw pre-checks** on the value, for rejections that a typed parse could not code: any `null`
+      (parse error); unknown feature `type` (`UNSUPPORTED_FEATURE`); a `v` that is not a defined
+      version (`UNSUPPORTED_FEATURE_VERSION`); a parameter's unknown `unit`, missing `value` or
+      present `measure` (`PARAM_INVALID`); a Ref's (`{ "kind", "q", … }`) `card` outside
+      `one`/`some`/`any`/integer ≥ 1 (`INVALID_CARDINALITY`); a hole `size` not in `HOLE_SIZES`
+      (`HOLE_SIZE_UNKNOWN`); `driving` or `value` on a constraint that is not a dimension
+      (`SKETCH_NOT_A_DIMENSION`). If any fails, the document is rejected with those problems;
+   4. typed parse against `schema/ir-v1.schema.json` (unknown fields, wrong JSON types: parse
+      error without a code);
+   5. structural validation (`forge_ir::v1::validate`), then the expression checks of W1 through
+      the hook `forge_ir::v1::expr::ExprValidator`, which receives every expression site with its
+      JSON pointer, field type (§2.2) and scope (§2.8).
 
 ### 0.6 Evaluation is a pure function; the command layer writes back [D-5]
 
@@ -121,7 +191,7 @@ ordinary undoable ops inside the user's transaction:
 | Stored state | Written by the op | When |
 |---|---|---|
 | Solved sketch geometry (§4.5) | `writeBackSolution(sketchId)` | after any committed edit whose evaluation re-solved a constrained sketch successfully |
-| Reference captures (§5.6) | `captureRef(featureId, fieldPath)` | when a reference is created or edited, when a repair is accepted, and (SHOULD) for every exactly-resolved reference of a committed transaction |
+| Reference captures (§5.6) | `captureRef(featureId, fieldPath)` | **only** when a reference is created or edited, or a repair is accepted (ADR 0013 decision 4: captures are not refreshed on every commit, so `document.json` diffs stay readable) |
 | Rename maps (§5.9) | `renameCurve`, `renameFeature` | explicit renames; they rewrite every query that names the old id in the same op |
 
 A document that nobody has written back is still valid and evaluates deterministically; it just
@@ -150,6 +220,9 @@ starts solves from older guesses and validates references against older captures
 | `TIE_MARGIN` | `0.1` | candidates within this fraction of the best are a tie |
 | `MAX_CANDIDATES` | `6` | candidates listed per unresolved member |
 | `PARAM_VALUE_REL` | `1e-12` | diff tolerance for real-valued parameters (§8.2) |
+| `MAX_EXPR_BYTES`, `MAX_EXPR_DEPTH` | `4096`, `64` | expression size limits (§2.3) |
+| `MAX_COUNT_MAGNITUDE` | `2^31` | `count` values (§2.7 rule 9) |
+| `ID_PATTERN`, `MAX_ID_LEN`, `MAX_REF_SEGMENTS` | `^[A-Za-z_][A-Za-z0-9_]*$`, `64`, `3` | ids, names and references (§0.3, [W0-12]) |
 
 The last six constants are the values the spike 02 harness validated
 ([02-naming.md](../../../docs/spikes/02-naming.md)); changing them requires re-running that harness.
@@ -168,8 +241,13 @@ declaration order and matters only for printing and tie-breaking (§2.8).
 { "name": "holes",    "unit": "count", "value": 4, "min": 1 }
 { "name": "tilt",     "unit": "deg",   "value": 15 }
 { "name": "with_lid", "unit": "bool",  "value": true }
-{ "name": "slot_len", "unit": "mm",    "measure": { "sketch": "s_slot", "constraint": "d_len" } }
+{ "name": "slot_len", "unit": "mm",    "measure": { "sketch": "s_slot", "constraint": "d_len" } }   // DEFERRED to v1.1
 ```
+
+> **Measured parameters are deferred to IR v1.1** (ADR 0013 decision 5). The `measure` rows below
+> and the `MEASURE_*` codes stay as the v1.1 design; an `aicad.ir/1` document with a `measure`
+> field is rejected with `PARAM_INVALID` (reason `measure-deferred`). v1.1 adds `measure` as an
+> additive optional field (§0.2 rule 5). [W0] `unit` and `value` are therefore both required in v1.
 
 | Field | Meaning |
 |---|---|
@@ -177,7 +255,7 @@ declaration order and matters only for printing and tie-breaking (§2.8).
 | `unit` | `mm` (length), `deg` (angle), `ratio` (dimensionless real), `count` (dimensionless integer), `bool`. |
 | `value` | A literal (number or boolean) or an expression string (§2.3). Exactly one of `value` and `measure`. |
 | `measure` | A **measured parameter**: the value of a reference dimension (§4.3, `driving: false`) of an earlier sketch of the same part. Part-level only. `unit` must be `mm` for `distance`/`radius`/`diameter` and `deg` for `angle` (`MEASURE_UNIT_MISMATCH`); the constraint must be a reference dimension (`MEASURE_NOT_REFERENCE`). |
-| `min`, `max` | Optional bounds (literal or expression of the same type), checked after evaluation (`PARAM_OUT_OF_RANGE`). Not allowed for `bool`. |
+| `min`, `max` | Optional bounds (literal or expression of the same type), checked after evaluation (`PARAM_OUT_OF_RANGE`). Not allowed for `bool` (`PARAM_INVALID`). [W0-13] With a literal value and literal bounds the check is a rejection (§0.5 rule 1), as is literal `min > max` (`PARAM_INVALID`); a literal of the wrong kind (`true` for `mm`, `3` for `bool`) is `EXPR_TYPE_MISMATCH`; a non-integer literal `count` is `EXPR_NOT_INTEGER`. |
 | `note` | Free text, not semantic. |
 
 A parameter whose `value` is an expression is **derived**; UIs show it read-only unless the user
@@ -190,6 +268,14 @@ hole sizes, dimension values, query radii, …) has the JSON type **Scalar** = `
 number is a literal in the field's unit; a string is an expression. Boolean fields that accept
 expressions have the type `boolean | string`. Each field declares its **field type**: `length`
 (mm), `angle` (deg), `ratio`, `count` or `bool`. A `P2`/`P3` vector is an array of Scalars.
+
+[W0-3] The boolean fields that accept expressions are exactly: `suppressed` (every feature), hole
+`flip`, AxisRef and `datum_axis` `flip`, `tangent_chain` and `keep_tools`. `construction`, `ccw`,
+`driving`, tangent `internal` and hole `thread: true` are literal booleans. [W0-4] The components
+of **direction vectors** (frame `normal` and `x_dir`, face-plane `x_dir`, `line.direction`,
+revolve `axis.direction`, `Dir` vectors) have field type `ratio`; positions are `length`. The full
+field-type table is the site walker `forge_ir::v1::expr::expr_sites`; the fixtures of
+`queries/` and `programs/` exercise it.
 
 ### 2.3 Expression grammar [D-8]
 
@@ -217,17 +303,26 @@ ident     = ( letter | "_" ) , { letter | digit | "_" } ;
   identifier named `mm` or `in` elsewhere is an identifier.
 - Identifiers are parameter names, the constant `PI`, or function names followed by `(`.
 - Maximum nesting depth 64 and maximum length 4096 bytes (`EXPR_SYNTAX` beyond).
+- [W0-15] Whitespace is exactly space and tab: a newline is `EXPR_SYNTAX`. A call is an identifier
+  followed by `(` after optional whitespace (`sin (30)` is a call). A number literal that rounds
+  to ±∞ (`1e400`) is `EXPR_SYNTAX`; one that underflows is its rounded value. An empty or
+  blank expression is `EXPR_SYNTAX` (W0 checks this and the length limit without a parser).
 
 ### 2.4 Canonical form [D-9]
 
 The canonical text of an expression is produced by printing its AST:
 1. numbers in shortest round-trip form (`-0` → `0`), then a single space and the unit if present
-   (`12 mm`, `0.25 in`, `30 deg`);
+   (`12 mm`, `0.25 in`, `30 deg`); [W0-11] the textual form is ECMAScript `Number::toString`
+   (ECMA-262 §6.1.6.1.20): `1000` for `1e3`, `0.000001`, `1e-7`, `100000000000000000000`,
+   `1e+21`, `1.5e+300`;
 2. one space on both sides of every binary operator and of `?` and `:`; no space after a unary
    operator; `f(a, b)` with one space after each comma;
 3. parentheses only where the precedence and associativity of §2.3 require them, plus around the
    operand of a unary minus when that operand is a `^` (`-(a ^ 2)` is printed as `-(a ^ 2)`, never
-   `-a ^ 2`, to match CadScript, where `-a ** 2` is illegal).
+   `-a ^ 2`, to match CadScript, where `-a ** 2` is illegal). [W0-15] The same holds for `!`
+   (TypeScript rejects any unary operator directly before `**`). Precedence levels, lowest first:
+   `?:`, `||`, `&&`, comparisons (non-associative: both operands need at least `+`/`-` level),
+   `+ -`, `* / %`, unary, `^` (base must be an atom; exponent at least unary), atoms.
 
 An engine MUST accept any expression the grammar accepts; the CadScript compiler and the DocStore
 MUST store the canonical form. `parse(canonical(ast)) == ast` for every AST.
@@ -256,6 +351,12 @@ Every expression has a static type, computed bottom-up:
 | `asin`, `acos`, `atan` | argument Real(0,0) or Flex; result Real(0,1) |
 | `atan2(y, x)` | unify `y` and `x`; result Real(0,1) |
 | `!`, `&&`, `\|\|`, the condition of `?:` | Bool operands (`EXPR_TYPE_MISMATCH`) |
+| [W0-15] `==`, `!=` | two Bools, or two numbers unified as above; `<`, `<=`, `>`, `>=` on Bool are `EXPR_TYPE_MISMATCH` |
+
+[W0-15] **Type notation** (fixtures, `EXPR_UNIT_MISMATCH` details): `flex`, `bool`, and for
+Real(L, A) the factors `mm`/`mm^L` and `deg`/`deg^A` joined by `*` (`mm`, `mm^2`, `mm^-1`, `deg`,
+`mm*deg`), or `1` when both exponents are 0. An integer exponent literal may be written with a
+fractional zero (`width ^ 2.0`).
 
 **Use site.** The field type fixes the result: a Flex result takes the field's dimension; a fixed
 result must equal it (`EXPR_UNIT_MISMATCH`, with `expected` and `found` in the details); `count`
@@ -311,7 +412,10 @@ Forge, natively or through WASM).
    and return `1 / r` for negative `b`. Otherwise use `forge_core::math::pow`; a negative base with
    a non-integer exponent, or `0 ^ b` with `b < 0`, is `EXPR_DOMAIN`.
 4. **Degree trigonometry.** `sin`/`cos`/`tan` of `x`:
-   1. `r = x rem_euclid 360` (exact);
+   1. `r = x rem_euclid 360` (exact); [W0-5] except that for a tiny negative `x` the addition
+      inside `rem_euclid` rounds up to exactly `360`, which is replaced by `0` (the same angle).
+      The function is `forge_ir::v1::degtrig::sin_cos_deg`, shared by W1, compound curves and
+      hole placement;
    2. `q` = the largest integer in {0, 1, 2, 3} with `90·q ≤ r` (exact comparisons), and
       `s = r − 90·q` (exact by Sterbenz's lemma, since `r < 360`);
    3. if `s ∈ {0, 30, 45, 60}`, take `(sin s, cos s)` from the table `0 → (0, 1)`,
@@ -531,9 +635,12 @@ The report lists the evaluated frame (`datum: { origin, x, y, normal }`), compar
 | `edge` | `edge: Ref` | as the `{ "edge" }` AxisRef |
 | `cylinder` | `face: Ref` | as the `{ "cylinder" }` AxisRef |
 | `planes` | `a: PlaneRef`, `b: PlaneRef` | the intersection line; direction `normalize(n_a × n_b)`, sign-canonical; parallel planes → `DATUM_DEGENERATE` |
-| `points` | `a`, `b`: PointRefs | through both, direction `b − a`; `\|b − a\| ≤ tol` → `DATUM_DEGENERATE` |
+| `points` | `points`: two PointRefs `[a, b]` ([W0-8]; not `a`/`b`, which are PlaneRefs in `planes` mode) | through both, direction `b − a`; `\|b − a\| ≤ tol` → `DATUM_DEGENERATE` |
 
-`flip` is allowed as for AxisRef. CadScript: `datumAxis({ cylinder: boss.side("ring") })`,
+[W0-8] Both datum features are one JSON object with a `mode` and the fields of that mode; a missing
+or extra field is `DATUM_OPTIONS_CONFLICT` (rejected, details `{ "mode", "fields", "missing",
+"unexpected" }`). A literal `frame` whose normal and `x_dir` are not perpendicular is
+`INVALID_PLANE`. `flip` is allowed as for AxisRef. CadScript: `datumAxis({ cylinder: boss.side("ring") })`,
 `datumAxis({ planes: [XZ, mid] })`. Report: `datum: { origin, direction }`.
 
 ## 4. Sketches
@@ -557,6 +664,16 @@ Scalar. Each curve may set `"construction": true`. New kinds:
 `side:<member id>`, queries). The expansion is normative, evaluated in f64 exactly as written, and
 **a member of length ≤ tol is omitted** (so a `rect` with `r = h/2` is a stadium with no `left` and
 `right` members). Invalid sizes fail with `INVALID_VALUE`, details `{ "field", "value", "expected" }`.
+
+[W0-6] A member's "length" is `|end − start|` (for arcs: the chord), consistent with v0's
+degeneracy rule. Members are listed in table order (rect: `bottom`, `c_br`, `right`, `c_tr`,
+`top`, `c_tl`, `left`, `c_bl`; slot: `right`, `cap_b`, `left`, `cap_a`; polygon: `e0` … `e(n−1)`).
+The `corner` form of `rect` uses `x0 = kx, x1 = kx + w, y0 = ky, y1 = ky + h`. A `rect` with both or
+neither of `center`/`corner`, and a `polygon` with other than exactly one size field, is
+`CURVE_OPTIONS_CONFLICT` (rejected, details `{ "curve", "fields" }`); a polygon `n` that is not an
+exact integer is `EXPR_NOT_INTEGER`, `n < 3` is `INVALID_COUNT`. Any curve kind, including
+`point`, may carry `construction`. Reference implementation: `forge_ir::v1::compound::expand`;
+golden cases: `corpus/v1/conformance/compound/expansions.json`.
 
 `rect` (with `x0 = cx − w/2`, `x1 = cx + w/2`, `y0 = cy − h/2`, `y1 = cy + h/2`; requires
 `w > tol`, `h > tol`, `0 ≤ r ≤ min(w, h)/2`), all arcs `ccw: true`:
@@ -640,14 +757,26 @@ are entity reference strings resolved **exactly** against the solver entity ids 
 | `fix` | `entity`, optional `x`, `y` (lengths) | — |
 
 - **Driving dimensions** (`distance`, `angle`, `radius`, `diameter` with `driving` omitted or
-  `true`) require `value`, a Scalar that may reference parameters. This is how dimensions are
+  `true`) require `value` ([W0-13] `CONSTRAINT_VALUE_REQUIRED`, rejected), a Scalar that may
+  reference parameters. A literal `distance`/`radius`/`diameter` value ≤ 0 is
+  `SKETCH_INVALID_DIMENSION` at validation (§0.5 rule 1); an expression one fails the sketch at
+  evaluation (§4.4). This is how dimensions are
   **bound to parameters**: `"value": "width"`.
 - **Reference dimensions** (`"driving": false`) MUST NOT have a `value`
   (`CONSTRAINT_VALUE_ON_REFERENCE`); they are measured, reported in `sketch.dimensions`, and can be
   bound to a **measured parameter** (§2.1) that later features use.
 - The structural errors of forge-solve map to rejections with the same codes:
   `SKETCH_UNKNOWN_REFERENCE`, `SKETCH_WRONG_ENTITY_TYPE`, `SKETCH_NOT_A_DIMENSION`,
-  `SKETCH_UNSUPPORTED_COMBINATION`, `SKETCH_SELF_REFERENCE`.
+  `SKETCH_UNSUPPORTED_COMBINATION`, `SKETCH_SELF_REFERENCE`. [W0-9] They are decided with
+  forge-solve's rules and order (`system.rs::compile_constraint`), one per constraint, on the
+  argument ids **as written**: two different ids that welding maps to one solver point are not a
+  self-reference (§4.6: such a constraint is redundant, and W2 must lower it so that forge-solve
+  reports it as redundant instead of raising `SketchError::SelfReference`). Paths point at the
+  offending argument (`…/constraints/k/line`); `SKETCH_UNSUPPORTED_COMBINATION` points at the
+  constraint.
+- [W0-9] The IR constraint types, `type` tags and argument names equal forge-solve's JSON model; a
+  constraint with literal values deserializes as a `forge_solve::Constraint` (tested). The only
+  difference: an IR reference dimension has no `value`.
 
 ### 4.4 Solving [D-22]
 
@@ -699,6 +828,12 @@ selects the region whose **outer loop contains** that curve (`REGION_NOT_FOUND`,
 `{ "curve" }`, when none does). Selected regions are used once each, in canonical order. Selecting by
 a member curve instead of the full outer-curve set is naming recommendation 2: it survives edits to
 the region's other curves.
+
+[W0-14] Statically, `regions` is `"all"` or a non-empty list (`INVALID_VALUE`), and every id must
+name a **profile curve** of the consumed sketch — a non-construction line, arc or circle, or a
+member id a compound curve can produce (all eight rect members, all four slot members, `e0` …
+`e(n−1)`, or any `e<k>` when `n` is an expression) — else `QUERY_UNKNOWN_CURVE` (rejected). Points
+and construction curves are not profile curves.
 
 ### 4.6 Example (constrained)
 
@@ -839,6 +974,20 @@ sketch that feature consumed (`QUERY_UNKNOWN_CURVE`, rejected; the compiler chec
 statically). A `hole_face` position id that the hole no longer produces (e.g. a grid that shrank)
 simply yields nothing, which the cardinality check reports.
 
+[W0-14] **Static checks** (all rejections, paths into the query): a named source's `feature` must
+be an earlier feature of the same part (`UNRESOLVED_FEATURE`) of the right type, else
+`QUERY_INVALID` at `…/feature` with `expected` / `found` feature types: `cap` → `extrude`;
+`endcap` → `revolve`; `side`, `sides`, `edge_at` → `extrude` or `revolve`; `body` → `extrude`,
+`revolve` or `pattern`; `hole_face` → `hole`; `instance` → `pattern`; `tagged` → `tag`; `created` →
+any feature that creates geometry (not `sketch`, datums or `tag`). `curve` and `member` must name
+profile curves of the consumed sketch (§4.5; `QUERY_UNKNOWN_CURVE`); `edge_at` of a circle is
+`QUERY_INVALID` (a circle has no ends). `union`/`intersect` need at least one operand;
+`convex`/`concave`/`smooth` take only `true`; `radius` is `{ "eq" }` or `{ "min"?, "max"? }` with
+at least one bound, bounds ≥ 0 (`INVALID_VALUE`); `instance.index` has one or two entries;
+`largest`/`smallest` of vertices is `QUERY_INVALID` (vertices have no size); a literal zero `Dir`
+vector is `INVALID_VALUE`. `hole_face.at` and `created.role` follow the id grammar. The golden
+cases are `corpus/v1/conformance/queries/typing.json`.
+
 **Sources.** A source is **named** when it designates specific entities by identity; named sources
 are the only ones the capture validates and the only ones that can fall back geometrically (§5.7).
 
@@ -911,6 +1060,12 @@ Sizes and centroids are computed on the exact geometry, as metrics are. `s` is t
 | `"any"` | ≥ 0 | none |
 | integer `n ≥ 1` | exactly `n` | → `REF_CARDINALITY`, details `{ "expected", "found" }` |
 
+[W0-14] A field whose default is `one` designates exactly one entity (a plane face, an axis edge or
+face, a vertex point, `up_to`, chamfer `side`, shell `body`, datum-axis `edge`/`face`): its `card`
+may only be `one` or `1` (`INVALID_CARDINALITY`). Default cardinalities per field: `some` for
+body `targets`/`tools`, fillet/chamfer `edges`, draft `faces`, pattern `bodies` and `tag.target`;
+`any` for shell `open`; `one` for the rest.
+
 A reference whose target was split therefore either takes every piece (`some`, `any`, or `n` when
 the count still matches) or fails loudly: an exact answer on one piece, the most common silent
 re-bind of the spike, cannot happen (recommendation 3).
@@ -938,7 +1093,14 @@ re-bind of the spike, cannot happen (recommendation 3).
   centroid normalised to the body's bbox); `body_center` (the body's bbox centre, i.e. its own
   displacement); `neighbors` (the number of adjacent entities on the same carrier: the split
   signature).
-- Edge members also store the keys of their two `faces` (recommendation 5).
+- [W0-7] Carrier encodings (`carrier` is externally tagged, or the string `"free"`):
+  `{ "plane": { "normal", "offset" } }`, `{ "cylinder": { "axis", "point", "radius" } }`,
+  `{ "cone": { "axis", "apex", "half_angle" } }` (degrees), `{ "sphere": { "center", "radius" } }`,
+  `{ "torus": { "axis", "center", "major", "minor" } }`, `{ "line": { "direction", "point" } }`,
+  `{ "circle": { "normal", "center", "radius" } }`. `geom.type` is one of `plane`, `cylinder`,
+  `cone`, `sphere`, `torus`, `bspline`, `line`, `circle`, `ellipse`, `other`, `vertex` (vertex
+  members: `size` 0, `carrier` `"free"`) or `body` (body members: `size` = volume).
+- Edge members also store the keys of their two `faces` (recommendation 5), sorted.
 - A capture is canonical JSON, part of the feature's cache key, and never shown in CadScript.
   `compile(src, { base })` carries a reference's capture over when its query is unchanged.
 
@@ -1135,7 +1297,8 @@ report.
 A body operation (`op` other than `new_body`, `boolean`, `hole`, a `pattern` with an op) has
 `targets`: `"all"` (every body in scope) or a Ref of kind `body` (default card `some`). For
 `extrude` and `revolve` with `op ≠ new_body` the field is **required** (`BOOLEAN_TARGETS_REQUIRED`,
-rejected): target selection is explicit.
+rejected): target selection is explicit. [W0-10] `targets` with `op: new_body` is `INVALID_VALUE`
+(almost always a forgotten `op`).
 
 #### 6.0.3 Boolean semantics [D-36]
 
@@ -1289,22 +1452,65 @@ every position must lie on that face (inside or on its boundary within tol), els
 - `thread` changes no geometry: the report records `{ "size", "pitch", "depth" }` on the instance
   and the wall face `H/wall@p` carries the thread attribute for drawings and export.
 
-**Standard sizes** (normative table `HOLE_SIZES` in `schema/ir-v1.constants.json`; values in mm).
-Clearance diameters are ISO 273 fine/medium/coarse; tap drills are the ISO coarse-thread drills;
-counterbores are for ISO 4762 socket head cap screws (DIN 974-1 row 1, depth = head height + 0.2);
-countersinks are 90° for ISO 10642; inserts are common M-thread brass heat-set inserts (depth =
-insert length + 1). **Every value below must be checked against the standards before this draft is
-accepted** (§10, open point 1).
+**Standard sizes** (normative table `HOLE_SIZES` in `schema/ir-v1.constants.json`, values in mm,
+**verified 2026-09-23** against at least two independent published tables per family; ADR 0013
+decision 1). The constants file carries every value's sources and notes, and the list of values
+left out; the Rust table is `forge_ir::v1::holes`.
+
+| Family | Rule | Sources |
+|---|---|---|
+| pitch | ISO 261/262 coarse | ISO 2306:1972 Table 1; ISO metric thread tables |
+| `tap` | ISO 2306 tap drill (the default diameter of `thread`) | ISO 2306:1972; Fractory tap drill chart |
+| `close` / `normal` / `loose` | ISO 273 fine / medium / coarse clearance | ISO 273:1979 Table 1; Engineering Hardware |
+| cbore d, depth (`iso4762`) | DIN 974-1 row 1 (ISO 4762 without washer); depth = the published counterbore depth (k + 0.4 for M3–M6, k + 0.6 for M8) | Ifanger DIN 974-1 table; ingenieurkurse.de; neue-physik.de; schraube-mutter.de; engineersbible.com |
+| csink d (`iso10642`, 90°) | DIN 74:2003 Form F, the countersink written for ISO 10642 heads (always wider than the ISO 10642 head's theoretical dk) | Ifanger DIN 74 table; SMW Schrauben datasheet |
+| insert d, depth (`std`) | the common tapered brass heat-set insert, standard length; bore per the makers' datasheets; depth = insert length + 1 (both makers' minimum) | ruthex; CNC Kitchen |
 
 | Size | Pitch | `tap` | `close` | `normal` | `loose` | cbore d | cbore depth | csink d | insert d | insert depth |
 |---|---|---|---|---|---|---|---|---|---|---|
-| M2 | 0.4 | 1.6 | 2.2 | 2.4 | 2.6 | 4.3 | 2.2 | 4.4 | 3.2 | 4.0 |
-| M2.5 | 0.45 | 2.05 | 2.7 | 2.9 | 3.1 | 5.0 | 2.7 | 5.5 | 3.6 | 5.0 |
-| M3 | 0.5 | 2.5 | 3.2 | 3.4 | 3.6 | 6.0 | 3.2 | 6.3 | 4.0 | 6.7 |
-| M4 | 0.7 | 3.3 | 4.3 | 4.5 | 4.8 | 8.0 | 4.2 | 9.4 | 5.6 | 9.1 |
-| M5 | 0.8 | 4.2 | 5.3 | 5.5 | 5.8 | 10.0 | 5.2 | 10.4 | 6.4 | 10.5 |
-| M6 | 1.0 | 5.0 | 6.4 | 6.6 | 7.0 | 11.0 | 6.2 | 12.6 | 8.0 | 13.7 |
-| M8 | 1.25 | 6.8 | 8.4 | 9.0 | 10.0 | 15.0 | 8.2 | 17.3 | 9.7 | 13.7 |
+| M2 | 0.4 | 1.6 | 2.2 | 2.4 | 2.6 | 4.4 | — | — | 3.2 | 5.0 |
+| M2.5 | 0.45 | 2.05 | 2.7 | 2.9 | 3.1 | 5.5 | 3.0 | — | 4.0 | 6.7 |
+| M3 | 0.5 | 2.5 | 3.2 | 3.4 | 3.6 | 6.5 | 3.4 | 6.94 | 4.0 | 6.7 |
+| M4 | 0.7 | 3.3 | 4.3 | 4.5 | 4.8 | 8.0 | 4.4 | 9.18 | 5.6 | 9.1 |
+| M5 | 0.8 | 4.2 | 5.3 | 5.5 | 5.8 | 10.0 | 5.4 | 11.47 | 6.4 | 10.5 |
+| M6 | 1.0 | 5.0 | 6.4 | 6.6 | 7.0 | 11.0 | 6.4 | 13.71 | 8.0 | 13.7 |
+| M8 | 1.25 | 6.8 | 8.4 | 9.0 | 10.0 | 15.0 | 8.6 | 18.25 | 9.6 | 13.7 |
+
+Changes from the earlier draft table, all from the sources: counterbore diameters M2–M3 (4.3 /
+5.0 / 6.0 are SN 213.183 / GB/T values, not DIN 974-1); every counterbore depth (the draft's
+"head height + 0.2" appears in no table); every countersink diameter (the draft's 4.4 … 17.3 are
+ISO 15065 values for ISO 7721 heads and are **smaller** than the ISO 10642 head: a screw would
+stand proud); the M2.5 insert bore (3.6 is in no maker table; both makers use 4.0) and the M2,
+M2.5 and M8 insert data. **Left out** (—, no two agreeing sources): M2 counterbore depth (2.1 /
+2.2 / 2.3 published), M2 and M2.5 countersinks (ISO 10642:2019 added these sizes, but the
+DIN 74:2020 Form F values could not be obtained). A preset that needs a missing value is
+rejected for that size with `HOLE_OPTIONS_CONFLICT` (details `allowed`: the sizes that have it).
+Where makers disagree the table records both in a note: M2 and M2.5 insert lengths (ruthex 4.0 /
+5.7 vs CNC Kitchen 3.0 / 4.0 — the deeper hole is chosen because it seats either insert), M4–M8
+insert bores (CNC Kitchen's current table is 0.1 mm larger; ruthex and older CNC Kitchen data are
+the majority), M2.5 tap 2.05 (some tables round to 2.1), M8 tap 6.8 (Optimas lists 6.75). **FDM
+compensation is not in this table**: it is a process-profile setting, so the IR keeps nominal
+geometry (ADR 0013 decision 1). Changing a value is a hole `v` bump.
+
+[W0-10] Resolved hole rules (all rejections unless noted):
+- `tip` other than the default 118 on a hole that is not `{ "blind" }` is `HOLE_OPTIONS_CONFLICT`
+  (`tip` is meaningless for through, `up_to` and insert holes). The keyword `"flat"` wins over an
+  expression that would name a parameter `flat`.
+- `depth` together with `insert` is `HOLE_OPTIONS_CONFLICT` (the insert sets its blind depth).
+- `thread` with `fit` `close` or `loose` is `HOLE_OPTIONS_CONFLICT` (a threaded hole uses the tap
+  drill); `thread` without `size` needs an explicit `pitch` (`HOLE_OPTIONS_CONFLICT`); `thread:
+  false` means no thread (omitted in canonical JSON).
+- The diameter `D` is `d` if given, else the insert bore for `insert`, else the tap drill when
+  threaded or `fit: tap`, else the ISO 273 series of `fit` (`forge_ir::v1::holes::tool_dims`;
+  golden cases `corpus/v1/conformance/holes/tools.json`).
+- `on` that is not a face needs `targets` (`BOOLEAN_TARGETS_REQUIRED`). Position ids follow the id
+  grammar and are unique within the hole (`DUPLICATE_ID`); `list` and `points.ids` are non-empty
+  (`INVALID_VALUE`); `points.ids` name `point` curves or `<circle>.center` of that sketch
+  (`QUERY_UNKNOWN_CURVE`), and `"all"` means every `point` curve in curve order; grid `nx`, `ny`
+  and bolt-circle `n` are counts ≥ 1 (`INVALID_COUNT`).
+- Literal sizes: `d`, blind depth, custom counterbore/insert `d` and `depth`, thread `pitch` and
+  `depth`, bolt-circle `d` are > tol; `tip` and custom countersink `angle` are in (0, 180)
+  (`INVALID_VALUE`).
 
 **Report**: `holes: [{ "at", "center": P3, "axis": P3 (= d), "d", "depth" (number, or null for
 through), "kind" ("simple", "counterbore", "countersink", "insert"), "size"?, "cbore"?, "csink"?,
@@ -1475,7 +1681,19 @@ instance is skipped the pattern fails with `PATTERN_ALL_INSTANCES_FAILED`.
 **Body seeds** are copied from the current state; with `op: join` the copies are joined to
 `targets` (§6.0.3).
 
-Report: `pattern: { "instances", "skipped": [indices] }`.
+Report: `pattern: { "instances", "skipped": [indices] }` (`instances` = the non-seed instances the
+layout defines, minus `skip`).
+
+[W0-16] Resolved pattern rules (rejections): feature seeds are earlier features of the part
+(`UNRESOLVED_FEATURE`) of type `extrude`, `revolve` or `hole` (`PATTERN_SEED_UNSUPPORTED`); the
+seed list is non-empty (`INVALID_VALUE`). `op` and `targets` are for body seeds only
+(`PATTERN_OPTIONS_CONFLICT`, new code); `op: join` needs `targets` (`BOOLEAN_TARGETS_REQUIRED`);
+`targets` with `op: new_body` is `PATTERN_OPTIONS_CONFLICT`. `dir2` and `spacing2` come together,
+and `count2` needs them (`PATTERN_OPTIONS_CONFLICT`); `count2` defaults to 1. Literal `count` ≥ 1
+(linear) or ≥ 2 (circular) and `count2` ≥ 1 (`INVALID_COUNT`), `|spacing| > tol`
+(`INVALID_VALUE`), circular `angle` in (0, 360] (`INVALID_ANGLE`). Each `skip` entry has the
+layout's arity (`[i]`, or `[i, j]` with `dir2`), is not the seed (`[0]`, `[0, 0]`) and, with
+literal counts, is in range (`INVALID_VALUE`).
 
 ```json
 { "type": "pattern", "id": "pt1", "name": "bossRow", "seed": { "features": ["e2", "h2"] },
@@ -1555,6 +1773,20 @@ const inserts   = hole(mountFace, { at: { a: [10, 10], b: [-10, 10] }, size: "M3
 | `refs` | features with Ref fields | §5.8 |
 | `holes`, `fillet`, `chamfer`, `shell`, `pattern` | those features | the per-feature summaries of §6 |
 
+- [W0-16] Frozen report details (I5, `schema/metrics-v1.schema.json`): the report also has
+  `migration: { "renames": [{ "path", "kind", "from", "to" }] }` when a v0 input needed id
+  rewrites (§9.1; `from` is untrusted data), and `error` (the first rejection, all of them in
+  `details.errors`) for a rejected document. `parts[]` entries are `{ "part", "part_id",
+  "bodies" }`; a body is `{ "origin": { "feature", "member", "instance"? }, "change"?, …v0 metrics,
+  "shells" }` (`change` only in feature entries). The `sketch` block has `mode`, `solved` (always:
+  the literal geometry the regions came from, compound members expanded) and `dimensions`;
+  `status` (forge-solve's spelling) and `dof` in constrained mode only. Reference members carry a
+  `status` (`exact`, `merged`, `neighborhood_changed`, `kind_changed`, `split`, `repaired`);
+  unresolved `reason`s are the kebab-case list of §5.8; candidate `reason`s are `identical`,
+  `split-piece`, `plausible` or `tie`. Hole instances: `depth` is `null` for through holes;
+  `cbore`/`insert` are `{ "d", "depth" }`, `csink` `{ "d", "angle" }`, `thread` `{ "size"?,
+  "pitch", "depth" }`. Fillet and chamfer: `{ "edges", "chain_added", "faces_created" }` (keys);
+  shell: `{ "removed_faces", "closed_void"? }`.
 - `status` is `ok` iff every parameter and every feature is ok. Warnings never change `status`,
   geometry or exit codes.
 - `parts[].bodies` is the final state of each part, in canonical order (§5.4).
@@ -1579,15 +1811,23 @@ v0 messages; v1 removes the need).
 ### 7.5 Error-code catalogue [D-53]
 
 Stage: **R** rejected (exit 2), **E** evaluation error (the feature or parameter fails),
-**W**/**I** warning/info. Codes of v0 keep their meaning and are not repeated unless extended.
+**W**/**I** warning/info, **R/E** rejected when every input is a literal and an evaluation error
+when an expression is involved (§0.5). Codes of v0 keep their meaning and are not repeated unless
+extended. [W0-13] The machine-readable catalogue — every code with its stage, section, detail keys
+and `since` (`v0`, `v1`, `v1.1`) — is `ERROR_CODES` in `schema/ir-v1.constants.json`
+(`forge_ir::v1::codes`); agent playbooks, the oracle and CadScript read it from there.
 
 | Code | Stage | Raised when | `details` |
 |---|---|---|---|
 | `UNSUPPORTED_FEATURE` | R | unknown `type`, or an optional type the engine lacks (draft) | `type` |
 | `UNSUPPORTED_FEATURE_VERSION` | R | `v` not implemented | `type`, `v`, `supported` |
-| `INVALID_ID` | R | empty id | `path` |
-| `UNRESOLVED_FEATURE` | R | a feature id that is not an earlier feature of the same part | `id`, `field` |
-| `EXPR_SYNTAX` | R | §2.3 | `expr`, `offset`, `expected` |
+| `INVALID_ID` | R | [W0-12] an id outside the id grammar, or a reference that is not 1–3 ids joined by `.` | `path`, `reason`, `length` |
+| `CURVE_OPTIONS_CONFLICT` | R | [W0-6] rect `center`/`corner`, polygon size fields | `curve`, `fields` |
+| `CONSTRAINT_VALUE_REQUIRED` | R | [W0-13] a driving dimension without `value` | `constraint` |
+| `PATTERN_OPTIONS_CONFLICT` | R | [W0-16] §6.10 | `fields` |
+| `DATUM_OPTIONS_CONFLICT` | R | [W0-8] §3.3, §3.4 | `mode`, `fields`, `missing`, `unexpected` |
+| `UNRESOLVED_FEATURE` | R | a feature id that is not an earlier feature of the same part (or, for `datum` references, not a datum of the right kind) | `id`, `field`, `expected` |
+| `EXPR_SYNTAX` | R | §2.3 ([W0-12]: `expr` is present only when the text lexes) | `expr`, `offset`, `expected` |
 | `EXPR_UNKNOWN_NAME` | R | identifier is not a visible parameter | `name`, `is_feature`, `similar` |
 | `EXPR_UNKNOWN_FUNCTION` | R | | `name`, `similar` |
 | `EXPR_ARITY` | R | | `name`, `expected`, `found` |
@@ -1596,22 +1836,22 @@ Stage: **R** rejected (exit 2), **E** evaluation error (the feature or parameter
 | `EXPR_SCOPE` | R | another part's parameter | `name`, `part` |
 | `PARAM_INVALID` | R | bad `unit`, both/neither of `value` and `measure`, bounds on a bool | `name`, `reason` |
 | `PARAM_CYCLE` | R | §2.8 | `cycle` |
-| `MEASURE_NOT_REFERENCE`, `MEASURE_UNIT_MISMATCH`, `MEASURE_FORWARD` | R | §2.1, §2.8 | `name`, `sketch`, `constraint` |
+| `MEASURE_NOT_REFERENCE`, `MEASURE_UNIT_MISMATCH`, `MEASURE_FORWARD` | R | §2.1, §2.8 — **deferred to v1.1** with measured parameters | `name`, `sketch`, `constraint` |
 | `SKETCH_MIXED_MODE` | R | §4.2 | `sketch`, `path` |
 | `CONSTRAINT_VALUE_ON_REFERENCE` | R | §4.3 | `constraint` |
 | `SKETCH_UNKNOWN_REFERENCE`, `SKETCH_WRONG_ENTITY_TYPE`, `SKETCH_NOT_A_DIMENSION`, `SKETCH_UNSUPPORTED_COMBINATION`, `SKETCH_SELF_REFERENCE` | R | forge-solve input errors (§4.3) | forge-solve's `details` |
 | `REF_KIND_MISMATCH` | R | `kind` ≠ the query's kind, or the field does not accept it | `field`, `expected`, `found` |
 | `QUERY_INVALID` | R | §5.4 | `path`, `expected`, `found` |
 | `QUERY_UNKNOWN_CURVE` | R | §5.3 | `feature`, `curve`, `similar` |
-| `INVALID_CARDINALITY` | R | `card` is not `one`/`some`/`any`/integer ≥ 1 | `field` |
+| `INVALID_CARDINALITY` | R | `card` is not `one`/`some`/`any`/integer ≥ 1, or not `one`/`1` on a single-entity field ([W0-14]) | `field`, `allowed` |
 | `BOOLEAN_TARGETS_REQUIRED` | R | §6.0.2 | `feature` |
 | `HOLE_SIZE_UNKNOWN`, `HOLE_SIZE_REQUIRED`, `HOLE_OPTIONS_CONFLICT`, `HOLE_DEPTH_REQUIRED` | R | §6.5 | `field`, `allowed` |
 | `CHAMFER_OPTIONS_CONFLICT` | R | §6.7 | `fields` |
 | `PATTERN_SEED_UNSUPPORTED` | R | §6.10 | `seed`, `type` |
 | `INVALID_RADIUS`, `INVALID_COUNT`, `INVALID_VALUE` | R (literal) / E (expression) | range checks (§0.5) | `field`, `value`, `expected` |
 | `EXPR_DOMAIN` | E | §2.7 | `expr`, `subexpr`, `operands` |
-| `EXPR_NOT_INTEGER` | E | §2.7 | `expr`, `value` |
-| `PARAM_OUT_OF_RANGE` | E | §2.1 | `name`, `value`, `min`, `max` |
+| `EXPR_NOT_INTEGER` | R/E | §2.7 | `expr`, `value` |
+| `PARAM_OUT_OF_RANGE` | R/E | §2.1 | `name`, `value`, `min`, `max` |
 | `PARAM_FAILED` | E | a used parameter failed | `param`, `code` |
 | `DEPENDENCY_FAILED` | E | extended: any feature referenced by id or named in a query failed | `feature`, `code`, `message` |
 | `DEPENDENCY_SUPPRESSED` | E | a datum, tag or seed referenced by id is suppressed | `feature` |
@@ -1619,7 +1859,7 @@ Stage: **R** rejected (exit 2), **E** evaluation error (the feature or parameter
 | `AXIS_REF_UNSUPPORTED` | E | §3.2 | `type` |
 | `DATUM_DEGENERATE` | E | §3.3, §3.4 | `reason`, `angle_deg` |
 | `REGION_NOT_FOUND` | E | §4.5 | `curve` |
-| `SKETCH_INVALID_DIMENSION` | E | §4.4 | `constraint`, `value` |
+| `SKETCH_INVALID_DIMENSION` | R/E | §4.3, §4.4 | `constraint`, `value` |
 | `SKETCH_CONSTRAINT_CONFLICT` | E | §4.4 | `conflicts` |
 | `SKETCH_SOLVE_FAILED` | E | §4.4 | `max_residual`, `clusters` |
 | `REF_MISSING`, `REF_AMBIGUOUS`, `REF_SPLIT`, `REF_UNCERTAIN`, `REF_CARDINALITY` | E | §5.5, §5.7 | the reference's report entry (§5.8): `field`, `unresolved` with candidates, `expected`/`found` |
@@ -1753,8 +1993,18 @@ document:
 1. set `schema` to `"aicad.ir/1"`;
 2. in each part, replace the `sketch` field of every `extrude` and `revolve` (a sketch **name** in
    v0) by that sketch's **id**;
-3. change nothing else: `v` is omitted (1), `op` stays `new_body`, ids, names, curves, curve ids and
-   curve directions are untouched; no parameters, constraints or captures are added.
+3. [W0-12] rewrite every part id, part name, feature id, feature name and curve id that does not
+   match the id grammar of §0.3: `sanitize` (each character outside `[A-Za-z0-9_]` → `_`; a
+   `_` prefix for an empty result or a leading digit; cut to 64 bytes), then, if the result is
+   taken in its namespace (part ids, part names, feature ids and names document-wide, curve ids
+   per sketch), the first free `base_2`, `base_3`, … (the base cut so the total stays ≤ 64). Valid
+   ids are reserved first, invalid ones are assigned in document order. Every rewrite is recorded
+   in the **migration report** (`migrate_v0_to_v1_report`: `{ "renames": [{ "path", "kind":
+   "part_id" | "part_name" | "feature_id" | "feature_name" | "curve_id", "from", "to" }] }`), which
+   an engine copies into the report's `migration` field. The 6,079 v0 documents in the repository
+   (8 corpus programs, 69 MakerBench references and contexts, 6,002 generated) need no rewrite;
+4. change nothing else: `v` is omitted (1), `op` stays `new_body`, curves and curve directions are
+   untouched; no parameters, constraints or captures are added.
 
 **Properties** (each is a test in `forge-ir`, `@aicad/ir-types` and the oracle, over shared
 fixtures):
@@ -1764,6 +2014,15 @@ fixtures):
 - **Idempotence.** `migrate(migrate(d)) == migrate(d)`; v1 input is returned unchanged.
 - **Rejections are preserved.** An invalid v0 document is rejected with the same codes and paths.
 - The three implementations (Rust, TypeScript, Python) produce byte-identical canonical JSON.
+- [W0-18] **Compatibility path and gate.** `forge_ir::v1::downgrade_to_v0` is the inverse of the
+  migration on documents whose surface equals v0 (it returns `NotV0Surface` otherwise); until
+  forge-regen evaluates v1, engines MAY evaluate such documents through it. The W0 gate
+  (`forge-ir/tests/v1_migration_gate.rs`) checks, for every v0 program in the repository: the
+  migration is valid v1 with no rewrite, `to_json ∘ from_json` is stable, `downgrade_to_v0 ∘
+  migrate` is the identity, and forge-regen's report through the compatibility path is
+  bit-identical (all 6,079 programs, the generated ones in the ignored release test). W1–W3 own
+  the direct gate: forge-regen evaluating the migrated v1 document and comparing its
+  `aicad.metrics/1` report with the v0 report field by field.
 
 v1 engines evaluate v0 files by migrating them in memory. The CadScript compiler always emits v1;
 printing a v0 IR prints its migration.
@@ -1786,27 +2045,92 @@ v1 adds these CadScript builtins to `RESERVED_NAMES`: `param`, `measure`, `point
 `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `PI`, `mm`, `cm`, `inch`, `deg`, `X`, `Y`, `Z`,
 `C`. A v0 document that uses one of them as a feature name is still valid IR v1 at the IR level,
 because migration does not rename; the CadScript printer then reports `CS_RESERVED_NAME` for it,
-and the command layer offers `renameFeature` (safe, because references use ids).
+and the command layer offers `renameFeature` (safe, because references use ids). [W0-2] IR
+validation therefore checks feature names against `RESERVED_NAMES_V0` and parameter names (new in
+v1) against the full `RESERVED_NAMES`; the constants file has both lists and
+`RESERVED_NAMES_V1_BUILTINS`. CadScript v1 (W8) must switch its reserved-name test to
+`ir-v1.constants.json`.
 
-## 10. Open points in this draft
+### 9.4 Conformance fixtures (I9) [W0-17]
 
-1. **Standard tables** (§6.5): every value must be checked against ISO 273, the ISO coarse tap
-   drill table, DIN 974-1, ISO 15065/ISO 10642 and the chosen insert vendor before acceptance.
-   Product decision: which heat-set insert family is `"std"`, and whether printed-hole compensation
-   (e.g. +0.1 mm for FDM) belongs in hole presets or in the process profile (recommended: the
-   profile, so the IR stays process-independent).
-2. **Uncertain references fail the feature** (§5.7). This is stricter than ADR 0006's "warns";
-   ADR 0013 argues for it. The product owner should confirm the UX: in the UI a failed reference
-   shows a repair card with candidates, and one click applies a candidate's query.
-3. **A join whose tool touches nothing fails** (`BOOLEAN_NO_INTERSECTION`) instead of silently
-   making a new body; a pattern instance that misses is only skipped with a warning. Confirm both.
-4. **Fillet corners**: only the equal-radius three-plane corner is normative; other corners are
-   normalized in the diff (§8.3 rule 5). A normative corner family may follow in fillet `v: 2`.
-5. **Capture refresh**: refreshing every exactly-resolved capture on each commit keeps fallbacks
-   sharp but adds churn to git diffs of `document.json`. Alternative: refresh only on create, edit
-   and repair.
-6. **Measured parameters** (reference dimensions bound to parameters) interleave parameters with
-   the timeline. They could be deferred to a v1 revision if the implementation cost is high.
-7. **Draft** is optional in v1; confirm whether the Phase 1 exit needs it.
-8. **Units**: `mm`, `cm`, `in`, `deg` literals only. Add `m`, `ft`, `rad`?
-9. **Parameter sets / configurations** (named variants of parameter values) are not in v1.
+`corpus/v1/conformance/` is shared by the Rust, TypeScript and Python suites and is **append-only**:
+a new rule or a fix adds cases, never edits old ones. JSON numbers are read correctly rounded
+(`JSON.parse`, Python `json`, `forge_ir::v1::json`). Every file has a `description`.
+
+| Path | Content | Checked by W0 |
+|---|---|---|
+| `expressions/cases.json` | `params` (the environment) and ≥ 150 `cases`: `text`, `field`, then `canonical`, `type`, `value` with `bits` (big-endian hex of the binary64) or `tolerance_rel` (libm-dependent), or `error: { code, stage }` | well-formedness only; `TODO(W1)` test ignored until W1 lands |
+| `migration/programs/`, `migration/makerbench/`, `migration/renames/` | `<name>.v0.json` → `<name>.v1.json` (canonical text) and, for rewrites, `<name>.renames.json` | byte-for-byte |
+| `invalid/documents.json` | `cases`: `document`, `expected` (multiset of `{ code, path }`; `[]` = valid edge case) or `parse_error: true`; `requires: ["expr"]` marks cases that need W1's checker | exact, except `requires` cases (accepted structurally) |
+| `queries/typing.json` | a `context` document and `cases` appended as a `tag`: `kind` + `q`, then `expect` (the static kind) or `errors` (paths relative to the Ref) | exact |
+| `compound/expansions.json` | `curve` → `members` (bit-exact, or `tolerance` when non-table trigonometry is involved) or `error: { code, field }` | exact |
+| `holes/tools.json` | size-related hole fields → the resolved `d`, preset dimensions and thread pitch, or the rejection code | exact |
+
+`corpus/v1/programs/` holds canonical v1 example programs (the SPEC examples, every feature type and
+query op); their CadScript twins are W8's.
+
+## 10. Open points (resolved 2026-09-23)
+
+The owner delegated these calls to the coordinator; ADR 0013 "Decisions on the open questions"
+records them. All are applied above.
+
+| # | Open point | Resolution |
+|---|---|---|
+| 1 | Standard tables, `std` insert, FDM compensation | Verified and sourced (§6.5); unverifiable values left out; `std` = the common tapered standard-length brass insert (ruthex / CNC Kitchen datasheets, neutral name); FDM compensation belongs to the process profile. (Decision 1) |
+| 2 | Uncertain references fail the feature | Confirmed (§5.7); the UI shows a one-click repair card, the agent gets the same candidates. (Decision 2) |
+| 3 | Detached join; pattern instances that miss | A join or cut whose tool touches nothing is `BOOLEAN_NO_INTERSECTION`; a missing pattern instance is skipped with `PATTERN_INSTANCE_SKIPPED`, and only all-missing fails. (Decision 3) |
+| 4 | Fillet corners | Accepted: only the equal-radius three-plane corner is normative; others are `NORMALIZED` within a budget. (Decision 7) |
+| 5 | Capture refresh | Only on create, edit or repair (§0.6). (Decision 4) |
+| 6 | Measured parameters | Deferred to v1.1 (§2.1). (Decision 5) |
+| 7 | Draft | Stays in the spec and optional; not a Phase 1 exit requirement. (Decision 5) |
+| 8 | Units | `mm`, `cm`, `in`, `deg` only. (Decision 6) |
+| 9 | Parameter configurations | Deferred. (Decision 6) |
+
+## 11. W0 resolutions and notes for W1–W11
+
+Ambiguities resolved while encoding the types, by tag (each is also marked in place):
+
+| Tag | Where | Resolution (short) |
+|---|---|---|
+| [W0-1] | §0.2, §0.4, §0.5 | Rejection pipeline with raw pre-checks; no nullable fields; `v` must be a defined positive integer; error order not normative |
+| [W0-2] | §0.3, §9.3 | Feature names checked against the v0 reserved list, parameter names against the full v1 list |
+| [W0-3] | §2.2 | The boolean fields that accept expressions |
+| [W0-4] | §2.2 | Direction-vector components are `ratio` |
+| [W0-5] | §2.7 | `rem_euclid` rounding to 360 means 0 |
+| [W0-6] | §4.1 | Compound member order, `corner` form, chord length, `CURVE_OPTIONS_CONFLICT` |
+| [W0-7] | §5.6 | Capture carrier and fingerprint encodings |
+| [W0-8] | §3.3, §3.4 | Flat datum objects with `mode`; `datum_axis` `points: [a, b]`; `DATUM_OPTIONS_CONFLICT` |
+| [W0-9] | §4.3 | Constraint vocabulary = forge-solve; reference checks on ids as written; welding vs self-reference |
+| [W0-10] | §6.0.2, §6.5 | Hole option conflicts, diameter resolution, `targets` with `new_body` |
+| [W0-11] | §0.4, §2.4 | Correctly rounded v1 reader; canonical JSON text (Ryū) vs canonical expression numbers (ECMAScript) |
+| [W0-12] | §0.3, §9.1 | Id grammar (≤ 64 bytes), references, no echo of rejected strings, migration rewrites + report |
+| [W0-13] | §2.1, §4.3, §7.5 | Literal range checks as rejections; `CONSTRAINT_VALUE_REQUIRED`; machine-readable catalogue |
+| [W0-14] | §4.5, §5.3, §5.5 | Static query and region checks; single-entity fields take only `one` |
+| [W0-15] | §2.3–§2.5 | Whitespace, calls, literal overflow, `!` before `^`, Bool `==`, type notation |
+| [W0-16] | §6.10, §7.2 | Pattern rules; frozen report details |
+| [W0-17] | §9.4 | Conformance fixture layout |
+| [W0-18] | §9.1 | v0 compatibility path and migration gate |
+
+**Notes for the workstreams.**
+- **W1** plugs its parser/type checker into `forge_ir::v1::expr::ExprValidator` (sites carry path,
+  field type, scope and owner) and makes `v1_conformance::expression_fixtures_parse_type_and_evaluate`
+  pass (run `invalid/documents.json` `requires: ["expr"]` cases with the hook too). Reuse
+  `forge_ir::v1::degtrig` (rule 4 of §2.7). Canonicalize expression text in `to_json` callers
+  (the DocStore stores canonical text; `forge_ir::v1::to_json` never rewrites strings).
+- **W2** expands compound curves with `forge_ir::v1::compound::expand` (evaluated values), lowers
+  constraints per [W0-9] (welded ids in one constraint are redundant, not a self-reference), and
+  emits the `sketch` report block.
+- **W3** uses the frozen `Ref`, `Query`, `Capture` and report types; static kinds and feature-type
+  rules are already enforced by validation.
+- **W5** resolves hole dimensions with `forge_ir::v1::holes::tool_dims` and positions with
+  `degtrig` (bolt circles).
+- **W7** mirrors the pipeline of §0.5 rule 4 (raw pre-checks before JSON-Schema validation), the
+  id grammar, the migration rewrite and the fixtures; it reads `ir-v1.schema.json` and
+  `ir-v1.constants.json` at run time.
+- **W8** generates from `@aicad/ir-types` (`v1` and `metricsV1` namespaces); must switch the
+  reserved-name test to `ir-v1.constants.json`, print `--3` as `-(-3)` in TypeScript, and never
+  echo rejected ids in diagnostics.
+- **W9** can already expose `migrate` (with the rename report) and the canonical printer; `aicad
+  eval` on v1 input can use the compatibility path until W1–W3 land.
+- **W10** reads `ERROR_CODES` for playbook coverage and treats free-text metadata and
+  `migration.renames[].from` as untrusted.

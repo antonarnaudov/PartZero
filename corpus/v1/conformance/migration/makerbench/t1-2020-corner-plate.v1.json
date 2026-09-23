@@ -1,0 +1,147 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "corner_plate_2020",
+    "description": "L corner plate for 2020 extrusion: 60 mm legs, 20 wide, 4 thick, 5x M5 clearance"
+  },
+  "parts": [
+    {
+      "id": "p_plate",
+      "name": "plate",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                0.0,
+                0.0
+              ],
+              "end": [
+                60.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "leg_x_end",
+              "start": [
+                60.0,
+                0.0
+              ],
+              "end": [
+                60.0,
+                20.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "inner_x",
+              "start": [
+                60.0,
+                20.0
+              ],
+              "end": [
+                20.0,
+                20.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "inner_y",
+              "start": [
+                20.0,
+                20.0
+              ],
+              "end": [
+                20.0,
+                60.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "leg_y_end",
+              "start": [
+                20.0,
+                60.0
+              ],
+              "end": [
+                0.0,
+                60.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                0.0,
+                60.0
+              ],
+              "end": [
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "h_corner",
+              "center": [
+                10.0,
+                10.0
+              ],
+              "radius": 2.75
+            },
+            {
+              "kind": "circle",
+              "id": "h_x1",
+              "center": [
+                30.0,
+                10.0
+              ],
+              "radius": 2.75
+            },
+            {
+              "kind": "circle",
+              "id": "h_x2",
+              "center": [
+                50.0,
+                10.0
+              ],
+              "radius": 2.75
+            },
+            {
+              "kind": "circle",
+              "id": "h_y1",
+              "center": [
+                10.0,
+                30.0
+              ],
+              "radius": 2.75
+            },
+            {
+              "kind": "circle",
+              "id": "h_y2",
+              "center": [
+                10.0,
+                50.0
+              ],
+              "radius": 2.75
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_plate",
+          "name": "plate",
+          "sketch": "f_outline",
+          "distance": 4.0
+        }
+      ]
+    }
+  ]
+}

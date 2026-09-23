@@ -1,0 +1,44 @@
+{
+  "schema": "aicad.ir/1",
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "radius": 5.0
+            },
+            {
+              "kind": "circle",
+              "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_2",
+              "center": [
+                20.0,
+                0.0
+              ],
+              "radius": 5.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_2",
+          "name": "puck",
+          "sketch": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "distance": 3.0
+        }
+      ]
+    }
+  ]
+}

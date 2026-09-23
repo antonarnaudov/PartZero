@@ -22,7 +22,7 @@ export interface JsonSchema {
   $defs?: Record<string, JsonSchema>;
   title?: string;
   description?: string;
-  type?: string;
+  type?: string | string[];
   enum?: unknown[];
   const?: unknown;
   oneOf?: JsonSchema[];
@@ -138,13 +138,24 @@ function orderedProps(s: JsonSchema): string[] {
 class Generator {
   readonly decls = new Map<string, Decl>();
   readonly defaults = new Map<string, Record<string, unknown>>();
+  /** Variant declaration → its discriminated union. */
+  readonly variantOf = new Map<string, string>();
 
   /** Render an inline (anonymous) schema, recording named dependencies. */
   inline(s: JsonSchema, deps: Set<string>, indent: string): Rendered {
     if (s.$ref) {
       const name = refName(s.$ref);
       deps.add(name);
-      return { ts: name, zod: `${name}Schema` };
+      // Resolved after ordering: a direct reference, or `z.lazy(...)` for a back edge of a cycle.
+      return { ts: name, zod: refPlaceholder(name) };
+    }
+    if (Array.isArray(s.type)) {
+      // `type: [T, "null"]`: a field that is nullable on purpose.
+      const types = s.type as string[];
+      const nonNull = types.filter((t) => t !== "null");
+      if (nonNull.length !== 1) throw new Error(`unsupported type list ${lit(types)}`);
+      const base = this.inline({ ...s, type: nonNull[0]! }, deps, indent);
+      return types.includes("null") ? { ts: `${base.ts} | null`, zod: `${base.zod}.nullable()` } : base;
     }
     const alts = s.anyOf ?? s.oneOf;
     if (alts) {
@@ -187,12 +198,19 @@ class Generator {
           };
         }
         const needsParens = item.ts.includes("|");
-        return { ts: needsParens ? `(${item.ts})[]` : `${item.ts}[]`, zod: `z.array(${item.zod})` };
+        let zod = `z.array(${item.zod})`;
+        if (s.minItems !== undefined && s.minItems > 0) zod += `.min(${s.minItems})`;
+        if (s.maxItems !== undefined) zod += `.max(${s.maxItems})`;
+        return { ts: needsParens ? `(${item.ts})[]` : `${item.ts}[]`, zod };
       }
       case "object": {
         if (!s.properties && s.additionalProperties && typeof s.additionalProperties === "object") {
           const v = this.inline(s.additionalProperties, deps, indent);
           return { ts: `{ [key: string]: ${v.ts} }`, zod: `z.record(z.string(), ${v.zod})` };
+        }
+        if (!s.properties && s.additionalProperties === true) {
+          // An open JSON object (e.g. error `details`).
+          return { ts: "{ [key: string]: unknown }", zod: "z.record(z.string(), z.unknown())" };
         }
         return this.objectBody(s, deps, indent);
       }
@@ -258,6 +276,7 @@ class Generator {
         const vName = `${pascal(tag)}${name}`;
         variants.push(vName);
         this.named(vName, alt, `The \`${key}: ${lit(tag)}\` variant of {@link ${name}}.`);
+        this.variantOf.set(vName, name);
         deps.add(vName);
       }
       code =
@@ -274,14 +293,55 @@ class Generator {
     this.decls.set(name, { name, deps, code });
   }
 
-  /** Declarations in dependency order (dependencies first, otherwise alphabetical). */
+  /** Names that lie on a dependency cycle (Tarjan's strongly connected components). */
+  cyclic(): Set<string> {
+    const index = new Map<string, number>();
+    const low = new Map<string, number>();
+    const stack: string[] = [];
+    const onStack = new Set<string>();
+    const out = new Set<string>();
+    let next = 0;
+    const strong = (v: string): void => {
+      index.set(v, next);
+      low.set(v, next);
+      next++;
+      stack.push(v);
+      onStack.add(v);
+      for (const w of [...this.decls.get(v)!.deps].sort()) {
+        if (!index.has(w)) {
+          strong(w);
+          low.set(v, Math.min(low.get(v)!, low.get(w)!));
+        } else if (onStack.has(w)) {
+          low.set(v, Math.min(low.get(v)!, index.get(w)!));
+        }
+      }
+      if (low.get(v) === index.get(v)) {
+        const scc: string[] = [];
+        let w: string;
+        do {
+          w = stack.pop()!;
+          onStack.delete(w);
+          scc.push(w);
+        } while (w !== v);
+        if (scc.length > 1 || this.decls.get(v)!.deps.has(v)) scc.forEach((n) => out.add(n));
+      }
+    };
+    for (const name of [...this.decls.keys()].sort()) if (!index.has(name)) strong(name);
+    return out;
+  }
+
+  /**
+   * Declarations in dependency order (dependencies first, otherwise alphabetical), with
+   * references resolved. Acyclic schemas give plain references. On a cycle (the v1 query AST),
+   * the DFS back edges become `z.lazy(() => XSchema)` and every lazily referenced schema gets an
+   * explicit `z.ZodType<X>` annotation; variants of a discriminated union on a cycle are only
+   * reached through their union, so the union's options stay plain object schemas.
+   */
   ordered(): Decl[] {
     const out: Decl[] = [];
     const state = new Map<string, "visiting" | "done">();
     const visit = (name: string): void => {
-      const st = state.get(name);
-      if (st === "done") return;
-      if (st === "visiting") throw new Error(`recursive schema through ${name} is not supported`);
+      if (state.has(name)) return;
       state.set(name, "visiting");
       const d = this.decls.get(name);
       if (!d) throw new Error(`missing declaration ${name}`);
@@ -289,9 +349,35 @@ class Generator {
       state.set(name, "done");
       out.push(d);
     };
-    for (const name of [...this.decls.keys()].sort()) visit(name);
-    return out;
+    const cyclic = this.cyclic();
+    for (const name of [...this.decls.keys()].sort()) {
+      if (this.variantOf.has(name) && cyclic.has(name)) continue;
+      visit(name);
+    }
+    const pos = new Map(out.map((d, i) => [d.name, i]));
+    const lazy = new Set<string>();
+    const resolved = out.map((d) => {
+      const code = d.code.replace(REF_RE, (_m, target: string) => {
+        if (pos.get(target)! < pos.get(d.name)!) return `${target}Schema`;
+        lazy.add(target);
+        return `z.lazy(() => ${target}Schema)`;
+      });
+      return { ...d, code };
+    });
+    for (const target of lazy) {
+      if (this.variantOf.has(target)) throw new Error(`variant ${target} cannot be referenced lazily`);
+    }
+    return resolved.map((d) =>
+      lazy.has(d.name)
+        ? { ...d, code: d.code.replace(`export const ${d.name}Schema = `, `export const ${d.name}Schema: z.ZodType<${d.name}> = `) }
+        : d,
+    );
   }
+}
+
+const REF_RE = /@@REF:([A-Za-z0-9_]+)@@/g;
+function refPlaceholder(name: string): string {
+  return `@@REF:${name}@@`;
 }
 
 /** Generate one TypeScript module (types + zod schemas) from a JSON Schema document. */
@@ -366,14 +452,62 @@ export function generateConstants(libRs: string, source: string): string {
   return out.join("\n");
 }
 
+/**
+ * Generate a constants module from a forge-ir constants JSON file (`schema/ir-v1.constants.json`):
+ * one `export const KEY = <value> as const;` per top-level key, in file order.
+ */
+export function generateJsonConstants(json: Record<string, unknown>, source: string, docs: Record<string, string>): string {
+  const out: string[] = [`// ${HEADER_NOTE.split("\n").join("\n// ")}\n// Source: ${source}\n`];
+  for (const [key, value] of Object.entries(json)) {
+    if (!/^[A-Z_][A-Z0-9_]*$/.test(key)) throw new Error(`bad constant name ${key}`);
+    const doc = docs[key];
+    out.push(`${doc ? jsdoc([doc]) : ""}export const ${key} = ${JSON.stringify(value, null, 2)} as const;\n`);
+  }
+  return out.join("\n");
+}
+
+const V1_CONSTANT_DOCS: Record<string, string> = {
+  IR_SCHEMA: "Schema identifier of every v1 IR document.",
+  METRICS_SCHEMA: "Schema identifier of every v1 evaluation report.",
+  ID_PATTERN: "Every author-chosen id and name matches this pattern (SPEC-v1 §0.3, [W0-12]).",
+  MAX_ID_LEN: "Maximum id or name length in bytes.",
+  RESERVED_NAMES: "The full v1 reserved-name list (v0 list + CadScript v1 builtins). IR validation applies it to parameter names; feature names are checked against RESERVED_NAMES_V0 ([W0-2]).",
+  ERROR_CODES: "The error-code catalogue of SPEC-v1 §7.5: stage (R, E, R/E, W, I), section, detail keys, since.",
+  HOLE_SIZES: "The normative standard-hole table of SPEC-v1 §6.5, every value with its sources.",
+};
+
 /** Every generated file, computed in memory from the repository sources. */
 export function generateAll(repoRoot: string): GeneratedFile[] {
   const schemaDir = "forge/crates/forge-ir/schema";
   const read = (rel: string): string => readFileSync(join(repoRoot, rel), "utf8");
   const ir = JSON.parse(read(`${schemaDir}/ir-v0.schema.json`)) as JsonSchema;
   const metrics = JSON.parse(read(`${schemaDir}/metrics-v0.schema.json`)) as JsonSchema;
+  const irV1 = JSON.parse(read(`${schemaDir}/ir-v1.schema.json`)) as JsonSchema;
+  const metricsV1 = JSON.parse(read(`${schemaDir}/metrics-v1.schema.json`)) as JsonSchema;
+  const constantsV1 = JSON.parse(read(`${schemaDir}/ir-v1.constants.json`)) as Record<string, unknown>;
   const libRs = "forge/crates/forge-ir/src/lib.rs";
   return [
+    {
+      path: "src/generated/ir-v1.ts",
+      content: generateModule(irV1, {
+        source: `${schemaDir}/ir-v1.schema.json`,
+        rootName: "IrDocument",
+        defaultsName: "IR_DEFAULTS",
+        rootDescription: "An IR v1 document (`aicad.ir/1`).\nSemantics: forge/crates/forge-ir/SPEC-v1-DRAFT.md.",
+      }),
+    },
+    {
+      path: "src/generated/metrics-v1.ts",
+      content: generateModule(metricsV1, {
+        source: `${schemaDir}/metrics-v1.schema.json`,
+        defaultsName: "METRICS_DEFAULTS",
+        rootDescription: "An evaluation report (`aicad.metrics/1`); see SPEC-v1-DRAFT.md §7.",
+      }),
+    },
+    {
+      path: "src/generated/constants-v1.ts",
+      content: generateJsonConstants(constantsV1, `${schemaDir}/ir-v1.constants.json`, V1_CONSTANT_DOCS),
+    },
     {
       path: "src/generated/ir-v0.ts",
       content: generateModule(ir, {

@@ -1,0 +1,112 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "pipe_collar",
+    "description": "Collar for a 25 mm pipe: 25.6 bore, 36 OD x 15 tall, 44 mm x 3 mm flange at the bottom"
+  },
+  "parts": [
+    {
+      "id": "p_collar",
+      "name": "collar",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                12.8,
+                0
+              ],
+              "end": [
+                22,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "flange_rim",
+              "start": [
+                22,
+                0
+              ],
+              "end": [
+                22,
+                3
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "flange_top",
+              "start": [
+                22,
+                3
+              ],
+              "end": [
+                18,
+                3
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "outer",
+              "start": [
+                18,
+                3
+              ],
+              "end": [
+                18,
+                15
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                18,
+                15
+              ],
+              "end": [
+                12.8,
+                15
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "bore",
+              "start": [
+                12.8,
+                15
+              ],
+              "end": [
+                12.8,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_collar",
+          "name": "collar",
+          "sketch": "profile",
+          "axis": {
+            "origin": [
+              0,
+              0
+            ],
+            "direction": [
+              0,
+              1
+            ]
+          },
+          "angle": 360
+        }
+      ]
+    }
+  ]
+}

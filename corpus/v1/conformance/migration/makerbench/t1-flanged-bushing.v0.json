@@ -1,0 +1,112 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "flanged_bushing",
+    "description": "Flanged bushing for 8 mm rod: 8.1 bore, 12 OD, 15 long, 18x2 flange"
+  },
+  "parts": [
+    {
+      "id": "p_bushing",
+      "name": "bushing",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                4.05,
+                0
+              ],
+              "end": [
+                9,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "flange_rim",
+              "start": [
+                9,
+                0
+              ],
+              "end": [
+                9,
+                2
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "flange_top",
+              "start": [
+                9,
+                2
+              ],
+              "end": [
+                6,
+                2
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "body",
+              "start": [
+                6,
+                2
+              ],
+              "end": [
+                6,
+                15
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                6,
+                15
+              ],
+              "end": [
+                4.05,
+                15
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "bore",
+              "start": [
+                4.05,
+                15
+              ],
+              "end": [
+                4.05,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_bushing",
+          "name": "bushing",
+          "sketch": "profile",
+          "axis": {
+            "origin": [
+              0,
+              0
+            ],
+            "direction": [
+              0,
+              1
+            ]
+          },
+          "angle": 360
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,168 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "pegboard_plate",
+    "description": "Pegboard adapter plate: 90x65x4, 6x 7 mm holes on the 25.4 mm (1 in) grid, 4x M4 6 mm from the corners"
+  },
+  "parts": [
+    {
+      "id": "p_plate",
+      "name": "plate",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -45.0,
+                -32.5
+              ],
+              "end": [
+                45.0,
+                -32.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                45.0,
+                -32.5
+              ],
+              "end": [
+                45.0,
+                32.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                45.0,
+                32.5
+              ],
+              "end": [
+                -45.0,
+                32.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -45.0,
+                32.5
+              ],
+              "end": [
+                -45.0,
+                -32.5
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "peg_1",
+              "center": [
+                -25.4,
+                -12.7
+              ],
+              "radius": 3.5
+            },
+            {
+              "kind": "circle",
+              "id": "peg_2",
+              "center": [
+                0.0,
+                -12.7
+              ],
+              "radius": 3.5
+            },
+            {
+              "kind": "circle",
+              "id": "peg_3",
+              "center": [
+                25.4,
+                -12.7
+              ],
+              "radius": 3.5
+            },
+            {
+              "kind": "circle",
+              "id": "peg_4",
+              "center": [
+                -25.4,
+                12.7
+              ],
+              "radius": 3.5
+            },
+            {
+              "kind": "circle",
+              "id": "peg_5",
+              "center": [
+                0.0,
+                12.7
+              ],
+              "radius": 3.5
+            },
+            {
+              "kind": "circle",
+              "id": "peg_6",
+              "center": [
+                25.4,
+                12.7
+              ],
+              "radius": 3.5
+            },
+            {
+              "kind": "circle",
+              "id": "m4_ne",
+              "center": [
+                39.0,
+                26.5
+              ],
+              "radius": 2.25
+            },
+            {
+              "kind": "circle",
+              "id": "m4_nw",
+              "center": [
+                -39.0,
+                26.5
+              ],
+              "radius": 2.25
+            },
+            {
+              "kind": "circle",
+              "id": "m4_sw",
+              "center": [
+                -39.0,
+                -26.5
+              ],
+              "radius": 2.25
+            },
+            {
+              "kind": "circle",
+              "id": "m4_se",
+              "center": [
+                39.0,
+                -26.5
+              ],
+              "radius": 2.25
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_plate",
+          "name": "plate",
+          "sketch": "f_outline",
+          "distance": 4.0
+        }
+      ]
+    }
+  ]
+}

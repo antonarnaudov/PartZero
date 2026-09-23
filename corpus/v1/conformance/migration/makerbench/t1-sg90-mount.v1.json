@@ -1,0 +1,144 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "sg90_mount",
+    "description": "SG90 servo mount plate: 40x20x3, 23x12.5 cutout, 2x 2.2 mm screw holes 27.5 apart"
+  },
+  "parts": [
+    {
+      "id": "p_mount",
+      "name": "mount",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -20.0,
+                -10.0
+              ],
+              "end": [
+                20.0,
+                -10.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                20.0,
+                -10.0
+              ],
+              "end": [
+                20.0,
+                10.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                20.0,
+                10.0
+              ],
+              "end": [
+                -20.0,
+                10.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -20.0,
+                10.0
+              ],
+              "end": [
+                -20.0,
+                -10.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "cut_bottom",
+              "start": [
+                -11.5,
+                -6.25
+              ],
+              "end": [
+                11.5,
+                -6.25
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "cut_right",
+              "start": [
+                11.5,
+                -6.25
+              ],
+              "end": [
+                11.5,
+                6.25
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "cut_top",
+              "start": [
+                11.5,
+                6.25
+              ],
+              "end": [
+                -11.5,
+                6.25
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "cut_left",
+              "start": [
+                -11.5,
+                6.25
+              ],
+              "end": [
+                -11.5,
+                -6.25
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "screw_l",
+              "center": [
+                -13.75,
+                0.0
+              ],
+              "radius": 1.1
+            },
+            {
+              "kind": "circle",
+              "id": "screw_r",
+              "center": [
+                13.75,
+                0.0
+              ],
+              "radius": 1.1
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_mount",
+          "name": "mount",
+          "sketch": "f_outline",
+          "distance": 3.0
+        }
+      ]
+    }
+  ]
+}

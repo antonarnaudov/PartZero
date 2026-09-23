@@ -1,0 +1,114 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "rpi4_plate",
+    "description": "Raspberry Pi 4 mounting plate: 85x56x3, 4x 2.7 mm holes on the 58x49 pattern"
+  },
+  "parts": [
+    {
+      "id": "p_plate",
+      "name": "plate",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                0,
+                0
+              ],
+              "end": [
+                85,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                85,
+                0
+              ],
+              "end": [
+                85,
+                56
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                85,
+                56
+              ],
+              "end": [
+                0,
+                56
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                0,
+                56
+              ],
+              "end": [
+                0,
+                0
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "h_bl",
+              "center": [
+                3.5,
+                3.5
+              ],
+              "radius": 1.35
+            },
+            {
+              "kind": "circle",
+              "id": "h_br",
+              "center": [
+                61.5,
+                3.5
+              ],
+              "radius": 1.35
+            },
+            {
+              "kind": "circle",
+              "id": "h_tr",
+              "center": [
+                61.5,
+                52.5
+              ],
+              "radius": 1.35
+            },
+            {
+              "kind": "circle",
+              "id": "h_tl",
+              "center": [
+                3.5,
+                52.5
+              ],
+              "radius": 1.35
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_plate",
+          "name": "plate",
+          "sketch": "outline",
+          "distance": 3
+        }
+      ]
+    }
+  ]
+}

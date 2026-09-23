@@ -1,0 +1,49 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "revolve_torus",
+    "description": "Circle r=4 at distance 15 revolved 360 -> torus"
+  },
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "tube",
+              "center": [
+                15.0,
+                0.0
+              ],
+              "radius": 4.0
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "r1",
+          "name": "donut",
+          "sketch": "s1",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    }
+  ]
+}

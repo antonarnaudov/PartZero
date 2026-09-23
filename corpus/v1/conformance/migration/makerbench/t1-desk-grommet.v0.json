@@ -1,0 +1,112 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "desk_grommet",
+    "description": "Desk cable grommet: 60 OD x 2 wall x 20 tube, 70x3 flange on top"
+  },
+  "parts": [
+    {
+      "id": "p_grommet",
+      "name": "grommet",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                28,
+                0
+              ],
+              "end": [
+                30,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "tube_outer",
+              "start": [
+                30,
+                0
+              ],
+              "end": [
+                30,
+                20
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "flange_under",
+              "start": [
+                30,
+                20
+              ],
+              "end": [
+                35,
+                20
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "flange_rim",
+              "start": [
+                35,
+                20
+              ],
+              "end": [
+                35,
+                23
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                35,
+                23
+              ],
+              "end": [
+                28,
+                23
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "tube_inner",
+              "start": [
+                28,
+                23
+              ],
+              "end": [
+                28,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_grommet",
+          "name": "grommet",
+          "sketch": "profile",
+          "axis": {
+            "origin": [
+              0,
+              0
+            ],
+            "direction": [
+              0,
+              1
+            ]
+          },
+          "angle": 360
+        }
+      ]
+    }
+  ]
+}

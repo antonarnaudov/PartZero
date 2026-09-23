@@ -13,6 +13,14 @@ export * from "./generated/constants.js";
 export * from "./generated/ir-v0.js";
 export * from "./generated/metrics-v0.js";
 
+/**
+ * IR v1 (`aicad.ir/1`): types, zod schemas, constants (`v1.IR_SCHEMA`, `v1.HOLE_SIZES`,
+ * `v1.ERROR_CODES`, …) and `v1.parseIrDocument` / `v1.parseEvalReport`.
+ */
+export * as v1 from "./v1.js";
+/** The `aicad.metrics/1` report types and zod schemas (namespaced: names overlap with `v1`). */
+export * as metricsV1 from "./generated/metrics-v1.js";
+
 /** A 2D point or vector in sketch coordinates, mm: `[u, v]`. */
 export type P2 = LineSketchCurve["start"];
 /** A 3D point or vector in model coordinates, mm: `[x, y, z]`. */

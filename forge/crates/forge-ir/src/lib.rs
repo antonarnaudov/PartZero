@@ -7,9 +7,14 @@
 //! v0 scope (Forge milestone F0): sketches made of lines / arcs / circles on a plane,
 //! and `extrude` / `revolve` features that each create new bodies. Expressions,
 //! constraints, booleans and references to faces arrive in later schema versions.
+//!
+//! IR v1 (`aicad.ir/1`: parameters, expressions, constrained and compound sketches, datums,
+//! references, booleans, holes, blends, patterns) lives in [`v1`], next to v0, with its own
+//! normative draft `SPEC-v1-DRAFT.md`. [`VersionedDocument`] loads either version.
 
 mod doc;
 mod metrics;
+pub mod v1;
 mod validate;
 
 pub use doc::*;
@@ -65,6 +70,84 @@ pub fn document_schema() -> serde_json::Value {
 /// JSON Schema for [`EvalReport`].
 pub fn report_schema() -> serde_json::Value {
     serde_json::to_value(schemars::schema_for!(EvalReport)).expect("schema serializes")
+}
+
+/// An IR document of either schema version.
+#[derive(Debug, Clone, PartialEq)]
+pub enum VersionedDocument {
+    /// `aicad.ir/0`, validated with the v0 rules.
+    V0(Document),
+    /// `aicad.ir/1`, validated with the v1 rules.
+    V1(v1::Document),
+}
+
+impl VersionedDocument {
+    /// Parse and validate a document of either version, dispatching on `schema`. A v0 document
+    /// is rejected with exactly the v0 codes and paths (SPEC-v1 §9.1); an unknown schema is
+    /// `UNSUPPORTED_SCHEMA` at `/schema`.
+    pub fn from_json(text: &str) -> Result<Self, v1::LoadError> {
+        Self::from_json_with(text, &v1::ValidateOptions::default())
+    }
+
+    /// [`VersionedDocument::from_json`] with v1 validation options.
+    pub fn from_json_with(
+        text: &str,
+        opts: &v1::ValidateOptions<'_>,
+    ) -> Result<Self, v1::LoadError> {
+        // Dispatch on `schema`. v0 keeps serde_json's parser (bit-for-bit v0 behavior); v1 is
+        // read with the correctly rounded reader of `v1::json` (SPEC-v1 §0.4).
+        let value: serde_json::Value =
+            serde_json::from_str(text).map_err(|e| v1::LoadError::Parse {
+                path: None,
+                message: e.to_string(),
+            })?;
+        let schema = value
+            .get("schema")
+            .and_then(|s| s.as_str())
+            .map(str::to_owned);
+        match schema.as_deref() {
+            Some(IR_SCHEMA) => {
+                let doc: Document =
+                    serde_json::from_str(text).map_err(|e| v1::LoadError::Parse {
+                        path: None,
+                        message: e.to_string(),
+                    })?;
+                validate(&doc).map_err(|errs| {
+                    v1::LoadError::Invalid(
+                        errs.into_iter().map(v1::ValidationError::from).collect(),
+                    )
+                })?;
+                Ok(VersionedDocument::V0(doc))
+            }
+            Some(v1::IR_SCHEMA) => {
+                let exact = v1::json::parse(text).map_err(|e| v1::LoadError::Parse {
+                    path: None,
+                    message: e.to_string(),
+                })?;
+                v1::load_v1_value(exact, opts).map(VersionedDocument::V1)
+            }
+            other => Err(v1::LoadError::Invalid(vec![v1::ValidationError::new(
+                "UNSUPPORTED_SCHEMA",
+                "/schema",
+                format!(
+                    "expected {IR_SCHEMA:?} or {:?}, got {}",
+                    v1::IR_SCHEMA,
+                    other
+                        .map(|s| format!("{s:?}"))
+                        .unwrap_or_else(|| "no schema string".into())
+                ),
+                serde_json::json!({ "found": other, "supported": [IR_SCHEMA, v1::IR_SCHEMA] }),
+            )])),
+        }
+    }
+
+    /// The document as v1: a v0 document is migrated (SPEC-v1 §9.1); v1 is returned unchanged.
+    pub fn into_v1(self) -> v1::Document {
+        match self {
+            VersionedDocument::V0(d) => v1::migrate_v0_to_v1(&d),
+            VersionedDocument::V1(d) => d,
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]

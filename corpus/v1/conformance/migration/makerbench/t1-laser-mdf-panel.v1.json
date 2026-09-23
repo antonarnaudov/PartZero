@@ -1,0 +1,301 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "mdf_side_panel",
+    "description": "Laser-cut 3 mm MDF side panel 120x80: 2 tab slots, 4x M3, 12 mm switch, 8 mm DC jack, 12x11 USB-B cut-out"
+  },
+  "parts": [
+    {
+      "id": "p_panel",
+      "name": "panel",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_panel",
+          "name": "panel",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                0.0,
+                0.0
+              ],
+              "end": [
+                120.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                120.0,
+                0.0
+              ],
+              "end": [
+                120.0,
+                80.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                120.0,
+                80.0
+              ],
+              "end": [
+                0.0,
+                80.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                0.0,
+                80.0
+              ],
+              "end": [
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "slot_l_bottom",
+              "start": [
+                22.5,
+                4.4
+              ],
+              "end": [
+                37.5,
+                4.4
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "slot_l_right",
+              "start": [
+                37.5,
+                4.4
+              ],
+              "end": [
+                37.5,
+                7.6
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "slot_l_top",
+              "start": [
+                37.5,
+                7.6
+              ],
+              "end": [
+                22.5,
+                7.6
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "slot_l_left",
+              "start": [
+                22.5,
+                7.6
+              ],
+              "end": [
+                22.5,
+                4.4
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "slot_r_bottom",
+              "start": [
+                82.5,
+                4.4
+              ],
+              "end": [
+                97.5,
+                4.4
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "slot_r_right",
+              "start": [
+                97.5,
+                4.4
+              ],
+              "end": [
+                97.5,
+                7.6
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "slot_r_top",
+              "start": [
+                97.5,
+                7.6
+              ],
+              "end": [
+                82.5,
+                7.6
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "slot_r_left",
+              "start": [
+                82.5,
+                7.6
+              ],
+              "end": [
+                82.5,
+                4.4
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "m3_bl",
+              "center": [
+                5.0,
+                5.0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_br",
+              "center": [
+                115.0,
+                5.0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_tr",
+              "center": [
+                115.0,
+                75.0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_tl",
+              "center": [
+                5.0,
+                75.0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "arc",
+              "id": "switch_top",
+              "start": [
+                66.0,
+                45.0
+              ],
+              "end": [
+                54.0,
+                45.0
+              ],
+              "center": [
+                60.0,
+                45.0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "arc",
+              "id": "switch_bottom",
+              "start": [
+                54.0,
+                45.0
+              ],
+              "end": [
+                66.0,
+                45.0
+              ],
+              "center": [
+                60.0,
+                45.0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "circle",
+              "id": "dc_jack",
+              "center": [
+                30.0,
+                45.0
+              ],
+              "radius": 4.0
+            },
+            {
+              "kind": "line",
+              "id": "usb_bottom",
+              "start": [
+                84.0,
+                39.5
+              ],
+              "end": [
+                96.0,
+                39.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "usb_right",
+              "start": [
+                96.0,
+                39.5
+              ],
+              "end": [
+                96.0,
+                50.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "usb_top",
+              "start": [
+                96.0,
+                50.5
+              ],
+              "end": [
+                84.0,
+                50.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "usb_left",
+              "start": [
+                84.0,
+                50.5
+              ],
+              "end": [
+                84.0,
+                39.5
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_side_panel",
+          "name": "side_panel",
+          "sketch": "f_panel",
+          "distance": 3.0
+        }
+      ]
+    }
+  ]
+}

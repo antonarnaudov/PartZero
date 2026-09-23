@@ -1,0 +1,111 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "m3_hex_standoff",
+    "description": "Hex standoff: 5.5 mm across flats, 12 mm tall, 2.5 mm tap hole"
+  },
+  "parts": [
+    {
+      "id": "p_standoff",
+      "name": "standoff",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_hex",
+          "name": "hex",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "e1",
+              "start": [
+                3.1754264805429413,
+                0.0
+              ],
+              "end": [
+                1.5877132402714706,
+                2.75
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "e2",
+              "start": [
+                1.5877132402714706,
+                2.75
+              ],
+              "end": [
+                -1.5877132402714706,
+                2.75
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "e3",
+              "start": [
+                -1.5877132402714706,
+                2.75
+              ],
+              "end": [
+                -3.1754264805429413,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "e4",
+              "start": [
+                -3.1754264805429413,
+                0.0
+              ],
+              "end": [
+                -1.5877132402714706,
+                -2.75
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "e5",
+              "start": [
+                -1.5877132402714706,
+                -2.75
+              ],
+              "end": [
+                1.5877132402714706,
+                -2.75
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "e6",
+              "start": [
+                1.5877132402714706,
+                -2.75
+              ],
+              "end": [
+                3.1754264805429413,
+                0.0
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "tap_hole",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "radius": 1.25
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_standoff",
+          "name": "standoff",
+          "sketch": "f_hex",
+          "distance": 12.0
+        }
+      ]
+    }
+  ]
+}

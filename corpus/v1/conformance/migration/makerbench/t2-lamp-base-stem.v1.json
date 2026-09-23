@@ -1,0 +1,203 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "lamp_base_stem",
+    "description": "Table lamp: 120 mm conical base with a 20.4 socket and 8 mm cable hole, plus a 20 x 250 mm tube stem, assembled"
+  },
+  "parts": [
+    {
+      "id": "p_base",
+      "name": "base",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_base_profile",
+          "name": "base_profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                4.0,
+                0.0
+              ],
+              "end": [
+                60.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "rim",
+              "start": [
+                60.0,
+                0.0
+              ],
+              "end": [
+                60.0,
+                15.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "taper",
+              "start": [
+                60.0,
+                15.0
+              ],
+              "end": [
+                16.0,
+                30.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                16.0,
+                30.0
+              ],
+              "end": [
+                10.2,
+                30.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "socket_wall",
+              "start": [
+                10.2,
+                30.0
+              ],
+              "end": [
+                10.2,
+                15.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "socket_floor",
+              "start": [
+                10.2,
+                15.0
+              ],
+              "end": [
+                4.0,
+                15.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "cable_hole",
+              "start": [
+                4.0,
+                15.0
+              ],
+              "end": [
+                4.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_base",
+          "name": "base",
+          "sketch": "f_base_profile",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    },
+    {
+      "id": "p_stem",
+      "name": "stem",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_stem_profile",
+          "name": "stem_profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "s_bottom",
+              "start": [
+                4.0,
+                15.0
+              ],
+              "end": [
+                10.0,
+                15.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "s_outer",
+              "start": [
+                10.0,
+                15.0
+              ],
+              "end": [
+                10.0,
+                265.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "s_top",
+              "start": [
+                10.0,
+                265.0
+              ],
+              "end": [
+                4.0,
+                265.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "s_bore",
+              "start": [
+                4.0,
+                265.0
+              ],
+              "end": [
+                4.0,
+                15.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_stem",
+          "name": "stem",
+          "sketch": "f_stem_profile",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    }
+  ]
+}

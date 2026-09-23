@@ -1,0 +1,205 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "nema17_l_bracket",
+    "description": "L bracket for a NEMA 17 with a horizontal shaft: 50x45x5 base, 50x50x5 upright face plate"
+  },
+  "parts": [
+    {
+      "id": "p_bracket",
+      "name": "bracket",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_base_outline",
+          "name": "base_outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "back",
+              "start": [
+                -25.0,
+                0.0
+              ],
+              "end": [
+                25.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                25.0,
+                0.0
+              ],
+              "end": [
+                25.0,
+                45.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "front",
+              "start": [
+                25.0,
+                45.0
+              ],
+              "end": [
+                -25.0,
+                45.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -25.0,
+                45.0
+              ],
+              "end": [
+                -25.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "m5_l",
+              "center": [
+                -15.0,
+                30.0
+              ],
+              "radius": 2.75
+            },
+            {
+              "kind": "circle",
+              "id": "m5_r",
+              "center": [
+                15.0,
+                30.0
+              ],
+              "radius": 2.75
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_base",
+          "name": "base",
+          "sketch": "f_base_outline",
+          "distance": 5.0
+        },
+        {
+          "type": "sketch",
+          "id": "f_face_outline",
+          "name": "face_outline",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -25.0,
+                5.0
+              ],
+              "end": [
+                25.0,
+                5.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                25.0,
+                5.0
+              ],
+              "end": [
+                25.0,
+                55.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                25.0,
+                55.0
+              ],
+              "end": [
+                -25.0,
+                55.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -25.0,
+                55.0
+              ],
+              "end": [
+                -25.0,
+                5.0
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "pilot",
+              "center": [
+                0.0,
+                30.0
+              ],
+              "radius": 11.0
+            },
+            {
+              "kind": "circle",
+              "id": "m3_a",
+              "center": [
+                15.5,
+                45.5
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_b",
+              "center": [
+                -15.5,
+                45.5
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_c",
+              "center": [
+                -15.5,
+                14.5
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_d",
+              "center": [
+                15.5,
+                14.5
+              ],
+              "radius": 1.7
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_face",
+          "name": "face",
+          "sketch": "f_face_outline",
+          "distance": 5.0,
+          "direction": "reverse"
+        }
+      ]
+    }
+  ]
+}

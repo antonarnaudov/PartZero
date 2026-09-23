@@ -1,0 +1,97 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "keychain_tag",
+    "description": "Stadium keychain tag 50x20x3 with a 5 mm ring hole 8 mm from one end"
+  },
+  "parts": [
+    {
+      "id": "p_tag",
+      "name": "tag",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -15.0,
+                -10.0
+              ],
+              "end": [
+                15.0,
+                -10.0
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "end_r",
+              "start": [
+                15.0,
+                -10.0
+              ],
+              "end": [
+                15.0,
+                10.0
+              ],
+              "center": [
+                15.0,
+                0.0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                15.0,
+                10.0
+              ],
+              "end": [
+                -15.0,
+                10.0
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "end_l",
+              "start": [
+                -15.0,
+                10.0
+              ],
+              "end": [
+                -15.0,
+                -10.0
+              ],
+              "center": [
+                -15.0,
+                0.0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "circle",
+              "id": "ring_hole",
+              "center": [
+                -17.0,
+                0.0
+              ],
+              "radius": 2.5
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_tag",
+          "name": "tag",
+          "sketch": "f_outline",
+          "distance": 3.0
+        }
+      ]
+    }
+  ]
+}

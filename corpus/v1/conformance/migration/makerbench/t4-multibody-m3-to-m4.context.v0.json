@@ -1,0 +1,210 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "cable_clamp",
+    "description": "Two-part cable clamp, side by side: 80x30x5 base (4x M3, 8 mm cable hole) and an 80x15x4 strap (2x M3)"
+  },
+  "parts": [
+    {
+      "id": "p_base",
+      "name": "base",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_base_outline",
+          "name": "base_outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -40,
+                -15
+              ],
+              "end": [
+                40,
+                -15
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                40,
+                -15
+              ],
+              "end": [
+                40,
+                15
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                40,
+                15
+              ],
+              "end": [
+                -40,
+                15
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -40,
+                15
+              ],
+              "end": [
+                -40,
+                -15
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "wall_l",
+              "center": [
+                -33,
+                -8
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "wall_r",
+              "center": [
+                33,
+                -8
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "strap_l",
+              "center": [
+                -33,
+                8
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "strap_r",
+              "center": [
+                33,
+                8
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "cable",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 4
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_base",
+          "name": "base",
+          "sketch": "base_outline",
+          "distance": 5
+        }
+      ]
+    },
+    {
+      "id": "p_strap",
+      "name": "strap",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_strap_outline",
+          "name": "strap_outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "s_bottom",
+              "start": [
+                -40,
+                25
+              ],
+              "end": [
+                40,
+                25
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "s_right",
+              "start": [
+                40,
+                25
+              ],
+              "end": [
+                40,
+                40
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "s_top",
+              "start": [
+                40,
+                40
+              ],
+              "end": [
+                -40,
+                40
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "s_left",
+              "start": [
+                -40,
+                40
+              ],
+              "end": [
+                -40,
+                25
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "screw_l",
+              "center": [
+                -33,
+                32.5
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "screw_r",
+              "center": [
+                33,
+                32.5
+              ],
+              "radius": 1.7
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_strap",
+          "name": "strap",
+          "sketch": "strap_outline",
+          "distance": 4
+        }
+      ]
+    }
+  ]
+}

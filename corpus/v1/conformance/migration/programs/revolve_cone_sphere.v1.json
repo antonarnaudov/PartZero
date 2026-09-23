@@ -1,0 +1,81 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "revolve_cone_sphere",
+    "description": "Profile with slanted line (cone) and quarter arc touching axis (sphere cap) revolved 360"
+  },
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "axis_seg",
+              "start": [
+                0.0,
+                -10.0
+              ],
+              "end": [
+                0.0,
+                20.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "cone",
+              "start": [
+                0.0,
+                20.0
+              ],
+              "end": [
+                10.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "cap",
+              "start": [
+                10.0,
+                0.0
+              ],
+              "end": [
+                0.0,
+                -10.0
+              ],
+              "center": [
+                0.0,
+                0.0
+              ],
+              "ccw": false
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "r1",
+          "name": "spinner",
+          "sketch": "s1",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    }
+  ]
+}

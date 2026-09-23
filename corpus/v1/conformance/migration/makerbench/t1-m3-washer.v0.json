@@ -1,0 +1,48 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "m3_washer",
+    "description": "M3 washer: 3.2 mm hole, 7 mm OD, 1 mm thick"
+  },
+  "parts": [
+    {
+      "id": "p_washer",
+      "name": "washer",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "rim",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 3.5
+            },
+            {
+              "kind": "circle",
+              "id": "bore",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 1.6
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_washer",
+          "name": "washer",
+          "sketch": "outline",
+          "distance": 1
+        }
+      ]
+    }
+  ]
+}

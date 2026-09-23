@@ -1,0 +1,17 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": { "name": "extrude_plate_with_holes", "description": "Plate with four through holes (holes are sketch loops)" },
+  "parts": [{ "id": "p1", "name": "part", "features": [
+    { "type": "sketch", "id": "s1", "name": "base", "plane": "XY", "curves": [
+      { "kind": "line", "id": "bottom", "start": [0, 0],   "end": [100, 0] },
+      { "kind": "line", "id": "right",  "start": [100, 0], "end": [100, 60] },
+      { "kind": "line", "id": "top",    "start": [100, 60],"end": [0, 60] },
+      { "kind": "line", "id": "left",   "start": [0, 60],  "end": [0, 0] },
+      { "kind": "circle", "id": "h1", "center": [10, 10], "radius": 2.75 },
+      { "kind": "circle", "id": "h2", "center": [90, 10], "radius": 2.75 },
+      { "kind": "circle", "id": "h3", "center": [90, 50], "radius": 2.75 },
+      { "kind": "circle", "id": "h4", "center": [10, 50], "radius": 2.75 }
+    ]},
+    { "type": "extrude", "id": "e1", "name": "plate", "sketch": "base", "distance": 5 }
+  ]}]
+}

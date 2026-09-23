@@ -1,0 +1,102 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "pcb_spacers",
+    "description": "Assumed defaults: four round M3 spacers, 7 mm OD, 3.4 mm bore, 10 mm tall"
+  },
+  "parts": [
+    {
+      "id": "p_spacers",
+      "name": "spacers",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_rings",
+          "name": "rings",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "s1_outer",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 3.5
+            },
+            {
+              "kind": "circle",
+              "id": "s1_bore",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "s2_outer",
+              "center": [
+                12,
+                0
+              ],
+              "radius": 3.5
+            },
+            {
+              "kind": "circle",
+              "id": "s2_bore",
+              "center": [
+                12,
+                0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "s3_outer",
+              "center": [
+                24,
+                0
+              ],
+              "radius": 3.5
+            },
+            {
+              "kind": "circle",
+              "id": "s3_bore",
+              "center": [
+                24,
+                0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "s4_outer",
+              "center": [
+                36,
+                0
+              ],
+              "radius": 3.5
+            },
+            {
+              "kind": "circle",
+              "id": "s4_bore",
+              "center": [
+                36,
+                0
+              ],
+              "radius": 1.7
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_spacers",
+          "name": "spacers",
+          "sketch": "rings",
+          "distance": 10
+        }
+      ]
+    }
+  ]
+}

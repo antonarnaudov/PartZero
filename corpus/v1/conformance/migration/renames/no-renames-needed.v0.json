@@ -1,0 +1,35 @@
+{
+  "schema": "aicad.ir/0",
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "base",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "c",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 5
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "puck",
+          "sketch": "base",
+          "distance": 3
+        }
+      ]
+    }
+  ]
+}

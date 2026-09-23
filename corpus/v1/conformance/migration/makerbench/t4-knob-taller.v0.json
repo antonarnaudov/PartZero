@@ -1,0 +1,124 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "knob",
+    "description": "Round knob: 25 mm dia, 17 tall, 6 mm bore 8 deep, 1.5 mm top chamfer"
+  },
+  "parts": [
+    {
+      "id": "p_knob",
+      "name": "knob",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                3,
+                0
+              ],
+              "end": [
+                12.5,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "side",
+              "start": [
+                12.5,
+                0
+              ],
+              "end": [
+                12.5,
+                15.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "chamfer",
+              "start": [
+                12.5,
+                15.5
+              ],
+              "end": [
+                11,
+                17
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                11,
+                17
+              ],
+              "end": [
+                0,
+                17
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "axis_cap",
+              "start": [
+                0,
+                17
+              ],
+              "end": [
+                0,
+                8
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "bore_end",
+              "start": [
+                0,
+                8
+              ],
+              "end": [
+                3,
+                8
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "bore_wall",
+              "start": [
+                3,
+                8
+              ],
+              "end": [
+                3,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_knob",
+          "name": "knob",
+          "sketch": "profile",
+          "axis": {
+            "origin": [
+              0,
+              0
+            ],
+            "direction": [
+              0,
+              1
+            ]
+          },
+          "angle": 360
+        }
+      ]
+    }
+  ]
+}

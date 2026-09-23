@@ -1,0 +1,112 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "bearing_housing_608",
+    "description": "608 bearing housing: 30 OD, 8 tall, 22x7 pocket from the top, 1 mm lip with 19 mm hole"
+  },
+  "parts": [
+    {
+      "id": "p_housing",
+      "name": "housing",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                9.5,
+                0.0
+              ],
+              "end": [
+                15.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "outer",
+              "start": [
+                15.0,
+                0.0
+              ],
+              "end": [
+                15.0,
+                8.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                15.0,
+                8.0
+              ],
+              "end": [
+                11.0,
+                8.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "pocket_wall",
+              "start": [
+                11.0,
+                8.0
+              ],
+              "end": [
+                11.0,
+                1.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "lip_top",
+              "start": [
+                11.0,
+                1.0
+              ],
+              "end": [
+                9.5,
+                1.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "lip_bore",
+              "start": [
+                9.5,
+                1.0
+              ],
+              "end": [
+                9.5,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_housing",
+          "name": "housing",
+          "sketch": "f_profile",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    }
+  ]
+}

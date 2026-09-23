@@ -1,0 +1,505 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "hinge_pair",
+    "description": "Print-in-place butt hinge blank: two 30 x 30 x 2.5 leaves, 7 mm knuckles (A: two outer, B: middle) with 0.3 mm gaps, 2.2 mm pin hole on Z"
+  },
+  "parts": [
+    {
+      "id": "p_leaf_a",
+      "name": "leaf_a",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_a_knuckle_low_profile",
+          "name": "a_knuckle_low_profile",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                30.0,
+                -3.5
+              ],
+              "end": [
+                0.0,
+                -3.5
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "knuckle",
+              "start": [
+                0.0,
+                -3.5
+              ],
+              "end": [
+                3.3541019662496847,
+                -1.0
+              ],
+              "center": [
+                0.0,
+                0.0
+              ],
+              "ccw": false
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                3.3541019662496847,
+                -1.0
+              ],
+              "end": [
+                30.0,
+                -1.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "edge",
+              "start": [
+                30.0,
+                -1.0
+              ],
+              "end": [
+                30.0,
+                -3.5
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "pin",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "radius": 1.1
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_a_knuckle_low",
+          "name": "a_knuckle_low",
+          "sketch": "f_a_knuckle_low_profile",
+          "distance": 10.0
+        },
+        {
+          "type": "sketch",
+          "id": "f_a_plate_mid_profile",
+          "name": "a_plate_mid_profile",
+          "plane": {
+            "origin": [
+              0.0,
+              0.0,
+              10.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "x_dir": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                3.8,
+                -3.5
+              ],
+              "end": [
+                30.0,
+                -3.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "edge",
+              "start": [
+                30.0,
+                -3.5
+              ],
+              "end": [
+                30.0,
+                -1.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                30.0,
+                -1.0
+              ],
+              "end": [
+                3.8,
+                -1.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "inner",
+              "start": [
+                3.8,
+                -1.0
+              ],
+              "end": [
+                3.8,
+                -3.5
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_a_plate_mid",
+          "name": "a_plate_mid",
+          "sketch": "f_a_plate_mid_profile",
+          "distance": 10.0
+        },
+        {
+          "type": "sketch",
+          "id": "f_a_knuckle_high_profile",
+          "name": "a_knuckle_high_profile",
+          "plane": {
+            "origin": [
+              0.0,
+              0.0,
+              20.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "x_dir": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                30.0,
+                -3.5
+              ],
+              "end": [
+                0.0,
+                -3.5
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "knuckle",
+              "start": [
+                0.0,
+                -3.5
+              ],
+              "end": [
+                3.3541019662496847,
+                -1.0
+              ],
+              "center": [
+                0.0,
+                0.0
+              ],
+              "ccw": false
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                3.3541019662496847,
+                -1.0
+              ],
+              "end": [
+                30.0,
+                -1.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "edge",
+              "start": [
+                30.0,
+                -1.0
+              ],
+              "end": [
+                30.0,
+                -3.5
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "pin",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "radius": 1.1
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_a_knuckle_high",
+          "name": "a_knuckle_high",
+          "sketch": "f_a_knuckle_high_profile",
+          "distance": 10.0
+        }
+      ]
+    },
+    {
+      "id": "p_leaf_b",
+      "name": "leaf_b",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_b_plate_low_profile",
+          "name": "b_plate_low_profile",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -30.0,
+                -3.5
+              ],
+              "end": [
+                -3.8,
+                -3.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "inner",
+              "start": [
+                -3.8,
+                -3.5
+              ],
+              "end": [
+                -3.8,
+                -1.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                -3.8,
+                -1.0
+              ],
+              "end": [
+                -30.0,
+                -1.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "edge",
+              "start": [
+                -30.0,
+                -1.0
+              ],
+              "end": [
+                -30.0,
+                -3.5
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_b_plate_low",
+          "name": "b_plate_low",
+          "sketch": "f_b_plate_low_profile",
+          "distance": 10.3
+        },
+        {
+          "type": "sketch",
+          "id": "f_b_knuckle_profile",
+          "name": "b_knuckle_profile",
+          "plane": {
+            "origin": [
+              0.0,
+              0.0,
+              10.3
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "x_dir": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -30.0,
+                -3.5
+              ],
+              "end": [
+                0.0,
+                -3.5
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "knuckle",
+              "start": [
+                0.0,
+                -3.5
+              ],
+              "end": [
+                -3.3541019662496847,
+                -1.0
+              ],
+              "center": [
+                0.0,
+                0.0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                -3.3541019662496847,
+                -1.0
+              ],
+              "end": [
+                -30.0,
+                -1.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "edge",
+              "start": [
+                -30.0,
+                -1.0
+              ],
+              "end": [
+                -30.0,
+                -3.5
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "pin",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "radius": 1.1
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_b_knuckle",
+          "name": "b_knuckle",
+          "sketch": "f_b_knuckle_profile",
+          "distance": 9.4
+        },
+        {
+          "type": "sketch",
+          "id": "f_b_plate_high_profile",
+          "name": "b_plate_high_profile",
+          "plane": {
+            "origin": [
+              0.0,
+              0.0,
+              19.7
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "x_dir": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -30.0,
+                -3.5
+              ],
+              "end": [
+                -3.8,
+                -3.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "inner",
+              "start": [
+                -3.8,
+                -3.5
+              ],
+              "end": [
+                -3.8,
+                -1.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                -3.8,
+                -1.0
+              ],
+              "end": [
+                -30.0,
+                -1.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "edge",
+              "start": [
+                -30.0,
+                -1.0
+              ],
+              "end": [
+                -30.0,
+                -3.5
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_b_plate_high",
+          "name": "b_plate_high",
+          "sketch": "f_b_plate_high_profile",
+          "distance": 10.3
+        }
+      ]
+    }
+  ]
+}

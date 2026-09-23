@@ -1,0 +1,194 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "slotted_shim",
+    "description": "Motor mount shim: 40x20x1 with two 5.5x12 slots 20 mm apart"
+  },
+  "parts": [
+    {
+      "id": "p_shim",
+      "name": "shim",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -20.0,
+                -10.0
+              ],
+              "end": [
+                20.0,
+                -10.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                20.0,
+                -10.0
+              ],
+              "end": [
+                20.0,
+                10.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                20.0,
+                10.0
+              ],
+              "end": [
+                -20.0,
+                10.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -20.0,
+                10.0
+              ],
+              "end": [
+                -20.0,
+                -10.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "a_low",
+              "start": [
+                -13.25,
+                -2.75
+              ],
+              "end": [
+                -6.75,
+                -2.75
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "a_end_r",
+              "start": [
+                -6.75,
+                -2.75
+              ],
+              "end": [
+                -6.75,
+                2.75
+              ],
+              "center": [
+                -6.75,
+                0.0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "a_up",
+              "start": [
+                -6.75,
+                2.75
+              ],
+              "end": [
+                -13.25,
+                2.75
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "a_end_l",
+              "start": [
+                -13.25,
+                2.75
+              ],
+              "end": [
+                -13.25,
+                -2.75
+              ],
+              "center": [
+                -13.25,
+                0.0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "b_low",
+              "start": [
+                6.75,
+                -2.75
+              ],
+              "end": [
+                13.25,
+                -2.75
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "b_end_r",
+              "start": [
+                13.25,
+                -2.75
+              ],
+              "end": [
+                13.25,
+                2.75
+              ],
+              "center": [
+                13.25,
+                0.0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "b_up",
+              "start": [
+                13.25,
+                2.75
+              ],
+              "end": [
+                6.75,
+                2.75
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "b_end_l",
+              "start": [
+                6.75,
+                2.75
+              ],
+              "end": [
+                6.75,
+                -2.75
+              ],
+              "center": [
+                6.75,
+                0.0
+              ],
+              "ccw": true
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_shim",
+          "name": "shim",
+          "sketch": "f_outline",
+          "distance": 1.0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,165 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "cable_clip",
+    "description": "Stick-on C clip for a 6 mm cable: 1.5 mm wall, 4 mm opening, 20x2 foot, 8 mm wide"
+  },
+  "parts": [
+    {
+      "id": "p_clip",
+      "name": "clip",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "foot_bottom",
+              "start": [
+                -10,
+                -6
+              ],
+              "end": [
+                10,
+                -6
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "foot_right",
+              "start": [
+                10,
+                -6
+              ],
+              "end": [
+                10,
+                -4
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "foot_top_r",
+              "start": [
+                10,
+                -4
+              ],
+              "end": [
+                2.0615528128088303,
+                -4
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "outer_r",
+              "start": [
+                2.0615528128088303,
+                -4
+              ],
+              "end": [
+                3,
+                3.3541019662496847
+              ],
+              "center": [
+                0,
+                0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "lip_r",
+              "start": [
+                3,
+                3.3541019662496847
+              ],
+              "end": [
+                2,
+                2.23606797749979
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "seat",
+              "start": [
+                2,
+                2.23606797749979
+              ],
+              "end": [
+                -2,
+                2.23606797749979
+              ],
+              "center": [
+                0,
+                0
+              ],
+              "ccw": false
+            },
+            {
+              "kind": "line",
+              "id": "lip_l",
+              "start": [
+                -2,
+                2.23606797749979
+              ],
+              "end": [
+                -3,
+                3.3541019662496847
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "outer_l",
+              "start": [
+                -3,
+                3.3541019662496847
+              ],
+              "end": [
+                -2.0615528128088303,
+                -4
+              ],
+              "center": [
+                0,
+                0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "foot_top_l",
+              "start": [
+                -2.0615528128088303,
+                -4
+              ],
+              "end": [
+                -10,
+                -4
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "foot_left",
+              "start": [
+                -10,
+                -4
+              ],
+              "end": [
+                -10,
+                -6
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_clip",
+          "name": "clip",
+          "sketch": "profile",
+          "distance": 8
+        }
+      ]
+    }
+  ]
+}

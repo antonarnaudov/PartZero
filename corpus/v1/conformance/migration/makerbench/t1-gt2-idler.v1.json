@@ -1,0 +1,136 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "gt2_idler",
+    "description": "Flanged GT2 idler for a 608 bearing: 22 bore, 26 belt diameter, 7 mm belt width, 32 mm flanges"
+  },
+  "parts": [
+    {
+      "id": "p_idler",
+      "name": "idler",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                11.0,
+                0.0
+              ],
+              "end": [
+                16.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "flange1_rim",
+              "start": [
+                16.0,
+                0.0
+              ],
+              "end": [
+                16.0,
+                1.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "flange1_top",
+              "start": [
+                16.0,
+                1.0
+              ],
+              "end": [
+                13.0,
+                1.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "belt_seat",
+              "start": [
+                13.0,
+                1.0
+              ],
+              "end": [
+                13.0,
+                8.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "flange2_bottom",
+              "start": [
+                13.0,
+                8.0
+              ],
+              "end": [
+                16.0,
+                8.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "flange2_rim",
+              "start": [
+                16.0,
+                8.0
+              ],
+              "end": [
+                16.0,
+                9.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                16.0,
+                9.0
+              ],
+              "end": [
+                11.0,
+                9.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "bore",
+              "start": [
+                11.0,
+                9.0
+              ],
+              "end": [
+                11.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_idler",
+          "name": "idler",
+          "sketch": "f_profile",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    }
+  ]
+}

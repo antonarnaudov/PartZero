@@ -1,0 +1,112 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "succulent_pot",
+    "description": "Assumed defaults: tapered pot 65 → 80 mm dia, 70 tall, 2.5 mm walls, 3 mm floor with a 10 mm drainage hole"
+  },
+  "parts": [
+    {
+      "id": "p_pot",
+      "name": "pot",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                5.0,
+                0.0
+              ],
+              "end": [
+                32.5,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "outer",
+              "start": [
+                32.5,
+                0.0
+              ],
+              "end": [
+                40.0,
+                70.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "rim",
+              "start": [
+                40.0,
+                70.0
+              ],
+              "end": [
+                37.5,
+                70.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "inner",
+              "start": [
+                37.5,
+                70.0
+              ],
+              "end": [
+                30.32142857142857,
+                3.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "floor_top",
+              "start": [
+                30.32142857142857,
+                3.0
+              ],
+              "end": [
+                5.0,
+                3.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "drain",
+              "start": [
+                5.0,
+                3.0
+              ],
+              "end": [
+                5.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_pot",
+          "name": "pot",
+          "sketch": "f_profile",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    }
+  ]
+}

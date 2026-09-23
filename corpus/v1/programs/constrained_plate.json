@@ -1,0 +1,168 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "constrained_plate",
+    "description": "SPEC-v1 §4.6: a fully constrained rectangle whose dimensions are bound to parameters"
+  },
+  "params": [
+    {
+      "name": "width",
+      "unit": "mm",
+      "value": 80.0
+    },
+    {
+      "name": "depth",
+      "unit": "mm",
+      "value": 50.0
+    }
+  ],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "plate",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "base",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -40.0,
+                -25.0
+              ],
+              "end": [
+                40.0,
+                -25.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                40.0,
+                -25.0
+              ],
+              "end": [
+                40.0,
+                25.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                40.0,
+                25.0
+              ],
+              "end": [
+                -40.0,
+                25.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -40.0,
+                25.0
+              ],
+              "end": [
+                -40.0,
+                -25.0
+              ]
+            },
+            {
+              "kind": "point",
+              "id": "o",
+              "at": [
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "diag",
+              "start": [
+                -40.0,
+                -25.0
+              ],
+              "end": [
+                40.0,
+                25.0
+              ],
+              "construction": true
+            }
+          ],
+          "constraints": [
+            {
+              "type": "horizontal",
+              "id": "h1",
+              "line": "bottom"
+            },
+            {
+              "type": "horizontal",
+              "id": "h2",
+              "line": "top"
+            },
+            {
+              "type": "vertical",
+              "id": "v1",
+              "line": "left"
+            },
+            {
+              "type": "vertical",
+              "id": "v2",
+              "line": "right"
+            },
+            {
+              "type": "distance",
+              "id": "w",
+              "a": "bottom.start",
+              "b": "bottom.end",
+              "value": "width"
+            },
+            {
+              "type": "distance",
+              "id": "d",
+              "a": "left.start",
+              "b": "left.end",
+              "value": "depth"
+            },
+            {
+              "type": "midpoint",
+              "id": "mid",
+              "point": "o",
+              "line": "diag"
+            },
+            {
+              "type": "fix",
+              "id": "pin",
+              "entity": "o"
+            },
+            {
+              "type": "distance",
+              "id": "ref_diag",
+              "a": "diag.start",
+              "b": "diag.end",
+              "driving": false
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "slab",
+          "sketch": "s1",
+          "regions": [
+            "bottom"
+          ],
+          "distance": 6.0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,519 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "shell_box",
+    "description": "SPEC-v1 §3.3, §3.4, §6.3, §6.4, §6.8, §6.9, §6.10 examples: shell, draft, slot vents, hex standoff, boolean, revolve cut, datums, body patterns"
+  },
+  "params": [
+    {
+      "name": "w",
+      "unit": "mm",
+      "value": 60.0
+    },
+    {
+      "name": "d",
+      "unit": "mm",
+      "value": 40.0
+    },
+    {
+      "name": "h",
+      "unit": "mm",
+      "value": 30.0
+    },
+    {
+      "name": "wall",
+      "unit": "mm",
+      "value": 2.0,
+      "min": 0.8
+    },
+    {
+      "name": "tapered",
+      "unit": "bool",
+      "value": true
+    },
+    {
+      "name": "vents",
+      "unit": "count",
+      "value": 3.0
+    },
+    {
+      "name": "tilt",
+      "unit": "deg",
+      "value": 30.0
+    }
+  ],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "box",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "base",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "outline",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "w": "w",
+              "h": "d",
+              "r": 3.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "body1",
+          "sketch": "s1",
+          "distance": "h"
+        },
+        {
+          "type": "shell",
+          "id": "sh1",
+          "name": "hollow",
+          "body": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          },
+          "open": {
+            "kind": "face",
+            "q": {
+              "op": "cap",
+              "feature": "e1",
+              "end": "end"
+            }
+          },
+          "thickness": "wall"
+        },
+        {
+          "type": "draft",
+          "id": "dr1",
+          "name": "taper",
+          "suppressed": "!tapered",
+          "faces": {
+            "kind": "face",
+            "q": {
+              "op": "sides",
+              "feature": "e1"
+            }
+          },
+          "neutral": "XY",
+          "angle": 1.5
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "ventSk",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "slot",
+              "id": "vent",
+              "a": [
+                -10.0,
+                20.0
+              ],
+              "b": [
+                10.0,
+                20.0
+              ],
+              "w": 3.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e3",
+          "name": "vent",
+          "sketch": "s2",
+          "distance": 100.0,
+          "direction": "symmetric",
+          "op": "cut",
+          "targets": "all"
+        },
+        {
+          "type": "pattern",
+          "id": "pt1",
+          "name": "ventRow",
+          "seed": {
+            "features": [
+              "e3"
+            ]
+          },
+          "layout": {
+            "linear": {
+              "dir": "Z",
+              "count": "vents",
+              "spacing": -5.0
+            }
+          }
+        },
+        {
+          "type": "datum_plane",
+          "id": "dp1",
+          "name": "lidPlane",
+          "mode": "offset",
+          "from": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "end"
+              }
+            }
+          },
+          "distance": 5.0
+        },
+        {
+          "type": "sketch",
+          "id": "s3",
+          "name": "hexSk",
+          "plane": {
+            "datum": "dp1"
+          },
+          "curves": [
+            {
+              "kind": "polygon",
+              "id": "hex",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "n": 6.0,
+              "across_flats": 5.5
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e4",
+          "name": "standoff",
+          "sketch": "s3",
+          "distance": 10.0
+        },
+        {
+          "type": "boolean",
+          "id": "b1",
+          "name": "merged",
+          "op": "join",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          },
+          "tools": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e4"
+            }
+          }
+        },
+        {
+          "type": "sketch",
+          "id": "s4",
+          "name": "grooveSk",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "prof",
+              "corner": [
+                10.0,
+                0.0
+              ],
+              "w": 2.0,
+              "h": 1.0
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "r1",
+          "name": "groove",
+          "sketch": "s4",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0,
+          "op": "cut",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          }
+        },
+        {
+          "type": "datum_plane",
+          "id": "dp2",
+          "name": "tiltedPlane",
+          "mode": "angle",
+          "from": "XY",
+          "axis": "X",
+          "angle": "tilt"
+        },
+        {
+          "type": "datum_plane",
+          "id": "dp3",
+          "name": "slant",
+          "mode": "through",
+          "points": [
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              10.0,
+              0.0,
+              0.0
+            ],
+            {
+              "vertex": {
+                "kind": "vertex",
+                "q": {
+                  "op": "extreme",
+                  "of": {
+                    "op": "vertices",
+                    "of": {
+                      "op": "edge_at",
+                      "feature": "e1",
+                      "curve": "outline.left",
+                      "end": "end"
+                    }
+                  },
+                  "dir": "+Z",
+                  "which": "max"
+                },
+                "card": 1
+              }
+            }
+          ]
+        },
+        {
+          "type": "datum_plane",
+          "id": "dp4",
+          "name": "frame1",
+          "mode": "frame",
+          "origin": [
+            0.0,
+            0.0,
+            "h"
+          ],
+          "normal": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "x_dir": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "type": "datum_axis",
+          "id": "ax2",
+          "name": "hinge",
+          "mode": "planes",
+          "a": "XZ",
+          "b": {
+            "datum": "dp2"
+          }
+        },
+        {
+          "type": "datum_axis",
+          "id": "ax3",
+          "name": "diag",
+          "mode": "points",
+          "points": [
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              1.0,
+              1.0
+            ]
+          ],
+          "flip": true
+        },
+        {
+          "type": "datum_axis",
+          "id": "ax4",
+          "name": "edgeAxis",
+          "mode": "edge",
+          "edge": {
+            "kind": "edge",
+            "q": {
+              "op": "edge_at",
+              "feature": "e1",
+              "curve": "outline.bottom",
+              "end": "end"
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "tg",
+          "name": "rim",
+          "target": {
+            "kind": "edge",
+            "q": {
+              "op": "filter",
+              "of": {
+                "op": "edges",
+                "of": {
+                  "op": "cap",
+                  "feature": "e1",
+                  "end": "end"
+                }
+              },
+              "where": {
+                "convex": true
+              }
+            }
+          }
+        },
+        {
+          "type": "fillet",
+          "id": "f1",
+          "name": "rimRound",
+          "edges": {
+            "kind": "edge",
+            "q": {
+              "op": "tagged",
+              "feature": "tg"
+            }
+          },
+          "r": 0.5,
+          "tangent_chain": false
+        },
+        {
+          "type": "chamfer",
+          "id": "c1",
+          "name": "bottomChamfer",
+          "edges": {
+            "kind": "edge",
+            "q": {
+              "op": "edges",
+              "of": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "start"
+              }
+            }
+          },
+          "d": 1.0,
+          "angle": 30.0,
+          "side": {
+            "kind": "face",
+            "q": {
+              "op": "cap",
+              "feature": "e1",
+              "end": "start"
+            }
+          }
+        },
+        {
+          "type": "pattern",
+          "id": "pt4",
+          "name": "copies",
+          "seed": {
+            "bodies": {
+              "kind": "body",
+              "q": {
+                "op": "body",
+                "feature": "e4"
+              }
+            }
+          },
+          "layout": {
+            "circular": {
+              "axis": {
+                "line": {
+                  "origin": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  "direction": [
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "flip": true
+              },
+              "count": 4.0
+            }
+          },
+          "skip": [
+            [
+              2
+            ]
+          ]
+        },
+        {
+          "type": "pattern",
+          "id": "pt5",
+          "name": "grid",
+          "seed": {
+            "bodies": {
+              "kind": "body",
+              "q": {
+                "op": "body",
+                "feature": "e4"
+              }
+            }
+          },
+          "layout": {
+            "linear": {
+              "dir": [
+                1.0,
+                0.0,
+                0.0
+              ],
+              "count": 2.0,
+              "spacing": 15.0,
+              "dir2": "Y",
+              "count2": 2.0,
+              "spacing2": 15.0
+            }
+          },
+          "op": "join",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

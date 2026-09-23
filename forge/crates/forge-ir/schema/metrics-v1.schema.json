@@ -1,0 +1,2800 @@
+{
+  "$defs": {
+    "AxisLine": {
+      "additionalProperties": false,
+      "description": "An explicit line in model coordinates.",
+      "properties": {
+        "direction": {
+          "description": "Direction (ratio components); non-zero, normalised by the engine.",
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "origin": {
+          "description": "Length components.",
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        }
+      },
+      "required": [
+        "origin",
+        "direction"
+      ],
+      "type": "object"
+    },
+    "AxisObject": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EdgeAxis"
+        },
+        {
+          "$ref": "#/$defs/CylinderAxis"
+        },
+        {
+          "$ref": "#/$defs/DatumAxisRef"
+        },
+        {
+          "$ref": "#/$defs/LineAxis"
+        }
+      ],
+      "description": "The object forms of an AxisRef; each may carry `flip`."
+    },
+    "BlendReport": {
+      "additionalProperties": false,
+      "description": "Fillet and chamfer summary (§6.6, §6.7).",
+      "properties": {
+        "chain_added": {
+          "description": "Keys added by tangent-chain expansion (not part of the reference).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "edges": {
+          "description": "Keys of the blended edges (the reference's members, then `chain_added`).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "faces_created": {
+          "description": "Keys of the blend and corner faces created.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "edges",
+        "faces_created"
+      ],
+      "type": "object"
+    },
+    "BodyChange": {
+      "enum": [
+        "created",
+        "modified"
+      ],
+      "type": "string"
+    },
+    "BodyReport": {
+      "additionalProperties": false,
+      "description": "Body metrics: v0 §5 plus `origin`, `change` and `shells`.",
+      "properties": {
+        "area": {
+          "description": "mm², exact geometry.",
+          "format": "double",
+          "type": "number"
+        },
+        "bbox_max": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "bbox_min": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "centroid": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "change": {
+          "$ref": "#/$defs/BodyChange",
+          "description": "Feature entries only (absent in `parts[].bodies`)."
+        },
+        "edge_types": {
+          "additionalProperties": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "edges": {
+          "description": "Excluding seam edges.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "face_types": {
+          "additionalProperties": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "faces": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "origin": {
+          "$ref": "#/$defs/Origin"
+        },
+        "shells": {
+          "description": "Closed shells (2 for a body with an internal void).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "valid": {
+          "description": "The engine's own validity check.",
+          "type": "boolean"
+        },
+        "volume": {
+          "description": "mm³, exact geometry.",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "origin",
+        "volume",
+        "area",
+        "centroid",
+        "bbox_min",
+        "bbox_max",
+        "faces",
+        "edges",
+        "shells",
+        "face_types",
+        "edge_types",
+        "valid"
+      ],
+      "type": "object"
+    },
+    "BoolScalar": {
+      "anyOf": [
+        {
+          "description": "A literal.",
+          "type": "boolean"
+        },
+        {
+          "description": "An expression of type Bool, e.g. `\"!with_lid\"`.",
+          "type": "string"
+        }
+      ],
+      "description": "A boolean field that accepts expressions (SPEC-v1 §2.2, [W0-3]): a JSON boolean, or an\nexpression string of type Bool."
+    },
+    "Candidate": {
+      "additionalProperties": false,
+      "description": "A candidate for an unresolved member.",
+      "properties": {
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "key": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "probe": {
+          "$ref": "#/$defs/Probe"
+        },
+        "query": {
+          "$ref": "#/$defs/Query",
+          "description": "A synthesised query that selects exactly this candidate (SHOULD)."
+        },
+        "reason": {
+          "$ref": "#/$defs/CandidateReason"
+        }
+      },
+      "required": [
+        "key",
+        "name",
+        "confidence",
+        "reason",
+        "probe"
+      ],
+      "type": "object"
+    },
+    "CandidateReason": {
+      "description": "Why a candidate is offered (§5.7 step 4).",
+      "oneOf": [
+        {
+          "const": "identical",
+          "description": "Geometry-identical (confidence `IDENTICAL_MATCH_CONFIDENCE`).",
+          "type": "string"
+        },
+        {
+          "const": "split-piece",
+          "description": "A piece of a split target.",
+          "type": "string"
+        },
+        {
+          "const": "plausible",
+          "description": "Best fingerprint score ≥ `MIN_PLAUSIBLE`.",
+          "type": "string"
+        },
+        {
+          "const": "tie",
+          "description": "Within `TIE_MARGIN` of the best.",
+          "type": "string"
+        }
+      ]
+    },
+    "Capture": {
+      "additionalProperties": false,
+      "description": "Snapshot of a reference's resolution (§5.6): one entry per member of the resolved set, in\ncanonical order. Canonical JSON, part of the feature's cache key, never shown in CadScript.",
+      "properties": {
+        "members": {
+          "items": {
+            "$ref": "#/$defs/CaptureMember"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "members"
+      ],
+      "type": "object"
+    },
+    "CaptureMember": {
+      "additionalProperties": false,
+      "description": "One captured member.",
+      "properties": {
+        "faces": {
+          "description": "Edge members: the keys of the two adjacent faces (naming recommendation 5), sorted.",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "geom": {
+          "$ref": "#/$defs/Fingerprint"
+        },
+        "key": {
+          "description": "Provenance key (§5.2), never containing `#index`.",
+          "type": "string"
+        },
+        "via": {
+          "$ref": "#/$defs/Via"
+        }
+      },
+      "required": [
+        "key",
+        "via",
+        "geom"
+      ],
+      "type": "object"
+    },
+    "CardWord": {
+      "description": "The named cardinalities.",
+      "oneOf": [
+        {
+          "const": "one",
+          "description": "Exactly 1 (0 → `REF_MISSING`, ≥ 2 → `REF_AMBIGUOUS` / `REF_SPLIT`).",
+          "type": "string"
+        },
+        {
+          "const": "some",
+          "description": "At least 1 (0 → `REF_MISSING`).",
+          "type": "string"
+        },
+        {
+          "const": "any",
+          "description": "Any number, including 0.",
+          "type": "string"
+        }
+      ]
+    },
+    "Cardinality": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CardWord"
+        },
+        {
+          "format": "uint32",
+          "minimum": 1,
+          "type": "integer"
+        }
+      ],
+      "description": "Declared cardinality (§5.5): `one`, `some`, `any`, or an exact count `n ≥ 1`."
+    },
+    "Carrier": {
+      "description": "The exact carrier of a captured entity; axis directions are sign-canonical (§3.2), plane\nnormals outward. Angles in degrees ([W0-7]).",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "plane": {
+              "additionalProperties": false,
+              "properties": {
+                "normal": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "offset": {
+                  "format": "double",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "normal",
+                "offset"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "plane"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "cylinder": {
+              "additionalProperties": false,
+              "properties": {
+                "axis": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "point": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "radius": {
+                  "format": "double",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "axis",
+                "point",
+                "radius"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "cylinder"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "cone": {
+              "additionalProperties": false,
+              "properties": {
+                "apex": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "axis": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "half_angle": {
+                  "format": "double",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "axis",
+                "apex",
+                "half_angle"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "cone"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "sphere": {
+              "additionalProperties": false,
+              "properties": {
+                "center": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "radius": {
+                  "format": "double",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "center",
+                "radius"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "sphere"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "torus": {
+              "additionalProperties": false,
+              "properties": {
+                "axis": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "center": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "major": {
+                  "format": "double",
+                  "type": "number"
+                },
+                "minor": {
+                  "format": "double",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "axis",
+                "center",
+                "major",
+                "minor"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "torus"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "line": {
+              "additionalProperties": false,
+              "properties": {
+                "direction": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "point": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "direction",
+                "point"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "line"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "circle": {
+              "additionalProperties": false,
+              "properties": {
+                "center": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "normal": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "radius": {
+                  "format": "double",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "normal",
+                "center",
+                "radius"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "circle"
+          ],
+          "type": "object"
+        },
+        {
+          "const": "free",
+          "description": "Any other carrier (B-spline, vertex, body).",
+          "type": "string"
+        }
+      ]
+    },
+    "CboreOut": {
+      "additionalProperties": false,
+      "description": "Counterbore or insert dimensions.",
+      "properties": {
+        "d": {
+          "format": "double",
+          "type": "number"
+        },
+        "depth": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "d",
+        "depth"
+      ],
+      "type": "object"
+    },
+    "CsinkOut": {
+      "additionalProperties": false,
+      "properties": {
+        "angle": {
+          "description": "Included angle, degrees.",
+          "format": "double",
+          "type": "number"
+        },
+        "d": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "d",
+        "angle"
+      ],
+      "type": "object"
+    },
+    "CylinderAxis": {
+      "additionalProperties": false,
+      "description": "`{ \"cylinder\": Ref }` (face, `one`): the axis of a cylindrical or conical face.",
+      "properties": {
+        "cylinder": {
+          "$ref": "#/$defs/Ref"
+        },
+        "flip": {
+          "$ref": "#/$defs/BoolScalar",
+          "default": false
+        }
+      },
+      "required": [
+        "cylinder"
+      ],
+      "type": "object"
+    },
+    "DatumAxisRef": {
+      "additionalProperties": false,
+      "description": "`{ \"datum\": \"<feature id>\" }`: an earlier `datum_axis` feature.",
+      "properties": {
+        "datum": {
+          "type": "string"
+        },
+        "flip": {
+          "$ref": "#/$defs/BoolScalar",
+          "default": false
+        }
+      },
+      "required": [
+        "datum"
+      ],
+      "type": "object"
+    },
+    "DatumFrame": {
+      "additionalProperties": false,
+      "properties": {
+        "normal": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "origin": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "x": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "y": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        }
+      },
+      "required": [
+        "origin",
+        "x",
+        "y",
+        "normal"
+      ],
+      "type": "object"
+    },
+    "DatumLine": {
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "origin": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        }
+      },
+      "required": [
+        "origin",
+        "direction"
+      ],
+      "type": "object"
+    },
+    "DatumReport": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DatumFrame"
+        },
+        {
+          "$ref": "#/$defs/DatumLine"
+        }
+      ],
+      "description": "An evaluated datum."
+    },
+    "DimensionReport": {
+      "additionalProperties": false,
+      "description": "A dimension's evaluated and measured values.",
+      "properties": {
+        "driving": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "measured": {
+          "description": "Measured at the solution, mm or degrees.",
+          "format": "double",
+          "type": "number"
+        },
+        "value": {
+          "description": "The evaluated `value` (driving dimensions only), mm or degrees.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "driving",
+        "measured"
+      ],
+      "type": "object"
+    },
+    "Dir": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DirName"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        {
+          "$ref": "#/$defs/AxisObject"
+        }
+      ],
+      "description": "A direction (§3.2): a named direction, a vector (ratio components), or an AxisRef object\n(its direction)."
+    },
+    "DirName": {
+      "description": "Named directions (§3.2): signed `+X` … `-Z`, and unsigned `X`, `Y`, `Z` (parallel tests\nignore the sign; where a sign is needed they mean `+`).",
+      "enum": [
+        "+X",
+        "-X",
+        "+Y",
+        "-Y",
+        "+Z",
+        "-Z",
+        "X",
+        "Y",
+        "Z"
+      ],
+      "type": "string"
+    },
+    "EdgeAxis": {
+      "additionalProperties": false,
+      "description": "`{ \"edge\": Ref }` (edge, `one`): a line edge's line or a circular edge's axis, sign-canonical.",
+      "properties": {
+        "edge": {
+          "$ref": "#/$defs/Ref"
+        },
+        "flip": {
+          "$ref": "#/$defs/BoolScalar",
+          "default": false
+        }
+      },
+      "required": [
+        "edge"
+      ],
+      "type": "object"
+    },
+    "End": {
+      "description": "`start` / `end` of a sweep or of a curve.",
+      "enum": [
+        "start",
+        "end"
+      ],
+      "type": "string"
+    },
+    "EntityKind": {
+      "description": "The kind of topological entity a reference designates.",
+      "enum": [
+        "face",
+        "edge",
+        "vertex",
+        "body"
+      ],
+      "type": "string"
+    },
+    "FeatureReport": {
+      "additionalProperties": false,
+      "description": "One feature's result.",
+      "properties": {
+        "bodies": {
+          "description": "Body features: the bodies created or modified, in canonical order (§6.0.5).",
+          "items": {
+            "$ref": "#/$defs/BodyReport"
+          },
+          "type": "array"
+        },
+        "chamfer": {
+          "$ref": "#/$defs/BlendReport"
+        },
+        "datum": {
+          "$ref": "#/$defs/DatumReport",
+          "description": "Datum features: the evaluated frame or axis."
+        },
+        "error": {
+          "$ref": "#/$defs/ReportError"
+        },
+        "feature": {
+          "description": "Feature name.",
+          "type": "string"
+        },
+        "feature_id": {
+          "type": "string"
+        },
+        "fillet": {
+          "$ref": "#/$defs/BlendReport"
+        },
+        "holes": {
+          "items": {
+            "$ref": "#/$defs/HoleReport"
+          },
+          "type": "array"
+        },
+        "part": {
+          "description": "Part name.",
+          "type": "string"
+        },
+        "pattern": {
+          "$ref": "#/$defs/PatternReport"
+        },
+        "refs": {
+          "description": "Features with Ref fields: one entry per Ref-valued field, in field order (§5.8).",
+          "items": {
+            "$ref": "#/$defs/RefReport"
+          },
+          "type": "array"
+        },
+        "regions": {
+          "description": "Sketches: the regions found, in canonical region order (v0 §4.1).",
+          "items": {
+            "$ref": "#/$defs/RegionMetrics"
+          },
+          "type": "array"
+        },
+        "removed": {
+          "description": "Body features: the origins of consumed bodies.",
+          "items": {
+            "$ref": "#/$defs/Origin"
+          },
+          "type": "array"
+        },
+        "shell": {
+          "$ref": "#/$defs/ShellReport"
+        },
+        "sketch": {
+          "$ref": "#/$defs/SketchReport",
+          "description": "Sketches: the solve block (§4.4)."
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "type": {
+          "type": "string"
+        },
+        "warnings": {
+          "default": [],
+          "description": "In the order raised.",
+          "items": {
+            "$ref": "#/$defs/Warning"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "part",
+        "feature",
+        "feature_id",
+        "type",
+        "status"
+      ],
+      "type": "object"
+    },
+    "Fingerprint": {
+      "additionalProperties": false,
+      "description": "Fingerprint fields of a captured member (§5.6). Values are exact (not tessellated).",
+      "properties": {
+        "bbox": {
+          "description": "The entity's bounding box `[min, max]`.",
+          "items": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "body_center": {
+          "description": "The owning body's bounding-box centre.",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "carrier": {
+          "$ref": "#/$defs/Carrier"
+        },
+        "centroid": {
+          "description": "World centroid (a vertex: its position).",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "local": {
+          "description": "The centroid normalised to the owning body's bounding box.",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "neighbors": {
+          "description": "Adjacent entities on the same carrier (the split signature).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "size": {
+          "description": "Area (faces), length (edges), volume (bodies), 0 (vertices).",
+          "format": "double",
+          "type": "number"
+        },
+        "type": {
+          "$ref": "#/$defs/FingerprintType"
+        }
+      },
+      "required": [
+        "type",
+        "carrier",
+        "bbox",
+        "size",
+        "centroid",
+        "local",
+        "body_center",
+        "neighbors"
+      ],
+      "type": "object"
+    },
+    "FingerprintType": {
+      "description": "The canonical type recorded in a fingerprint.",
+      "oneOf": [
+        {
+          "enum": [
+            "plane",
+            "cylinder",
+            "cone",
+            "sphere",
+            "torus",
+            "bspline",
+            "line",
+            "circle",
+            "ellipse"
+          ],
+          "type": "string"
+        },
+        {
+          "const": "other",
+          "description": "A face or edge of another type.",
+          "type": "string"
+        },
+        {
+          "const": "vertex",
+          "description": "A vertex member.",
+          "type": "string"
+        },
+        {
+          "const": "body",
+          "description": "A body member.",
+          "type": "string"
+        }
+      ]
+    },
+    "GeomTypeName": {
+      "description": "Canonical surface and curve types a `type` predicate can test (v0 §5).",
+      "oneOf": [
+        {
+          "const": "plane",
+          "description": "F.",
+          "type": "string"
+        },
+        {
+          "const": "cylinder",
+          "description": "F.",
+          "type": "string"
+        },
+        {
+          "const": "cone",
+          "description": "F.",
+          "type": "string"
+        },
+        {
+          "const": "sphere",
+          "description": "F.",
+          "type": "string"
+        },
+        {
+          "const": "torus",
+          "description": "F.",
+          "type": "string"
+        },
+        {
+          "const": "bspline",
+          "description": "F or E.",
+          "type": "string"
+        },
+        {
+          "const": "line",
+          "description": "E.",
+          "type": "string"
+        },
+        {
+          "const": "circle",
+          "description": "E.",
+          "type": "string"
+        },
+        {
+          "const": "ellipse",
+          "description": "E.",
+          "type": "string"
+        }
+      ]
+    },
+    "HoleKind": {
+      "enum": [
+        "simple",
+        "counterbore",
+        "countersink",
+        "insert"
+      ],
+      "type": "string"
+    },
+    "HolePart": {
+      "description": "The faces a hole creates at one position (§5.2 rule 3).",
+      "enum": [
+        "wall",
+        "tip",
+        "floor",
+        "cbore_wall",
+        "cbore_floor",
+        "csink"
+      ],
+      "type": "string"
+    },
+    "HoleReport": {
+      "additionalProperties": false,
+      "description": "One hole instance (§6.5), in position order.",
+      "properties": {
+        "at": {
+          "description": "Position id.",
+          "type": "string"
+        },
+        "axis": {
+          "description": "The drilling direction `d`.",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "cbore": {
+          "$ref": "#/$defs/CboreOut"
+        },
+        "center": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "csink": {
+          "$ref": "#/$defs/CsinkOut"
+        },
+        "d": {
+          "description": "Hole diameter.",
+          "format": "double",
+          "type": "number"
+        },
+        "depth": {
+          "description": "Depth to the shoulder, or `null` for a through hole.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "insert": {
+          "$ref": "#/$defs/CboreOut"
+        },
+        "kind": {
+          "$ref": "#/$defs/HoleKind"
+        },
+        "size": {
+          "$ref": "#/$defs/HoleSize"
+        },
+        "thread": {
+          "$ref": "#/$defs/ThreadOut"
+        }
+      },
+      "required": [
+        "at",
+        "center",
+        "axis",
+        "d",
+        "depth",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "HoleSize": {
+      "description": "Standard metric sizes of the `HOLE_SIZES` table (§6.5).",
+      "enum": [
+        "M2",
+        "M2.5",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M8"
+      ],
+      "type": "string"
+    },
+    "IdRename": {
+      "additionalProperties": false,
+      "description": "One id or name that migration rewrote because it does not match the v1 id grammar\n([W0-12]). `from` is the original string: untrusted data, never to be spliced into prompts.",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/RenameKind"
+        },
+        "path": {
+          "description": "JSON pointer of the rewritten field in the v1 document.",
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "kind",
+        "from",
+        "to"
+      ],
+      "type": "object"
+    },
+    "LineAxis": {
+      "additionalProperties": false,
+      "description": "`{ \"line\": { \"origin\", \"direction\" } }`: an explicit line.",
+      "properties": {
+        "flip": {
+          "$ref": "#/$defs/BoolScalar",
+          "default": false
+        },
+        "line": {
+          "$ref": "#/$defs/AxisLine"
+        }
+      },
+      "required": [
+        "line"
+      ],
+      "type": "object"
+    },
+    "LiteralCurve": {
+      "description": "A curve with literal geometry: the members of an expanded compound curve (§4.1) and the\n`solved` geometry of a sketch report (§4.4).",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "construction": {
+              "default": false,
+              "type": "boolean"
+            },
+            "end": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "line",
+              "type": "string"
+            },
+            "start": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "start",
+            "end"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ccw": {
+              "type": "boolean"
+            },
+            "center": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "construction": {
+              "default": false,
+              "type": "boolean"
+            },
+            "end": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "arc",
+              "type": "string"
+            },
+            "start": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "start",
+            "end",
+            "center",
+            "ccw"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "center": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "construction": {
+              "default": false,
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "circle",
+              "type": "string"
+            },
+            "radius": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "center",
+            "radius"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "at": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "construction": {
+              "default": false,
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "point",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "at"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "MemberStatus": {
+      "description": "A resolved member's outcome (§5.7 steps 3–4).",
+      "enum": [
+        "exact",
+        "merged",
+        "neighborhood_changed",
+        "kind_changed",
+        "split",
+        "repaired"
+      ],
+      "type": "string"
+    },
+    "MigrationReport": {
+      "additionalProperties": false,
+      "description": "What `migrate_v0_to_v1` changed beyond the schema string and sketch references.",
+      "properties": {
+        "renames": {
+          "description": "Rewritten ids and names, in document order.",
+          "items": {
+            "$ref": "#/$defs/IdRename"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "renames"
+      ],
+      "type": "object"
+    },
+    "Origin": {
+      "additionalProperties": false,
+      "description": "A body's identity (§5.2 rule 4): the feature that created it and the byte-wise smallest\ncurve id of its region's outer loop at creation; pattern copies add their instance.",
+      "properties": {
+        "feature": {
+          "type": "string"
+        },
+        "instance": {
+          "items": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "maxItems": 2,
+          "minItems": 1,
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "member": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "feature",
+        "member"
+      ],
+      "type": "object"
+    },
+    "ParamOut": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "format": "double",
+          "type": "number"
+        }
+      ],
+      "description": "An evaluated parameter value (`-0` is reported as `0`)."
+    },
+    "ParamReport": {
+      "additionalProperties": false,
+      "description": "A parameter's evaluated value or error.",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/ReportError"
+        },
+        "name": {
+          "type": "string"
+        },
+        "scope": {
+          "description": "`\"doc\"` for document parameters, else the part's name.",
+          "type": "string"
+        },
+        "unit": {
+          "$ref": "#/$defs/ParamUnit"
+        },
+        "value": {
+          "$ref": "#/$defs/ParamOut",
+          "description": "Absent when the parameter failed."
+        }
+      },
+      "required": [
+        "name",
+        "scope",
+        "unit"
+      ],
+      "type": "object"
+    },
+    "ParamUnit": {
+      "description": "Parameter units (§2.1).",
+      "oneOf": [
+        {
+          "const": "mm",
+          "description": "Length in millimetres: Real(1, 0).",
+          "type": "string"
+        },
+        {
+          "const": "deg",
+          "description": "Angle in degrees: Real(0, 1).",
+          "type": "string"
+        },
+        {
+          "const": "ratio",
+          "description": "Dimensionless real: Real(0, 0).",
+          "type": "string"
+        },
+        {
+          "const": "count",
+          "description": "Dimensionless exact integer.",
+          "type": "string"
+        },
+        {
+          "const": "bool",
+          "description": "Boolean.",
+          "type": "string"
+        }
+      ]
+    },
+    "PartReport": {
+      "additionalProperties": false,
+      "description": "The final state of one part.",
+      "properties": {
+        "bodies": {
+          "description": "In canonical order (§5.4).",
+          "items": {
+            "$ref": "#/$defs/BodyReport"
+          },
+          "type": "array"
+        },
+        "part": {
+          "description": "Part name.",
+          "type": "string"
+        },
+        "part_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "part",
+        "part_id",
+        "bodies"
+      ],
+      "type": "object"
+    },
+    "PatternReport": {
+      "additionalProperties": false,
+      "description": "Pattern summary (§6.10).",
+      "properties": {
+        "instances": {
+          "description": "Non-seed instances the layout defines, minus `skip`.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "skipped": {
+          "description": "Instances skipped with `PATTERN_INSTANCE_SKIPPED`.",
+          "items": {
+            "items": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "instances"
+      ],
+      "type": "object"
+    },
+    "Predicate": {
+      "description": "One predicate of a `filter` (§5.3); all angle tests use `QUERY_ANGLE_TOLERANCE`.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "F, E: the canonical type is `t`.",
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/GeomTypeName"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F: planar, outward normal equal to the **signed** direction.",
+          "properties": {
+            "normal": {
+              "$ref": "#/$defs/Dir"
+            }
+          },
+          "required": [
+            "normal"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E: a line parallel to the direction (either sign). F: a plane whose normal is\nperpendicular to it, or a cylinder/cone whose axis is parallel to it.",
+          "properties": {
+            "parallel": {
+              "$ref": "#/$defs/Dir"
+            }
+          },
+          "required": [
+            "parallel"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E: a line perpendicular to it, or a circle whose normal is parallel to it. F: a plane\nwhose normal is parallel to it (either sign).",
+          "properties": {
+            "perpendicular": {
+              "$ref": "#/$defs/Dir"
+            }
+          },
+          "required": [
+            "perpendicular"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E: material angle < 180° − tol. Must be `true`.",
+          "properties": {
+            "convex": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "convex"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E: material angle > 180° + tol. Must be `true`.",
+          "properties": {
+            "concave": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "concave"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E: material angle within tol of 180°. Must be `true`.",
+          "properties": {
+            "smooth": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "smooth"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F (cylinder, sphere; torus: minor radius), E (circle).",
+          "properties": {
+            "radius": {
+              "$ref": "#/$defs/RadiusBound"
+            }
+          },
+          "required": [
+            "radius"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Probe": {
+      "additionalProperties": false,
+      "description": "A probe (§7.6): locates an entity without persisting it.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/EntityKind"
+        },
+        "normal": {
+          "description": "Faces: the outward normal at `point`.",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "point": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "point"
+      ],
+      "type": "object"
+    },
+    "Query": {
+      "description": "The query AST (§5.3). Kinds: **F** faces, **E** edges, **V** vertices, **B** bodies.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "B, named: bodies whose origin feature is `feature` (with `member`: whose origin region's\nouter loop contains `member`), including every piece of a split.",
+          "properties": {
+            "feature": {
+              "type": "string"
+            },
+            "member": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "op": {
+              "const": "body",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "B, broad: every body in scope.",
+          "properties": {
+            "op": {
+              "const": "bodies",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, named: an extrude's cap faces.",
+          "properties": {
+            "end": {
+              "$ref": "#/$defs/End"
+            },
+            "feature": {
+              "type": "string"
+            },
+            "member": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "op": {
+              "const": "cap",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature",
+            "end"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, named: a revolve's end-cap faces.",
+          "properties": {
+            "end": {
+              "$ref": "#/$defs/End"
+            },
+            "feature": {
+              "type": "string"
+            },
+            "member": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "op": {
+              "const": "endcap",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature",
+            "end"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, named: faces keyed `F/side:curve` (all pieces).",
+          "properties": {
+            "curve": {
+              "type": "string"
+            },
+            "feature": {
+              "type": "string"
+            },
+            "op": {
+              "const": "side",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature",
+            "curve"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, broad: every side face of the feature.",
+          "properties": {
+            "feature": {
+              "type": "string"
+            },
+            "member": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "op": {
+              "const": "sides",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E, named: the junction edges swept from the sketch vertex at that curve end.",
+          "properties": {
+            "curve": {
+              "type": "string"
+            },
+            "end": {
+              "$ref": "#/$defs/End"
+            },
+            "feature": {
+              "type": "string"
+            },
+            "op": {
+              "const": "edge_at",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature",
+            "curve",
+            "end"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E, named if `a` and `b` are both named: edges with one adjacent face in `a` and the\nother in `b`.",
+          "properties": {
+            "a": {
+              "$ref": "#/$defs/Query"
+            },
+            "b": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "between",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, named: a face a hole created at position `at`.",
+          "properties": {
+            "at": {
+              "type": "string"
+            },
+            "feature": {
+              "type": "string"
+            },
+            "op": {
+              "const": "hole_face",
+              "type": "string"
+            },
+            "part": {
+              "$ref": "#/$defs/HolePart"
+            }
+          },
+          "required": [
+            "op",
+            "feature",
+            "at",
+            "part"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, broad: every face whose key has that feature id (and role label).",
+          "properties": {
+            "feature": {
+              "type": "string"
+            },
+            "op": {
+              "const": "created",
+              "type": "string"
+            },
+            "role": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "op",
+            "feature"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, broad: every face of that pattern instance.",
+          "properties": {
+            "feature": {
+              "type": "string"
+            },
+            "index": {
+              "items": {
+                "format": "uint32",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "maxItems": 2,
+              "minItems": 1,
+              "type": "array"
+            },
+            "op": {
+              "const": "instance",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature",
+            "index"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "The tag's kind; the tag's query re-evaluated in the current scope (§6.12).",
+          "properties": {
+            "feature": {
+              "type": "string"
+            },
+            "op": {
+              "const": "tagged",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "B → faces of the bodies; E → the two adjacent faces; V → incident faces.",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "faces",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "B → all edges; F → boundary edges; V → incident edges.",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "edges",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "B, F, E → vertices.",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "vertices",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, E, V → the bodies containing them.",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "owner",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Set union (operands of one kind).",
+          "properties": {
+            "of": {
+              "items": {
+                "$ref": "#/$defs/Query"
+              },
+              "type": "array"
+            },
+            "op": {
+              "const": "union",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Set intersection (operands of one kind).",
+          "properties": {
+            "of": {
+              "items": {
+                "$ref": "#/$defs/Query"
+              },
+              "type": "array"
+            },
+            "op": {
+              "const": "intersect",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Members of `a` not in `b`.",
+          "properties": {
+            "a": {
+              "$ref": "#/$defs/Query"
+            },
+            "b": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "minus",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Members satisfying the predicate.",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "filter",
+              "type": "string"
+            },
+            "where": {
+              "$ref": "#/$defs/Predicate"
+            }
+          },
+          "required": [
+            "op",
+            "of",
+            "where"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Members whose centroid projected on `dir` is within `LINEAR_TOLERANCE·s` of the max (min).",
+          "properties": {
+            "dir": {
+              "$ref": "#/$defs/Dir"
+            },
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "extreme",
+              "type": "string"
+            },
+            "which": {
+              "$ref": "#/$defs/Which"
+            }
+          },
+          "required": [
+            "op",
+            "of",
+            "dir",
+            "which"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Members of maximal size (area, length or volume).",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "largest",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Members of minimal size.",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "smallest",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RadiusBound": {
+      "additionalProperties": false,
+      "description": "`{ \"eq\": r }` or `{ \"min\"?: r, \"max\"?: r }` (lengths, inclusive).",
+      "properties": {
+        "eq": {
+          "$ref": "#/$defs/Scalar"
+        },
+        "max": {
+          "$ref": "#/$defs/Scalar"
+        },
+        "min": {
+          "$ref": "#/$defs/Scalar"
+        }
+      },
+      "type": "object"
+    },
+    "Ref": {
+      "additionalProperties": false,
+      "description": "A reference (§5.1): a typed query plus a declared cardinality, with an optional capture.",
+      "properties": {
+        "capture": {
+          "$ref": "#/$defs/Capture",
+          "description": "Snapshot of what the reference resolved to when it was last accepted (§5.6). Written\nonly by the command layer."
+        },
+        "card": {
+          "$ref": "#/$defs/Cardinality",
+          "description": "Declared cardinality (§5.5). Omitted means the field's default (canonical JSON omits\na `card` equal to the field's default)."
+        },
+        "kind": {
+          "$ref": "#/$defs/EntityKind",
+          "description": "Must equal the static kind of `q` and be accepted by the field (`REF_KIND_MISMATCH`)."
+        },
+        "q": {
+          "$ref": "#/$defs/Query",
+          "description": "The query: the intent of the reference."
+        }
+      },
+      "required": [
+        "kind",
+        "q"
+      ],
+      "type": "object"
+    },
+    "RefMember": {
+      "additionalProperties": false,
+      "description": "One member of a resolved reference.",
+      "properties": {
+        "key": {
+          "description": "Provenance key (never containing `#index`).",
+          "type": "string"
+        },
+        "name": {
+          "description": "Display name (feature ids replaced by names; `#k` display indices allowed here only).",
+          "type": "string"
+        },
+        "probe": {
+          "$ref": "#/$defs/Probe"
+        },
+        "status": {
+          "$ref": "#/$defs/MemberStatus"
+        },
+        "via": {
+          "$ref": "#/$defs/Via"
+        }
+      },
+      "required": [
+        "key",
+        "name",
+        "via",
+        "status",
+        "probe"
+      ],
+      "type": "object"
+    },
+    "RefReport": {
+      "additionalProperties": false,
+      "description": "The report entry of one Ref-valued field (§5.8).",
+      "properties": {
+        "added": {
+          "description": "Broad members added since the capture (`REF_SET_CHANGED`), keys.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "code": {
+          "description": "The failing code (`REF_*`, `DEPENDENCY_FAILED`) when `status` is `failed`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "field": {
+          "description": "JSON pointer of the field relative to the feature, e.g. `/edges`, `/on/face`.",
+          "type": "string"
+        },
+        "members": {
+          "description": "The resolved set, in canonical order.",
+          "items": {
+            "$ref": "#/$defs/RefMember"
+          },
+          "type": "array"
+        },
+        "proposal": {
+          "$ref": "#/$defs/Ref",
+          "description": "For `REF_REPAIRED` / `REF_SET_CHANGED`: the rewritten reference (query and fresh\ncapture) that `acceptRefProposal` applies."
+        },
+        "removed": {
+          "description": "Broad members removed since the capture, keys.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/RefStatus"
+        },
+        "unresolved": {
+          "items": {
+            "$ref": "#/$defs/Unresolved"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "field",
+        "status",
+        "members"
+      ],
+      "type": "object"
+    },
+    "RefStatus": {
+      "description": "A reference's outcome (§5.7).",
+      "oneOf": [
+        {
+          "const": "exact",
+          "description": "Exact resolution; no report entries.",
+          "type": "string"
+        },
+        {
+          "const": "accepted",
+          "description": "Used, with warnings or infos only.",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "description": "The feature fails with the reference's code.",
+          "type": "string"
+        }
+      ]
+    },
+    "RegionMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "area": {
+          "description": "Area in mm².",
+          "format": "double",
+          "type": "number"
+        },
+        "loops": {
+          "description": "Number of boundary loops (1 outer + holes).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "outer_curves": {
+          "description": "Sorted ids of the curves forming the outer loop (the region's stable name).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "area",
+        "loops",
+        "outer_curves"
+      ],
+      "type": "object"
+    },
+    "RenameKind": {
+      "description": "What kind of id or name was rewritten.",
+      "enum": [
+        "part_id",
+        "part_name",
+        "feature_id",
+        "feature_name",
+        "curve_id"
+      ],
+      "type": "string"
+    },
+    "ReportError": {
+      "additionalProperties": false,
+      "description": "A machine-readable error (§7.4): a stable code, a message for people, and structured\n`details` whose keys are listed per code in the catalogue (`ERROR_CODES` in\n`ir-v1.constants.json`). Details never contain arena ids.",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "details": {
+          "additionalProperties": true,
+          "default": {},
+          "type": "object"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "Scalar": {
+      "anyOf": [
+        {
+          "description": "A literal in the field's unit.",
+          "format": "double",
+          "type": "number"
+        },
+        {
+          "description": "An expression (SPEC-v1 §2.3), e.g. `\"width - 2 * wall\"`.",
+          "type": "string"
+        }
+      ],
+      "description": "A numeric field value (SPEC-v1 §2.2 [D-7]): a JSON **number** is a literal in the field's\nunit (mm or degrees); a JSON **string** is an expression (§2.3) in canonical form (§2.4)."
+    },
+    "Severity": {
+      "oneOf": [
+        {
+          "const": "info",
+          "description": "Expected, informational (never blocks).",
+          "type": "string"
+        },
+        {
+          "const": "warning",
+          "description": "Probably unintended but well-defined (the agent's L1 check explains it).",
+          "type": "string"
+        }
+      ]
+    },
+    "ShellReport": {
+      "additionalProperties": false,
+      "description": "Shell summary (§6.8).",
+      "properties": {
+        "closed_void": {
+          "description": "A closed shell (no open face) made an internal void.",
+          "type": "boolean"
+        },
+        "removed_faces": {
+          "description": "Keys of the opened (removed) faces.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "removed_faces"
+      ],
+      "type": "object"
+    },
+    "SketchMode": {
+      "description": "Sketch mode (§4.2).",
+      "enum": [
+        "explicit",
+        "constrained"
+      ],
+      "type": "string"
+    },
+    "SketchReport": {
+      "additionalProperties": false,
+      "description": "The sketch block (§4.4): what the regions were built from, and the solver's verdict.",
+      "properties": {
+        "dimensions": {
+          "description": "Dimension constraints, in constraint order.",
+          "items": {
+            "$ref": "#/$defs/DimensionReport"
+          },
+          "type": "array"
+        },
+        "dof": {
+          "description": "Constrained mode only: remaining degrees of freedom.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "mode": {
+          "$ref": "#/$defs/SketchMode"
+        },
+        "solved": {
+          "description": "The literal geometry the regions were built from: compound curves expanded into their\nmembers, expressions evaluated, constrained sketches solved (arcs mapped back through\nthe `ccw` rule). The oracle replays this for constrained sketches (§8.1).",
+          "items": {
+            "$ref": "#/$defs/LiteralCurve"
+          },
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SolveStatus",
+          "description": "Constrained mode only."
+        }
+      },
+      "required": [
+        "mode",
+        "solved"
+      ],
+      "type": "object"
+    },
+    "SolveStatus": {
+      "description": "forge-solve's overall status (`SolveStatus`), same spelling.",
+      "enum": [
+        "under_constrained",
+        "fully_constrained",
+        "over_constrained_redundant",
+        "conflict",
+        "failed_to_converge"
+      ],
+      "type": "string"
+    },
+    "Status": {
+      "enum": [
+        "ok",
+        "error"
+      ],
+      "type": "string"
+    },
+    "ThreadOut": {
+      "additionalProperties": false,
+      "description": "A cosmetic thread (no geometry).",
+      "properties": {
+        "depth": {
+          "description": "Thread depth, or `null` for the full (through) depth.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pitch": {
+          "format": "double",
+          "type": "number"
+        },
+        "size": {
+          "$ref": "#/$defs/HoleSize"
+        }
+      },
+      "required": [
+        "pitch",
+        "depth"
+      ],
+      "type": "object"
+    },
+    "Unresolved": {
+      "additionalProperties": false,
+      "description": "A named member that did not resolve, with up to `MAX_CANDIDATES` candidates, best first.",
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/Candidate"
+          },
+          "type": "array"
+        },
+        "key": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/UnresolvedReason"
+        }
+      },
+      "required": [
+        "key",
+        "name",
+        "reason",
+        "candidates"
+      ],
+      "type": "object"
+    },
+    "UnresolvedReason": {
+      "description": "Why a named member did not resolve (§5.8).",
+      "enum": [
+        "name-not-found",
+        "faces-no-longer-meet",
+        "split",
+        "split-piece",
+        "tie",
+        "no-plausible-match",
+        "feature-suppressed"
+      ],
+      "type": "string"
+    },
+    "Via": {
+      "description": "Whether a member came from a named source or a broad one (§5.3).",
+      "enum": [
+        "named",
+        "broad"
+      ],
+      "type": "string"
+    },
+    "Warning": {
+      "additionalProperties": false,
+      "description": "A warning or info (§7.3).",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "details": {
+          "additionalProperties": true,
+          "default": {},
+          "type": "object"
+        },
+        "message": {
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "message"
+      ],
+      "type": "object"
+    },
+    "Which": {
+      "description": "`max` / `min` of an `extreme` pick.",
+      "enum": [
+        "max",
+        "min"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The whole report.",
+  "properties": {
+    "document": {
+      "description": "Document name (`meta.name`, or the file stem).",
+      "type": "string"
+    },
+    "engine": {
+      "description": "Engine identifier, e.g. `forge 0.1.0` or `occt 7.8.1 (build123d 0.9)`.",
+      "type": "string"
+    },
+    "error": {
+      "$ref": "#/$defs/ReportError",
+      "description": "Set when the document was rejected (CLI exit 2): the first rejection, with every\nrejection in `details.errors` (`[{ code, path, message, details }]`)."
+    },
+    "features": {
+      "description": "One entry per non-suppressed feature, in timeline order over all parts.",
+      "items": {
+        "$ref": "#/$defs/FeatureReport"
+      },
+      "type": "array"
+    },
+    "migration": {
+      "$ref": "#/$defs/MigrationReport",
+      "description": "Present when the input was an `aicad.ir/0` document whose migration rewrote ids or\nnames ([W0-12]): region `outer_curves`, feature names and ids in this report use the new\nvalues; `renames[].from` is untrusted data."
+    },
+    "params": {
+      "default": [],
+      "description": "Every parameter (document ones first, then per part, in declaration order).",
+      "items": {
+        "$ref": "#/$defs/ParamReport"
+      },
+      "type": "array"
+    },
+    "parts": {
+      "default": [],
+      "description": "The final bodies of each part (§6.0.5), in part order.",
+      "items": {
+        "$ref": "#/$defs/PartReport"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "description": "Must equal [`super::METRICS_SCHEMA`].",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/Status",
+      "description": "`ok` iff every parameter and every feature is ok (warnings never change it)."
+    }
+  },
+  "required": [
+    "schema",
+    "engine",
+    "document",
+    "status",
+    "features"
+  ],
+  "title": "EvalReport",
+  "type": "object"
+}

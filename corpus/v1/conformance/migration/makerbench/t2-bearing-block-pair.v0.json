@@ -1,0 +1,355 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "bearing_block_pair",
+    "description": "Two 608 bearing blocks for an 8 mm shaft along Y at Z = 25, 100 mm apart: 60x20x5 feet with 2x M5, 40x8 rounded uprights with 22.1 seats"
+  },
+  "parts": [
+    {
+      "id": "p_block_a",
+      "name": "block_a",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_foot_a_outline",
+          "name": "foot_a_outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -30,
+                -10
+              ],
+              "end": [
+                30,
+                -10
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                30,
+                -10
+              ],
+              "end": [
+                30,
+                10
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                30,
+                10
+              ],
+              "end": [
+                -30,
+                10
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -30,
+                10
+              ],
+              "end": [
+                -30,
+                -10
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "m5_l",
+              "center": [
+                -22,
+                0
+              ],
+              "radius": 2.75
+            },
+            {
+              "kind": "circle",
+              "id": "m5_r",
+              "center": [
+                22,
+                0
+              ],
+              "radius": 2.75
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_foot_a",
+          "name": "foot_a",
+          "sketch": "foot_a_outline",
+          "distance": 5
+        },
+        {
+          "type": "sketch",
+          "id": "f_upright_a_outline",
+          "name": "upright_a_outline",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "u_bottom",
+              "start": [
+                -20,
+                5
+              ],
+              "end": [
+                20,
+                5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "u_right",
+              "start": [
+                20,
+                5
+              ],
+              "end": [
+                20,
+                25
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "u_top",
+              "start": [
+                20,
+                25
+              ],
+              "end": [
+                -20,
+                25
+              ],
+              "center": [
+                0,
+                25
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "u_left",
+              "start": [
+                -20,
+                25
+              ],
+              "end": [
+                -20,
+                5
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "seat",
+              "center": [
+                0,
+                25
+              ],
+              "radius": 11.05
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_upright_a",
+          "name": "upright_a",
+          "sketch": "upright_a_outline",
+          "distance": 8,
+          "direction": "symmetric"
+        }
+      ]
+    },
+    {
+      "id": "p_block_b",
+      "name": "block_b",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_foot_b_outline",
+          "name": "foot_b_outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "b_bottom",
+              "start": [
+                -30,
+                90
+              ],
+              "end": [
+                30,
+                90
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "b_right",
+              "start": [
+                30,
+                90
+              ],
+              "end": [
+                30,
+                110
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "b_top",
+              "start": [
+                30,
+                110
+              ],
+              "end": [
+                -30,
+                110
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "b_left",
+              "start": [
+                -30,
+                110
+              ],
+              "end": [
+                -30,
+                90
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "b_m5_l",
+              "center": [
+                -22,
+                100
+              ],
+              "radius": 2.75
+            },
+            {
+              "kind": "circle",
+              "id": "b_m5_r",
+              "center": [
+                22,
+                100
+              ],
+              "radius": 2.75
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_foot_b",
+          "name": "foot_b",
+          "sketch": "foot_b_outline",
+          "distance": 5
+        },
+        {
+          "type": "sketch",
+          "id": "f_upright_b_outline",
+          "name": "upright_b_outline",
+          "plane": {
+            "origin": [
+              0,
+              100,
+              0
+            ],
+            "normal": [
+              0,
+              -1,
+              0
+            ],
+            "x_dir": [
+              1,
+              0,
+              0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "b_u_bottom",
+              "start": [
+                -20,
+                5
+              ],
+              "end": [
+                20,
+                5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "b_u_right",
+              "start": [
+                20,
+                5
+              ],
+              "end": [
+                20,
+                25
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "b_u_top",
+              "start": [
+                20,
+                25
+              ],
+              "end": [
+                -20,
+                25
+              ],
+              "center": [
+                0,
+                25
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "b_u_left",
+              "start": [
+                -20,
+                25
+              ],
+              "end": [
+                -20,
+                5
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "b_seat",
+              "center": [
+                0,
+                25
+              ],
+              "radius": 11.05
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_upright_b",
+          "name": "upright_b",
+          "sketch": "upright_b_outline",
+          "distance": 8,
+          "direction": "symmetric"
+        }
+      ]
+    }
+  ]
+}

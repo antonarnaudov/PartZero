@@ -1,0 +1,186 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "corner_bracket_right",
+    "description": "Right-hand L corner bracket (mirror of the left-hand one about YZ), 4 mm: 60 mm foot, 50 mm leg, R8 corner, M4 hole, 15 mm slot"
+  },
+  "parts": [
+    {
+      "id": "p_bracket",
+      "name": "bracket",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "arc",
+              "id": "corner",
+              "start": [
+                0.0,
+                8.0
+              ],
+              "end": [
+                -8.0,
+                0.0
+              ],
+              "center": [
+                -8.0,
+                8.0
+              ],
+              "ccw": false
+            },
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -8.0,
+                0.0
+              ],
+              "end": [
+                -60.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "foot_end",
+              "start": [
+                -60.0,
+                0.0
+              ],
+              "end": [
+                -60.0,
+                15.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "foot_top",
+              "start": [
+                -60.0,
+                15.0
+              ],
+              "end": [
+                -15.0,
+                15.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "leg_inner",
+              "start": [
+                -15.0,
+                15.0
+              ],
+              "end": [
+                -15.0,
+                50.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "leg_top",
+              "start": [
+                -15.0,
+                50.0
+              ],
+              "end": [
+                0.0,
+                50.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "leg_outer",
+              "start": [
+                0.0,
+                50.0
+              ],
+              "end": [
+                0.0,
+                8.0
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "m4",
+              "center": [
+                -50.0,
+                7.5
+              ],
+              "radius": 2.25
+            },
+            {
+              "kind": "line",
+              "id": "slot_right",
+              "start": [
+                -9.75,
+                25.0
+              ],
+              "end": [
+                -9.75,
+                40.0
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "slot_top",
+              "start": [
+                -9.75,
+                40.0
+              ],
+              "end": [
+                -5.25,
+                40.0
+              ],
+              "center": [
+                -7.5,
+                40.0
+              ],
+              "ccw": false
+            },
+            {
+              "kind": "line",
+              "id": "slot_left",
+              "start": [
+                -5.25,
+                40.0
+              ],
+              "end": [
+                -5.25,
+                25.0
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "slot_bottom",
+              "start": [
+                -5.25,
+                25.0
+              ],
+              "end": [
+                -9.75,
+                25.0
+              ],
+              "center": [
+                -7.5,
+                25.0
+              ],
+              "ccw": false
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_bracket",
+          "name": "bracket",
+          "sketch": "f_outline",
+          "distance": 4.0
+        }
+      ]
+    }
+  ]
+}

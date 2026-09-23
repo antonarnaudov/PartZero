@@ -1,0 +1,199 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "spool_holder",
+    "description": "Spool holder: 60x60x5 base with 4x M4 holes on 50 mm square, 30x80 spindle with 2 mm top chamfer"
+  },
+  "parts": [
+    {
+      "id": "p_holder",
+      "name": "holder",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_base_outline",
+          "name": "base_outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -30.0,
+                -30.0
+              ],
+              "end": [
+                30.0,
+                -30.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                30.0,
+                -30.0
+              ],
+              "end": [
+                30.0,
+                30.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                30.0,
+                30.0
+              ],
+              "end": [
+                -30.0,
+                30.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -30.0,
+                30.0
+              ],
+              "end": [
+                -30.0,
+                -30.0
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "m4_a",
+              "center": [
+                25.0,
+                25.0
+              ],
+              "radius": 2.25
+            },
+            {
+              "kind": "circle",
+              "id": "m4_b",
+              "center": [
+                -25.0,
+                25.0
+              ],
+              "radius": 2.25
+            },
+            {
+              "kind": "circle",
+              "id": "m4_c",
+              "center": [
+                -25.0,
+                -25.0
+              ],
+              "radius": 2.25
+            },
+            {
+              "kind": "circle",
+              "id": "m4_d",
+              "center": [
+                25.0,
+                -25.0
+              ],
+              "radius": 2.25
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_base",
+          "name": "base",
+          "sketch": "f_base_outline",
+          "distance": 5.0
+        },
+        {
+          "type": "sketch",
+          "id": "f_spindle_profile",
+          "name": "spindle_profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "foot",
+              "start": [
+                0.0,
+                5.0
+              ],
+              "end": [
+                15.0,
+                5.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "side",
+              "start": [
+                15.0,
+                5.0
+              ],
+              "end": [
+                15.0,
+                83.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "chamfer",
+              "start": [
+                15.0,
+                83.0
+              ],
+              "end": [
+                13.0,
+                85.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                13.0,
+                85.0
+              ],
+              "end": [
+                0.0,
+                85.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "axis_edge",
+              "start": [
+                0.0,
+                85.0
+              ],
+              "end": [
+                0.0,
+                5.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_spindle",
+          "name": "spindle",
+          "sketch": "f_spindle_profile",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    }
+  ]
+}

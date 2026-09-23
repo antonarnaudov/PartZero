@@ -1,0 +1,141 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "screw_size_gauge",
+    "description": "Laser-cut 3 mm acrylic screw gauge: 120x25 strip, M2–M8 clearance holes 15 mm apart on the centre line"
+  },
+  "parts": [
+    {
+      "id": "p_gauge",
+      "name": "gauge",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_strip",
+          "name": "strip",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                0,
+                0
+              ],
+              "end": [
+                120,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                120,
+                0
+              ],
+              "end": [
+                120,
+                25
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                120,
+                25
+              ],
+              "end": [
+                0,
+                25
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                0,
+                25
+              ],
+              "end": [
+                0,
+                0
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "m2",
+              "center": [
+                12,
+                12.5
+              ],
+              "radius": 1.2
+            },
+            {
+              "kind": "circle",
+              "id": "m2_5",
+              "center": [
+                27,
+                12.5
+              ],
+              "radius": 1.45
+            },
+            {
+              "kind": "circle",
+              "id": "m3",
+              "center": [
+                42,
+                12.5
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m4",
+              "center": [
+                57,
+                12.5
+              ],
+              "radius": 2.25
+            },
+            {
+              "kind": "circle",
+              "id": "m5",
+              "center": [
+                72,
+                12.5
+              ],
+              "radius": 2.75
+            },
+            {
+              "kind": "circle",
+              "id": "m6",
+              "center": [
+                87,
+                12.5
+              ],
+              "radius": 3.3
+            },
+            {
+              "kind": "circle",
+              "id": "m8",
+              "center": [
+                102,
+                12.5
+              ],
+              "radius": 4.5
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_gauge",
+          "name": "gauge",
+          "sketch": "strip",
+          "distance": 3
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "vacuum_hose_adapter",
+    "description": "Shop-vac adapter: 32.4 ID sleeve over a 32 mm port, 10 mm taper, 35 OD spigot into the hose cuff; 2 mm walls"
+  },
+  "parts": [
+    {
+      "id": "p_adapter",
+      "name": "adapter",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "port_end",
+              "start": [
+                16.2,
+                0.0
+              ],
+              "end": [
+                18.2,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "sleeve_outer",
+              "start": [
+                18.2,
+                0.0
+              ],
+              "end": [
+                18.2,
+                30.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "taper_outer",
+              "start": [
+                18.2,
+                30.0
+              ],
+              "end": [
+                17.5,
+                40.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "spigot_outer",
+              "start": [
+                17.5,
+                40.0
+              ],
+              "end": [
+                17.5,
+                70.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "hose_end",
+              "start": [
+                17.5,
+                70.0
+              ],
+              "end": [
+                15.5,
+                70.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "spigot_inner",
+              "start": [
+                15.5,
+                70.0
+              ],
+              "end": [
+                15.5,
+                40.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "taper_inner",
+              "start": [
+                15.5,
+                40.0
+              ],
+              "end": [
+                16.2,
+                30.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "sleeve_inner",
+              "start": [
+                16.2,
+                30.0
+              ],
+              "end": [
+                16.2,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_adapter",
+          "name": "adapter",
+          "sketch": "f_profile",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    }
+  ]
+}

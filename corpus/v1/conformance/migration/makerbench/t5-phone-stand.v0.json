@@ -1,0 +1,138 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "phone_stand",
+    "description": "Assumed defaults: one-piece side profile (90 deep, 66 tall) extruded 75 mm, 12 mm phone slot"
+  },
+  "parts": [
+    {
+      "id": "p_stand",
+      "name": "stand",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "base_bottom",
+              "start": [
+                0,
+                0
+              ],
+              "end": [
+                90,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "base_back",
+              "start": [
+                90,
+                0
+              ],
+              "end": [
+                90,
+                6
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "back_slope",
+              "start": [
+                90,
+                6
+              ],
+              "end": [
+                52,
+                66
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "rest_top",
+              "start": [
+                52,
+                66
+              ],
+              "end": [
+                44,
+                66
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "rest_face",
+              "start": [
+                44,
+                66
+              ],
+              "end": [
+                18,
+                6
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "slot_floor",
+              "start": [
+                18,
+                6
+              ],
+              "end": [
+                6,
+                6
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "lip_inner",
+              "start": [
+                6,
+                6
+              ],
+              "end": [
+                6,
+                16
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "lip_top",
+              "start": [
+                6,
+                16
+              ],
+              "end": [
+                0,
+                16
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "front",
+              "start": [
+                0,
+                16
+              ],
+              "end": [
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_stand",
+          "name": "stand",
+          "sketch": "profile",
+          "distance": 75
+        }
+      ]
+    }
+  ]
+}

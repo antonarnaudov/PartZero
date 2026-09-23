@@ -1,0 +1,2517 @@
+{
+ "description": "Static query typing (SPEC-v1 \u00a75.3\u2013\u00a75.5). Each case is appended to `context` as the last feature, `{ \"type\": \"tag\", \"id\": \"tq\", \"name\": \"tq\", \"target\": { \"kind\": <kind>, \"q\": <q> } }`. `expect` cases must validate with no error and have that static kind; `errors` cases must produce exactly those {code, path} (paths relative to the tag's `target` Ref; order not significant) and no other error.",
+ "context": {
+  "schema": "aicad.ir/1",
+  "meta": {
+   "name": "query_typing_context"
+  },
+  "parts": [
+   {
+    "id": "p1",
+    "name": "part",
+    "features": [
+     {
+      "type": "sketch",
+      "id": "s1",
+      "name": "base",
+      "plane": "XY",
+      "curves": [
+       {
+        "kind": "rect",
+        "id": "outline",
+        "center": [
+         0,
+         0
+        ],
+        "w": 40,
+        "h": 20
+       },
+       {
+        "kind": "circle",
+        "id": "ring",
+        "center": [
+         0,
+         0
+        ],
+        "radius": 3
+       },
+       {
+        "kind": "point",
+        "id": "p",
+        "at": [
+         5,
+         5
+        ]
+       },
+       {
+        "kind": "line",
+        "id": "cl",
+        "start": [
+         -1,
+         0
+        ],
+        "end": [
+         1,
+         0
+        ],
+        "construction": true
+       }
+      ]
+     },
+     {
+      "type": "extrude",
+      "id": "e1",
+      "name": "slab",
+      "sketch": "s1",
+      "distance": 5
+     },
+     {
+      "type": "sketch",
+      "id": "s2",
+      "name": "prof",
+      "plane": "XZ",
+      "curves": [
+       {
+        "kind": "line",
+        "id": "a",
+        "start": [
+         0,
+         0
+        ],
+        "end": [
+         4,
+         0
+        ]
+       },
+       {
+        "kind": "line",
+        "id": "b",
+        "start": [
+         4,
+         0
+        ],
+        "end": [
+         0,
+         6
+        ]
+       },
+       {
+        "kind": "line",
+        "id": "c",
+        "start": [
+         0,
+         6
+        ],
+        "end": [
+         0,
+         0
+        ]
+       }
+      ]
+     },
+     {
+      "type": "revolve",
+      "id": "r1",
+      "name": "cone",
+      "sketch": "s2",
+      "axis": {
+       "origin": [
+        0,
+        0
+       ],
+       "direction": [
+        0,
+        1
+       ]
+      },
+      "angle": 180
+     },
+     {
+      "type": "hole",
+      "id": "h1",
+      "name": "bore",
+      "on": {
+       "face": {
+        "kind": "face",
+        "q": {
+         "op": "cap",
+         "feature": "e1",
+         "end": "end"
+        }
+       }
+      },
+      "at": {
+       "list": [
+        {
+         "id": "m",
+         "at": [
+          10,
+          0
+         ]
+        }
+       ]
+      },
+      "d": 3,
+      "depth": "through"
+     },
+     {
+      "type": "pattern",
+      "id": "pt1",
+      "name": "row",
+      "seed": {
+       "features": [
+        "h1"
+       ]
+      },
+      "layout": {
+       "linear": {
+        "dir": "X",
+        "count": 2,
+        "spacing": 5
+       }
+      }
+     },
+     {
+      "type": "tag",
+      "id": "t1",
+      "name": "sideEdges",
+      "target": {
+       "kind": "edge",
+       "q": {
+        "op": "edges",
+        "of": {
+         "op": "sides",
+         "feature": "e1"
+        }
+       }
+      }
+     },
+     {
+      "type": "datum_plane",
+      "id": "dp1",
+      "name": "above",
+      "mode": "offset",
+      "from": "XY",
+      "distance": 3
+     }
+    ]
+   }
+  ]
+ },
+ "cases": [
+  {
+   "id": "body",
+   "kind": "body",
+   "q": {
+    "op": "body",
+    "feature": "e1"
+   },
+   "expect": "body"
+  },
+  {
+   "id": "body-member",
+   "kind": "body",
+   "q": {
+    "op": "body",
+    "feature": "e1",
+    "member": "outline.bottom"
+   },
+   "expect": "body"
+  },
+  {
+   "id": "body-of-revolve",
+   "kind": "body",
+   "q": {
+    "op": "body",
+    "feature": "r1"
+   },
+   "expect": "body"
+  },
+  {
+   "id": "body-of-pattern",
+   "kind": "body",
+   "q": {
+    "op": "body",
+    "feature": "pt1"
+   },
+   "expect": "body"
+  },
+  {
+   "id": "bodies",
+   "kind": "body",
+   "q": {
+    "op": "bodies"
+   },
+   "expect": "body"
+  },
+  {
+   "id": "cap",
+   "kind": "face",
+   "q": {
+    "op": "cap",
+    "feature": "e1",
+    "end": "end"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "cap-member",
+   "kind": "face",
+   "q": {
+    "op": "cap",
+    "feature": "e1",
+    "end": "start",
+    "member": "ring"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "endcap",
+   "kind": "face",
+   "q": {
+    "op": "endcap",
+    "feature": "r1",
+    "end": "start"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "endcap-member",
+   "kind": "face",
+   "q": {
+    "op": "endcap",
+    "feature": "r1",
+    "end": "end",
+    "member": "a"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "side-rect-member",
+   "kind": "face",
+   "q": {
+    "op": "side",
+    "feature": "e1",
+    "curve": "outline.top"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "side-circle",
+   "kind": "face",
+   "q": {
+    "op": "side",
+    "feature": "e1",
+    "curve": "ring"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "side-revolve",
+   "kind": "face",
+   "q": {
+    "op": "side",
+    "feature": "r1",
+    "curve": "b"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "sides",
+   "kind": "face",
+   "q": {
+    "op": "sides",
+    "feature": "e1"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "sides-member",
+   "kind": "face",
+   "q": {
+    "op": "sides",
+    "feature": "e1",
+    "member": "ring"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "sides-revolve",
+   "kind": "face",
+   "q": {
+    "op": "sides",
+    "feature": "r1"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "edge-at",
+   "kind": "edge",
+   "q": {
+    "op": "edge_at",
+    "feature": "e1",
+    "curve": "outline.bottom",
+    "end": "end"
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "edge-at-revolve",
+   "kind": "edge",
+   "q": {
+    "op": "edge_at",
+    "feature": "r1",
+    "curve": "a",
+    "end": "start"
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "between",
+   "kind": "edge",
+   "q": {
+    "op": "between",
+    "a": {
+     "op": "side",
+     "feature": "e1",
+     "curve": "ring"
+    },
+    "b": {
+     "op": "cap",
+     "feature": "e1",
+     "end": "end"
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "between-broad",
+   "kind": "edge",
+   "q": {
+    "op": "between",
+    "a": {
+     "op": "sides",
+     "feature": "e1"
+    },
+    "b": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "hole-face",
+   "kind": "face",
+   "q": {
+    "op": "hole_face",
+    "feature": "h1",
+    "at": "m",
+    "part": "wall"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "hole-face-unknown-position",
+   "kind": "face",
+   "q": {
+    "op": "hole_face",
+    "feature": "h1",
+    "at": "gone",
+    "part": "csink"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "created-hole",
+   "kind": "face",
+   "q": {
+    "op": "created",
+    "feature": "h1"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "created-role",
+   "kind": "face",
+   "q": {
+    "op": "created",
+    "feature": "e1",
+    "role": "side"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "created-pattern",
+   "kind": "face",
+   "q": {
+    "op": "created",
+    "feature": "pt1"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "instance",
+   "kind": "face",
+   "q": {
+    "op": "instance",
+    "feature": "pt1",
+    "index": [
+     1
+    ]
+   },
+   "expect": "face"
+  },
+  {
+   "id": "instance-2d",
+   "kind": "face",
+   "q": {
+    "op": "instance",
+    "feature": "pt1",
+    "index": [
+     1,
+     0
+    ]
+   },
+   "expect": "face"
+  },
+  {
+   "id": "tagged",
+   "kind": "edge",
+   "q": {
+    "op": "tagged",
+    "feature": "t1"
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "faces-of-body",
+   "kind": "face",
+   "q": {
+    "op": "faces",
+    "of": {
+     "op": "body",
+     "feature": "e1"
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "faces-of-edges",
+   "kind": "face",
+   "q": {
+    "op": "faces",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "faces-of-vertices",
+   "kind": "face",
+   "q": {
+    "op": "faces",
+    "of": {
+     "op": "vertices",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "edges-of-body",
+   "kind": "edge",
+   "q": {
+    "op": "edges",
+    "of": {
+     "op": "body",
+     "feature": "e1"
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "edges-of-face",
+   "kind": "edge",
+   "q": {
+    "op": "edges",
+    "of": {
+     "op": "cap",
+     "feature": "e1",
+     "end": "end"
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "edges-of-vertices",
+   "kind": "edge",
+   "q": {
+    "op": "edges",
+    "of": {
+     "op": "vertices",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "vertices-of-body",
+   "kind": "vertex",
+   "q": {
+    "op": "vertices",
+    "of": {
+     "op": "body",
+     "feature": "e1"
+    }
+   },
+   "expect": "vertex"
+  },
+  {
+   "id": "vertices-of-face",
+   "kind": "vertex",
+   "q": {
+    "op": "vertices",
+    "of": {
+     "op": "cap",
+     "feature": "e1",
+     "end": "end"
+    }
+   },
+   "expect": "vertex"
+  },
+  {
+   "id": "vertices-of-edge",
+   "kind": "vertex",
+   "q": {
+    "op": "vertices",
+    "of": {
+     "op": "tagged",
+     "feature": "t1"
+    }
+   },
+   "expect": "vertex"
+  },
+  {
+   "id": "owner-of-face",
+   "kind": "body",
+   "q": {
+    "op": "owner",
+    "of": {
+     "op": "cap",
+     "feature": "e1",
+     "end": "end"
+    }
+   },
+   "expect": "body"
+  },
+  {
+   "id": "owner-of-edge",
+   "kind": "body",
+   "q": {
+    "op": "owner",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "expect": "body"
+  },
+  {
+   "id": "owner-of-vertex",
+   "kind": "body",
+   "q": {
+    "op": "owner",
+    "of": {
+     "op": "vertices",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "expect": "body"
+  },
+  {
+   "id": "union",
+   "kind": "face",
+   "q": {
+    "op": "union",
+    "of": [
+     {
+      "op": "cap",
+      "feature": "e1",
+      "end": "end"
+     },
+     {
+      "op": "sides",
+      "feature": "e1"
+     }
+    ]
+   },
+   "expect": "face"
+  },
+  {
+   "id": "union-single",
+   "kind": "edge",
+   "q": {
+    "op": "union",
+    "of": [
+     {
+      "op": "edges",
+      "of": {
+       "op": "body",
+       "feature": "e1"
+      }
+     }
+    ]
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "intersect",
+   "kind": "edge",
+   "q": {
+    "op": "intersect",
+    "of": [
+     {
+      "op": "edges",
+      "of": {
+       "op": "body",
+       "feature": "e1"
+      }
+     },
+     {
+      "op": "edges",
+      "of": {
+       "op": "cap",
+       "feature": "e1",
+       "end": "end"
+      }
+     }
+    ]
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "minus",
+   "kind": "body",
+   "q": {
+    "op": "minus",
+    "a": {
+     "op": "bodies"
+    },
+    "b": {
+     "op": "body",
+     "feature": "e1"
+    }
+   },
+   "expect": "body"
+  },
+  {
+   "id": "type-plane",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "type": "plane"
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "type-cylinder",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "type": "cylinder"
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "type-cone",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "type": "cone"
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "type-sphere",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "type": "sphere"
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "type-torus",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "type": "torus"
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "type-bspline-face",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "type": "bspline"
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "type-line",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "type": "line"
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "type-circle",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "type": "circle"
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "type-ellipse",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "type": "ellipse"
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "type-bspline-edge",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "type": "bspline"
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "normal-signed",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "normal": "+Z"
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "normal-vector",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "normal": [
+      0,
+      0.6,
+      0.8
+     ]
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "normal-unsigned",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "normal": "Y"
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "parallel-edges",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "parallel": "Z"
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "parallel-faces",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "parallel": [
+      1,
+      0,
+      0
+     ]
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "parallel-axis-object",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "parallel": {
+      "edge": {
+       "kind": "edge",
+       "q": {
+        "op": "edge_at",
+        "feature": "e1",
+        "curve": "outline.left",
+        "end": "start"
+       }
+      }
+     }
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "perpendicular-edges",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "perpendicular": "-X"
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "perpendicular-faces",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "perpendicular": "Z"
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "convex",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "convex": true
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "concave",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "concave": true
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "smooth",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "smooth": true
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "radius-eq-face",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "radius": {
+      "eq": 3
+     }
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "radius-range-edge",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "radius": {
+      "min": 1,
+      "max": 4
+     }
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "radius-min-only",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "radius": {
+      "min": 1
+     }
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "radius-expression",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "radius": {
+      "eq": "3 mm"
+     }
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "extreme-vertices",
+   "kind": "vertex",
+   "q": {
+    "op": "extreme",
+    "of": {
+     "op": "vertices",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "dir": "-X",
+    "which": "max"
+   },
+   "expect": "vertex"
+  },
+  {
+   "id": "extreme-faces-vector",
+   "kind": "face",
+   "q": {
+    "op": "extreme",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "dir": [
+     0,
+     0,
+     1
+    ],
+    "which": "min"
+   },
+   "expect": "face"
+  },
+  {
+   "id": "extreme-bodies-axis",
+   "kind": "body",
+   "q": {
+    "op": "extreme",
+    "of": {
+     "op": "bodies"
+    },
+    "dir": {
+     "line": {
+      "origin": [
+       0,
+       0,
+       0
+      ],
+      "direction": [
+       1,
+       1,
+       0
+      ]
+     }
+    },
+    "which": "max"
+   },
+   "expect": "body"
+  },
+  {
+   "id": "extreme-datum-axis-dir",
+   "kind": "edge",
+   "q": {
+    "op": "extreme",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "dir": {
+     "cylinder": {
+      "kind": "face",
+      "q": {
+       "op": "side",
+       "feature": "e1",
+       "curve": "ring"
+      }
+     },
+     "flip": true
+    },
+    "which": "max"
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "largest-faces",
+   "kind": "face",
+   "q": {
+    "op": "largest",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "largest-edges",
+   "kind": "edge",
+   "q": {
+    "op": "largest",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "largest-bodies",
+   "kind": "body",
+   "q": {
+    "op": "largest",
+    "of": {
+     "op": "bodies"
+    }
+   },
+   "expect": "body"
+  },
+  {
+   "id": "smallest-faces",
+   "kind": "face",
+   "q": {
+    "op": "smallest",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "expect": "face"
+  },
+  {
+   "id": "nested-chain",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "extreme",
+      "of": {
+       "op": "filter",
+       "of": {
+        "op": "faces",
+        "of": {
+         "op": "body",
+         "feature": "e1"
+        }
+       },
+       "where": {
+        "type": "plane"
+       }
+      },
+      "dir": "+Z",
+      "which": "max"
+     }
+    },
+    "where": {
+     "parallel": "Z"
+    }
+   },
+   "expect": "edge"
+  },
+  {
+   "id": "between-of-edges",
+   "kind": "edge",
+   "q": {
+    "op": "between",
+    "a": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "b": {
+     "op": "cap",
+     "feature": "e1",
+     "end": "end"
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/a"
+    }
+   ]
+  },
+  {
+   "id": "between-of-bodies",
+   "kind": "edge",
+   "q": {
+    "op": "between",
+    "a": {
+     "op": "cap",
+     "feature": "e1",
+     "end": "end"
+    },
+    "b": {
+     "op": "body",
+     "feature": "e1"
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/b"
+    }
+   ]
+  },
+  {
+   "id": "faces-of-faces",
+   "kind": "face",
+   "q": {
+    "op": "faces",
+    "of": {
+     "op": "cap",
+     "feature": "e1",
+     "end": "end"
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/of"
+    }
+   ]
+  },
+  {
+   "id": "edges-of-edges",
+   "kind": "edge",
+   "q": {
+    "op": "edges",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/of"
+    }
+   ]
+  },
+  {
+   "id": "vertices-of-vertices",
+   "kind": "vertex",
+   "q": {
+    "op": "vertices",
+    "of": {
+     "op": "vertices",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/of"
+    }
+   ]
+  },
+  {
+   "id": "owner-of-body",
+   "kind": "body",
+   "q": {
+    "op": "owner",
+    "of": {
+     "op": "body",
+     "feature": "e1"
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/of"
+    }
+   ]
+  },
+  {
+   "id": "union-mixed",
+   "kind": "face",
+   "q": {
+    "op": "union",
+    "of": [
+     {
+      "op": "cap",
+      "feature": "e1",
+      "end": "end"
+     },
+     {
+      "op": "edges",
+      "of": {
+       "op": "body",
+       "feature": "e1"
+      }
+     }
+    ]
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/of/1"
+    }
+   ]
+  },
+  {
+   "id": "union-empty",
+   "kind": "face",
+   "q": {
+    "op": "union",
+    "of": []
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/of"
+    }
+   ]
+  },
+  {
+   "id": "intersect-mixed",
+   "kind": "edge",
+   "q": {
+    "op": "intersect",
+    "of": [
+     {
+      "op": "edges",
+      "of": {
+       "op": "body",
+       "feature": "e1"
+      }
+     },
+     {
+      "op": "vertices",
+      "of": {
+       "op": "body",
+       "feature": "e1"
+      }
+     }
+    ]
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/of/1"
+    }
+   ]
+  },
+  {
+   "id": "minus-mixed",
+   "kind": "face",
+   "q": {
+    "op": "minus",
+    "a": {
+     "op": "cap",
+     "feature": "e1",
+     "end": "end"
+    },
+    "b": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/b"
+    }
+   ]
+  },
+  {
+   "id": "normal-on-edges",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "normal": "+Z"
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/where"
+    }
+   ]
+  },
+  {
+   "id": "type-line-on-faces",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "type": "line"
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/where"
+    }
+   ]
+  },
+  {
+   "id": "type-plane-on-edges",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "type": "plane"
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/where"
+    }
+   ]
+  },
+  {
+   "id": "type-on-bodies",
+   "kind": "body",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "bodies"
+    },
+    "where": {
+     "type": "plane"
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/where"
+    }
+   ]
+  },
+  {
+   "id": "convex-on-faces",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "convex": true
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/where"
+    }
+   ]
+  },
+  {
+   "id": "convex-false",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "convex": false
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/where/convex"
+    }
+   ]
+  },
+  {
+   "id": "smooth-on-vertices",
+   "kind": "vertex",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "vertices",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "smooth": true
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/where"
+    }
+   ]
+  },
+  {
+   "id": "radius-on-vertices",
+   "kind": "vertex",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "vertices",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "radius": {
+      "eq": 1
+     }
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/where"
+    }
+   ]
+  },
+  {
+   "id": "radius-eq-and-min",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "radius": {
+      "eq": 1,
+      "min": 0.5
+     }
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/where/radius"
+    }
+   ]
+  },
+  {
+   "id": "radius-empty",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "radius": {}
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/where/radius"
+    }
+   ]
+  },
+  {
+   "id": "radius-negative",
+   "kind": "face",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "radius": {
+      "min": -1
+     }
+    }
+   },
+   "errors": [
+    {
+     "code": "INVALID_VALUE",
+     "path": "/q/where/radius/min"
+    }
+   ]
+  },
+  {
+   "id": "parallel-on-vertices",
+   "kind": "vertex",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "vertices",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "parallel": "X"
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/where"
+    }
+   ]
+  },
+  {
+   "id": "perpendicular-on-bodies",
+   "kind": "body",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "bodies"
+    },
+    "where": {
+     "perpendicular": "X"
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/where"
+    }
+   ]
+  },
+  {
+   "id": "largest-of-vertices",
+   "kind": "vertex",
+   "q": {
+    "op": "largest",
+    "of": {
+     "op": "vertices",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/of"
+    }
+   ]
+  },
+  {
+   "id": "smallest-of-vertices",
+   "kind": "vertex",
+   "q": {
+    "op": "smallest",
+    "of": {
+     "op": "vertices",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    }
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/of"
+    }
+   ]
+  },
+  {
+   "id": "cap-on-revolve",
+   "kind": "face",
+   "q": {
+    "op": "cap",
+    "feature": "r1",
+    "end": "end"
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/feature"
+    }
+   ]
+  },
+  {
+   "id": "endcap-on-extrude",
+   "kind": "face",
+   "q": {
+    "op": "endcap",
+    "feature": "e1",
+    "end": "end"
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/feature"
+    }
+   ]
+  },
+  {
+   "id": "side-on-hole",
+   "kind": "face",
+   "q": {
+    "op": "side",
+    "feature": "h1",
+    "curve": "x"
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/feature"
+    }
+   ]
+  },
+  {
+   "id": "sides-on-sketch",
+   "kind": "face",
+   "q": {
+    "op": "sides",
+    "feature": "s1"
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/feature"
+    }
+   ]
+  },
+  {
+   "id": "edge-at-on-pattern",
+   "kind": "edge",
+   "q": {
+    "op": "edge_at",
+    "feature": "pt1",
+    "curve": "a",
+    "end": "end"
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/feature"
+    }
+   ]
+  },
+  {
+   "id": "hole-face-on-extrude",
+   "kind": "face",
+   "q": {
+    "op": "hole_face",
+    "feature": "e1",
+    "at": "m",
+    "part": "wall"
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/feature"
+    }
+   ]
+  },
+  {
+   "id": "instance-on-extrude",
+   "kind": "face",
+   "q": {
+    "op": "instance",
+    "feature": "e1",
+    "index": [
+     1
+    ]
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/feature"
+    }
+   ]
+  },
+  {
+   "id": "tagged-on-extrude",
+   "kind": "edge",
+   "q": {
+    "op": "tagged",
+    "feature": "e1"
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/feature"
+    }
+   ]
+  },
+  {
+   "id": "created-on-sketch",
+   "kind": "face",
+   "q": {
+    "op": "created",
+    "feature": "s1"
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/feature"
+    }
+   ]
+  },
+  {
+   "id": "created-on-datum",
+   "kind": "face",
+   "q": {
+    "op": "created",
+    "feature": "dp1"
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/feature"
+    }
+   ]
+  },
+  {
+   "id": "body-on-hole",
+   "kind": "body",
+   "q": {
+    "op": "body",
+    "feature": "h1"
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/feature"
+    }
+   ]
+  },
+  {
+   "id": "unknown-feature",
+   "kind": "face",
+   "q": {
+    "op": "cap",
+    "feature": "nope",
+    "end": "end"
+   },
+   "errors": [
+    {
+     "code": "UNRESOLVED_FEATURE",
+     "path": "/q/feature"
+    }
+   ]
+  },
+  {
+   "id": "unknown-feature-nested",
+   "kind": "edge",
+   "q": {
+    "op": "edges",
+    "of": {
+     "op": "union",
+     "of": [
+      {
+       "op": "cap",
+       "feature": "e1",
+       "end": "end"
+      },
+      {
+       "op": "sides",
+       "feature": "e9"
+      }
+     ]
+    }
+   },
+   "errors": [
+    {
+     "code": "UNRESOLVED_FEATURE",
+     "path": "/q/of/of/1/feature"
+    }
+   ]
+  },
+  {
+   "id": "side-unknown-curve",
+   "kind": "face",
+   "q": {
+    "op": "side",
+    "feature": "e1",
+    "curve": "outline.middle"
+   },
+   "errors": [
+    {
+     "code": "QUERY_UNKNOWN_CURVE",
+     "path": "/q/curve"
+    }
+   ]
+  },
+  {
+   "id": "side-whole-compound",
+   "kind": "face",
+   "q": {
+    "op": "side",
+    "feature": "e1",
+    "curve": "outline"
+   },
+   "errors": [
+    {
+     "code": "QUERY_UNKNOWN_CURVE",
+     "path": "/q/curve"
+    }
+   ]
+  },
+  {
+   "id": "side-construction",
+   "kind": "face",
+   "q": {
+    "op": "side",
+    "feature": "e1",
+    "curve": "cl"
+   },
+   "errors": [
+    {
+     "code": "QUERY_UNKNOWN_CURVE",
+     "path": "/q/curve"
+    }
+   ]
+  },
+  {
+   "id": "side-point",
+   "kind": "face",
+   "q": {
+    "op": "side",
+    "feature": "e1",
+    "curve": "p"
+   },
+   "errors": [
+    {
+     "code": "QUERY_UNKNOWN_CURVE",
+     "path": "/q/curve"
+    }
+   ]
+  },
+  {
+   "id": "side-curve-of-other-sketch",
+   "kind": "face",
+   "q": {
+    "op": "side",
+    "feature": "e1",
+    "curve": "a"
+   },
+   "errors": [
+    {
+     "code": "QUERY_UNKNOWN_CURVE",
+     "path": "/q/curve"
+    }
+   ]
+  },
+  {
+   "id": "edge-at-circle",
+   "kind": "edge",
+   "q": {
+    "op": "edge_at",
+    "feature": "e1",
+    "curve": "ring",
+    "end": "start"
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/curve"
+    }
+   ]
+  },
+  {
+   "id": "body-unknown-member",
+   "kind": "body",
+   "q": {
+    "op": "body",
+    "feature": "e1",
+    "member": "zz"
+   },
+   "errors": [
+    {
+     "code": "QUERY_UNKNOWN_CURVE",
+     "path": "/q/member"
+    }
+   ]
+  },
+  {
+   "id": "cap-unknown-member",
+   "kind": "face",
+   "q": {
+    "op": "cap",
+    "feature": "e1",
+    "end": "end",
+    "member": "zz"
+   },
+   "errors": [
+    {
+     "code": "QUERY_UNKNOWN_CURVE",
+     "path": "/q/member"
+    }
+   ]
+  },
+  {
+   "id": "sides-unknown-member",
+   "kind": "face",
+   "q": {
+    "op": "sides",
+    "feature": "r1",
+    "member": "zz"
+   },
+   "errors": [
+    {
+     "code": "QUERY_UNKNOWN_CURVE",
+     "path": "/q/member"
+    }
+   ]
+  },
+  {
+   "id": "instance-empty-index",
+   "kind": "face",
+   "q": {
+    "op": "instance",
+    "feature": "pt1",
+    "index": []
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/index"
+    }
+   ]
+  },
+  {
+   "id": "instance-3d-index",
+   "kind": "face",
+   "q": {
+    "op": "instance",
+    "feature": "pt1",
+    "index": [
+     1,
+     0,
+     0
+    ]
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/index"
+    }
+   ]
+  },
+  {
+   "id": "extreme-zero-vector",
+   "kind": "face",
+   "q": {
+    "op": "extreme",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "dir": [
+     0,
+     0,
+     0
+    ],
+    "which": "max"
+   },
+   "errors": [
+    {
+     "code": "INVALID_VALUE",
+     "path": "/q/dir"
+    }
+   ]
+  },
+  {
+   "id": "dir-axis-wrong-kind",
+   "kind": "edge",
+   "q": {
+    "op": "extreme",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "dir": {
+     "edge": {
+      "kind": "face",
+      "q": {
+       "op": "cap",
+       "feature": "e1",
+       "end": "end"
+      }
+     }
+    },
+    "which": "max"
+   },
+   "errors": [
+    {
+     "code": "REF_KIND_MISMATCH",
+     "path": "/q/dir/edge/kind"
+    }
+   ]
+  },
+  {
+   "id": "dir-axis-card-some",
+   "kind": "edge",
+   "q": {
+    "op": "filter",
+    "of": {
+     "op": "edges",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "where": {
+     "parallel": {
+      "edge": {
+       "kind": "edge",
+       "card": "some",
+       "q": {
+        "op": "edge_at",
+        "feature": "e1",
+        "curve": "outline.left",
+        "end": "start"
+       }
+      }
+     }
+    }
+   },
+   "errors": [
+    {
+     "code": "INVALID_CARDINALITY",
+     "path": "/q/where/parallel/edge/card"
+    }
+   ]
+  },
+  {
+   "id": "dir-datum-axis-unknown",
+   "kind": "face",
+   "q": {
+    "op": "extreme",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "dir": {
+     "datum": "ax9"
+    },
+    "which": "max"
+   },
+   "errors": [
+    {
+     "code": "UNRESOLVED_FEATURE",
+     "path": "/q/dir/datum"
+    }
+   ]
+  },
+  {
+   "id": "dir-datum-is-a-plane",
+   "kind": "face",
+   "q": {
+    "op": "extreme",
+    "of": {
+     "op": "faces",
+     "of": {
+      "op": "body",
+      "feature": "e1"
+     }
+    },
+    "dir": {
+     "datum": "dp1"
+    },
+    "which": "max"
+   },
+   "errors": [
+    {
+     "code": "UNRESOLVED_FEATURE",
+     "path": "/q/dir/datum"
+    }
+   ]
+  },
+  {
+   "id": "kind-mismatch",
+   "kind": "edge",
+   "q": {
+    "op": "cap",
+    "feature": "e1",
+    "end": "end"
+   },
+   "errors": [
+    {
+     "code": "REF_KIND_MISMATCH",
+     "path": "/kind"
+    }
+   ]
+  },
+  {
+   "id": "kind-mismatch-body",
+   "kind": "face",
+   "q": {
+    "op": "body",
+    "feature": "e1"
+   },
+   "errors": [
+    {
+     "code": "REF_KIND_MISMATCH",
+     "path": "/kind"
+    }
+   ]
+  },
+  {
+   "id": "two-errors",
+   "kind": "face",
+   "q": {
+    "op": "union",
+    "of": [
+     {
+      "op": "faces",
+      "of": {
+       "op": "cap",
+       "feature": "e1",
+       "end": "end"
+      }
+     },
+     {
+      "op": "side",
+      "feature": "e1",
+      "curve": "zz"
+     }
+    ]
+   },
+   "errors": [
+    {
+     "code": "QUERY_INVALID",
+     "path": "/q/of/0/of"
+    },
+    {
+     "code": "QUERY_UNKNOWN_CURVE",
+     "path": "/q/of/1/curve"
+    }
+   ]
+  }
+ ]
+}

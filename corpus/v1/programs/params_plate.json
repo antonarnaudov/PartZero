@@ -1,0 +1,59 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "params_plate",
+    "description": "SPEC-v1 §2.10: a rounded plate driven by three parameters"
+  },
+  "params": [
+    {
+      "name": "width",
+      "unit": "mm",
+      "value": 80.0
+    },
+    {
+      "name": "depth",
+      "unit": "mm",
+      "value": 50.0
+    },
+    {
+      "name": "thick",
+      "unit": "mm",
+      "value": 8.0,
+      "min": 2.0
+    }
+  ],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "plate",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "base",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "outline",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "w": "width",
+              "h": "depth",
+              "r": 4.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "slab",
+          "sketch": "s1",
+          "distance": "thick"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,239 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "jar_with_lid",
+    "description": "50x40 jar (2 mm wall and floor) and a press-fit lid with a 45.6 mm plug ring, side by side"
+  },
+  "parts": [
+    {
+      "id": "p_jar",
+      "name": "jar",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_jar_profile",
+          "name": "jar_profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                0.0,
+                0.0
+              ],
+              "end": [
+                25.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "outer",
+              "start": [
+                25.0,
+                0.0
+              ],
+              "end": [
+                25.0,
+                40.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "rim",
+              "start": [
+                25.0,
+                40.0
+              ],
+              "end": [
+                23.0,
+                40.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "inner",
+              "start": [
+                23.0,
+                40.0
+              ],
+              "end": [
+                23.0,
+                2.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "floor",
+              "start": [
+                23.0,
+                2.0
+              ],
+              "end": [
+                0.0,
+                2.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "axis_edge",
+              "start": [
+                0.0,
+                2.0
+              ],
+              "end": [
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_jar",
+          "name": "jar",
+          "sketch": "f_jar_profile",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    },
+    {
+      "id": "p_lid",
+      "name": "lid",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_lid_profile",
+          "name": "lid_profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                60.0,
+                0.0
+              ],
+              "end": [
+                85.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "edge",
+              "start": [
+                85.0,
+                0.0
+              ],
+              "end": [
+                85.0,
+                2.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top_outer",
+              "start": [
+                85.0,
+                2.0
+              ],
+              "end": [
+                82.8,
+                2.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "plug_outer",
+              "start": [
+                82.8,
+                2.0
+              ],
+              "end": [
+                82.8,
+                7.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "plug_top",
+              "start": [
+                82.8,
+                7.0
+              ],
+              "end": [
+                81.3,
+                7.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "plug_inner",
+              "start": [
+                81.3,
+                7.0
+              ],
+              "end": [
+                81.3,
+                2.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top_inner",
+              "start": [
+                81.3,
+                2.0
+              ],
+              "end": [
+                60.0,
+                2.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "axis_edge",
+              "start": [
+                60.0,
+                2.0
+              ],
+              "end": [
+                60.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_lid",
+          "name": "lid",
+          "sketch": "f_lid_profile",
+          "axis": {
+            "origin": [
+              60.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "box_lid",
+    "description": "90x60x2 box lid with four M3 clearance holes 5 mm in from the corners"
+  },
+  "parts": [
+    {
+      "id": "p_lid",
+      "name": "lid",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                0.0,
+                0.0
+              ],
+              "end": [
+                90.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                90.0,
+                0.0
+              ],
+              "end": [
+                90.0,
+                60.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                90.0,
+                60.0
+              ],
+              "end": [
+                0.0,
+                60.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                0.0,
+                60.0
+              ],
+              "end": [
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "screw_bl",
+              "center": [
+                5.0,
+                5.0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "screw_br",
+              "center": [
+                85.0,
+                5.0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "screw_tr",
+              "center": [
+                85.0,
+                55.0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "screw_tl",
+              "center": [
+                5.0,
+                55.0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "dc_jack",
+              "center": [
+                15.0,
+                30.0
+              ],
+              "radius": 4.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_lid",
+          "name": "lid",
+          "sketch": "f_outline",
+          "distance": 2.0
+        }
+      ]
+    }
+  ]
+}

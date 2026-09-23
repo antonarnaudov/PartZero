@@ -12,6 +12,18 @@ serde.workspace = true
 serde_json.workspace = true
 schemars.workspace = true
 thiserror.workspace = true
+# IR v1 degree trigonometry (SPEC-v1 §2.7 rule 4) needs `sincos`; the same libm that
+# `forge_core::math` wraps, so results are bit-identical to the evaluator of record.
+libm.workspace = true
+
+[dev-dependencies]
+# Migration gate (SPEC-v1 §9.1): evaluate migrated documents through the v0 compatibility
+# path and compare reports. A dev-only cycle (forge-regen depends on forge-ir) is fine.
+forge-regen.workspace = true
+# Constraint vocabulary alignment test (SPEC-v1 §4.3): IR constraints must lower to
+# forge-solve's JSON model with the same `type` tags and argument names.
+forge-solve = { path = "../forge-solve" }
+proptest.workspace = true
 
 [lints]
 workspace = true

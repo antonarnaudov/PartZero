@@ -1,0 +1,150 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "esp32_devkit_plate",
+    "description": "ESP32 dev board carrier: 70x40x3, 4x M2.5 on the board's 47x23.5 pattern (centred), 4x M3 4 mm from the corners"
+  },
+  "parts": [
+    {
+      "id": "p_plate",
+      "name": "plate",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -35,
+                -20
+              ],
+              "end": [
+                35,
+                -20
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                35,
+                -20
+              ],
+              "end": [
+                35,
+                20
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                35,
+                20
+              ],
+              "end": [
+                -35,
+                20
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -35,
+                20
+              ],
+              "end": [
+                -35,
+                -20
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "board_ne",
+              "center": [
+                23.5,
+                11.75
+              ],
+              "radius": 1.35
+            },
+            {
+              "kind": "circle",
+              "id": "board_nw",
+              "center": [
+                -23.5,
+                11.75
+              ],
+              "radius": 1.35
+            },
+            {
+              "kind": "circle",
+              "id": "board_sw",
+              "center": [
+                -23.5,
+                -11.75
+              ],
+              "radius": 1.35
+            },
+            {
+              "kind": "circle",
+              "id": "board_se",
+              "center": [
+                23.5,
+                -11.75
+              ],
+              "radius": 1.35
+            },
+            {
+              "kind": "circle",
+              "id": "m3_ne",
+              "center": [
+                31,
+                16
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_nw",
+              "center": [
+                -31,
+                16
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_sw",
+              "center": [
+                -31,
+                -16
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_se",
+              "center": [
+                31,
+                -16
+              ],
+              "radius": 1.7
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_plate",
+          "name": "plate",
+          "sketch": "outline",
+          "distance": 3
+        }
+      ]
+    }
+  ]
+}

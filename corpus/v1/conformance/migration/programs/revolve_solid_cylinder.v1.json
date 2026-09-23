@@ -1,0 +1,88 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "revolve_solid_cylinder",
+    "description": "Rectangle touching the axis revolved 360 -> solid cylinder r=10 h=30"
+  },
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "base",
+              "start": [
+                0.0,
+                0.0
+              ],
+              "end": [
+                10.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "wall",
+              "start": [
+                10.0,
+                0.0
+              ],
+              "end": [
+                10.0,
+                30.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "lid",
+              "start": [
+                10.0,
+                30.0
+              ],
+              "end": [
+                0.0,
+                30.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "axis_edge",
+              "start": [
+                0.0,
+                30.0
+              ],
+              "end": [
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "r1",
+          "name": "rod",
+          "sketch": "s1",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    }
+  ]
+}

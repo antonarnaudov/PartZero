@@ -1,0 +1,607 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "stackable_tray_lid",
+    "description": "Stackable 100x60x28 parts tray (2 compartments, 3 mm stacking foot with 0.3 mm clearance) and a lid with the same locating ring"
+  },
+  "parts": [
+    {
+      "id": "p_tray",
+      "name": "tray",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_foot_ring",
+          "name": "foot_ring",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "o_bottom",
+              "start": [
+                1.9,
+                1.9
+              ],
+              "end": [
+                98.1,
+                1.9
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_right",
+              "start": [
+                98.1,
+                1.9
+              ],
+              "end": [
+                98.1,
+                58.1
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_top",
+              "start": [
+                98.1,
+                58.1
+              ],
+              "end": [
+                1.9,
+                58.1
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_left",
+              "start": [
+                1.9,
+                58.1
+              ],
+              "end": [
+                1.9,
+                1.9
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_bottom",
+              "start": [
+                3.5,
+                3.5
+              ],
+              "end": [
+                96.5,
+                3.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_right",
+              "start": [
+                96.5,
+                3.5
+              ],
+              "end": [
+                96.5,
+                56.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_top",
+              "start": [
+                96.5,
+                56.5
+              ],
+              "end": [
+                3.5,
+                56.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_left",
+              "start": [
+                3.5,
+                56.5
+              ],
+              "end": [
+                3.5,
+                3.5
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_foot",
+          "name": "foot",
+          "sketch": "foot_ring",
+          "distance": 3
+        },
+        {
+          "type": "sketch",
+          "id": "f_floor_outline",
+          "name": "floor_outline",
+          "plane": {
+            "origin": [
+              0,
+              0,
+              3
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "x_dir": [
+              1,
+              0,
+              0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                0,
+                0
+              ],
+              "end": [
+                100,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                100,
+                0
+              ],
+              "end": [
+                100,
+                60
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                100,
+                60
+              ],
+              "end": [
+                0,
+                60
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                0,
+                60
+              ],
+              "end": [
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_floor",
+          "name": "floor",
+          "sketch": "floor_outline",
+          "distance": 2
+        },
+        {
+          "type": "sketch",
+          "id": "f_wall_ring",
+          "name": "wall_ring",
+          "plane": {
+            "origin": [
+              0,
+              0,
+              5
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "x_dir": [
+              1,
+              0,
+              0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "o_bottom",
+              "start": [
+                0,
+                0
+              ],
+              "end": [
+                100,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_right",
+              "start": [
+                100,
+                0
+              ],
+              "end": [
+                100,
+                60
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_top",
+              "start": [
+                100,
+                60
+              ],
+              "end": [
+                0,
+                60
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_left",
+              "start": [
+                0,
+                60
+              ],
+              "end": [
+                0,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_bottom",
+              "start": [
+                1.6,
+                1.6
+              ],
+              "end": [
+                98.4,
+                1.6
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_right",
+              "start": [
+                98.4,
+                1.6
+              ],
+              "end": [
+                98.4,
+                58.4
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_top",
+              "start": [
+                98.4,
+                58.4
+              ],
+              "end": [
+                1.6,
+                58.4
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_left",
+              "start": [
+                1.6,
+                58.4
+              ],
+              "end": [
+                1.6,
+                1.6
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_walls",
+          "name": "walls",
+          "sketch": "wall_ring",
+          "distance": 23
+        },
+        {
+          "type": "sketch",
+          "id": "f_divider_outline",
+          "name": "divider_outline",
+          "plane": {
+            "origin": [
+              0,
+              0,
+              5
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "x_dir": [
+              1,
+              0,
+              0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "d_bottom",
+              "start": [
+                49.2,
+                1.6
+              ],
+              "end": [
+                50.8,
+                1.6
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "d_right",
+              "start": [
+                50.8,
+                1.6
+              ],
+              "end": [
+                50.8,
+                58.4
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "d_top",
+              "start": [
+                50.8,
+                58.4
+              ],
+              "end": [
+                49.2,
+                58.4
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "d_left",
+              "start": [
+                49.2,
+                58.4
+              ],
+              "end": [
+                49.2,
+                1.6
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_divider",
+          "name": "divider",
+          "sketch": "divider_outline",
+          "distance": 20
+        }
+      ]
+    },
+    {
+      "id": "p_lid",
+      "name": "lid",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_lid_outline",
+          "name": "lid_outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                110,
+                0
+              ],
+              "end": [
+                210,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                210,
+                0
+              ],
+              "end": [
+                210,
+                60
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                210,
+                60
+              ],
+              "end": [
+                110,
+                60
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                110,
+                60
+              ],
+              "end": [
+                110,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_lid_plate",
+          "name": "lid_plate",
+          "sketch": "lid_outline",
+          "distance": 2
+        },
+        {
+          "type": "sketch",
+          "id": "f_lid_ring_outline",
+          "name": "lid_ring_outline",
+          "plane": {
+            "origin": [
+              0,
+              0,
+              2
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "x_dir": [
+              1,
+              0,
+              0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "o_bottom",
+              "start": [
+                111.9,
+                1.9
+              ],
+              "end": [
+                208.1,
+                1.9
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_right",
+              "start": [
+                208.1,
+                1.9
+              ],
+              "end": [
+                208.1,
+                58.1
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_top",
+              "start": [
+                208.1,
+                58.1
+              ],
+              "end": [
+                111.9,
+                58.1
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_left",
+              "start": [
+                111.9,
+                58.1
+              ],
+              "end": [
+                111.9,
+                1.9
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_bottom",
+              "start": [
+                113.5,
+                3.5
+              ],
+              "end": [
+                206.5,
+                3.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_right",
+              "start": [
+                206.5,
+                3.5
+              ],
+              "end": [
+                206.5,
+                56.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_top",
+              "start": [
+                206.5,
+                56.5
+              ],
+              "end": [
+                113.5,
+                56.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_left",
+              "start": [
+                113.5,
+                56.5
+              ],
+              "end": [
+                113.5,
+                3.5
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_lid_ring",
+          "name": "lid_ring",
+          "sketch": "lid_ring_outline",
+          "distance": 3
+        }
+      ]
+    }
+  ]
+}

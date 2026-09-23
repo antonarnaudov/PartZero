@@ -1,0 +1,195 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "knob_skirt_set",
+    "description": "Pot knob (20 dia x 16, 1 mm chamfer, 6 mm shaft hole 12 deep) and a separate 32 mm skirt with a 20.2 hole and a V pointer notch"
+  },
+  "parts": [
+    {
+      "id": "p_knob",
+      "name": "knob",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_knob_profile",
+          "name": "knob_profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                3,
+                0
+              ],
+              "end": [
+                10,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "side",
+              "start": [
+                10,
+                0
+              ],
+              "end": [
+                10,
+                15
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "chamfer",
+              "start": [
+                10,
+                15
+              ],
+              "end": [
+                9,
+                16
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                9,
+                16
+              ],
+              "end": [
+                0,
+                16
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "axis_cap",
+              "start": [
+                0,
+                16
+              ],
+              "end": [
+                0,
+                12
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "shaft_end",
+              "start": [
+                0,
+                12
+              ],
+              "end": [
+                3,
+                12
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "shaft_hole",
+              "start": [
+                3,
+                12
+              ],
+              "end": [
+                3,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_knob",
+          "name": "knob",
+          "sketch": "knob_profile",
+          "axis": {
+            "origin": [
+              0,
+              0
+            ],
+            "direction": [
+              0,
+              1
+            ]
+          },
+          "angle": 360
+        }
+      ]
+    },
+    {
+      "id": "p_skirt",
+      "name": "skirt",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_skirt_outline",
+          "name": "skirt_outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "arc",
+              "id": "rim",
+              "start": [
+                29,
+                15.968719422671311
+              ],
+              "end": [
+                31,
+                15.968719422671311
+              ],
+              "center": [
+                30,
+                0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "notch_r",
+              "start": [
+                31,
+                15.968719422671311
+              ],
+              "end": [
+                30,
+                14
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "notch_l",
+              "start": [
+                30,
+                14
+              ],
+              "end": [
+                29,
+                15.968719422671311
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "bore",
+              "center": [
+                30,
+                0
+              ],
+              "radius": 10.1
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_skirt",
+          "name": "skirt",
+          "sketch": "skirt_outline",
+          "distance": 2
+        }
+      ]
+    }
+  ]
+}

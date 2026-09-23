@@ -1,0 +1,105 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "sensor_mount",
+    "description": "60x40x5 sensor mount: 12 mm sensor hole, two M4 clearance holes 44 mm apart"
+  },
+  "parts": [
+    {
+      "id": "p_mount",
+      "name": "mount",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -30,
+                -20
+              ],
+              "end": [
+                30,
+                -20
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                30,
+                -20
+              ],
+              "end": [
+                30,
+                20
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                30,
+                20
+              ],
+              "end": [
+                -30,
+                20
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -30,
+                20
+              ],
+              "end": [
+                -30,
+                -20
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "sensor",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 6
+            },
+            {
+              "kind": "circle",
+              "id": "m4_l",
+              "center": [
+                -22,
+                0
+              ],
+              "radius": 2.2
+            },
+            {
+              "kind": "circle",
+              "id": "m4_r",
+              "center": [
+                22,
+                0
+              ],
+              "radius": 2.2
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_plate",
+          "name": "plate",
+          "sketch": "outline",
+          "distance": 5
+        }
+      ]
+    }
+  ]
+}

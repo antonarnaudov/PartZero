@@ -1,0 +1,112 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "plant_saucer",
+    "description": "Plant saucer: 120 mm rim, 100 mm base, 15 tall, 3 mm floor, 2 mm sloped wall"
+  },
+  "parts": [
+    {
+      "id": "p_saucer",
+      "name": "saucer",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                0,
+                0
+              ],
+              "end": [
+                50,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "outer_wall",
+              "start": [
+                50,
+                0
+              ],
+              "end": [
+                60,
+                15
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "rim",
+              "start": [
+                60,
+                15
+              ],
+              "end": [
+                58,
+                15
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "inner_wall",
+              "start": [
+                58,
+                15
+              ],
+              "end": [
+                50,
+                3
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "floor",
+              "start": [
+                50,
+                3
+              ],
+              "end": [
+                0,
+                3
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "axis_edge",
+              "start": [
+                0,
+                3
+              ],
+              "end": [
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_saucer",
+          "name": "saucer",
+          "sketch": "profile",
+          "axis": {
+            "origin": [
+              0,
+              0
+            ],
+            "direction": [
+              0,
+              1
+            ]
+          },
+          "angle": 360
+        }
+      ]
+    }
+  ]
+}

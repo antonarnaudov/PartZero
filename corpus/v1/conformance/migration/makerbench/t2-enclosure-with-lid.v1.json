@@ -1,0 +1,401 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "enclosure_with_lid",
+    "description": "90x60x30 project box (2 mm floor and walls) plus a lid with a 0.2 mm clearance locating lip, side by side"
+  },
+  "parts": [
+    {
+      "id": "p_box",
+      "name": "box",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_floor_outline",
+          "name": "floor_outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                0.0,
+                0.0
+              ],
+              "end": [
+                90.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                90.0,
+                0.0
+              ],
+              "end": [
+                90.0,
+                60.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                90.0,
+                60.0
+              ],
+              "end": [
+                0.0,
+                60.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                0.0,
+                60.0
+              ],
+              "end": [
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_floor",
+          "name": "floor",
+          "sketch": "f_floor_outline",
+          "distance": 2.0
+        },
+        {
+          "type": "sketch",
+          "id": "f_wall_ring",
+          "name": "wall_ring",
+          "plane": {
+            "origin": [
+              0.0,
+              0.0,
+              2.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "x_dir": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "o_bottom",
+              "start": [
+                0.0,
+                0.0
+              ],
+              "end": [
+                90.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_right",
+              "start": [
+                90.0,
+                0.0
+              ],
+              "end": [
+                90.0,
+                60.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_top",
+              "start": [
+                90.0,
+                60.0
+              ],
+              "end": [
+                0.0,
+                60.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_left",
+              "start": [
+                0.0,
+                60.0
+              ],
+              "end": [
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_bottom",
+              "start": [
+                2.0,
+                2.0
+              ],
+              "end": [
+                88.0,
+                2.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_right",
+              "start": [
+                88.0,
+                2.0
+              ],
+              "end": [
+                88.0,
+                58.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_top",
+              "start": [
+                88.0,
+                58.0
+              ],
+              "end": [
+                2.0,
+                58.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_left",
+              "start": [
+                2.0,
+                58.0
+              ],
+              "end": [
+                2.0,
+                2.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_walls",
+          "name": "walls",
+          "sketch": "f_wall_ring",
+          "distance": 28.0
+        }
+      ]
+    },
+    {
+      "id": "p_lid",
+      "name": "lid",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_lid_outline",
+          "name": "lid_outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                100.0,
+                0.0
+              ],
+              "end": [
+                190.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                190.0,
+                0.0
+              ],
+              "end": [
+                190.0,
+                60.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                190.0,
+                60.0
+              ],
+              "end": [
+                100.0,
+                60.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                100.0,
+                60.0
+              ],
+              "end": [
+                100.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_lid_plate",
+          "name": "lid_plate",
+          "sketch": "f_lid_outline",
+          "distance": 2.0
+        },
+        {
+          "type": "sketch",
+          "id": "f_lip_ring",
+          "name": "lip_ring",
+          "plane": {
+            "origin": [
+              0.0,
+              0.0,
+              2.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "x_dir": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "o_bottom",
+              "start": [
+                102.2,
+                2.2
+              ],
+              "end": [
+                187.8,
+                2.2
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_right",
+              "start": [
+                187.8,
+                2.2
+              ],
+              "end": [
+                187.8,
+                57.8
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_top",
+              "start": [
+                187.8,
+                57.8
+              ],
+              "end": [
+                102.2,
+                57.8
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_left",
+              "start": [
+                102.2,
+                57.8
+              ],
+              "end": [
+                102.2,
+                2.2
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_bottom",
+              "start": [
+                103.4,
+                3.4
+              ],
+              "end": [
+                186.6,
+                3.4
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_right",
+              "start": [
+                186.6,
+                3.4
+              ],
+              "end": [
+                186.6,
+                56.6
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_top",
+              "start": [
+                186.6,
+                56.6
+              ],
+              "end": [
+                103.4,
+                56.6
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_left",
+              "start": [
+                103.4,
+                56.6
+              ],
+              "end": [
+                103.4,
+                3.4
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_lip",
+          "name": "lip",
+          "sketch": "f_lip_ring",
+          "distance": 4.0
+        }
+      ]
+    }
+  ]
+}

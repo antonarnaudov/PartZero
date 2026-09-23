@@ -1,0 +1,145 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "pen_holder",
+    "description": "80x40x3 base with two 30 mm cups (2 mm wall, 60 tall) standing on it"
+  },
+  "parts": [
+    {
+      "id": "p_holder",
+      "name": "holder",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_base_outline",
+          "name": "base_outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                0.0,
+                0.0
+              ],
+              "end": [
+                80.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                80.0,
+                0.0
+              ],
+              "end": [
+                80.0,
+                40.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                80.0,
+                40.0
+              ],
+              "end": [
+                0.0,
+                40.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                0.0,
+                40.0
+              ],
+              "end": [
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_base",
+          "name": "base",
+          "sketch": "f_base_outline",
+          "distance": 3.0
+        },
+        {
+          "type": "sketch",
+          "id": "f_cup_rings",
+          "name": "cup_rings",
+          "plane": {
+            "origin": [
+              0.0,
+              0.0,
+              3.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "x_dir": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "cup1_outer",
+              "center": [
+                20.0,
+                20.0
+              ],
+              "radius": 15.0
+            },
+            {
+              "kind": "circle",
+              "id": "cup1_inner",
+              "center": [
+                20.0,
+                20.0
+              ],
+              "radius": 13.0
+            },
+            {
+              "kind": "circle",
+              "id": "cup2_outer",
+              "center": [
+                60.0,
+                20.0
+              ],
+              "radius": 15.0
+            },
+            {
+              "kind": "circle",
+              "id": "cup2_inner",
+              "center": [
+                60.0,
+                20.0
+              ],
+              "radius": 13.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_cups",
+          "name": "cups",
+          "sketch": "f_cup_rings",
+          "distance": 60.0
+        }
+      ]
+    }
+  ]
+}

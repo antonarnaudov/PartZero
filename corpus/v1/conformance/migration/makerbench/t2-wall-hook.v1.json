@@ -1,0 +1,202 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "wall_hook",
+    "description": "Wall hook: 30x60x4 back plate with two 4.5 mm screw holes, 10 mm wide J arm with an R8 outer corner"
+  },
+  "parts": [
+    {
+      "id": "p_hook",
+      "name": "hook",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_plate_outline",
+          "name": "plate_outline",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -15.0,
+                0.0
+              ],
+              "end": [
+                15.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                15.0,
+                0.0
+              ],
+              "end": [
+                15.0,
+                60.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                15.0,
+                60.0
+              ],
+              "end": [
+                -15.0,
+                60.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -15.0,
+                60.0
+              ],
+              "end": [
+                -15.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "screw_low",
+              "center": [
+                0.0,
+                10.0
+              ],
+              "radius": 2.25
+            },
+            {
+              "kind": "circle",
+              "id": "screw_high",
+              "center": [
+                0.0,
+                50.0
+              ],
+              "radius": 2.25
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_plate",
+          "name": "plate",
+          "sketch": "f_plate_outline",
+          "distance": 4.0,
+          "direction": "reverse"
+        },
+        {
+          "type": "sketch",
+          "id": "f_arm_profile",
+          "name": "arm_profile",
+          "plane": "YZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "arm_bottom",
+              "start": [
+                4.0,
+                20.0
+              ],
+              "end": [
+                30.0,
+                20.0
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "corner",
+              "start": [
+                30.0,
+                20.0
+              ],
+              "end": [
+                38.0,
+                28.0
+              ],
+              "center": [
+                30.0,
+                28.0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "lip_front",
+              "start": [
+                38.0,
+                28.0
+              ],
+              "end": [
+                38.0,
+                36.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "lip_top",
+              "start": [
+                38.0,
+                36.0
+              ],
+              "end": [
+                30.0,
+                36.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "lip_back",
+              "start": [
+                30.0,
+                36.0
+              ],
+              "end": [
+                30.0,
+                28.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "arm_top",
+              "start": [
+                30.0,
+                28.0
+              ],
+              "end": [
+                4.0,
+                28.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "arm_root",
+              "start": [
+                4.0,
+                28.0
+              ],
+              "end": [
+                4.0,
+                20.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_arm",
+          "name": "arm",
+          "sketch": "f_arm_profile",
+          "distance": 10.0,
+          "direction": "symmetric"
+        }
+      ]
+    }
+  ]
+}

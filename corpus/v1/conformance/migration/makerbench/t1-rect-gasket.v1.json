@@ -1,0 +1,162 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "rect_gasket",
+    "description": "Junction box gasket: 90x70 outside, 8 mm band, 4x M3 clearance, 1.5 mm sheet"
+  },
+  "parts": [
+    {
+      "id": "p_gasket",
+      "name": "gasket",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "o_bottom",
+              "start": [
+                -45.0,
+                -35.0
+              ],
+              "end": [
+                45.0,
+                -35.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_right",
+              "start": [
+                45.0,
+                -35.0
+              ],
+              "end": [
+                45.0,
+                35.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_top",
+              "start": [
+                45.0,
+                35.0
+              ],
+              "end": [
+                -45.0,
+                35.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "o_left",
+              "start": [
+                -45.0,
+                35.0
+              ],
+              "end": [
+                -45.0,
+                -35.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_bottom",
+              "start": [
+                -37.0,
+                -27.0
+              ],
+              "end": [
+                37.0,
+                -27.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_right",
+              "start": [
+                37.0,
+                -27.0
+              ],
+              "end": [
+                37.0,
+                27.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_top",
+              "start": [
+                37.0,
+                27.0
+              ],
+              "end": [
+                -37.0,
+                27.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "i_left",
+              "start": [
+                -37.0,
+                27.0
+              ],
+              "end": [
+                -37.0,
+                -27.0
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "h1",
+              "center": [
+                41.0,
+                31.0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "h2",
+              "center": [
+                -41.0,
+                31.0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "h3",
+              "center": [
+                -41.0,
+                -31.0
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "h4",
+              "center": [
+                41.0,
+                -31.0
+              ],
+              "radius": 1.7
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_gasket",
+          "name": "gasket",
+          "sketch": "f_outline",
+          "distance": 1.5
+        }
+      ]
+    }
+  ]
+}

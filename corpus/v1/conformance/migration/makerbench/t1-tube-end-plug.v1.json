@@ -1,0 +1,117 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "tube_end_plug",
+    "description": "End plug for 25x1.5 round tube: 21.8x10 spigot, 25x3 cap, 3 mm spherical dome"
+  },
+  "parts": [
+    {
+      "id": "p_plug",
+      "name": "plug",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                0.0,
+                0.0
+              ],
+              "end": [
+                10.9,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "spigot",
+              "start": [
+                10.9,
+                0.0
+              ],
+              "end": [
+                10.9,
+                10.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "shoulder",
+              "start": [
+                10.9,
+                10.0
+              ],
+              "end": [
+                12.5,
+                10.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "cap_edge",
+              "start": [
+                12.5,
+                10.0
+              ],
+              "end": [
+                12.5,
+                13.0
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "dome",
+              "start": [
+                12.5,
+                13.0
+              ],
+              "end": [
+                0.0,
+                16.0
+              ],
+              "center": [
+                0.0,
+                -11.541666666666666
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "axis_edge",
+              "start": [
+                0.0,
+                16.0
+              ],
+              "end": [
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_plug",
+          "name": "plug",
+          "sketch": "f_profile",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    }
+  ]
+}

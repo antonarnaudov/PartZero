@@ -1,0 +1,144 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "filament_clip",
+    "description": "Spool-rim filament clip: 20x14x6, 3.2 wide x 10 deep flange slot, 2x 2.2 mm filament holes"
+  },
+  "parts": [
+    {
+      "id": "p_clip",
+      "name": "clip",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom_l",
+              "start": [
+                0,
+                0
+              ],
+              "end": [
+                8.4,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "slot_l",
+              "start": [
+                8.4,
+                0
+              ],
+              "end": [
+                8.4,
+                10
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "slot_end",
+              "start": [
+                8.4,
+                10
+              ],
+              "end": [
+                11.6,
+                10
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "slot_r",
+              "start": [
+                11.6,
+                10
+              ],
+              "end": [
+                11.6,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "bottom_r",
+              "start": [
+                11.6,
+                0
+              ],
+              "end": [
+                20,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                20,
+                0
+              ],
+              "end": [
+                20,
+                14
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                20,
+                14
+              ],
+              "end": [
+                0,
+                14
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                0,
+                14
+              ],
+              "end": [
+                0,
+                0
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "hole_l",
+              "center": [
+                4.2,
+                5
+              ],
+              "radius": 1.1
+            },
+            {
+              "kind": "circle",
+              "id": "hole_r",
+              "center": [
+                15.8,
+                5
+              ],
+              "radius": 1.1
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_clip",
+          "name": "clip",
+          "sketch": "outline",
+          "distance": 6
+        }
+      ]
+    }
+  ]
+}

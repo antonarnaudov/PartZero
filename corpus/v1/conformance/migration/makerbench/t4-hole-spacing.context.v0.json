@@ -1,0 +1,123 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "sensor_mount_plate",
+    "description": "60x45x3 sensor board mount: 4x M3 clearance on a 30x20 pattern (centred), 8 mm cable hole at the left"
+  },
+  "parts": [
+    {
+      "id": "p_plate",
+      "name": "plate",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -30,
+                -22.5
+              ],
+              "end": [
+                30,
+                -22.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                30,
+                -22.5
+              ],
+              "end": [
+                30,
+                22.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                30,
+                22.5
+              ],
+              "end": [
+                -30,
+                22.5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -30,
+                22.5
+              ],
+              "end": [
+                -30,
+                -22.5
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "m3_ne",
+              "center": [
+                15,
+                10
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_nw",
+              "center": [
+                -15,
+                10
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_sw",
+              "center": [
+                -15,
+                -10
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "m3_se",
+              "center": [
+                15,
+                -10
+              ],
+              "radius": 1.7
+            },
+            {
+              "kind": "circle",
+              "id": "cable",
+              "center": [
+                -22,
+                0
+              ],
+              "radius": 4
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_plate",
+          "name": "plate",
+          "sketch": "outline",
+          "distance": 3
+        }
+      ]
+    }
+  ]
+}

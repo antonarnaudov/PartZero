@@ -1,0 +1,102 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "shelf_bracket",
+    "description": "Assumed defaults: triangular bracket, 150 along the wall, 120 along the shelf, 15 thick, 15 mm arms"
+  },
+  "parts": [
+    {
+      "id": "p_bracket",
+      "name": "bracket",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "shelf_edge",
+              "start": [
+                0,
+                0
+              ],
+              "end": [
+                120,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "brace",
+              "start": [
+                120,
+                0
+              ],
+              "end": [
+                0,
+                150
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "wall_edge",
+              "start": [
+                0,
+                150
+              ],
+              "end": [
+                0,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "win_bottom",
+              "start": [
+                15,
+                15
+              ],
+              "end": [
+                88.79062728770145,
+                15
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "win_brace",
+              "start": [
+                88.79062728770145,
+                15
+              ],
+              "end": [
+                15,
+                107.23828410962682
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "win_side",
+              "start": [
+                15,
+                107.23828410962682
+              ],
+              "end": [
+                15,
+                15
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_bracket",
+          "name": "bracket",
+          "sketch": "outline",
+          "distance": 15
+        }
+      ]
+    }
+  ]
+}

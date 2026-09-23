@@ -1,0 +1,78 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "extrude_box",
+    "description": "80x50 rectangle extruded 8 mm"
+  },
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "base",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -40.0,
+                -25.0
+              ],
+              "end": [
+                40.0,
+                -25.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                40.0,
+                -25.0
+              ],
+              "end": [
+                40.0,
+                25.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                40.0,
+                25.0
+              ],
+              "end": [
+                -40.0,
+                25.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -40.0,
+                25.0
+              ],
+              "end": [
+                -40.0,
+                -25.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "plate",
+          "sketch": "s1",
+          "distance": 8.0
+        }
+      ]
+    }
+  ]
+}

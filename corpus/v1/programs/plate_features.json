@@ -1,0 +1,462 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "plate_features",
+    "description": "SPEC-v1 §5.11, §6.2, §6.5, §6.6, §6.7, §6.10, §6.12 examples on one plate: sketch on a tagged face, join boss, four hole kinds, fillets, chamfer, patterns, datums"
+  },
+  "params": [
+    {
+      "name": "width",
+      "unit": "mm",
+      "value": 80.0,
+      "min": 20.0,
+      "max": 300.0,
+      "note": "outer width"
+    },
+    {
+      "name": "depth",
+      "unit": "mm",
+      "value": 50.0
+    },
+    {
+      "name": "thick",
+      "unit": "mm",
+      "value": 8.0,
+      "min": 2.0
+    },
+    {
+      "name": "holes",
+      "unit": "count",
+      "value": 4.0,
+      "min": 1.0
+    }
+  ],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "plate",
+      "params": [
+        {
+          "name": "margin",
+          "unit": "mm",
+          "value": "min(width, depth) / 8"
+        }
+      ],
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "base",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "outline",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "w": "width",
+              "h": "depth",
+              "r": 4.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "slab",
+          "sketch": "s1",
+          "distance": "thick"
+        },
+        {
+          "type": "tag",
+          "id": "t1",
+          "name": "topFace",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "filter",
+              "of": {
+                "op": "faces",
+                "of": {
+                  "op": "body",
+                  "feature": "e1"
+                }
+              },
+              "where": {
+                "normal": "+Z"
+              }
+            },
+            "card": "one"
+          }
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "bossSk",
+          "plane": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "tagged",
+                "feature": "t1"
+              }
+            }
+          },
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "ring",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "radius": 11.0
+            },
+            {
+              "kind": "point",
+              "id": "p1",
+              "at": [
+                4.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "point",
+              "id": "p2",
+              "at": [
+                -4.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e2",
+          "name": "boss",
+          "sketch": "s2",
+          "distance": 12.0,
+          "op": "join",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          }
+        },
+        {
+          "type": "hole",
+          "id": "h1",
+          "name": "mounts",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "end"
+              }
+            }
+          },
+          "at": {
+            "grid": {
+              "nx": 2.0,
+              "ny": 2.0,
+              "dx": "width - 2 * margin",
+              "dy": "depth - 2 * margin"
+            }
+          },
+          "size": "M5",
+          "depth": "through",
+          "cbore": "iso4762"
+        },
+        {
+          "type": "hole",
+          "id": "h2",
+          "name": "inserts",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e2",
+                "end": "end"
+              }
+            }
+          },
+          "at": {
+            "points": {
+              "sketch": "s2",
+              "ids": [
+                "p1",
+                "p2"
+              ]
+            }
+          },
+          "size": "M3",
+          "insert": "std"
+        },
+        {
+          "type": "hole",
+          "id": "h3",
+          "name": "pilots",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "end"
+              }
+            }
+          },
+          "at": {
+            "list": [
+              {
+                "id": "a",
+                "at": [
+                  30.0,
+                  -18.0
+                ]
+              },
+              {
+                "id": "b",
+                "at": [
+                  -30.0,
+                  -18.0
+                ]
+              }
+            ]
+          },
+          "d": 3.4,
+          "depth": {
+            "blind": 6.0
+          },
+          "tip": "flat"
+        },
+        {
+          "type": "hole",
+          "id": "h4",
+          "name": "bolts",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "start"
+              }
+            }
+          },
+          "flip": true,
+          "at": {
+            "circle": {
+              "n": 3.0,
+              "d": 20.0,
+              "start": 90.0
+            }
+          },
+          "size": "M4",
+          "fit": "close",
+          "depth": "through",
+          "csink": "iso10642"
+        },
+        {
+          "type": "hole",
+          "id": "h5",
+          "name": "tapped",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "end"
+              }
+            }
+          },
+          "at": {
+            "list": [
+              {
+                "id": "t",
+                "at": [
+                  0.0,
+                  -18.0
+                ]
+              }
+            ]
+          },
+          "size": "M3",
+          "depth": {
+            "blind": 6.0
+          },
+          "thread": {
+            "depth": 5.0
+          }
+        },
+        {
+          "type": "fillet",
+          "id": "f1",
+          "name": "corners",
+          "edges": {
+            "kind": "edge",
+            "q": {
+              "op": "filter",
+              "of": {
+                "op": "edges",
+                "of": {
+                  "op": "sides",
+                  "feature": "e1"
+                }
+              },
+              "where": {
+                "parallel": "Z"
+              }
+            }
+          },
+          "r": 1.0
+        },
+        {
+          "type": "fillet",
+          "id": "f2",
+          "name": "rootRing",
+          "edges": {
+            "kind": "edge",
+            "q": {
+              "op": "between",
+              "a": {
+                "op": "side",
+                "feature": "e2",
+                "curve": "ring"
+              },
+              "b": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "end"
+              }
+            }
+          },
+          "r": 2.0
+        },
+        {
+          "type": "chamfer",
+          "id": "c1",
+          "name": "topEdge",
+          "edges": {
+            "kind": "edge",
+            "q": {
+              "op": "edges",
+              "of": {
+                "op": "cap",
+                "feature": "e2",
+                "end": "end"
+              }
+            }
+          },
+          "d": 1.0
+        },
+        {
+          "type": "pattern",
+          "id": "pt1",
+          "name": "bossRow",
+          "seed": {
+            "features": [
+              "e2",
+              "h2"
+            ]
+          },
+          "layout": {
+            "linear": {
+              "dir": "X",
+              "count": "holes",
+              "spacing": 20.0
+            }
+          }
+        },
+        {
+          "type": "datum_plane",
+          "id": "d1",
+          "name": "mid",
+          "mode": "midplane",
+          "a": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "side",
+                "feature": "e1",
+                "curve": "outline.left"
+              }
+            }
+          },
+          "b": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "side",
+                "feature": "e1",
+                "curve": "outline.right"
+              }
+            }
+          }
+        },
+        {
+          "type": "pattern",
+          "id": "pt2",
+          "name": "otherSide",
+          "seed": {
+            "features": [
+              "h3"
+            ]
+          },
+          "layout": {
+            "mirror": {
+              "plane": {
+                "datum": "d1"
+              }
+            }
+          }
+        },
+        {
+          "type": "datum_axis",
+          "id": "ax1",
+          "name": "bossAxis",
+          "mode": "cylinder",
+          "face": {
+            "kind": "face",
+            "q": {
+              "op": "side",
+              "feature": "e2",
+              "curve": "ring"
+            }
+          }
+        },
+        {
+          "type": "pattern",
+          "id": "pt3",
+          "name": "pilotRing",
+          "seed": {
+            "features": [
+              "h5"
+            ]
+          },
+          "layout": {
+            "circular": {
+              "axis": {
+                "datum": "ax1"
+              },
+              "count": 6.0
+            }
+          },
+          "skip": [
+            [
+              3
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

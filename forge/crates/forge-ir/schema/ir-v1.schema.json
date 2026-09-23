@@ -1,0 +1,4502 @@
+{
+  "$defs": {
+    "AllKeyword": {
+      "description": "`\"all\"`.",
+      "enum": [
+        "all"
+      ],
+      "type": "string"
+    },
+    "AngleUnit": {
+      "enum": [
+        "deg"
+      ],
+      "type": "string"
+    },
+    "AxisLine": {
+      "additionalProperties": false,
+      "description": "An explicit line in model coordinates.",
+      "properties": {
+        "direction": {
+          "description": "Direction (ratio components); non-zero, normalised by the engine.",
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "origin": {
+          "description": "Length components.",
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        }
+      },
+      "required": [
+        "origin",
+        "direction"
+      ],
+      "type": "object"
+    },
+    "AxisName": {
+      "description": "The world axes usable as an AxisRef (origin at the world origin, direction +X/+Y/+Z).",
+      "enum": [
+        "X",
+        "Y",
+        "Z"
+      ],
+      "type": "string"
+    },
+    "AxisObject": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EdgeAxis"
+        },
+        {
+          "$ref": "#/$defs/CylinderAxis"
+        },
+        {
+          "$ref": "#/$defs/DatumAxisRef"
+        },
+        {
+          "$ref": "#/$defs/LineAxis"
+        }
+      ],
+      "description": "The object forms of an AxisRef; each may carry `flip`."
+    },
+    "AxisRef": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AxisName",
+          "description": "`\"X\"`, `\"Y\"`, `\"Z\"`."
+        },
+        {
+          "$ref": "#/$defs/AxisObject",
+          "description": "An edge, cylinder, datum or explicit line."
+        }
+      ],
+      "description": "An oriented line (§3.2)."
+    },
+    "BodyOp": {
+      "description": "What a body feature does with its tools (§6.0.3).",
+      "enum": [
+        "new_body",
+        "join",
+        "cut",
+        "intersect"
+      ],
+      "type": "string"
+    },
+    "BoolScalar": {
+      "anyOf": [
+        {
+          "description": "A literal.",
+          "type": "boolean"
+        },
+        {
+          "description": "An expression of type Bool, e.g. `\"!with_lid\"`.",
+          "type": "string"
+        }
+      ],
+      "description": "A boolean field that accepts expressions (SPEC-v1 §2.2, [W0-3]): a JSON boolean, or an\nexpression string of type Bool."
+    },
+    "BooleanOp": {
+      "description": "The operation of a standalone `boolean` (§6.4).",
+      "enum": [
+        "join",
+        "cut",
+        "intersect"
+      ],
+      "type": "string"
+    },
+    "Capture": {
+      "additionalProperties": false,
+      "description": "Snapshot of a reference's resolution (§5.6): one entry per member of the resolved set, in\ncanonical order. Canonical JSON, part of the feature's cache key, never shown in CadScript.",
+      "properties": {
+        "members": {
+          "items": {
+            "$ref": "#/$defs/CaptureMember"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "members"
+      ],
+      "type": "object"
+    },
+    "CaptureMember": {
+      "additionalProperties": false,
+      "description": "One captured member.",
+      "properties": {
+        "faces": {
+          "description": "Edge members: the keys of the two adjacent faces (naming recommendation 5), sorted.",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "geom": {
+          "$ref": "#/$defs/Fingerprint"
+        },
+        "key": {
+          "description": "Provenance key (§5.2), never containing `#index`.",
+          "type": "string"
+        },
+        "via": {
+          "$ref": "#/$defs/Via"
+        }
+      },
+      "required": [
+        "key",
+        "via",
+        "geom"
+      ],
+      "type": "object"
+    },
+    "CardWord": {
+      "description": "The named cardinalities.",
+      "oneOf": [
+        {
+          "const": "one",
+          "description": "Exactly 1 (0 → `REF_MISSING`, ≥ 2 → `REF_AMBIGUOUS` / `REF_SPLIT`).",
+          "type": "string"
+        },
+        {
+          "const": "some",
+          "description": "At least 1 (0 → `REF_MISSING`).",
+          "type": "string"
+        },
+        {
+          "const": "any",
+          "description": "Any number, including 0.",
+          "type": "string"
+        }
+      ]
+    },
+    "Cardinality": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CardWord"
+        },
+        {
+          "format": "uint32",
+          "minimum": 1,
+          "type": "integer"
+        }
+      ],
+      "description": "Declared cardinality (§5.5): `one`, `some`, `any`, or an exact count `n ≥ 1`."
+    },
+    "Carrier": {
+      "description": "The exact carrier of a captured entity; axis directions are sign-canonical (§3.2), plane\nnormals outward. Angles in degrees ([W0-7]).",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "plane": {
+              "additionalProperties": false,
+              "properties": {
+                "normal": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "offset": {
+                  "format": "double",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "normal",
+                "offset"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "plane"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "cylinder": {
+              "additionalProperties": false,
+              "properties": {
+                "axis": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "point": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "radius": {
+                  "format": "double",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "axis",
+                "point",
+                "radius"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "cylinder"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "cone": {
+              "additionalProperties": false,
+              "properties": {
+                "apex": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "axis": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "half_angle": {
+                  "format": "double",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "axis",
+                "apex",
+                "half_angle"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "cone"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "sphere": {
+              "additionalProperties": false,
+              "properties": {
+                "center": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "radius": {
+                  "format": "double",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "center",
+                "radius"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "sphere"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "torus": {
+              "additionalProperties": false,
+              "properties": {
+                "axis": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "center": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "major": {
+                  "format": "double",
+                  "type": "number"
+                },
+                "minor": {
+                  "format": "double",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "axis",
+                "center",
+                "major",
+                "minor"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "torus"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "line": {
+              "additionalProperties": false,
+              "properties": {
+                "direction": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "point": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "direction",
+                "point"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "line"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "circle": {
+              "additionalProperties": false,
+              "properties": {
+                "center": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "normal": {
+                  "items": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "radius": {
+                  "format": "double",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "normal",
+                "center",
+                "radius"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "circle"
+          ],
+          "type": "object"
+        },
+        {
+          "const": "free",
+          "description": "Any other carrier (B-spline, vertex, body).",
+          "type": "string"
+        }
+      ]
+    },
+    "CboreKeyword": {
+      "description": "`\"iso4762\"`.",
+      "enum": [
+        "iso4762"
+      ],
+      "type": "string"
+    },
+    "CirclePlacement": {
+      "additionalProperties": false,
+      "description": "`{ \"n\", \"d\", \"center\", \"start\" }`: a bolt circle of diameter `d`.",
+      "properties": {
+        "center": {
+          "default": [
+            0,
+            0
+          ],
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "d": {
+          "$ref": "#/$defs/Scalar",
+          "description": "Bolt-circle diameter, > tol."
+        },
+        "n": {
+          "$ref": "#/$defs/Scalar",
+          "description": "Count ≥ 1."
+        },
+        "start": {
+          "$ref": "#/$defs/Scalar",
+          "default": 0,
+          "description": "Angle of position `c0`."
+        }
+      },
+      "required": [
+        "n",
+        "d"
+      ],
+      "type": "object"
+    },
+    "CircularLayout": {
+      "additionalProperties": false,
+      "description": "Instances `k = 1 … count−1` rotated by `k·Δ` about the axis.",
+      "properties": {
+        "angle": {
+          "$ref": "#/$defs/Scalar",
+          "default": 360,
+          "description": "In (0, 360]."
+        },
+        "axis": {
+          "$ref": "#/$defs/AxisRef"
+        },
+        "count": {
+          "$ref": "#/$defs/Scalar",
+          "description": "Count ≥ 2."
+        }
+      },
+      "required": [
+        "axis",
+        "count"
+      ],
+      "type": "object"
+    },
+    "Constraint": {
+      "description": "A constraint (§4.3). The 16 kinds, their `type` tags and argument names are exactly\nforge-solve's (`forge-solve/src/model.rs`). Arguments are solver entity ids: `p`, `l`,\n`l.start`, `l.end`, `a.center`, `c.center`, …; dimension `value`s are Scalars.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "Two points coincide.",
+          "properties": {
+            "a": {
+              "type": "string"
+            },
+            "b": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "coincident",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "A line is horizontal (relative to the sketch's u axis).",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "line": {
+              "type": "string"
+            },
+            "type": {
+              "const": "horizontal",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "line"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "A line is vertical (relative to the sketch's v axis).",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "line": {
+              "type": "string"
+            },
+            "type": {
+              "const": "vertical",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "line"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Two lines are parallel (or anti-parallel).",
+          "properties": {
+            "a": {
+              "type": "string"
+            },
+            "b": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "parallel",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Two lines are perpendicular.",
+          "properties": {
+            "a": {
+              "type": "string"
+            },
+            "b": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "perpendicular",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Tangency: line–circle/arc, circle/arc–circle/arc.",
+          "properties": {
+            "a": {
+              "type": "string"
+            },
+            "b": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "internal": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "type": {
+              "const": "tangent",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Equal length (two lines) or equal radius (two circles/arcs).",
+          "properties": {
+            "a": {
+              "type": "string"
+            },
+            "b": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "equal",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Dimension (length): point–point, or point–(infinite) line when `b` is a line.",
+          "properties": {
+            "a": {
+              "type": "string"
+            },
+            "b": {
+              "type": "string"
+            },
+            "driving": {
+              "default": true,
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "distance",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Scalar",
+              "description": "Required when driving; forbidden on a reference dimension."
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Dimension (angle): counter-clockwise from line `a` (`p1 → p2`) to line `b`.",
+          "properties": {
+            "a": {
+              "type": "string"
+            },
+            "b": {
+              "type": "string"
+            },
+            "driving": {
+              "default": true,
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "angle",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Scalar"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Dimension (length): radius of a circle or arc.",
+          "properties": {
+            "curve": {
+              "type": "string"
+            },
+            "driving": {
+              "default": true,
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "radius",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Scalar"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "curve"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Dimension (length): diameter of a circle or arc.",
+          "properties": {
+            "curve": {
+              "type": "string"
+            },
+            "driving": {
+              "default": true,
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "diameter",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Scalar"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "curve"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "A point lies on the infinite line through `line`.",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "line": {
+              "type": "string"
+            },
+            "point": {
+              "type": "string"
+            },
+            "type": {
+              "const": "point_on_line",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "point",
+            "line"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "A point lies on a circle, or on the full circle of an arc.",
+          "properties": {
+            "curve": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "point": {
+              "type": "string"
+            },
+            "type": {
+              "const": "point_on_circle",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "point",
+            "curve"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "A point is the midpoint of a line.",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "line": {
+              "type": "string"
+            },
+            "point": {
+              "type": "string"
+            },
+            "type": {
+              "const": "midpoint",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "point",
+            "line"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Points `a` and `b` are mirror images about `line`.",
+          "properties": {
+            "a": {
+              "type": "string"
+            },
+            "b": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "line": {
+              "type": "string"
+            },
+            "type": {
+              "const": "symmetric",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "a",
+            "b",
+            "line"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Pin a point (optionally at `x`, `y`), a line or a circle where it is.",
+          "properties": {
+            "entity": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "fix",
+              "type": "string"
+            },
+            "x": {
+              "$ref": "#/$defs/Scalar"
+            },
+            "y": {
+              "$ref": "#/$defs/Scalar"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "entity"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Counterbore": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CboreKeyword"
+        },
+        {
+          "$ref": "#/$defs/CustomCounterbore"
+        }
+      ],
+      "description": "Counterbore: the ISO 4762 preset (`HOLE_SIZES`) or explicit `{ d, depth }`."
+    },
+    "Countersink": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CsinkKeyword"
+        },
+        {
+          "$ref": "#/$defs/CustomCountersink"
+        }
+      ],
+      "description": "Countersink: the ISO 10642 preset (90°) or explicit `{ d, angle }`."
+    },
+    "CsinkKeyword": {
+      "description": "`\"iso10642\"`.",
+      "enum": [
+        "iso10642"
+      ],
+      "type": "string"
+    },
+    "CustomCounterbore": {
+      "additionalProperties": false,
+      "properties": {
+        "d": {
+          "$ref": "#/$defs/Scalar"
+        },
+        "depth": {
+          "$ref": "#/$defs/Scalar"
+        }
+      },
+      "required": [
+        "d",
+        "depth"
+      ],
+      "type": "object"
+    },
+    "CustomCountersink": {
+      "additionalProperties": false,
+      "properties": {
+        "angle": {
+          "$ref": "#/$defs/Scalar",
+          "default": 90,
+          "description": "Included angle, degrees."
+        },
+        "d": {
+          "$ref": "#/$defs/Scalar"
+        }
+      },
+      "required": [
+        "d"
+      ],
+      "type": "object"
+    },
+    "CustomInsert": {
+      "additionalProperties": false,
+      "properties": {
+        "d": {
+          "$ref": "#/$defs/Scalar"
+        },
+        "depth": {
+          "$ref": "#/$defs/Scalar"
+        }
+      },
+      "required": [
+        "d",
+        "depth"
+      ],
+      "type": "object"
+    },
+    "CylinderAxis": {
+      "additionalProperties": false,
+      "description": "`{ \"cylinder\": Ref }` (face, `one`): the axis of a cylindrical or conical face.",
+      "properties": {
+        "cylinder": {
+          "$ref": "#/$defs/Ref"
+        },
+        "flip": {
+          "$ref": "#/$defs/BoolScalar",
+          "default": false
+        }
+      },
+      "required": [
+        "cylinder"
+      ],
+      "type": "object"
+    },
+    "DatumAxisMode": {
+      "description": "`datum_axis` modes (§3.4).",
+      "oneOf": [
+        {
+          "const": "edge",
+          "description": "`edge`.",
+          "type": "string"
+        },
+        {
+          "const": "cylinder",
+          "description": "`face` (a cylinder or cone).",
+          "type": "string"
+        },
+        {
+          "const": "planes",
+          "description": "`a`, `b` (planes).",
+          "type": "string"
+        },
+        {
+          "const": "points",
+          "description": "`points` (two).",
+          "type": "string"
+        }
+      ]
+    },
+    "DatumAxisRef": {
+      "additionalProperties": false,
+      "description": "`{ \"datum\": \"<feature id>\" }`: an earlier `datum_axis` feature.",
+      "properties": {
+        "datum": {
+          "type": "string"
+        },
+        "flip": {
+          "$ref": "#/$defs/BoolScalar",
+          "default": false
+        }
+      },
+      "required": [
+        "datum"
+      ],
+      "type": "object"
+    },
+    "DatumPlaneMode": {
+      "description": "`datum_plane` modes (§3.3).",
+      "oneOf": [
+        {
+          "const": "offset",
+          "description": "`from`, `distance`.",
+          "type": "string"
+        },
+        {
+          "const": "angle",
+          "description": "`from`, `axis`, `angle`.",
+          "type": "string"
+        },
+        {
+          "const": "midplane",
+          "description": "`a`, `b`.",
+          "type": "string"
+        },
+        {
+          "const": "through",
+          "description": "`points` (three).",
+          "type": "string"
+        },
+        {
+          "const": "frame",
+          "description": "`origin`, `normal`, `x_dir`.",
+          "type": "string"
+        }
+      ]
+    },
+    "DatumPlaneRef": {
+      "additionalProperties": false,
+      "description": "`{ \"datum\": \"<feature id>\" }`: the frame of an earlier `datum_plane` feature.",
+      "properties": {
+        "datum": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "datum"
+      ],
+      "type": "object"
+    },
+    "Dir": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DirName"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        {
+          "$ref": "#/$defs/AxisObject"
+        }
+      ],
+      "description": "A direction (§3.2): a named direction, a vector (ratio components), or an AxisRef object\n(its direction)."
+    },
+    "DirName": {
+      "description": "Named directions (§3.2): signed `+X` … `-Z`, and unsigned `X`, `Y`, `Z` (parallel tests\nignore the sign; where a sign is needed they mean `+`).",
+      "enum": [
+        "+X",
+        "-X",
+        "+Y",
+        "-Y",
+        "+Z",
+        "-Z",
+        "X",
+        "Y",
+        "Z"
+      ],
+      "type": "string"
+    },
+    "EdgeAxis": {
+      "additionalProperties": false,
+      "description": "`{ \"edge\": Ref }` (edge, `one`): a line edge's line or a circular edge's axis, sign-canonical.",
+      "properties": {
+        "edge": {
+          "$ref": "#/$defs/Ref"
+        },
+        "flip": {
+          "$ref": "#/$defs/BoolScalar",
+          "default": false
+        }
+      },
+      "required": [
+        "edge"
+      ],
+      "type": "object"
+    },
+    "End": {
+      "description": "`start` / `end` of a sweep or of a curve.",
+      "enum": [
+        "start",
+        "end"
+      ],
+      "type": "string"
+    },
+    "EntityKind": {
+      "description": "The kind of topological entity a reference designates.",
+      "enum": [
+        "face",
+        "edge",
+        "vertex",
+        "body"
+      ],
+      "type": "string"
+    },
+    "FacePlane": {
+      "additionalProperties": false,
+      "description": "`{ \"face\": Ref }`: the face frame of §3.1 (kind `face`, card `one`).",
+      "properties": {
+        "face": {
+          "$ref": "#/$defs/Ref"
+        },
+        "origin": {
+          "description": "Projected onto the face plane; default: the world origin.",
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "x_dir": {
+          "description": "Projected onto the face plane; default: the world axis least aligned with the normal.",
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "face"
+      ],
+      "type": "object"
+    },
+    "Feature": {
+      "description": "A feature in the timeline. `type` selects the variant.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "A 2D sketch (§4). **Explicit** mode when `constraints` is empty (Scalars and compound\ncurves allowed); **constrained** mode otherwise (literal geometry only, solved by\nforge-solve).",
+          "properties": {
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "constraints": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/Constraint"
+              },
+              "type": "array"
+            },
+            "curves": {
+              "items": {
+                "$ref": "#/$defs/SketchCurve"
+              },
+              "type": "array"
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "plane": {
+              "$ref": "#/$defs/PlaneRef"
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "type": {
+              "const": "sketch",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "plane",
+            "curves"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Extrude (§6.2 [D-39]).",
+          "properties": {
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "direction": {
+              "$ref": "#/$defs/SweepDirection",
+              "default": "normal"
+            },
+            "distance": {
+              "$ref": "#/$defs/Scalar",
+              "description": "Length, > tol (`INVALID_DISTANCE`)."
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "op": {
+              "$ref": "#/$defs/BodyOp",
+              "default": "new_body"
+            },
+            "regions": {
+              "$ref": "#/$defs/RegionSelection",
+              "default": "all"
+            },
+            "sketch": {
+              "description": "Id of an earlier sketch of the same part (`UNRESOLVED_SKETCH`).",
+              "type": "string"
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "targets": {
+              "$ref": "#/$defs/Targets",
+              "description": "Required when `op ≠ new_body` (`BOOLEAN_TARGETS_REQUIRED`)."
+            },
+            "type": {
+              "const": "extrude",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "sketch",
+            "distance"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Revolve (§6.3 [D-40]): v0 §4.3 plus `regions`, `op` and `targets`.",
+          "properties": {
+            "angle": {
+              "$ref": "#/$defs/Scalar",
+              "description": "Angle in (0, 360] (`INVALID_ANGLE`)."
+            },
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "axis": {
+              "$ref": "#/$defs/SketchAxis",
+              "description": "In sketch coordinates."
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "direction": {
+              "$ref": "#/$defs/SweepDirection",
+              "default": "normal"
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "op": {
+              "$ref": "#/$defs/BodyOp",
+              "default": "new_body"
+            },
+            "regions": {
+              "$ref": "#/$defs/RegionSelection",
+              "default": "all"
+            },
+            "sketch": {
+              "type": "string"
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "targets": {
+              "$ref": "#/$defs/Targets"
+            },
+            "type": {
+              "const": "revolve",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "sketch",
+            "axis",
+            "angle"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Boolean (§6.4 [D-41]).",
+          "properties": {
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "keep_tools": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "op": {
+              "$ref": "#/$defs/BooleanOp"
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "targets": {
+              "$ref": "#/$defs/Ref",
+              "description": "Body, default `some`."
+            },
+            "tools": {
+              "$ref": "#/$defs/Ref",
+              "description": "Body, default `some`."
+            },
+            "type": {
+              "const": "boolean",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "op",
+            "targets",
+            "tools"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Hole (§6.5 [D-42]).",
+          "properties": {
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "at": {
+              "$ref": "#/$defs/HolePlacement"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "cbore": {
+              "$ref": "#/$defs/Counterbore"
+            },
+            "csink": {
+              "$ref": "#/$defs/Countersink"
+            },
+            "d": {
+              "$ref": "#/$defs/Scalar",
+              "description": "Overrides the table diameter. One of `d` and `size` is required."
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "depth": {
+              "$ref": "#/$defs/HoleDepth",
+              "description": "Required, except with `insert` (whose preset sets a blind depth)."
+            },
+            "fit": {
+              "$ref": "#/$defs/HoleFit",
+              "default": "normal"
+            },
+            "flip": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Reverses the drilling direction `d = −n`."
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "insert": {
+              "$ref": "#/$defs/Insert"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "on": {
+              "$ref": "#/$defs/PlaneRef",
+              "description": "The placement plane, usually `{ \"face\": Ref }` (face, `one`)."
+            },
+            "size": {
+              "$ref": "#/$defs/HoleSize"
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "targets": {
+              "$ref": "#/$defs/Targets",
+              "description": "Default: the body owning the `on` face; required when `on` is not a face."
+            },
+            "thread": {
+              "$ref": "#/$defs/Thread"
+            },
+            "tip": {
+              "$ref": "#/$defs/HoleTip",
+              "default": 118,
+              "description": "Blind holes only."
+            },
+            "type": {
+              "const": "hole",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "on",
+            "at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Fillet (§6.6 [D-43]).",
+          "properties": {
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "edges": {
+              "$ref": "#/$defs/Ref",
+              "description": "Edge, default `some`."
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "r": {
+              "$ref": "#/$defs/Scalar",
+              "description": "Length, > tol (`INVALID_RADIUS`)."
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "tangent_chain": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": true
+            },
+            "type": {
+              "const": "fillet",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "edges",
+            "r"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Chamfer (§6.7 [D-44]): exactly one of `{ d }`, `{ d, d2, side }`, `{ d, angle, side }`.",
+          "properties": {
+            "angle": {
+              "$ref": "#/$defs/Scalar",
+              "description": "In (0, 90)."
+            },
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "d": {
+              "$ref": "#/$defs/Scalar"
+            },
+            "d2": {
+              "$ref": "#/$defs/Scalar"
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "edges": {
+              "$ref": "#/$defs/Ref",
+              "description": "Edge, default `some`."
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "side": {
+              "$ref": "#/$defs/Ref",
+              "description": "Face, `one`: the face `d` is measured on."
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "tangent_chain": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": true
+            },
+            "type": {
+              "const": "chamfer",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "edges",
+            "d"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Shell (§6.8 [D-45]).",
+          "properties": {
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "body": {
+              "$ref": "#/$defs/Ref",
+              "description": "Body, `one`."
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "direction": {
+              "$ref": "#/$defs/ShellDirection",
+              "default": "inward"
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "open": {
+              "$ref": "#/$defs/Ref",
+              "description": "Face, default `any`: faces removed."
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "thickness": {
+              "$ref": "#/$defs/Scalar",
+              "description": "Length, > tol."
+            },
+            "type": {
+              "const": "shell",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "body",
+            "thickness"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Draft (§6.9 [D-46]); optional in v1: engines without it reject `UNSUPPORTED_FEATURE`.",
+          "properties": {
+            "angle": {
+              "$ref": "#/$defs/Scalar",
+              "description": "In (0, 45)."
+            },
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "faces": {
+              "$ref": "#/$defs/Ref",
+              "description": "Face, default `some`."
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "neutral": {
+              "$ref": "#/$defs/PlaneRef"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "pull": {
+              "$ref": "#/$defs/PullDirection",
+              "default": "normal"
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "type": {
+              "const": "draft",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "faces",
+            "neutral",
+            "angle"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Pattern (§6.10 [D-47]).",
+          "properties": {
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "layout": {
+              "$ref": "#/$defs/PatternLayout"
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "op": {
+              "$ref": "#/$defs/PatternOp",
+              "default": "new_body",
+              "description": "Body seeds only."
+            },
+            "seed": {
+              "$ref": "#/$defs/PatternSeed"
+            },
+            "skip": {
+              "default": [],
+              "description": "Instance indices not created.",
+              "items": {
+                "items": {
+                  "format": "uint32",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "targets": {
+              "$ref": "#/$defs/Targets",
+              "description": "Body seeds with `op: join` only (required there)."
+            },
+            "type": {
+              "const": "pattern",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "seed",
+            "layout"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Datum plane (§3.3 [D-17]); produces no body. The fields allowed and required depend on\n`mode` (`DATUM_OPTIONS_CONFLICT`, [W0-8]).",
+          "properties": {
+            "a": {
+              "$ref": "#/$defs/PlaneRef"
+            },
+            "angle": {
+              "$ref": "#/$defs/Scalar"
+            },
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "axis": {
+              "$ref": "#/$defs/AxisRef"
+            },
+            "b": {
+              "$ref": "#/$defs/PlaneRef"
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "distance": {
+              "$ref": "#/$defs/Scalar",
+              "description": "Length, any sign."
+            },
+            "from": {
+              "$ref": "#/$defs/PlaneRef"
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "mode": {
+              "$ref": "#/$defs/DatumPlaneMode"
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "normal": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "origin": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "points": {
+              "items": {
+                "$ref": "#/$defs/PointRef"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "type": {
+              "const": "datum_plane",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "x_dir": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "mode"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Datum axis (§3.4 [D-18]). The fields allowed and required depend on `mode`\n(`DATUM_OPTIONS_CONFLICT`, [W0-8]).",
+          "properties": {
+            "a": {
+              "$ref": "#/$defs/PlaneRef"
+            },
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "b": {
+              "$ref": "#/$defs/PlaneRef"
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "edge": {
+              "$ref": "#/$defs/Ref",
+              "description": "Edge, `one`."
+            },
+            "face": {
+              "$ref": "#/$defs/Ref",
+              "description": "Face, `one`."
+            },
+            "flip": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "mode": {
+              "$ref": "#/$defs/DatumAxisMode"
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "points": {
+              "items": {
+                "$ref": "#/$defs/PointRef"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "type": {
+              "const": "datum_axis",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "mode"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Tag (§6.12 [D-48]): a stable, named handle for a selection; produces no geometry.",
+          "properties": {
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "target": {
+              "$ref": "#/$defs/Ref",
+              "description": "Any kind; default card `some`."
+            },
+            "type": {
+              "const": "tag",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "target"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Fingerprint": {
+      "additionalProperties": false,
+      "description": "Fingerprint fields of a captured member (§5.6). Values are exact (not tessellated).",
+      "properties": {
+        "bbox": {
+          "description": "The entity's bounding box `[min, max]`.",
+          "items": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "body_center": {
+          "description": "The owning body's bounding-box centre.",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "carrier": {
+          "$ref": "#/$defs/Carrier"
+        },
+        "centroid": {
+          "description": "World centroid (a vertex: its position).",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "local": {
+          "description": "The centroid normalised to the owning body's bounding box.",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "neighbors": {
+          "description": "Adjacent entities on the same carrier (the split signature).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "size": {
+          "description": "Area (faces), length (edges), volume (bodies), 0 (vertices).",
+          "format": "double",
+          "type": "number"
+        },
+        "type": {
+          "$ref": "#/$defs/FingerprintType"
+        }
+      },
+      "required": [
+        "type",
+        "carrier",
+        "bbox",
+        "size",
+        "centroid",
+        "local",
+        "body_center",
+        "neighbors"
+      ],
+      "type": "object"
+    },
+    "FingerprintType": {
+      "description": "The canonical type recorded in a fingerprint.",
+      "oneOf": [
+        {
+          "enum": [
+            "plane",
+            "cylinder",
+            "cone",
+            "sphere",
+            "torus",
+            "bspline",
+            "line",
+            "circle",
+            "ellipse"
+          ],
+          "type": "string"
+        },
+        {
+          "const": "other",
+          "description": "A face or edge of another type.",
+          "type": "string"
+        },
+        {
+          "const": "vertex",
+          "description": "A vertex member.",
+          "type": "string"
+        },
+        {
+          "const": "body",
+          "description": "A body member.",
+          "type": "string"
+        }
+      ]
+    },
+    "FlatKeyword": {
+      "description": "`\"flat\"`.",
+      "enum": [
+        "flat"
+      ],
+      "type": "string"
+    },
+    "FramePlane": {
+      "additionalProperties": false,
+      "description": "An explicit frame: `y = normal × x_dir` after re-orthogonalising `x_dir` (v0 [R-14]).",
+      "properties": {
+        "normal": {
+          "description": "Direction (ratio components); non-zero.",
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "origin": {
+          "description": "Length components.",
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "x_dir": {
+          "description": "Direction (ratio components); non-zero, perpendicular to `normal`.",
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        }
+      },
+      "required": [
+        "origin",
+        "normal",
+        "x_dir"
+      ],
+      "type": "object"
+    },
+    "GeomTypeName": {
+      "description": "Canonical surface and curve types a `type` predicate can test (v0 §5).",
+      "oneOf": [
+        {
+          "const": "plane",
+          "description": "F.",
+          "type": "string"
+        },
+        {
+          "const": "cylinder",
+          "description": "F.",
+          "type": "string"
+        },
+        {
+          "const": "cone",
+          "description": "F.",
+          "type": "string"
+        },
+        {
+          "const": "sphere",
+          "description": "F.",
+          "type": "string"
+        },
+        {
+          "const": "torus",
+          "description": "F.",
+          "type": "string"
+        },
+        {
+          "const": "bspline",
+          "description": "F or E.",
+          "type": "string"
+        },
+        {
+          "const": "line",
+          "description": "E.",
+          "type": "string"
+        },
+        {
+          "const": "circle",
+          "description": "E.",
+          "type": "string"
+        },
+        {
+          "const": "ellipse",
+          "description": "E.",
+          "type": "string"
+        }
+      ]
+    },
+    "GridPlacement": {
+      "additionalProperties": false,
+      "description": "`{ \"nx\", \"ny\", \"dx\", \"dy\", \"center\" }`.",
+      "properties": {
+        "center": {
+          "default": [
+            0,
+            0
+          ],
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "dx": {
+          "$ref": "#/$defs/Scalar"
+        },
+        "dy": {
+          "$ref": "#/$defs/Scalar"
+        },
+        "nx": {
+          "$ref": "#/$defs/Scalar",
+          "description": "Count ≥ 1."
+        },
+        "ny": {
+          "$ref": "#/$defs/Scalar",
+          "description": "Count ≥ 1."
+        }
+      },
+      "required": [
+        "nx",
+        "ny",
+        "dx",
+        "dy"
+      ],
+      "type": "object"
+    },
+    "HoleDepth": {
+      "description": "Hole depth (§6.5): `\"through\"`, `{ \"blind\": length }` or `{ \"up_to\": Ref }` (face, `one`).",
+      "oneOf": [
+        {
+          "enum": [
+            "through"
+          ],
+          "type": "string"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "blind": {
+              "$ref": "#/$defs/Scalar"
+            }
+          },
+          "required": [
+            "blind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "up_to": {
+              "$ref": "#/$defs/Ref"
+            }
+          },
+          "required": [
+            "up_to"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "HoleFit": {
+      "description": "Which table diameter a hole uses (§6.5).",
+      "oneOf": [
+        {
+          "const": "close",
+          "description": "ISO 273 fine clearance.",
+          "type": "string"
+        },
+        {
+          "const": "normal",
+          "description": "ISO 273 medium clearance.",
+          "type": "string"
+        },
+        {
+          "const": "loose",
+          "description": "ISO 273 coarse clearance.",
+          "type": "string"
+        },
+        {
+          "const": "tap",
+          "description": "Tap drill.",
+          "type": "string"
+        }
+      ]
+    },
+    "HolePart": {
+      "description": "The faces a hole creates at one position (§5.2 rule 3).",
+      "enum": [
+        "wall",
+        "tip",
+        "floor",
+        "cbore_wall",
+        "cbore_floor",
+        "csink"
+      ],
+      "type": "string"
+    },
+    "HolePlacement": {
+      "description": "Where the holes go (§6.5): exactly one placement form.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "Sketch points (`point` curves or `<circle>.center`); ids are the point ids.",
+          "properties": {
+            "points": {
+              "$ref": "#/$defs/PointsPlacement"
+            }
+          },
+          "required": [
+            "points"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "(u, v) positions in the placement plane's frame.",
+          "properties": {
+            "list": {
+              "items": {
+                "$ref": "#/$defs/HolePosition"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "list"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "A centred grid; ids `g<i>_<j>`.",
+          "properties": {
+            "grid": {
+              "$ref": "#/$defs/GridPlacement"
+            }
+          },
+          "required": [
+            "grid"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "A bolt circle; ids `c<k>`.",
+          "properties": {
+            "circle": {
+              "$ref": "#/$defs/CirclePlacement"
+            }
+          },
+          "required": [
+            "circle"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "HolePosition": {
+      "additionalProperties": false,
+      "description": "One listed position.",
+      "properties": {
+        "at": {
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "id": {
+          "description": "The position id (names the hole instance and its faces).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "at"
+      ],
+      "type": "object"
+    },
+    "HoleSize": {
+      "description": "Standard metric sizes of the `HOLE_SIZES` table (§6.5).",
+      "enum": [
+        "M2",
+        "M2.5",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M8"
+      ],
+      "type": "string"
+    },
+    "HoleTip": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FlatKeyword"
+        },
+        {
+          "$ref": "#/$defs/Scalar"
+        }
+      ],
+      "description": "Drill-point angle of a blind hole, or `\"flat\"`. The keyword wins over an expression that\nnames a parameter `flat` ([W0-10])."
+    },
+    "Insert": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/InsertKeyword"
+        },
+        {
+          "$ref": "#/$defs/CustomInsert"
+        }
+      ],
+      "description": "Heat-set insert hole: the `std` preset (`HOLE_SIZES`) or explicit `{ d, depth }`."
+    },
+    "InsertKeyword": {
+      "description": "`\"std\"`.",
+      "enum": [
+        "std"
+      ],
+      "type": "string"
+    },
+    "LengthUnit": {
+      "enum": [
+        "mm"
+      ],
+      "type": "string"
+    },
+    "LineAxis": {
+      "additionalProperties": false,
+      "description": "`{ \"line\": { \"origin\", \"direction\" } }`: an explicit line.",
+      "properties": {
+        "flip": {
+          "$ref": "#/$defs/BoolScalar",
+          "default": false
+        },
+        "line": {
+          "$ref": "#/$defs/AxisLine"
+        }
+      },
+      "required": [
+        "line"
+      ],
+      "type": "object"
+    },
+    "LinearLayout": {
+      "additionalProperties": false,
+      "description": "Instances `(i, j)`, `i < count`, `j < count2`, translated by `i·spacing·u1 + j·spacing2·u2`.",
+      "properties": {
+        "count": {
+          "$ref": "#/$defs/Scalar",
+          "description": "Count ≥ 1."
+        },
+        "count2": {
+          "$ref": "#/$defs/Scalar",
+          "description": "Count ≥ 1 (default 1)."
+        },
+        "dir": {
+          "$ref": "#/$defs/Dir"
+        },
+        "dir2": {
+          "$ref": "#/$defs/Dir",
+          "description": "Second direction; requires `spacing2`."
+        },
+        "spacing": {
+          "$ref": "#/$defs/Scalar",
+          "description": "Length, `|spacing| > tol`."
+        },
+        "spacing2": {
+          "$ref": "#/$defs/Scalar"
+        }
+      },
+      "required": [
+        "dir",
+        "count",
+        "spacing"
+      ],
+      "type": "object"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "MirrorLayout": {
+      "additionalProperties": false,
+      "description": "One instance (index 1): the reflection in `plane`.",
+      "properties": {
+        "plane": {
+          "$ref": "#/$defs/PlaneRef"
+        }
+      },
+      "required": [
+        "plane"
+      ],
+      "type": "object"
+    },
+    "NamedPlane": {
+      "description": "Named datum planes. Frames (x axis, y axis, normal):\n`XY` = (+X, +Y, +Z), `XZ` = (+X, +Z, −Y), `YZ` = (+Y, +Z, +X).",
+      "enum": [
+        "XY",
+        "XZ",
+        "YZ"
+      ],
+      "type": "string"
+    },
+    "ParamUnit": {
+      "description": "Parameter units (§2.1).",
+      "oneOf": [
+        {
+          "const": "mm",
+          "description": "Length in millimetres: Real(1, 0).",
+          "type": "string"
+        },
+        {
+          "const": "deg",
+          "description": "Angle in degrees: Real(0, 1).",
+          "type": "string"
+        },
+        {
+          "const": "ratio",
+          "description": "Dimensionless real: Real(0, 0).",
+          "type": "string"
+        },
+        {
+          "const": "count",
+          "description": "Dimensionless exact integer.",
+          "type": "string"
+        },
+        {
+          "const": "bool",
+          "description": "Boolean.",
+          "type": "string"
+        }
+      ]
+    },
+    "ParamValue": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "format": "double",
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "description": "A parameter value: a literal number, a literal boolean, or an expression string."
+    },
+    "Parameter": {
+      "additionalProperties": false,
+      "description": "A named, typed value. Document-level parameters live in `Document.params`, part-level ones\nin `PartStudio.params`; order is declaration order.\n\nMeasured parameters (`measure`, §2.1) are **deferred to IR v1.1** (ADR 0013 decision 5);\na `measure` field is rejected with `PARAM_INVALID`.",
+      "properties": {
+        "max": {
+          "$ref": "#/$defs/Scalar",
+          "description": "Optional upper bound, as `min`."
+        },
+        "min": {
+          "$ref": "#/$defs/Scalar",
+          "description": "Optional lower bound (literal or expression of the same type), checked after evaluation\n(`PARAM_OUT_OF_RANGE`). Not allowed for `bool`."
+        },
+        "name": {
+          "description": "Shares the feature-name namespace (§0.3): unique across the document, an identifier,\nnot in `RESERVED_NAMES` (the full v1 list).",
+          "type": "string"
+        },
+        "note": {
+          "default": "",
+          "description": "Free text, not semantic.",
+          "type": "string"
+        },
+        "unit": {
+          "$ref": "#/$defs/ParamUnit"
+        },
+        "value": {
+          "$ref": "#/$defs/ParamValue",
+          "description": "A literal (number or boolean) or an expression string (§2.3). A parameter whose value\nis an expression is *derived*."
+        }
+      },
+      "required": [
+        "name",
+        "unit",
+        "value"
+      ],
+      "type": "object"
+    },
+    "PartStudio": {
+      "additionalProperties": false,
+      "description": "An ordered feature timeline that produces a set of bodies.",
+      "properties": {
+        "features": {
+          "items": {
+            "$ref": "#/$defs/Feature"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "params": {
+          "default": [],
+          "description": "Part-level parameters (§2.1), in declaration order.",
+          "items": {
+            "$ref": "#/$defs/Parameter"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "features"
+      ],
+      "type": "object"
+    },
+    "PatternLayout": {
+      "description": "How the instances are placed (§6.10).",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "linear": {
+              "$ref": "#/$defs/LinearLayout"
+            }
+          },
+          "required": [
+            "linear"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "circular": {
+              "$ref": "#/$defs/CircularLayout"
+            }
+          },
+          "required": [
+            "circular"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "mirror": {
+              "$ref": "#/$defs/MirrorLayout"
+            }
+          },
+          "required": [
+            "mirror"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PatternOp": {
+      "description": "A body-seed pattern's operation (§6.10).",
+      "enum": [
+        "new_body",
+        "join"
+      ],
+      "type": "string"
+    },
+    "PatternSeed": {
+      "description": "What a pattern copies (§6.10).",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "Earlier `extrude`, `revolve` or `hole` features of the same part.",
+          "properties": {
+            "features": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "features"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Bodies (body, default `some`), copied from the current state.",
+          "properties": {
+            "bodies": {
+              "$ref": "#/$defs/Ref"
+            }
+          },
+          "required": [
+            "bodies"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PlaneRef": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NamedPlane",
+          "description": "`\"XY\"`, `\"XZ\"`, `\"YZ\"` (v0 §2)."
+        },
+        {
+          "$ref": "#/$defs/FramePlane",
+          "description": "An explicit right-handed frame (v0 §2); Scalars allowed."
+        },
+        {
+          "$ref": "#/$defs/FacePlane",
+          "description": "The face frame of a planar face (§3.1)."
+        },
+        {
+          "$ref": "#/$defs/DatumPlaneRef",
+          "description": "The frame of a `datum_plane` feature."
+        }
+      ],
+      "description": "A plane reference (§3.1): a named plane, an explicit frame, the frame of a planar face, or\na `datum_plane` feature."
+    },
+    "PointIds": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AllKeyword"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      ],
+      "description": "A list of sketch point ids, or `\"all\"` (every `point` curve of the sketch, in curve order)."
+    },
+    "PointRef": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        {
+          "$ref": "#/$defs/VertexPoint"
+        }
+      ],
+      "description": "A point (§3.2): a literal/expression `P3`, or a vertex."
+    },
+    "PointsPlacement": {
+      "additionalProperties": false,
+      "description": "`{ \"sketch\": \"<id>\", \"ids\": [...] | \"all\" }`.",
+      "properties": {
+        "ids": {
+          "$ref": "#/$defs/PointIds"
+        },
+        "sketch": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sketch",
+        "ids"
+      ],
+      "type": "object"
+    },
+    "Predicate": {
+      "description": "One predicate of a `filter` (§5.3); all angle tests use `QUERY_ANGLE_TOLERANCE`.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "F, E: the canonical type is `t`.",
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/GeomTypeName"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F: planar, outward normal equal to the **signed** direction.",
+          "properties": {
+            "normal": {
+              "$ref": "#/$defs/Dir"
+            }
+          },
+          "required": [
+            "normal"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E: a line parallel to the direction (either sign). F: a plane whose normal is\nperpendicular to it, or a cylinder/cone whose axis is parallel to it.",
+          "properties": {
+            "parallel": {
+              "$ref": "#/$defs/Dir"
+            }
+          },
+          "required": [
+            "parallel"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E: a line perpendicular to it, or a circle whose normal is parallel to it. F: a plane\nwhose normal is parallel to it (either sign).",
+          "properties": {
+            "perpendicular": {
+              "$ref": "#/$defs/Dir"
+            }
+          },
+          "required": [
+            "perpendicular"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E: material angle < 180° − tol. Must be `true`.",
+          "properties": {
+            "convex": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "convex"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E: material angle > 180° + tol. Must be `true`.",
+          "properties": {
+            "concave": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "concave"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E: material angle within tol of 180°. Must be `true`.",
+          "properties": {
+            "smooth": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "smooth"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F (cylinder, sphere; torus: minor radius), E (circle).",
+          "properties": {
+            "radius": {
+              "$ref": "#/$defs/RadiusBound"
+            }
+          },
+          "required": [
+            "radius"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PullDirection": {
+      "description": "Pull direction of a draft (§6.9).",
+      "enum": [
+        "normal",
+        "reverse"
+      ],
+      "type": "string"
+    },
+    "Query": {
+      "description": "The query AST (§5.3). Kinds: **F** faces, **E** edges, **V** vertices, **B** bodies.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "B, named: bodies whose origin feature is `feature` (with `member`: whose origin region's\nouter loop contains `member`), including every piece of a split.",
+          "properties": {
+            "feature": {
+              "type": "string"
+            },
+            "member": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "op": {
+              "const": "body",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "B, broad: every body in scope.",
+          "properties": {
+            "op": {
+              "const": "bodies",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, named: an extrude's cap faces.",
+          "properties": {
+            "end": {
+              "$ref": "#/$defs/End"
+            },
+            "feature": {
+              "type": "string"
+            },
+            "member": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "op": {
+              "const": "cap",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature",
+            "end"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, named: a revolve's end-cap faces.",
+          "properties": {
+            "end": {
+              "$ref": "#/$defs/End"
+            },
+            "feature": {
+              "type": "string"
+            },
+            "member": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "op": {
+              "const": "endcap",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature",
+            "end"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, named: faces keyed `F/side:curve` (all pieces).",
+          "properties": {
+            "curve": {
+              "type": "string"
+            },
+            "feature": {
+              "type": "string"
+            },
+            "op": {
+              "const": "side",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature",
+            "curve"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, broad: every side face of the feature.",
+          "properties": {
+            "feature": {
+              "type": "string"
+            },
+            "member": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "op": {
+              "const": "sides",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E, named: the junction edges swept from the sketch vertex at that curve end.",
+          "properties": {
+            "curve": {
+              "type": "string"
+            },
+            "end": {
+              "$ref": "#/$defs/End"
+            },
+            "feature": {
+              "type": "string"
+            },
+            "op": {
+              "const": "edge_at",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature",
+            "curve",
+            "end"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "E, named if `a` and `b` are both named: edges with one adjacent face in `a` and the\nother in `b`.",
+          "properties": {
+            "a": {
+              "$ref": "#/$defs/Query"
+            },
+            "b": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "between",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, named: a face a hole created at position `at`.",
+          "properties": {
+            "at": {
+              "type": "string"
+            },
+            "feature": {
+              "type": "string"
+            },
+            "op": {
+              "const": "hole_face",
+              "type": "string"
+            },
+            "part": {
+              "$ref": "#/$defs/HolePart"
+            }
+          },
+          "required": [
+            "op",
+            "feature",
+            "at",
+            "part"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, broad: every face whose key has that feature id (and role label).",
+          "properties": {
+            "feature": {
+              "type": "string"
+            },
+            "op": {
+              "const": "created",
+              "type": "string"
+            },
+            "role": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "op",
+            "feature"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, broad: every face of that pattern instance.",
+          "properties": {
+            "feature": {
+              "type": "string"
+            },
+            "index": {
+              "items": {
+                "format": "uint32",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "maxItems": 2,
+              "minItems": 1,
+              "type": "array"
+            },
+            "op": {
+              "const": "instance",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature",
+            "index"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "The tag's kind; the tag's query re-evaluated in the current scope (§6.12).",
+          "properties": {
+            "feature": {
+              "type": "string"
+            },
+            "op": {
+              "const": "tagged",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "feature"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "B → faces of the bodies; E → the two adjacent faces; V → incident faces.",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "faces",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "B → all edges; F → boundary edges; V → incident edges.",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "edges",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "B, F, E → vertices.",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "vertices",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "F, E, V → the bodies containing them.",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "owner",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Set union (operands of one kind).",
+          "properties": {
+            "of": {
+              "items": {
+                "$ref": "#/$defs/Query"
+              },
+              "type": "array"
+            },
+            "op": {
+              "const": "union",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Set intersection (operands of one kind).",
+          "properties": {
+            "of": {
+              "items": {
+                "$ref": "#/$defs/Query"
+              },
+              "type": "array"
+            },
+            "op": {
+              "const": "intersect",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Members of `a` not in `b`.",
+          "properties": {
+            "a": {
+              "$ref": "#/$defs/Query"
+            },
+            "b": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "minus",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "a",
+            "b"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Members satisfying the predicate.",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "filter",
+              "type": "string"
+            },
+            "where": {
+              "$ref": "#/$defs/Predicate"
+            }
+          },
+          "required": [
+            "op",
+            "of",
+            "where"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Members whose centroid projected on `dir` is within `LINEAR_TOLERANCE·s` of the max (min).",
+          "properties": {
+            "dir": {
+              "$ref": "#/$defs/Dir"
+            },
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "extreme",
+              "type": "string"
+            },
+            "which": {
+              "$ref": "#/$defs/Which"
+            }
+          },
+          "required": [
+            "op",
+            "of",
+            "dir",
+            "which"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Members of maximal size (area, length or volume).",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "largest",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Members of minimal size.",
+          "properties": {
+            "of": {
+              "$ref": "#/$defs/Query"
+            },
+            "op": {
+              "const": "smallest",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "of"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RadiusBound": {
+      "additionalProperties": false,
+      "description": "`{ \"eq\": r }` or `{ \"min\"?: r, \"max\"?: r }` (lengths, inclusive).",
+      "properties": {
+        "eq": {
+          "$ref": "#/$defs/Scalar"
+        },
+        "max": {
+          "$ref": "#/$defs/Scalar"
+        },
+        "min": {
+          "$ref": "#/$defs/Scalar"
+        }
+      },
+      "type": "object"
+    },
+    "Ref": {
+      "additionalProperties": false,
+      "description": "A reference (§5.1): a typed query plus a declared cardinality, with an optional capture.",
+      "properties": {
+        "capture": {
+          "$ref": "#/$defs/Capture",
+          "description": "Snapshot of what the reference resolved to when it was last accepted (§5.6). Written\nonly by the command layer."
+        },
+        "card": {
+          "$ref": "#/$defs/Cardinality",
+          "description": "Declared cardinality (§5.5). Omitted means the field's default (canonical JSON omits\na `card` equal to the field's default)."
+        },
+        "kind": {
+          "$ref": "#/$defs/EntityKind",
+          "description": "Must equal the static kind of `q` and be accepted by the field (`REF_KIND_MISMATCH`)."
+        },
+        "q": {
+          "$ref": "#/$defs/Query",
+          "description": "The query: the intent of the reference."
+        }
+      },
+      "required": [
+        "kind",
+        "q"
+      ],
+      "type": "object"
+    },
+    "RegionSelection": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AllKeyword"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      ],
+      "description": "Which regions of the consumed sketch a body feature uses (§4.5): `\"all\"`, or the curve ids\nwhose region's outer loop contains them."
+    },
+    "Scalar": {
+      "anyOf": [
+        {
+          "description": "A literal in the field's unit.",
+          "format": "double",
+          "type": "number"
+        },
+        {
+          "description": "An expression (SPEC-v1 §2.3), e.g. `\"width - 2 * wall\"`.",
+          "type": "string"
+        }
+      ],
+      "description": "A numeric field value (SPEC-v1 §2.2 [D-7]): a JSON **number** is a literal in the field's\nunit (mm or degrees); a JSON **string** is an expression (§2.3) in canonical form (§2.4)."
+    },
+    "ShellDirection": {
+      "description": "Shell offset direction (§6.8).",
+      "enum": [
+        "inward",
+        "outward"
+      ],
+      "type": "string"
+    },
+    "SketchAxis": {
+      "additionalProperties": false,
+      "description": "A revolve axis in the sketch's 2D coordinates (v0 §4.3; Scalars allowed).",
+      "properties": {
+        "direction": {
+          "description": "Direction (ratio components); non-zero.",
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "origin": {
+          "description": "Length components.",
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        }
+      },
+      "required": [
+        "origin",
+        "direction"
+      ],
+      "type": "object"
+    },
+    "SketchCurve": {
+      "description": "A sketch curve (§4.1). v0's `line`, `arc` and `circle` keep their fields with Scalars;\n`point` is a sketch point; `rect`, `slot` and `polygon` are **compound** curves that expand\ninto member curves `<id>.<member>` (§4.1, [`super::compound`]).",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "A line segment `start → end`.",
+          "properties": {
+            "construction": {
+              "default": false,
+              "type": "boolean"
+            },
+            "end": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "line",
+              "type": "string"
+            },
+            "start": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "start",
+            "end"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "A circular arc from `start` to `end` around `center`, counter-clockwise when `ccw`.",
+          "properties": {
+            "ccw": {
+              "type": "boolean"
+            },
+            "center": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "construction": {
+              "default": false,
+              "type": "boolean"
+            },
+            "end": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "arc",
+              "type": "string"
+            },
+            "start": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "start",
+            "end",
+            "center",
+            "ccw"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "A full circle.",
+          "properties": {
+            "center": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "construction": {
+              "default": false,
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "circle",
+              "type": "string"
+            },
+            "radius": {
+              "$ref": "#/$defs/Scalar"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "center",
+            "radius"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "A sketch point: never part of a loop; used by constraints, hole placement and queries.",
+          "properties": {
+            "at": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "construction": {
+              "default": false,
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "point",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Compound: a rectangle with optional corner radius. Exactly one of `center` / `corner`\n(the lower-left corner).",
+          "properties": {
+            "center": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "construction": {
+              "default": false,
+              "type": "boolean"
+            },
+            "corner": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "h": {
+              "$ref": "#/$defs/Scalar"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "rect",
+              "type": "string"
+            },
+            "r": {
+              "$ref": "#/$defs/Scalar",
+              "default": 0,
+              "description": "Corner radius, `0 ≤ r ≤ min(w, h)/2`."
+            },
+            "w": {
+              "$ref": "#/$defs/Scalar"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "w",
+            "h"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Compound: a straight slot with round ends centred on `a` and `b`, width `w`.",
+          "properties": {
+            "a": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "b": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "construction": {
+              "default": false,
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "slot",
+              "type": "string"
+            },
+            "w": {
+              "$ref": "#/$defs/Scalar"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "a",
+            "b",
+            "w"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Compound: a regular polygon with `n ≥ 3` sides. Exactly one of `circumradius`,\n`inradius`, `across_flats`, `side`.",
+          "properties": {
+            "across_flats": {
+              "$ref": "#/$defs/Scalar"
+            },
+            "center": {
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "circumradius": {
+              "$ref": "#/$defs/Scalar"
+            },
+            "construction": {
+              "default": false,
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "inradius": {
+              "$ref": "#/$defs/Scalar"
+            },
+            "kind": {
+              "const": "polygon",
+              "type": "string"
+            },
+            "n": {
+              "$ref": "#/$defs/Scalar",
+              "description": "A count."
+            },
+            "rotation": {
+              "$ref": "#/$defs/Scalar",
+              "default": 0,
+              "description": "Angle of vertex 0 from +u, degrees."
+            },
+            "side": {
+              "$ref": "#/$defs/Scalar"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "center",
+            "n"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "SweepDirection": {
+      "description": "Direction of a sweep relative to the sketch normal (extrude) or the axis (revolve).",
+      "oneOf": [
+        {
+          "const": "normal",
+          "description": "Along +normal (extrude) / right-hand rule about the axis (revolve).",
+          "type": "string"
+        },
+        {
+          "const": "reverse",
+          "description": "Along −normal / negative rotation.",
+          "type": "string"
+        },
+        {
+          "const": "symmetric",
+          "description": "Half of the extent on each side.",
+          "type": "string"
+        }
+      ]
+    },
+    "Targets": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AllKeyword"
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        }
+      ],
+      "description": "Target bodies of a body operation (§6.0.2): `\"all\"` or a Ref (body, default `some`)."
+    },
+    "Thread": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/ThreadSpec"
+        }
+      ],
+      "description": "Cosmetic thread: `true`, or `{ pitch?, depth? }` (defaults: the size's coarse pitch, the\nfull hole depth). `false` means no thread."
+    },
+    "ThreadSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "depth": {
+          "$ref": "#/$defs/Scalar"
+        },
+        "pitch": {
+          "$ref": "#/$defs/Scalar"
+        }
+      },
+      "type": "object"
+    },
+    "Units": {
+      "additionalProperties": false,
+      "properties": {
+        "angle": {
+          "$ref": "#/$defs/AngleUnit"
+        },
+        "length": {
+          "$ref": "#/$defs/LengthUnit"
+        }
+      },
+      "required": [
+        "length",
+        "angle"
+      ],
+      "type": "object"
+    },
+    "VertexPoint": {
+      "additionalProperties": false,
+      "description": "`{ \"vertex\": Ref }` (vertex, `one`).",
+      "properties": {
+        "vertex": {
+          "$ref": "#/$defs/Ref"
+        }
+      },
+      "required": [
+        "vertex"
+      ],
+      "type": "object"
+    },
+    "Via": {
+      "description": "Whether a member came from a named source or a broad one (§5.3).",
+      "enum": [
+        "named",
+        "broad"
+      ],
+      "type": "string"
+    },
+    "Which": {
+      "description": "`max` / `min` of an `extreme` pick.",
+      "enum": [
+        "max",
+        "min"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "An IR v1 document (`aicad.ir/1`): the single source of truth for a design.",
+  "properties": {
+    "meta": {
+      "$ref": "#/$defs/Meta",
+      "default": {}
+    },
+    "params": {
+      "default": [],
+      "description": "Document-level parameters (§2.1), in declaration order.",
+      "items": {
+        "$ref": "#/$defs/Parameter"
+      },
+      "type": "array"
+    },
+    "parts": {
+      "items": {
+        "$ref": "#/$defs/PartStudio"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "description": "Must equal [`IR_SCHEMA`].",
+      "type": "string"
+    },
+    "units": {
+      "$ref": "#/$defs/Units",
+      "default": {
+        "angle": "deg",
+        "length": "mm"
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "parts"
+  ],
+  "title": "Document",
+  "type": "object"
+}

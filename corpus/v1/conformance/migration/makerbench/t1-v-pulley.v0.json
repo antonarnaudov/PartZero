@@ -1,0 +1,124 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "v_pulley",
+    "description": "V-groove pulley: 40 mm dia, 10 thick, 8 mm bore, 90-degree groove 4 mm deep"
+  },
+  "parts": [
+    {
+      "id": "p_pulley",
+      "name": "pulley",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                4,
+                0
+              ],
+              "end": [
+                20,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "rim_low",
+              "start": [
+                20,
+                0
+              ],
+              "end": [
+                20,
+                1
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "flank_low",
+              "start": [
+                20,
+                1
+              ],
+              "end": [
+                16,
+                5
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "flank_high",
+              "start": [
+                16,
+                5
+              ],
+              "end": [
+                20,
+                9
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "rim_high",
+              "start": [
+                20,
+                9
+              ],
+              "end": [
+                20,
+                10
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                20,
+                10
+              ],
+              "end": [
+                4,
+                10
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "bore",
+              "start": [
+                4,
+                10
+              ],
+              "end": [
+                4,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_pulley",
+          "name": "pulley",
+          "sketch": "profile",
+          "axis": {
+            "origin": [
+              0,
+              0
+            ],
+            "direction": [
+              0,
+              1
+            ]
+          },
+          "angle": 360
+        }
+      ]
+    }
+  ]
+}

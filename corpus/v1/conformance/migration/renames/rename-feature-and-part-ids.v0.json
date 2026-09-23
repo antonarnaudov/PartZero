@@ -1,0 +1,92 @@
+{
+  "schema": "aicad.ir/0",
+  "parts": [
+    {
+      "id": "p 1",
+      "name": "Main Body",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s-1",
+          "name": "base",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "c",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 5
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e.1",
+          "name": "puck",
+          "sketch": "base",
+          "distance": 3
+        },
+        {
+          "type": "sketch",
+          "id": "",
+          "name": "second",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "c",
+              "center": [
+                0,
+                20
+              ],
+              "radius": 2
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "r#1",
+          "name": "ring",
+          "sketch": "second",
+          "axis": {
+            "origin": [
+              0,
+              0
+            ],
+            "direction": [
+              0,
+              1
+            ]
+          },
+          "angle": 360
+        }
+      ]
+    },
+    {
+      "id": "p_1",
+      "name": "Main_Body",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s_1",
+          "name": "other",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "c",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

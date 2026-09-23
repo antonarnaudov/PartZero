@@ -1,4 +1,5 @@
-//! Writes the JSON Schemas for the IR and the metrics report into `schema/`.
+//! Writes the JSON Schemas for the IR and the metrics report into `schema/`, for both IR
+//! versions: `ir-v0.*`, `metrics-v0.*` (frozen) and `ir-v1.*`, `metrics-v1.*` (SPEC-v1).
 //! Run: `cargo run -p forge-ir --example dump_schema`
 fn main() {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("schema");
@@ -19,4 +20,7 @@ fn main() {
             "RESERVED_NAMES": forge_ir::RESERVED_NAMES,
         }),
     );
+    write("ir-v1.schema.json", forge_ir::v1::document_schema());
+    write("metrics-v1.schema.json", forge_ir::v1::report_schema());
+    write("ir-v1.constants.json", forge_ir::v1::constants_json());
 }

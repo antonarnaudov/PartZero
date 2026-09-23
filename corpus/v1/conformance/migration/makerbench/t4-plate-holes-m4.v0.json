@@ -1,0 +1,114 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "mounting_plate",
+    "description": "80x50x4 mounting plate with four M4 clearance holes 6 mm from the edges"
+  },
+  "parts": [
+    {
+      "id": "p_plate",
+      "name": "plate",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -40,
+                -25
+              ],
+              "end": [
+                40,
+                -25
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                40,
+                -25
+              ],
+              "end": [
+                40,
+                25
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                40,
+                25
+              ],
+              "end": [
+                -40,
+                25
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -40,
+                25
+              ],
+              "end": [
+                -40,
+                -25
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "hole_ne",
+              "center": [
+                34,
+                19
+              ],
+              "radius": 2.2
+            },
+            {
+              "kind": "circle",
+              "id": "hole_nw",
+              "center": [
+                -34,
+                19
+              ],
+              "radius": 2.2
+            },
+            {
+              "kind": "circle",
+              "id": "hole_sw",
+              "center": [
+                -34,
+                -19
+              ],
+              "radius": 2.2
+            },
+            {
+              "kind": "circle",
+              "id": "hole_se",
+              "center": [
+                34,
+                -19
+              ],
+              "radius": 2.2
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_plate",
+          "name": "plate",
+          "sketch": "outline",
+          "distance": 4
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "split_shaft_collar",
+    "description": "Split clamp collar blank for an 8 mm shaft: 22 OD, 8.1 bore, 10 thick, 1.5 mm slit through one side"
+  },
+  "parts": [
+    {
+      "id": "p_collar",
+      "name": "collar",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_ring",
+          "name": "ring",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "arc",
+              "id": "outer",
+              "start": [
+                10.974402033823985,
+                0.75
+              ],
+              "end": [
+                10.974402033823985,
+                -0.75
+              ],
+              "center": [
+                0,
+                0
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "slit_lower",
+              "start": [
+                10.974402033823985,
+                -0.75
+              ],
+              "end": [
+                3.97994974842648,
+                -0.75
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "bore",
+              "start": [
+                3.97994974842648,
+                -0.75
+              ],
+              "end": [
+                3.97994974842648,
+                0.75
+              ],
+              "center": [
+                0,
+                0
+              ],
+              "ccw": false
+            },
+            {
+              "kind": "line",
+              "id": "slit_upper",
+              "start": [
+                3.97994974842648,
+                0.75
+              ],
+              "end": [
+                10.974402033823985,
+                0.75
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_collar",
+          "name": "collar",
+          "sketch": "ring",
+          "distance": 10
+        }
+      ]
+    }
+  ]
+}

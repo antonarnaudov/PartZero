@@ -1,0 +1,787 @@
+{
+ "description": "Hole tool dimensions from HOLE_SIZES (SPEC-v1 \u00a76.5; values and sources in schema/ir-v1.constants.json). `hole` gives the size-related fields of a hole feature; `expected` is the resolved tool: `d` = hole diameter (ISO 273 series by fit, the tap drill for `fit: tap` and for `thread`), `depth` for insert holes (the preset's blind depth), and the preset dimensions (`cbore` / `csink` / `insert`, mm and degrees). `error` = the rejection code when HOLE_SIZES has no verified value for that preset and size. Transcribed from the source tables independently of the Rust table.",
+ "cases": [
+  {
+   "id": "M2-close",
+   "hole": {
+    "size": "M2",
+    "fit": "close",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 2.2,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M2-normal",
+   "hole": {
+    "size": "M2",
+    "fit": "normal",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 2.4,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M2-loose",
+   "hole": {
+    "size": "M2",
+    "fit": "loose",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 2.6,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M2-tap",
+   "hole": {
+    "size": "M2",
+    "fit": "tap",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 1.6,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M2-thread",
+   "hole": {
+    "size": "M2",
+    "depth": {
+     "blind": 10
+    },
+    "thread": true
+   },
+   "expected": {
+    "d": 1.6,
+    "kind": "simple",
+    "thread": {
+     "pitch": 0.4
+    }
+   }
+  },
+  {
+   "id": "M2-cbore",
+   "hole": {
+    "size": "M2",
+    "depth": "through",
+    "cbore": "iso4762"
+   },
+   "error": "HOLE_OPTIONS_CONFLICT"
+  },
+  {
+   "id": "M2-csink",
+   "hole": {
+    "size": "M2",
+    "depth": "through",
+    "csink": "iso10642"
+   },
+   "error": "HOLE_OPTIONS_CONFLICT"
+  },
+  {
+   "id": "M2-insert",
+   "hole": {
+    "size": "M2",
+    "insert": "std"
+   },
+   "expected": {
+    "d": 3.2,
+    "depth": 5.0,
+    "kind": "insert",
+    "insert": {
+     "d": 3.2,
+     "depth": 5.0
+    }
+   }
+  },
+  {
+   "id": "M2.5-close",
+   "hole": {
+    "size": "M2.5",
+    "fit": "close",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 2.7,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M2.5-normal",
+   "hole": {
+    "size": "M2.5",
+    "fit": "normal",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 2.9,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M2.5-loose",
+   "hole": {
+    "size": "M2.5",
+    "fit": "loose",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 3.1,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M2.5-tap",
+   "hole": {
+    "size": "M2.5",
+    "fit": "tap",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 2.05,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M2.5-thread",
+   "hole": {
+    "size": "M2.5",
+    "depth": {
+     "blind": 10
+    },
+    "thread": true
+   },
+   "expected": {
+    "d": 2.05,
+    "kind": "simple",
+    "thread": {
+     "pitch": 0.45
+    }
+   }
+  },
+  {
+   "id": "M2.5-cbore",
+   "hole": {
+    "size": "M2.5",
+    "depth": "through",
+    "cbore": "iso4762"
+   },
+   "expected": {
+    "d": 2.9,
+    "kind": "counterbore",
+    "cbore": {
+     "d": 5.5,
+     "depth": 3.0
+    }
+   }
+  },
+  {
+   "id": "M2.5-csink",
+   "hole": {
+    "size": "M2.5",
+    "depth": "through",
+    "csink": "iso10642"
+   },
+   "error": "HOLE_OPTIONS_CONFLICT"
+  },
+  {
+   "id": "M2.5-insert",
+   "hole": {
+    "size": "M2.5",
+    "insert": "std"
+   },
+   "expected": {
+    "d": 4.0,
+    "depth": 6.7,
+    "kind": "insert",
+    "insert": {
+     "d": 4.0,
+     "depth": 6.7
+    }
+   }
+  },
+  {
+   "id": "M3-close",
+   "hole": {
+    "size": "M3",
+    "fit": "close",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 3.2,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M3-normal",
+   "hole": {
+    "size": "M3",
+    "fit": "normal",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 3.4,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M3-loose",
+   "hole": {
+    "size": "M3",
+    "fit": "loose",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 3.6,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M3-tap",
+   "hole": {
+    "size": "M3",
+    "fit": "tap",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 2.5,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M3-thread",
+   "hole": {
+    "size": "M3",
+    "depth": {
+     "blind": 10
+    },
+    "thread": true
+   },
+   "expected": {
+    "d": 2.5,
+    "kind": "simple",
+    "thread": {
+     "pitch": 0.5
+    }
+   }
+  },
+  {
+   "id": "M3-cbore",
+   "hole": {
+    "size": "M3",
+    "depth": "through",
+    "cbore": "iso4762"
+   },
+   "expected": {
+    "d": 3.4,
+    "kind": "counterbore",
+    "cbore": {
+     "d": 6.5,
+     "depth": 3.4
+    }
+   }
+  },
+  {
+   "id": "M3-csink",
+   "hole": {
+    "size": "M3",
+    "depth": "through",
+    "csink": "iso10642"
+   },
+   "expected": {
+    "d": 3.4,
+    "kind": "countersink",
+    "csink": {
+     "d": 6.94,
+     "angle": 90
+    }
+   }
+  },
+  {
+   "id": "M3-insert",
+   "hole": {
+    "size": "M3",
+    "insert": "std"
+   },
+   "expected": {
+    "d": 4.0,
+    "depth": 6.7,
+    "kind": "insert",
+    "insert": {
+     "d": 4.0,
+     "depth": 6.7
+    }
+   }
+  },
+  {
+   "id": "M4-close",
+   "hole": {
+    "size": "M4",
+    "fit": "close",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 4.3,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M4-normal",
+   "hole": {
+    "size": "M4",
+    "fit": "normal",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 4.5,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M4-loose",
+   "hole": {
+    "size": "M4",
+    "fit": "loose",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 4.8,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M4-tap",
+   "hole": {
+    "size": "M4",
+    "fit": "tap",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 3.3,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M4-thread",
+   "hole": {
+    "size": "M4",
+    "depth": {
+     "blind": 10
+    },
+    "thread": true
+   },
+   "expected": {
+    "d": 3.3,
+    "kind": "simple",
+    "thread": {
+     "pitch": 0.7
+    }
+   }
+  },
+  {
+   "id": "M4-cbore",
+   "hole": {
+    "size": "M4",
+    "depth": "through",
+    "cbore": "iso4762"
+   },
+   "expected": {
+    "d": 4.5,
+    "kind": "counterbore",
+    "cbore": {
+     "d": 8.0,
+     "depth": 4.4
+    }
+   }
+  },
+  {
+   "id": "M4-csink",
+   "hole": {
+    "size": "M4",
+    "depth": "through",
+    "csink": "iso10642"
+   },
+   "expected": {
+    "d": 4.5,
+    "kind": "countersink",
+    "csink": {
+     "d": 9.18,
+     "angle": 90
+    }
+   }
+  },
+  {
+   "id": "M4-insert",
+   "hole": {
+    "size": "M4",
+    "insert": "std"
+   },
+   "expected": {
+    "d": 5.6,
+    "depth": 9.1,
+    "kind": "insert",
+    "insert": {
+     "d": 5.6,
+     "depth": 9.1
+    }
+   }
+  },
+  {
+   "id": "M5-close",
+   "hole": {
+    "size": "M5",
+    "fit": "close",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 5.3,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M5-normal",
+   "hole": {
+    "size": "M5",
+    "fit": "normal",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 5.5,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M5-loose",
+   "hole": {
+    "size": "M5",
+    "fit": "loose",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 5.8,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M5-tap",
+   "hole": {
+    "size": "M5",
+    "fit": "tap",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 4.2,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M5-thread",
+   "hole": {
+    "size": "M5",
+    "depth": {
+     "blind": 10
+    },
+    "thread": true
+   },
+   "expected": {
+    "d": 4.2,
+    "kind": "simple",
+    "thread": {
+     "pitch": 0.8
+    }
+   }
+  },
+  {
+   "id": "M5-cbore",
+   "hole": {
+    "size": "M5",
+    "depth": "through",
+    "cbore": "iso4762"
+   },
+   "expected": {
+    "d": 5.5,
+    "kind": "counterbore",
+    "cbore": {
+     "d": 10.0,
+     "depth": 5.4
+    }
+   }
+  },
+  {
+   "id": "M5-csink",
+   "hole": {
+    "size": "M5",
+    "depth": "through",
+    "csink": "iso10642"
+   },
+   "expected": {
+    "d": 5.5,
+    "kind": "countersink",
+    "csink": {
+     "d": 11.47,
+     "angle": 90
+    }
+   }
+  },
+  {
+   "id": "M5-insert",
+   "hole": {
+    "size": "M5",
+    "insert": "std"
+   },
+   "expected": {
+    "d": 6.4,
+    "depth": 10.5,
+    "kind": "insert",
+    "insert": {
+     "d": 6.4,
+     "depth": 10.5
+    }
+   }
+  },
+  {
+   "id": "M6-close",
+   "hole": {
+    "size": "M6",
+    "fit": "close",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 6.4,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M6-normal",
+   "hole": {
+    "size": "M6",
+    "fit": "normal",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 6.6,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M6-loose",
+   "hole": {
+    "size": "M6",
+    "fit": "loose",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 7.0,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M6-tap",
+   "hole": {
+    "size": "M6",
+    "fit": "tap",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 5.0,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M6-thread",
+   "hole": {
+    "size": "M6",
+    "depth": {
+     "blind": 10
+    },
+    "thread": true
+   },
+   "expected": {
+    "d": 5.0,
+    "kind": "simple",
+    "thread": {
+     "pitch": 1.0
+    }
+   }
+  },
+  {
+   "id": "M6-cbore",
+   "hole": {
+    "size": "M6",
+    "depth": "through",
+    "cbore": "iso4762"
+   },
+   "expected": {
+    "d": 6.6,
+    "kind": "counterbore",
+    "cbore": {
+     "d": 11.0,
+     "depth": 6.4
+    }
+   }
+  },
+  {
+   "id": "M6-csink",
+   "hole": {
+    "size": "M6",
+    "depth": "through",
+    "csink": "iso10642"
+   },
+   "expected": {
+    "d": 6.6,
+    "kind": "countersink",
+    "csink": {
+     "d": 13.71,
+     "angle": 90
+    }
+   }
+  },
+  {
+   "id": "M6-insert",
+   "hole": {
+    "size": "M6",
+    "insert": "std"
+   },
+   "expected": {
+    "d": 8.0,
+    "depth": 13.7,
+    "kind": "insert",
+    "insert": {
+     "d": 8.0,
+     "depth": 13.7
+    }
+   }
+  },
+  {
+   "id": "M8-close",
+   "hole": {
+    "size": "M8",
+    "fit": "close",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 8.4,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M8-normal",
+   "hole": {
+    "size": "M8",
+    "fit": "normal",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 9.0,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M8-loose",
+   "hole": {
+    "size": "M8",
+    "fit": "loose",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 10.0,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M8-tap",
+   "hole": {
+    "size": "M8",
+    "fit": "tap",
+    "depth": "through"
+   },
+   "expected": {
+    "d": 6.8,
+    "kind": "simple"
+   }
+  },
+  {
+   "id": "M8-thread",
+   "hole": {
+    "size": "M8",
+    "depth": {
+     "blind": 10
+    },
+    "thread": true
+   },
+   "expected": {
+    "d": 6.8,
+    "kind": "simple",
+    "thread": {
+     "pitch": 1.25
+    }
+   }
+  },
+  {
+   "id": "M8-cbore",
+   "hole": {
+    "size": "M8",
+    "depth": "through",
+    "cbore": "iso4762"
+   },
+   "expected": {
+    "d": 9.0,
+    "kind": "counterbore",
+    "cbore": {
+     "d": 15.0,
+     "depth": 8.6
+    }
+   }
+  },
+  {
+   "id": "M8-csink",
+   "hole": {
+    "size": "M8",
+    "depth": "through",
+    "csink": "iso10642"
+   },
+   "expected": {
+    "d": 9.0,
+    "kind": "countersink",
+    "csink": {
+     "d": 18.25,
+     "angle": 90
+    }
+   }
+  },
+  {
+   "id": "M8-insert",
+   "hole": {
+    "size": "M8",
+    "insert": "std"
+   },
+   "expected": {
+    "d": 9.6,
+    "depth": 13.7,
+    "kind": "insert",
+    "insert": {
+     "d": 9.6,
+     "depth": 13.7
+    }
+   }
+  },
+  {
+   "id": "explicit-d-overrides-table",
+   "hole": {
+    "size": "M3",
+    "d": 3.1,
+    "depth": "through"
+   },
+   "expected": {
+    "d": 3.1,
+    "kind": "simple"
+   }
+  }
+ ]
+}

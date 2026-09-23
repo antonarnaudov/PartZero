@@ -1,0 +1,117 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "m8_rod_end_cap",
+    "description": "Domed cap for an M8 threaded rod end: 14 mm dia, 10 mm straight + R7 dome, 8.4 mm bore 12 deep"
+  },
+  "parts": [
+    {
+      "id": "p_cap",
+      "name": "cap",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                4.2,
+                0
+              ],
+              "end": [
+                7,
+                0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "side",
+              "start": [
+                7,
+                0
+              ],
+              "end": [
+                7,
+                10
+              ]
+            },
+            {
+              "kind": "arc",
+              "id": "dome",
+              "start": [
+                7,
+                10
+              ],
+              "end": [
+                0,
+                17
+              ],
+              "center": [
+                0,
+                10
+              ],
+              "ccw": true
+            },
+            {
+              "kind": "line",
+              "id": "axis_cap",
+              "start": [
+                0,
+                17
+              ],
+              "end": [
+                0,
+                12
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "bore_end",
+              "start": [
+                0,
+                12
+              ],
+              "end": [
+                4.2,
+                12
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "bore",
+              "start": [
+                4.2,
+                12
+              ],
+              "end": [
+                4.2,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_cap",
+          "name": "cap",
+          "sketch": "profile",
+          "axis": {
+            "origin": [
+              0,
+              0
+            ],
+            "direction": [
+              0,
+              1
+            ]
+          },
+          "angle": 360
+        }
+      ]
+    }
+  ]
+}

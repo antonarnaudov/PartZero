@@ -1,0 +1,88 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "m5_spacer",
+    "description": "Round spacer for M5: 10 mm OD, 5.3 mm bore, 15 mm long"
+  },
+  "parts": [
+    {
+      "id": "p_spacer",
+      "name": "spacer",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_profile",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                2.65,
+                0.0
+              ],
+              "end": [
+                5.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "outer",
+              "start": [
+                5.0,
+                0.0
+              ],
+              "end": [
+                5.0,
+                15.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                5.0,
+                15.0
+              ],
+              "end": [
+                2.65,
+                15.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "bore",
+              "start": [
+                2.65,
+                15.0
+              ],
+              "end": [
+                2.65,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "f_spacer",
+          "name": "spacer",
+          "sketch": "f_profile",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 360.0
+        }
+      ]
+    }
+  ]
+}

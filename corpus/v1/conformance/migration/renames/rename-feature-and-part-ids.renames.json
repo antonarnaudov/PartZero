@@ -1,0 +1,40 @@
+{
+  "renames": [
+    {
+      "path": "/parts/0/id",
+      "kind": "part_id",
+      "from": "p 1",
+      "to": "p_1_2"
+    },
+    {
+      "path": "/parts/0/name",
+      "kind": "part_name",
+      "from": "Main Body",
+      "to": "Main_Body_2"
+    },
+    {
+      "path": "/parts/0/features/0/id",
+      "kind": "feature_id",
+      "from": "s-1",
+      "to": "s_1_2"
+    },
+    {
+      "path": "/parts/0/features/1/id",
+      "kind": "feature_id",
+      "from": "e.1",
+      "to": "e_1"
+    },
+    {
+      "path": "/parts/0/features/2/id",
+      "kind": "feature_id",
+      "from": "",
+      "to": "_"
+    },
+    {
+      "path": "/parts/0/features/3/id",
+      "kind": "feature_id",
+      "from": "r#1",
+      "to": "r_1"
+    }
+  ]
+}

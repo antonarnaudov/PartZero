@@ -1,0 +1,571 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "knob_queries",
+    "description": "Every query op and predicate of SPEC-v1 §5.3 in tags on a revolved knob with a hole and a pattern"
+  },
+  "parts": [
+    {
+      "id": "p1",
+      "name": "knob",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "profile",
+          "plane": "XZ",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "axis_seg",
+              "start": [
+                0.0,
+                0.0
+              ],
+              "end": [
+                0.0,
+                20.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                0.0,
+                20.0
+              ],
+              "end": [
+                15.0,
+                20.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "rim",
+              "start": [
+                15.0,
+                20.0
+              ],
+              "end": [
+                15.0,
+                0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                15.0,
+                0.0
+              ],
+              "end": [
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "revolve",
+          "id": "r1",
+          "name": "body1",
+          "sketch": "s1",
+          "axis": {
+            "origin": [
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ]
+          },
+          "angle": 270.0
+        },
+        {
+          "type": "hole",
+          "id": "h1",
+          "name": "shaft",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "side",
+                "feature": "r1",
+                "curve": "bottom"
+              }
+            }
+          },
+          "at": {
+            "list": [
+              {
+                "id": "c",
+                "at": [
+                  0.0,
+                  0.0
+                ]
+              }
+            ]
+          },
+          "d": 6.0,
+          "depth": {
+            "blind": 12.0
+          }
+        },
+        {
+          "type": "pattern",
+          "id": "pt1",
+          "name": "copies",
+          "seed": {
+            "features": [
+              "r1"
+            ]
+          },
+          "layout": {
+            "linear": {
+              "dir": {
+                "cylinder": {
+                  "kind": "face",
+                  "q": {
+                    "op": "side",
+                    "feature": "r1",
+                    "curve": "rim"
+                  }
+                }
+              },
+              "count": 2.0,
+              "spacing": 40.0
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q1",
+          "name": "qEndcap",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "endcap",
+              "feature": "r1",
+              "end": "start",
+              "member": "rim"
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q2",
+          "name": "qSidesMember",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "sides",
+              "feature": "r1",
+              "member": "top"
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q3",
+          "name": "qBodyMember",
+          "target": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "r1",
+              "member": "axis_seg"
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q4",
+          "name": "qBodies",
+          "target": {
+            "kind": "body",
+            "q": {
+              "op": "bodies"
+            },
+            "card": "any"
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q5",
+          "name": "qHoleWall",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "hole_face",
+              "feature": "h1",
+              "at": "c",
+              "part": "wall"
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q6",
+          "name": "qCreated",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "created",
+              "feature": "h1",
+              "role": "tip"
+            },
+            "card": 3
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q7",
+          "name": "qInstance",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "instance",
+              "feature": "pt1",
+              "index": [
+                1
+              ]
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q8",
+          "name": "qUnion",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "union",
+              "of": [
+                {
+                  "op": "side",
+                  "feature": "r1",
+                  "curve": "top"
+                },
+                {
+                  "op": "side",
+                  "feature": "r1",
+                  "curve": "rim"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q9",
+          "name": "qIntersect",
+          "target": {
+            "kind": "edge",
+            "q": {
+              "op": "intersect",
+              "of": [
+                {
+                  "op": "edges",
+                  "of": {
+                    "op": "side",
+                    "feature": "r1",
+                    "curve": "top"
+                  }
+                },
+                {
+                  "op": "edges",
+                  "of": {
+                    "op": "side",
+                    "feature": "r1",
+                    "curve": "rim"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q10",
+          "name": "qMinus",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "minus",
+              "a": {
+                "op": "sides",
+                "feature": "r1"
+              },
+              "b": {
+                "op": "side",
+                "feature": "r1",
+                "curve": "top"
+              }
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q11",
+          "name": "qOwner",
+          "target": {
+            "kind": "body",
+            "q": {
+              "op": "owner",
+              "of": {
+                "op": "hole_face",
+                "feature": "h1",
+                "at": "c",
+                "part": "floor"
+              }
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q12",
+          "name": "qLargest",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "largest",
+              "of": {
+                "op": "faces",
+                "of": {
+                  "op": "bodies"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q13",
+          "name": "qSmallest",
+          "target": {
+            "kind": "edge",
+            "q": {
+              "op": "smallest",
+              "of": {
+                "op": "edges",
+                "of": {
+                  "op": "body",
+                  "feature": "r1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q14",
+          "name": "qType",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "filter",
+              "of": {
+                "op": "created",
+                "feature": "r1"
+              },
+              "where": {
+                "type": "cylinder"
+              }
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q15",
+          "name": "qPerp",
+          "target": {
+            "kind": "edge",
+            "q": {
+              "op": "filter",
+              "of": {
+                "op": "edges",
+                "of": {
+                  "op": "bodies"
+                }
+              },
+              "where": {
+                "perpendicular": [
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q16",
+          "name": "qConcave",
+          "target": {
+            "kind": "edge",
+            "q": {
+              "op": "filter",
+              "of": {
+                "op": "edges",
+                "of": {
+                  "op": "bodies"
+                }
+              },
+              "where": {
+                "concave": true
+              }
+            },
+            "card": "any"
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q17",
+          "name": "qSmooth",
+          "target": {
+            "kind": "edge",
+            "q": {
+              "op": "filter",
+              "of": {
+                "op": "edges",
+                "of": {
+                  "op": "bodies"
+                }
+              },
+              "where": {
+                "smooth": true
+              }
+            },
+            "card": "any"
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q18",
+          "name": "qRadius",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "filter",
+              "of": {
+                "op": "faces",
+                "of": {
+                  "op": "bodies"
+                }
+              },
+              "where": {
+                "radius": {
+                  "min": 2.0,
+                  "max": 4.0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q19",
+          "name": "qRadiusEq",
+          "target": {
+            "kind": "edge",
+            "q": {
+              "op": "filter",
+              "of": {
+                "op": "edges",
+                "of": {
+                  "op": "bodies"
+                }
+              },
+              "where": {
+                "radius": {
+                  "eq": 15.0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q20",
+          "name": "qVerticesOfFace",
+          "target": {
+            "kind": "vertex",
+            "q": {
+              "op": "vertices",
+              "of": {
+                "op": "endcap",
+                "feature": "r1",
+                "end": "end"
+              }
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q21",
+          "name": "qFacesOfEdges",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "faces",
+              "of": {
+                "op": "edge_at",
+                "feature": "r1",
+                "curve": "top",
+                "end": "start"
+              }
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q22",
+          "name": "qEdgesOfVertices",
+          "target": {
+            "kind": "edge",
+            "q": {
+              "op": "edges",
+              "of": {
+                "op": "tagged",
+                "feature": "q20"
+              }
+            }
+          }
+        },
+        {
+          "type": "tag",
+          "id": "q23",
+          "name": "qExtremeAxis",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "extreme",
+              "of": {
+                "op": "faces",
+                "of": {
+                  "op": "bodies"
+                }
+              },
+              "dir": {
+                "edge": {
+                  "kind": "edge",
+                  "q": {
+                    "op": "edge_at",
+                    "feature": "r1",
+                    "curve": "rim",
+                    "end": "end"
+                  }
+                },
+                "flip": true
+              },
+              "which": "min"
+            },
+            "card": "one"
+          }
+        }
+      ]
+    }
+  ]
+}

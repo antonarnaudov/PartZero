@@ -1,0 +1,84 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "flange_gasket",
+    "description": "Flange gasket: 60 OD, 40 ID, 4x 4.5 mm holes on a 50 mm bolt circle, 2 mm thick"
+  },
+  "parts": [
+    {
+      "id": "p_gasket",
+      "name": "gasket",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_outline",
+          "name": "outline",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "outer",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 30
+            },
+            {
+              "kind": "circle",
+              "id": "inner",
+              "center": [
+                0,
+                0
+              ],
+              "radius": 20
+            },
+            {
+              "kind": "circle",
+              "id": "bolt_e",
+              "center": [
+                25,
+                0
+              ],
+              "radius": 2.25
+            },
+            {
+              "kind": "circle",
+              "id": "bolt_n",
+              "center": [
+                0,
+                25
+              ],
+              "radius": 2.25
+            },
+            {
+              "kind": "circle",
+              "id": "bolt_w",
+              "center": [
+                -25,
+                0
+              ],
+              "radius": 2.25
+            },
+            {
+              "kind": "circle",
+              "id": "bolt_s",
+              "center": [
+                0,
+                -25
+              ],
+              "radius": 2.25
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_gasket",
+          "name": "gasket",
+          "sketch": "outline",
+          "distance": 2
+        }
+      ]
+    }
+  ]
+}

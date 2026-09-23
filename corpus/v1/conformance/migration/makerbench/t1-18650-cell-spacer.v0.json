@@ -1,0 +1,150 @@
+{
+  "schema": "aicad.ir/0",
+  "meta": {
+    "name": "cell_spacer_18650_4s2p",
+    "description": "4S2P 18650 cell spacer: 88x46x5, 8x 18.6 mm holes on a 21 mm grid, centred"
+  },
+  "parts": [
+    {
+      "id": "p_spacer",
+      "name": "spacer",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_grid",
+          "name": "grid",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -44,
+                -23
+              ],
+              "end": [
+                44,
+                -23
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                44,
+                -23
+              ],
+              "end": [
+                44,
+                23
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                44,
+                23
+              ],
+              "end": [
+                -44,
+                23
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -44,
+                23
+              ],
+              "end": [
+                -44,
+                -23
+              ]
+            },
+            {
+              "kind": "circle",
+              "id": "c11",
+              "center": [
+                -31.5,
+                -10.5
+              ],
+              "radius": 9.3
+            },
+            {
+              "kind": "circle",
+              "id": "c12",
+              "center": [
+                -10.5,
+                -10.5
+              ],
+              "radius": 9.3
+            },
+            {
+              "kind": "circle",
+              "id": "c13",
+              "center": [
+                10.5,
+                -10.5
+              ],
+              "radius": 9.3
+            },
+            {
+              "kind": "circle",
+              "id": "c14",
+              "center": [
+                31.5,
+                -10.5
+              ],
+              "radius": 9.3
+            },
+            {
+              "kind": "circle",
+              "id": "c21",
+              "center": [
+                -31.5,
+                10.5
+              ],
+              "radius": 9.3
+            },
+            {
+              "kind": "circle",
+              "id": "c22",
+              "center": [
+                -10.5,
+                10.5
+              ],
+              "radius": 9.3
+            },
+            {
+              "kind": "circle",
+              "id": "c23",
+              "center": [
+                10.5,
+                10.5
+              ],
+              "radius": 9.3
+            },
+            {
+              "kind": "circle",
+              "id": "c24",
+              "center": [
+                31.5,
+                10.5
+              ],
+              "radius": 9.3
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_spacer",
+          "name": "spacer",
+          "sketch": "grid",
+          "distance": 5
+        }
+      ]
+    }
+  ]
+}
