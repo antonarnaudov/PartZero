@@ -11,10 +11,20 @@ publish.workspace = true
 forge-core.workspace = true
 forge-ir.workspace = true
 thiserror.workspace = true
+# W4 booleans: surface-surface / curve-surface intersection and serializable error details.
+forge-ssi = { path = "../forge-ssi" }
+serde.workspace = true
+# W4 booleans: exact centroids for the canonical order of split pieces (SPEC §5.4), and
+# exact mass properties / validation of results in the tests.
+forge-check.workspace = true
 
 [dev-dependencies]
-proptest.workspace = true
 serde_json.workspace = true
+
+# proptest (and its process helpers) only on native targets: the boolean determinism golden
+# (tests/boolean_golden.rs) is also built for wasm32-wasip1 to check bit-identical results.
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+proptest.workspace = true
 
 [lints]
 workspace = true

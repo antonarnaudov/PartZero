@@ -18,6 +18,7 @@
 //! - Vertex tolerances grow only where the sketch data requires it (curve ends that meet
 //!   within tolerance, arc ends off their carrier circle), explicitly, per vertex.
 
+pub mod boolean;
 mod error;
 mod extrude;
 mod plan;
@@ -25,6 +26,10 @@ mod plane;
 pub mod revolve;
 pub mod sketch;
 
+pub use boolean::{
+    BodyOp, BodyOpResult, BooleanError, OpBody, apply_body_op, apply_body_op_in_scope,
+    unify_same_domain,
+};
 pub use error::{CurveEnd, OpError};
 pub use extrude::extrude;
 pub use plane::sketch_frame;

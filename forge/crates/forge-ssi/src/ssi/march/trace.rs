@@ -100,6 +100,23 @@ impl March<'_> {
         (g.abs() <= 1e3 * goal).then_some(x)
     }
 
+    /// [`Self::correct`] that only accepts points whose distance to the curve, estimated
+    /// as `|G| / |∇G|` in 3D, is below `max(1e-12·len, min(h / 20, 1e-9·len))` for a step
+    /// of length `h` (what rounding allows where `∇G` is tiny):
+    /// near a hairpin tip `∇G` is tiny, and a small `|G|` alone lets the trace wander off
+    /// along the tolerance band past the tip.
+    fn correct_strict(&self, uv: Point2, h: f64) -> Option<Point2> {
+        let x = self.correct(uv)?;
+        let (g, gr) = self.g.grad(x);
+        let [_, su, sv] = self.p.surf.derivs1(x.x, x.y);
+        // Parameter-space step to the curve, measured in 3D.
+        let n2 = gr.norm_squared();
+        let st = gr * (g / n2.max(1e-300));
+        let d3 = (su * st.x + sv * st.y).norm();
+        let len = self.len.max(1e-300);
+        (d3 <= (1e-12 * len).max((0.05 * h).min(1e-9 * len))).then_some(x)
+    }
+
     /// Tangent direction in `P`'s parameters (unit 3D speed) and the 3D speed of
     /// `perp(∇G)`.
     fn tangent(&self, uv: Point2) -> Option<(Vec2, Vec3)> {
@@ -216,7 +233,6 @@ fn trace_dir(
     let mut dir = t0 * sign;
     let start_p = pts[0].p;
     let start_t3 = t3_start * sign;
-    let start_canon = start - m.canonical(start);
     // Geometric closure: the step `a → b` passes through the start point (which lies on
     // the curve) in the traced direction.
     let closes = |m: &March<'_>, a: Point3, b: Point3, uv_a: Point2, uv_b: Point2| -> Option<Tp> {
@@ -228,8 +244,19 @@ fn trace_dir(
         if !(chord > 0.0 && via <= chord * 1.02 + 1e-9 * m.len && start_t3.dot(b - a) > 0.0) {
             return None;
         }
-        let shift = (uv_b - m.canonical(uv_b)) - start_canon;
-        let s = start + shift;
+        // The period copy of the start nearest the step (canonical windows cannot decide
+        // it: a start on the window's edge and a step just across it wrap apart).
+        let near = |x: f64, full: bool, y: f64| {
+            if full {
+                x + ((y - x) / math::TAU).round() * math::TAU
+            } else {
+                x
+            }
+        };
+        let s = Point2::new(
+            near(start.x, m.full_u, uv_b.x),
+            near(start.y, m.full_v, uv_b.y),
+        );
         let uv_chord = uv_a.distance(uv_b);
         let uv_via = uv_a.distance(s) + s.distance(uv_b);
         (uv_via <= uv_chord * 1.1 + 1e-9 * (1.0 + s.norm())).then_some(Tp { uv: s, p: start_p })
@@ -297,7 +324,12 @@ fn trace_dir(
                 h *= 0.5;
                 continue;
             };
-            let tn = if tn.dot(dir) < 0.0 { -tn } else { tn };
+            // Orientation lock (open issue 1): along one regular piece of the zero set the
+            // raw tangent `perp(∇G)` keeps its orientation, and the trace only runs through
+            // certified-regular cells. A corrected point whose raw tangent points backwards
+            // lies on another piece — the other branch of a near-crossing that passes a
+            // saddle of `G` — and the step is rejected (`cos_turn` < 0), never re-oriented.
+            let tn = tn * sign;
             let moved = pc.distance(p0);
             let drift = pc.distance(m.p.surf.eval(pred.x, pred.y));
             let cos_turn = {
@@ -444,7 +476,10 @@ fn trace_dir(
             let n = pts.len();
             let last = pts[n - 1];
             // A regular curve cannot pass through one 3D point twice.
-            let hit = (0..n - 16).find(|&j| pts[j].p.distance(last.p) <= m.match_dist());
+            // The most recent earlier visit (one lap back, not the first of several).
+            let hit = (0..n - 16)
+                .rev()
+                .find(|&j| pts[j].p.distance(last.p) <= m.match_dist());
             if let Some(j) = hit {
                 let mut lp: Vec<Tp> = pts[j..].to_vec();
                 if let Some(e) = lp.last_mut() {
@@ -731,32 +766,63 @@ impl March<'_> {
 
     /// Trace through a cluster from `from` in direction `dir` until leaving the
     /// cluster's cells; returns the path (excluding `from`).
-    fn pass_through(&self, from: Tp, dir: Vec2, info: &ClusterInfo) -> Option<Vec<Tp>> {
+    ///
+    /// With `lock = Some(s)` the step direction is the **raw** tangent `perp(∇G)` times
+    /// `s`, never re-oriented by continuity: along one regular piece of the zero set the
+    /// raw tangent keeps its orientation, so a corrected point whose raw tangent points
+    /// backwards lies on another piece (the other branch of a near-crossing, the far
+    /// side of a thin lens) and the step is rejected as a jump. Without a lock the
+    /// orientation follows the previous direction.
+    fn pass_through(
+        &self,
+        from: Tp,
+        dir: Vec2,
+        info: &ClusterInfo,
+        lock: Option<f64>,
+    ) -> Option<Vec<Tp>> {
         let mut uv = from.uv;
-        let mut d = dir;
+        let mut d = match lock {
+            Some(s) => self.tangent(uv)?.0 * s,
+            None => dir,
+        };
         let mut out = Vec::new();
         let h0 = (info.extent / 32.0).max(1e-3 * self.h_min);
         let mut h = h0;
+        let floor = if lock.is_some() { 1e-9 } else { 1e-6 };
         let inside =
             |m: &March<'_>, x: Point2| m.locate(x).is_some_and(|l| info.cells.contains(&l));
         let mut steps = 0;
         let mut left = false;
+        let mut entered = false;
         while steps < 20_000 {
             steps += 1;
             let pred = uv + d * h;
             let Some(c) = self.correct(pred) else {
                 h *= 0.5;
-                if h < 1e-6 * h0 {
+                if h < floor * h0 {
                     return None;
                 }
                 continue;
             };
             let (tn, _) = self.tangent(c)?;
-            let tn = if tn.dot(d) < 0.0 { -tn } else { tn };
+            let tn = match lock {
+                Some(s) => tn * s,
+                None if tn.dot(d) < 0.0 => -tn,
+                None => tn,
+            };
             let turn = d.normalize()?.dot(tn.normalize()?);
-            if turn < 0.97 {
+            // A corrected point far from the predictor jumped to another piece (the
+            // locked direction has unit 3D speed, so the step is `h` in 3D).
+            let jumped = lock.is_some()
+                && self
+                    .p
+                    .surf
+                    .eval(c.x, c.y)
+                    .distance(self.p.surf.eval(pred.x, pred.y))
+                    > 0.2 * h;
+            if turn < 0.97 || jumped {
                 h *= 0.5;
-                if h < 1e-6 * h0 {
+                if h < floor * h0 {
                     return None;
                 }
                 continue;
@@ -767,13 +833,229 @@ impl March<'_> {
             });
             uv = c;
             d = tn;
-            if !inside(self, c) && steps > 1 {
+            let is_in = inside(self, c);
+            entered |= is_in;
+            // Unlocked: legacy rule (any point outside after the first step). Locked: the
+            // path must have entered the cluster before it counts as leaving it.
+            if !is_in && steps > 1 && (lock.is_none() || entered) {
                 left = true;
                 break;
             }
             h = (h * 1.5).min(h0 * 4.0);
         }
         left.then_some(out)
+    }
+
+    /// Newton on `∇G = 0` inside a cluster: the saddle (or extremum) of `G` a
+    /// near-crossing or a tangency passes by. `Some((uv, |G|))` when it converged within
+    /// the cluster's reach.
+    fn cluster_saddle(&self, info: &ClusterInfo) -> Option<(Point2, f64)> {
+        // Start at the cell centre with the smallest gradient.
+        let mut best = (info.cells[0], f64::INFINITY);
+        for &c in &info.cells {
+            let x = self.cells[c].centre();
+            let (_, gr) = self.g.grad(x);
+            if gr.norm() < best.1 {
+                best = (c, gr.norm());
+            }
+        }
+        let start = self.cells[best.0].centre();
+        let mut radius: f64 = 0.0;
+        for &c in &info.cells {
+            let cell = self.cells[c];
+            radius = radius.max((cell.u.1 - cell.u.0).max(cell.v.1 - cell.v.0));
+        }
+        let radius = 4.0 * radius * (info.cells.len() as f64).sqrt();
+        let mut x = start;
+        let g0 = best.1.max(1e-300);
+        for _ in 0..50 {
+            let (_, gr) = self.g.grad(x);
+            let h = self.g.hessian(x);
+            let det = h[0][0] * h[1][1] - h[0][1] * h[1][0];
+            if det == 0.0 || !det.is_finite() {
+                return None;
+            }
+            let dx = Vec2::new(
+                -(h[1][1] * gr.x - h[0][1] * gr.y) / det,
+                -(-h[1][0] * gr.x + h[0][0] * gr.y) / det,
+            );
+            let nx = x + dx;
+            if nx.distance(start) > radius || !nx.is_finite() {
+                return None;
+            }
+            x = nx;
+            if dx.norm() <= 1e-15 * (1.0 + x.norm()) {
+                break;
+            }
+        }
+        let (g, gr) = self.g.grad(x);
+        (gr.norm() <= 1e-6 * g0 || gr.norm() <= 1e-12).then_some((x, g.abs()))
+    }
+
+    /// Pair the branch ends of a near-crossing (or a lens tip) by orientation-locked
+    /// pass-throughs (docs/spikes/03-ssi.md, open issue 1). Every end is classified by
+    /// the raw tangent `perp(∇G)`: an **in** end enters the cluster along it, an **out**
+    /// end against it. Along one regular piece of the zero set the raw orientation is
+    /// preserved, so each in end is traced with the orientation locked until it leaves
+    /// the cluster, and joined to the out end it arrives at. `None` (fall back to a
+    /// singular vertex) unless every end is paired, one-to-one.
+    fn pair_locked(
+        &self,
+        raws: &[RawBranch],
+        ends: &[(usize, usize)],
+        info: &ClusterInfo,
+    ) -> Option<Vec<Join>> {
+        let mut ins: Vec<(usize, usize)> = Vec::new();
+        let mut outs: Vec<(usize, usize)> = Vec::new();
+        for &(b, e) in ends {
+            if raws[b].pts.len() < 2 {
+                return None;
+            }
+            let tp = end_tp(&raws[b], e);
+            let dir = end_dir(&raws[b], e);
+            let (tau, _) = self.tangent(tp.uv)?;
+            let c = tau.normalize()?.dot(dir);
+            if c.abs() < 0.5 {
+                return None;
+            }
+            if c > 0.0 {
+                ins.push((b, e));
+            } else {
+                outs.push((b, e));
+            }
+        }
+        if ins.len() != outs.len() || ins.is_empty() {
+            return None;
+        }
+        let reach = 4.0 * info.extent.max(self.match_dist());
+        let mut used = vec![false; outs.len()];
+        let mut joins = Vec::new();
+        for (b, e) in ins {
+            let from = end_tp(&raws[b], e);
+            let mut path = self.pass_through(from, end_dir(&raws[b], e), info, Some(1.0))?;
+            let last = *path.last()?;
+            let mut cand: Vec<(f64, usize)> = outs
+                .iter()
+                .enumerate()
+                .filter(|(j, _)| !used[*j])
+                .map(|(j, &(ob, oe))| (end_tp(&raws[ob], oe).p.distance(last.p), j))
+                .collect();
+            cand.sort_by(|x, y| x.0.total_cmp(&y.0).then(x.1.cmp(&y.1)));
+            let &(d, j) = cand.first()?;
+            // The arrival must be unambiguous: clearly nearer one out end than any other.
+            if d > reach || cand.get(1).is_some_and(|c2| c2.0 <= 2.0 * d) {
+                return None;
+            }
+            used[j] = true;
+            path.pop();
+            joins.push(((b, e), outs[j], path));
+        }
+        Some(joins)
+    }
+
+    /// Pair branch ends of odd clusters across clusters (open issue 2: the hairpin tips
+    /// of thin lenses at near-tangential contacts, whose radius ≈ the surfaces'
+    /// separation lies far below the subdivision resolution). Each **in** end (see
+    /// [`March::pair_locked`]) is traced with the raw orientation locked and no cell
+    /// bounds, with steps down to `1e-10·len`, until it arrives at an **out** end,
+    /// travelling into that branch. `None` unless every end is paired, one-to-one.
+    fn pair_across(&self, raws: &[RawBranch], ends: &[(usize, usize)]) -> Option<Vec<Join>> {
+        let mut ins: Vec<(usize, usize)> = Vec::new();
+        let mut outs: Vec<(usize, usize)> = Vec::new();
+        for &(b, e) in ends {
+            if raws[b].pts.len() < 2 {
+                return None;
+            }
+            let tp = end_tp(&raws[b], e);
+            let (tau, _) = self.tangent(tp.uv)?;
+            let c = tau.normalize()?.dot(end_dir(&raws[b], e));
+            if c.abs() < 0.5 {
+                return None;
+            }
+            if c > 0.0 {
+                ins.push((b, e));
+            } else {
+                outs.push((b, e));
+            }
+        }
+        if ins.len() != outs.len() || ins.is_empty() {
+            return None;
+        }
+        // Travel budget: a few times the spread of the ends.
+        let mut spread: f64 = 0.0;
+        for &(b1, e1) in ends {
+            for &(b2, e2) in ends {
+                spread = spread.max(end_tp(&raws[b1], e1).p.distance(end_tp(&raws[b2], e2).p));
+            }
+        }
+        let budget = (8.0 * spread + 1e3 * self.match_dist()).min(0.5 * self.len);
+        let targets: Vec<(Tp, Vec2)> = outs
+            .iter()
+            .map(|&(b, e)| (end_tp(&raws[b], e), end_dir(&raws[b], e)))
+            .collect();
+        let mut used = vec![false; outs.len()];
+        let mut joins = Vec::new();
+        for (b, e) in ins {
+            let (j, mut path) = self.hairpin(end_tp(&raws[b], e), &targets, budget)?;
+            if used[j] {
+                return None;
+            }
+            used[j] = true;
+            path.pop();
+            joins.push(((b, e), outs[j], path));
+        }
+        Some(joins)
+    }
+
+    /// Orientation-locked trace (raw tangent `perp(∇G)`, sign +1) from `from` until it
+    /// arrives at one of `targets` (`(end point, direction into its cluster)`), within
+    /// `budget` of travel. Returns the target index and the path (ending at the target).
+    fn hairpin(&self, from: Tp, targets: &[(Tp, Vec2)], budget: f64) -> Option<(usize, Vec<Tp>)> {
+        let mut uv = from.uv;
+        let mut d = self.tangent(uv)?.0;
+        let floor = 1e-10 * self.len.max(1e-300);
+        let h_max = (budget / 64.0).max(floor);
+        let mut h = (1e-2 * budget).clamp(floor, h_max);
+        let mut p = from.p;
+        let mut out: Vec<Tp> = Vec::new();
+        let mut travelled = 0.0;
+        for _ in 0..400_000 {
+            // Arrival: the target is within one step ahead and we travel into its branch.
+            for (j, (tp, into_cluster)) in targets.iter().enumerate() {
+                let to = tp.p - p;
+                let near = to.norm() <= (1.5 * h).max(self.match_dist());
+                if near && d.dot(*into_cluster) < 0.0 {
+                    out.push(*tp);
+                    return Some((j, out));
+                }
+            }
+            if travelled > budget {
+                return None;
+            }
+            let pred = uv + d * h;
+            let accepted = self.correct_strict(pred, h).and_then(|c| {
+                let q = self.p.surf.eval(c.x, c.y);
+                let (tn, _) = self.tangent(c)?;
+                let turn = d.normalize()?.dot(tn.normalize()?);
+                let jumped = q.distance(self.p.surf.eval(pred.x, pred.y)) > 0.2 * h
+                    || q.distance(p) > 1.5 * h;
+                (turn >= 0.97 && !jumped).then_some((c, q, tn))
+            });
+            let Some((c, q, tn)) = accepted else {
+                h *= 0.5;
+                if h < floor {
+                    return None;
+                }
+                continue;
+            };
+            travelled += q.distance(p);
+            uv = c;
+            p = q;
+            d = tn;
+            out.push(Tp { uv: c, p: q });
+            h = (h * 1.5).min(h_max);
+        }
+        None
     }
 }
 
@@ -790,6 +1072,7 @@ pub(crate) fn resolve_clusters(
             leaf_cluster[c] = ci;
         }
     }
+    let raws = split_at_crossings(m, raws, clusters, fit);
     // Ends per cluster: (branch, end index).
     let mut ends: Vec<Vec<(usize, usize)>> = vec![Vec::new(); clusters.len()];
     for (bi, rb) in raws.iter().enumerate() {
@@ -833,6 +1116,8 @@ pub(crate) fn resolve_clusters(
     // Joins between branch ends: (b1, e1) <-> (b2, e2) with the connecting path.
     let mut joins: Vec<Join> = Vec::new();
     let mut points = Vec::new();
+    // Branch ends of odd clusters, paired across clusters at the end.
+    let mut deferred: Vec<(usize, usize)> = Vec::new();
     for (ci, cells) in clusters.iter().enumerate() {
         let info = m.cluster_info(cells);
         let special = m
@@ -841,6 +1126,23 @@ pub(crate) fn resolve_clusters(
             .find(|s| cells.iter().any(|&c| special_in_cell(m, s, c)))
             .copied();
         let k = ends[ci].len();
+        if std::env::var_os("FORGE_SSI_DEBUG").is_some() {
+            eprintln!(
+                "cluster {ci}: {} cells, extent {:e}, k {k}, special {}, saddle {:?}",
+                cells.len(),
+                info.extent,
+                special.is_some(),
+                m.cluster_saddle(&info)
+            );
+            for &(b, e) in &ends[ci] {
+                let tp = end_tp(&raws[b], e);
+                let dir = end_dir(&raws[b], e);
+                let t = m
+                    .tangent(tp.uv)
+                    .map(|x| x.0.normalize().map(|y| y.dot(dir)));
+                eprintln!("   end ({b},{e}) p {:?} cos {:?}", tp.p, t);
+            }
+        }
         let (core_uv, gap) = match special {
             Some(s) => {
                 let uv = if s.row.is_some() {
@@ -853,6 +1155,11 @@ pub(crate) fn resolve_clusters(
             None => m.cluster_core(&info),
         };
         let core_p = special.map_or_else(|| m.p.surf.eval(core_uv.x, core_uv.y), |s| s.p);
+        // A contact region clearly outside Q's box does not matter: its branch ends stay
+        // domain ends (the branches are clipped to the box).
+        if k == 0 && outside_q(m, core_p) {
+            continue;
+        }
         if k == 0 {
             if gap <= fit {
                 if info.extent > 1e3 * m.h_min.max(1e-12) {
@@ -874,12 +1181,23 @@ pub(crate) fn resolve_clusters(
             }
             continue;
         }
-        if k == 2 && special.is_none() {
+        // Two ends at a true crossing (a saddle of `G` on both surfaces) that meet at an
+        // angle are two arms of the crossing whose other arms leave the box right there
+        // (a crossing on the box edge): they end at a vertex, not joined through a kink.
+        let kinked_crossing = k == 2 && special.is_none() && {
+            let (b1, e1) = ends[ci][0];
+            let (b2, e2) = ends[ci][1];
+            let (d1, d2) = (end_dir(&raws[b1], e1), end_dir(&raws[b2], e2));
+            d1.dot(-d2) < 0.866
+                && m.cluster_saddle(&info)
+                    .is_some_and(|(_, g)| g <= 0.25 * fit)
+        };
+        if k == 2 && special.is_none() && !kinked_crossing {
             let (b1, e1) = ends[ci][0];
             let (b2, e2) = ends[ci][1];
             let from = end_tp(&raws[b1], e1);
             let dir = end_dir(&raws[b1], e1);
-            if let Some(path) = m.pass_through(from, dir, &info) {
+            if let Some(path) = m.pass_through(from, dir, &info, None) {
                 let target = end_tp(&raws[b2], e2);
                 let last = path.last().copied().unwrap_or(from);
                 if last.p.distance(target.p) <= 4.0 * info.extent.max(m.match_dist()) {
@@ -891,7 +1209,47 @@ pub(crate) fn resolve_clusters(
                 }
             }
         }
+        // Near-crossings (open issue 1): the curves pass by a saddle of `G` whose value
+        // is clearly off zero, so the branches do not meet there. Pair the ends by
+        // orientation-locked pass-throughs; a true (tangential) crossing, where the
+        // saddle lies on both surfaces within `fit / 4`, stays a singular vertex.
+        if k >= 2 && k.is_multiple_of(2) && special.is_none() {
+            let near_crossing = m.cluster_saddle(&info).is_none_or(|(_, g)| g > 0.25 * fit);
+            if near_crossing && let Some(js) = m.pair_locked(&raws, &ends[ci], &info) {
+                joins.extend(js);
+                m.uncertified = true;
+                continue;
+            }
+        }
+        // An odd number of branch ends and no surface singularity: the zero set of a
+        // regular `G` has no odd vertex, so the curve leaves this cluster through another
+        // one (the hairpin tip of a thin lens, tangent-band clusters along its sides).
+        // A vertex here would be a dangling curve end; the ends are paired across
+        // clusters after the loop.
+        // Except at a true crossing (a saddle of `G` on both surfaces) on the edge of P's
+        // box: one of its arms leaves the box there, the others meet at a vertex.
+        let crossing_on_edge = || {
+            let Some((suv, g)) = m.cluster_saddle(&info) else {
+                return false;
+            };
+            if g > 0.25 * fit {
+                return false;
+            }
+            let d = m.p.dom;
+            let (su, sv) = (1e-4 * (d.u.1 - d.u.0), 1e-4 * (d.v.1 - d.v.0));
+            let q = m.canonical(suv);
+            let near_u = !m.full_u && ((q.x - d.u.0).abs() <= su || (q.x - d.u.1).abs() <= su);
+            let near_v = !m.full_v && ((q.y - d.v.0).abs() <= sv || (q.y - d.v.1).abs() <= sv);
+            near_u || near_v
+        };
+        if !k.is_multiple_of(2) && special.is_none() && !crossing_on_edge() {
+            deferred.extend(ends[ci].iter().copied());
+            continue;
+        }
         if gap > fit {
+            if outside_q(m, core_p) {
+                continue;
+            }
             return Err(unresolved(m, core_p, core_uv, gap, info.extent, k));
         }
         let kind = if special.is_some() {
@@ -924,10 +1282,165 @@ pub(crate) fn resolve_clusters(
             end_info[b][e] = EndInfo::Vertex(v);
         }
     }
+    deferred.retain(|&(b, e)| !outside_q(m, end_tp(&raws[b], e).p));
+    if !deferred.is_empty() {
+        match m.pair_across(&raws, &deferred) {
+            Some(js) => {
+                joins.extend(js);
+                m.uncertified = true;
+            }
+            None => {
+                let (b, e) = deferred[0];
+                let tp = end_tp(&raws[b], e);
+                let gap = m.g.eval(tp.uv.x, tp.uv.y).abs();
+                return Err(unresolved(m, tp.p, tp.uv, gap, 0.0, deferred.len()));
+            }
+        }
+    }
     Ok(Assembled {
         branches: chain(raws, end_info, joins),
         points,
     })
+}
+
+/// A true branch crossing (a saddle of `G` lying on both surfaces within `fit / 4`) must
+/// be a vertex of every branch through it. A trace can pass a small irregular cluster
+/// through a neighbouring cell without entering it; such a branch is split at its point
+/// nearest the saddle, so the cluster sees all its branch ends (a closed branch is
+/// opened there).
+fn split_at_crossings(
+    m: &March<'_>,
+    mut raws: Vec<RawBranch>,
+    clusters: &[Vec<usize>],
+    fit: f64,
+) -> Vec<RawBranch> {
+    for cells in clusters {
+        if m.specials
+            .iter()
+            .any(|s| cells.iter().any(|&c| special_in_cell(m, s, c)))
+        {
+            continue;
+        }
+        let info = m.cluster_info(cells);
+        let Some((core, g)) = m.cluster_saddle(&info) else {
+            continue;
+        };
+        if g > 0.25 * fit {
+            continue;
+        }
+        let core_p = m.p.surf.eval(core.x, core.y);
+        let reach = 4.0 * info.extent.max(m.match_dist());
+        if std::env::var_os("FORGE_SSI_DEBUG").is_some() {
+            for (bi, rb) in raws.iter().enumerate() {
+                let d = rb
+                    .pts
+                    .iter()
+                    .map(|t| t.p.distance(core_p))
+                    .fold(f64::INFINITY, f64::min);
+                eprintln!(
+                    "raw {bi}: {} pts closed {} ends {:?} first {:?} last {:?} nearest {d:e}",
+                    rb.pts.len(),
+                    rb.closed,
+                    rb.ends,
+                    rb.pts.first().map(|t| t.p),
+                    rb.pts.last().map(|t| t.p)
+                );
+            }
+        }
+        let leaf = cells[0];
+        let mut out: Vec<RawBranch> = Vec::with_capacity(raws.len() + 2);
+        for rb in raws {
+            let n = rb.pts.len();
+            if n < 3 {
+                out.push(rb);
+                continue;
+            }
+            // Distance of each segment to the core.
+            let seg: Vec<(f64, usize)> = (0..n - 1)
+                .map(|i| {
+                    let (a, b) = (rb.pts[i].p, rb.pts[i + 1].p);
+                    let ab = b - a;
+                    let l2 = ab.norm_squared();
+                    let s = if l2 > 0.0 {
+                        ((core_p - a).dot(ab) / l2).clamp(0.0, 1.0)
+                    } else {
+                        0.0
+                    };
+                    (
+                        (a + ab * s).distance(core_p),
+                        if s < 0.5 { i } else { i + 1 },
+                    )
+                })
+                .collect();
+            // Visits: maximal runs of segments within reach; a visit touching an end that
+            // already lies in this cluster is that end, every other visit is a pass-by.
+            let in_here = |e: RawEnd| matches!(e, RawEnd::Cluster(l) if cells.contains(&l));
+            let mut cuts: Vec<usize> = Vec::new();
+            let mut i = 0;
+            while i < seg.len() {
+                if seg[i].0 > reach {
+                    i += 1;
+                    continue;
+                }
+                let run_start = i;
+                let mut best = seg[i];
+                while i < seg.len() && seg[i].0 <= reach {
+                    if seg[i].0 < best.0 {
+                        best = seg[i];
+                    }
+                    i += 1;
+                }
+                let touches_start = run_start == 0;
+                let touches_end = i == seg.len();
+                let is_end = !rb.closed
+                    && ((touches_start && in_here(rb.ends[0]))
+                        || (touches_end && in_here(rb.ends[1])));
+                if !is_end && best.1 > 0 && best.1 + 1 < n {
+                    cuts.push(best.1);
+                }
+            }
+            if cuts.is_empty() {
+                out.push(rb);
+                continue;
+            }
+            if rb.closed {
+                // Open the loop at the first cut, then split at the others.
+                let c0 = cuts[0];
+                let mut pts: Vec<Tp> = rb.pts[c0..n - 1].to_vec();
+                pts.extend_from_slice(&rb.pts[..=c0]);
+                let shift = n - 1 - c0;
+                let rest: Vec<usize> = cuts[1..].iter().map(|&c| c + shift).collect();
+                let mut prev = 0;
+                for &c in rest.iter().chain(std::iter::once(&(pts.len() - 1))) {
+                    out.push(RawBranch {
+                        pts: pts[prev..=c].to_vec(),
+                        ends: [RawEnd::Cluster(leaf), RawEnd::Cluster(leaf)],
+                        closed: false,
+                    });
+                    prev = c;
+                }
+            } else {
+                let mut prev = 0;
+                let mut first_end = rb.ends[0];
+                for &c in &cuts {
+                    out.push(RawBranch {
+                        pts: rb.pts[prev..=c].to_vec(),
+                        ends: [first_end, RawEnd::Cluster(leaf)],
+                        closed: false,
+                    });
+                    prev = c;
+                    first_end = RawEnd::Cluster(leaf);
+                }
+                out.push(RawBranch {
+                    pts: rb.pts[prev..].to_vec(),
+                    ends: [first_end, rb.ends[1]],
+                    closed: false,
+                });
+            }
+        }
+        raws = out;
+    }
+    raws
 }
 
 /// Shift that brings `core` (canonical) next to the unwrapped `uv` of a branch end.
@@ -1004,6 +1517,16 @@ fn end_dir(rb: &RawBranch, e: usize) -> Vec2 {
         (rb.pts[n - 2].uv, rb.pts[n - 1].uv)
     };
     (b - a).normalize().unwrap_or(Vec2::unit_x())
+}
+
+/// `true` if `p` lies clearly outside `Q`'s parameter box (by more than a thousandth of
+/// its size): what happens there is clipped away with the branches anyway.
+fn outside_q(m: &March<'_>, p: Point3) -> bool {
+    let (qu, qv) = m.q.refs();
+    let uv = uv_near(m.q.surf, p, qu, qv);
+    let d = m.q.dom;
+    let slack = [1e-3 * (d.u.1 - d.u.0), 1e-3 * (d.v.1 - d.v.0)];
+    !d.contains(m.q.surf, uv, slack)
 }
 
 fn unresolved(m: &March<'_>, p: Point3, uv: Point2, gap: f64, extent: f64, k: usize) -> SsiError {
@@ -1553,6 +2076,11 @@ pub(crate) fn fit_branch(
     let mut out = Vec::new();
     for (a, b) in pieces {
         let closed = rb.closed && whole;
+        // A piece of no length (the curve grazes the box, e.g. through a cone apex on its
+        // bound) is no branch.
+        if b - a <= opts.min_span {
+            continue;
+        }
         let mut sub = sub_nodes(&src, &nodes, a, b, t1 - t0, rb.closed)?;
         if !whole {
             // The clip points are new nodes: check the spans next to them.

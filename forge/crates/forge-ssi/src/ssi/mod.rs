@@ -11,7 +11,7 @@ use forge_core::math;
 use forge_core::scalar::Interval;
 use forge_core::{Point2, Point3, Vec3};
 
-use crate::clip::{ParamCurve, Patch, clip_to_patches};
+use crate::clip::{ParamCurve, Patch, clip_to_patches_around};
 use crate::error::{Operand, SsiError};
 use crate::func::{mid, param_slack, uv_near};
 use crate::ssi::bound::{certify_curve, curve_segments};
@@ -430,7 +430,28 @@ fn exact_graph(ctx: &Ctx, out: &ExactOutcome) -> Result<Option<IntersectionGraph
     let mut stats = SsiStats::default();
     for f in &out.features {
         for (t0, t1, closed) in carrier_ranges(ctx, &f.carrier) {
-            let (pieces, whole) = clip_to_patches(&f.carrier, t0, t1, &ctx.patches(), closed)?;
+            // Where the carrier passes through a pole or apex, the box constraints on `u` are
+            // undefined: the clip leaves the curve within the fit tolerance of it unsearched.
+            let mut avoid: Vec<(f64, f64)> = Vec::new();
+            for &x in &sing {
+                let (t, d) = f.carrier.project(x);
+                if d > ctx.tol.fit {
+                    continue;
+                }
+                let h = 1e-6 * (t1 - t0).abs().max(1e-300);
+                let speed = f.carrier.point(t + h).distance(f.carrier.point(t - h)) / (2.0 * h);
+                let delta = ctx.tol.fit / speed.max(1e-300);
+                let period = if closed { t1 - t0 } else { 0.0 };
+                for tt in [t, t - period, t + period] {
+                    if tt >= t0 && tt <= t1 {
+                        avoid.push((tt, delta));
+                    }
+                }
+            }
+            avoid.sort_by(|a, b| a.0.total_cmp(&b.0));
+            avoid.dedup_by(|b, a| a.0.to_bits() == b.0.to_bits());
+            let (pieces, whole) =
+                clip_to_patches_around(&f.carrier, t0, t1, &ctx.patches(), closed, &avoid)?;
             if pieces.is_empty() {
                 continue;
             }
@@ -718,22 +739,32 @@ pub(crate) fn finalize(
     });
     let merge = vertex_merge_distance(ctx);
     let mut vertices: Vec<Vertex> = Vec::new();
+    let on = |pv: &PreVertex, k: usize| {
+        let p = ctx.patches()[k];
+        let slack = param_slack(p.surf, pv.uv[k], ctx.tol.fit);
+        on_box_boundary(&p, pv.uv[k], slack)
+    };
     let add = |pv: &PreVertex, vertices: &mut Vec<Vertex>| -> usize {
         if let Some(i) = vertices
             .iter()
             .position(|v| v.point.distance(pv.point) <= merge)
         {
             if kind_rank(pv.kind) > kind_rank(vertices[i].kind) {
+                // A special point (tangent point, crossing, surface singularity) is located
+                // exactly; a domain-boundary end merged with it (a clip end up to the merge
+                // distance away, e.g. where a padded box ends just past a sphere pole) must
+                // not move it: the vertex takes the special point's position.
                 vertices[i].kind = pv.kind;
                 vertices[i].contact = pv.contact;
+                vertices[i].point = pv.point;
+                vertices[i].uv_a = pv.uv[0];
+                vertices[i].uv_b = pv.uv[1];
+                vertices[i].on_boundary_a = on(pv, 0);
+                vertices[i].on_boundary_b = on(pv, 1);
             }
             return i;
         }
-        let on = |k: usize| {
-            let p = ctx.patches()[k];
-            let slack = param_slack(p.surf, pv.uv[k], ctx.tol.fit);
-            on_box_boundary(&p, pv.uv[k], slack)
-        };
+        let on = |k: usize| on(pv, k);
         vertices.push(Vertex {
             point: pv.point,
             uv_a: pv.uv[0],

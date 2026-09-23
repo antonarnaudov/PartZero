@@ -423,3 +423,89 @@ fn villarceau_plane_gives_two_exact_circles_of_radius_r_major() {
         0
     );
 }
+
+/// A cap plane against a side face whose (padded) parameter box ends exactly on their
+/// intersection line (a pocket whose top lies 3e-6 under the cap, padded by 3e-6): the line
+/// runs along the box edge up to rounding. It used to exhaust the clip's root budget
+/// (`SSI_BUDGET_EXCEEDED`); now it is a certified answer either way.
+#[test]
+fn a_plane_pair_meeting_on_the_box_edge_does_not_exhaust_the_budget() {
+    let cap: Surface = Plane::new(
+        Frame::from_normal_x(
+            Vec3::new(0.0, 0.0, 4.0),
+            Vec3::new(0.0, 0.0, 1.0),
+            Vec3::new(1.0, 0.0, 0.0),
+        )
+        .expect("f"),
+    )
+    .into();
+    let side: Surface = Plane::new(
+        Frame::from_normal_x(
+            Vec3::new(1.0, 1.0, 2.0),
+            Vec3::new(0.0, -1.0, 0.0),
+            Vec3::new(1.0, 0.0, 0.0),
+        )
+        .expect("f"),
+    )
+    .into();
+    for (e, pad) in [(3e-6, 3e-6), (1e-6, 1e-6), (5e-6, 5e-6), (3e-6, 0.0)] {
+        let dom_cap = UvBox::new(-5e-6, 4.000005, -5e-6, 4.000005);
+        let dom_side = UvBox::new(-pad, 2.0 + pad, -pad, 2.0 - e + pad);
+        let g = intersect_surfaces(&cap, dom_cap, &side, dom_side, &tol())
+            .unwrap_or_else(|x| panic!("e={e:e}: {} {x}", x.code()));
+        for b in &g.branches {
+            // Whatever is returned lies on the line y = 1, z = 4 inside both boxes.
+            let p = b.curve.eval(0.5 * (b.range.0 + b.range.1));
+            assert!(
+                (p.y - 1.0).abs() < 1e-9 && (p.z - 4.0).abs() < 1e-9,
+                "{p:?}"
+            );
+        }
+    }
+}
+
+/// Review round 3 (chained booleans): a plane through a sphere's centre, containing its
+/// axis, whose (padded) parameter box ends where the great circle only touches the box's
+/// edge from inside (the circle's rightmost point on the line `x = 1`): no contact of the
+/// patches, an empty result or the touching point, never `SSI_TANGENT_UNRESOLVED`.
+#[test]
+fn a_great_circle_touching_the_plane_box_edge_is_resolved() {
+    let s: Surface = Sphere::new(
+        Frame::try_from_axes(
+            Vec3::new(-0.25, 3.25, 0.25),
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(0.0, -1.0, 0.0),
+            Vec3::new(0.0, 0.0, -1.0),
+            1e-12,
+        )
+        .expect("frame"),
+        1.25,
+    )
+    .expect("s")
+    .into();
+    let pl: Surface = Plane::new(
+        Frame::try_from_axes(
+            Vec3::new(0.0, 3.25, 0.0),
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(0.0, 0.0, -1.0),
+            Vec3::new(0.0, 1.0, 0.0),
+            1e-12,
+        )
+        .expect("frame"),
+    )
+    .into();
+    let bs = UvBox::new(
+        4.776722501223364,
+        7.935147792613412,
+        -math::FRAC_PI_2,
+        0.24219315263113578,
+    );
+    let bp = UvBox::new(
+        0.9999969999999997,
+        3.0000030000000004,
+        -2.2500030000000004,
+        -0.24999699999999975,
+    );
+    let g = intersect_surfaces(&s, bs, &pl, bp, &tol()).expect("resolved");
+    check_contract(&g, &s, &pl, 1e-7);
+}

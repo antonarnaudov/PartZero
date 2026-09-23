@@ -147,6 +147,54 @@ impl Patch<'_> {
 /// the last and first pieces are joined (the joined piece then ends beyond `t1`).
 /// Returns `(pieces, whole)` where `whole` is true when no constraint ever becomes
 /// active (the entire range is inside).
+/// Split parameters of one box constraint on `[a, b]`: its roots and the ends of its flats.
+///
+/// Where the root finder cannot certify a range root-free although the constraint is far
+/// from zero there (`SSI_TANGENT_UNRESOLVED` with the offending parameter), the constraint
+/// is discontinuous or has an unbounded derivative: the curve passes through a singular
+/// point of the surface (a sphere pole or cone apex, where `u` is undefined and jumps by
+/// half a period). That parameter becomes a split point too, and the two sides are searched
+/// on their own (up to a small depth): splitting a clip range is always harmless, because
+/// every piece is classified at its midpoint and consecutive inside pieces are joined
+/// again. (Review round 3: a great circle of a sphere through its poles, clipped to a box
+/// whose edge it only touches, failed.)
+fn constraint_splits<F: Fn1>(
+    f: &F,
+    a: f64,
+    b: f64,
+    opts: &RootOpts,
+    depth: usize,
+    splits: &mut Vec<f64>,
+) -> Result<(), SsiError> {
+    match find_roots(f, a, b, opts) {
+        Ok(r) => {
+            for root in &r.roots {
+                splits.push(root.t);
+            }
+            for &(fa, fb) in &r.flats {
+                splits.push(fa);
+                splits.push(fb);
+            }
+            Ok(())
+        }
+        Err(SsiError::TangentUnresolved { point, gap, .. })
+            if depth < 8 && gap > opts.zero_tol && point[0] > a && point[0] < b =>
+        {
+            let t = point[0];
+            let d = 1e-12 * (b - a).abs().max(t.abs()).max(1e-300);
+            splits.push(t);
+            if t - d > a {
+                constraint_splits(f, a, t - d, opts, depth + 1, splits)?;
+            }
+            if t + d < b {
+                constraint_splits(f, t + d, b, opts, depth + 1, splits)?;
+            }
+            Ok(())
+        }
+        Err(e) => Err(e),
+    }
+}
+
 pub(crate) fn clip_to_patches<C: ParamCurve>(
     curve: &C,
     t0: f64,
@@ -154,17 +202,67 @@ pub(crate) fn clip_to_patches<C: ParamCurve>(
     patches: &[Patch<'_>],
     closed: bool,
 ) -> Result<(Vec<(f64, f64)>, bool), SsiError> {
+    clip_to_patches_around(curve, t0, t1, patches, closed, &[])
+}
+
+/// [`clip_to_patches`] where the curve passes through singular points of a patch's surface
+/// (a sphere pole, a cone apex) at the parameters `avoid[k].0`: there `u` is undefined (it
+/// jumps by half a period across a pole), so no interval enclosure of the `u` constraints
+/// can separate it from zero. The range `t ± avoid[k].1` (the curve within the fit
+/// tolerance of the singular point) is not searched for constraint roots; its ends and
+/// `t` itself are split points, and the pieces are classified at their midpoints like all
+/// others. (Review round 3: a great circle through a sphere's poles, clipped to a plane's
+/// box whose edge it only touches, was `SSI_TANGENT_UNRESOLVED`.)
+pub(crate) fn clip_to_patches_around<C: ParamCurve>(
+    curve: &C,
+    t0: f64,
+    t1: f64,
+    patches: &[Patch<'_>],
+    closed: bool,
+    avoid: &[(f64, f64)],
+) -> Result<(Vec<(f64, f64)>, bool), SsiError> {
     let width = t1 - t0;
-    let opts = RootOpts {
-        zero_tol: 0.0,
-        min_width: 1e-13 * width.abs().max(1e-300),
-        flat_width: 0.05 * width.abs(),
-        max_pieces: 200_000,
-    };
     let mut splits: Vec<f64> = Vec::new();
-    let pieces_in = split_range(t0, t1, &curve.breaks(t0, t1));
+    let mut breaks = curve.breaks(t0, t1);
+    let mut holes: Vec<(f64, f64)> = Vec::new();
+    // Split points of the avoided ranges (they do not make a closed curve partial).
+    let mut avoid_splits: Vec<f64> = Vec::new();
+    for &(t, d) in avoid {
+        let (a, b) = ((t - d).max(t0), (t + d).min(t1));
+        if b <= a {
+            continue;
+        }
+        for x in [a, t, b] {
+            if x > t0 && x < t1 {
+                breaks.push(x);
+                avoid_splits.push(x);
+            }
+        }
+        holes.push((a, b));
+    }
+    breaks.sort_by(f64::total_cmp);
+    breaks.dedup();
+    let pieces_in: Vec<(f64, f64)> = split_range(t0, t1, &breaks)
+        .into_iter()
+        .filter(|&(a, b)| {
+            let m = 0.5 * a + 0.5 * b;
+            !holes.iter().any(|&(x, y)| m >= x && m <= y)
+        })
+        .collect();
     for p in patches {
         for (which, bound) in p.constraints() {
+            // A curve running along the box edge (a line at rounding distance from it)
+            // makes the constraint vanish identically up to rounding: values within a
+            // few thousand ulps of the bound count as zero, so such a range is a flat
+            // (split at its ends, classified by midpoints) instead of being bisected
+            // until the piece budget runs out. Simple crossings are unaffected: they are
+            // isolated by monotonicity before this test applies.
+            let opts = RootOpts {
+                zero_tol: 1e-12 * (1.0 + bound.abs()),
+                min_width: 1e-13 * width.abs().max(1e-300),
+                flat_width: 0.05 * width.abs(),
+                max_pieces: 200_000,
+            };
             let f = Constraint {
                 curve,
                 surf: p.surf,
@@ -173,18 +271,13 @@ pub(crate) fn clip_to_patches<C: ParamCurve>(
                 bound,
             };
             for &(a, b) in &pieces_in {
-                let r = find_roots(&f, a, b, &opts)?;
-                for root in &r.roots {
-                    splits.push(root.t);
-                }
-                for &(fa, fb) in &r.flats {
-                    splits.push(fa);
-                    splits.push(fb);
-                }
+                constraint_splits(&f, a, b, &opts, 0, &mut splits)?;
             }
         }
     }
     splits.retain(|&s| s > t0 && s < t1);
+    let root_splits = !splits.is_empty();
+    splits.extend(avoid_splits);
     splits.sort_by(f64::total_cmp);
     splits.dedup();
     let mut pts = Vec::with_capacity(splits.len() + 2);
@@ -210,7 +303,7 @@ pub(crate) fn clip_to_patches<C: ParamCurve>(
             pieces.push((a, b));
         }
     }
-    let whole = splits.is_empty() && pieces.len() == 1;
+    let whole = !root_splits && pieces.len() == 1 && same(pieces[0].0, t0) && same(pieces[0].1, t1);
     if closed && pieces.len() >= 2 {
         let first = pieces[0];
         let last = *pieces.last().expect("non-empty");
@@ -228,6 +321,30 @@ mod tests {
     use forge_core::geom::{Circle3, Cylinder, Line3, Plane};
     use forge_core::math;
     use forge_core::{Frame, Vec3};
+
+    /// A line lying on the box edge up to rounding (the intersection of a cap plane with
+    /// a side face whose padded box ends exactly there) is clipped without exhausting the
+    /// root budget.
+    #[test]
+    fn a_line_along_the_box_edge_is_clipped_without_bisecting_forever() {
+        let plane: Surface = Plane::new(Frame::world()).into();
+        for off in [0.0, 4e-16, -4e-16, 1e-13, -1e-13] {
+            let line: Curve3 = Line3::new(Vec3::new(-10.0, 2.0 + off, 0.0), Vec3::unit_x())
+                .expect("l")
+                .into();
+            let patch = Patch {
+                surf: &plane,
+                dom: UvBox::new(-1.0, 3.0, 0.0, 2.0000000000000004),
+            };
+            let (pieces, _) =
+                clip_to_patches(&line, 0.0, 20.0, &[patch], false).expect("no budget error");
+            // On (or within rounding of) the edge: inside, clipped in u.
+            if off <= 1e-13 {
+                assert_eq!(pieces.len(), 1, "{off:e}: {pieces:?}");
+                assert!((pieces[0].0 - 9.0).abs() < 1e-9 && (pieces[0].1 - 13.0).abs() < 1e-9);
+            }
+        }
+    }
 
     #[test]
     fn line_is_clipped_to_a_plane_box() {

@@ -269,16 +269,20 @@ fn near_degenerate_configurations_are_correct_or_explicit() {
             ),
         ]
     };
+    // Near-crossings (equal cylinders) are resolved by orientation-locked tracing and
+    // pass-through pairing (open issue 1, closed): every δ must succeed. The sphere in the
+    // cylinder is a thin lens whose hairpin tips (radius δ) are traced down to δ = 1e-6;
+    // below that the tips fall under the rounding of the distance form and the lens is a
+    // tangent band within a few times the fit tolerance (open issue 2: ridge tracer).
     let known_hard = |name: &str, delta: f64| {
-        (name.starts_with("equal cylinders") && (1e-8..1e-4).contains(&delta))
-            || (name.starts_with("sphere in cylinder") && (5e-7..5e-6).contains(&delta))
+        name.starts_with("sphere in cylinder") && (1e-8..1e-6).contains(&delta)
     };
     // The δ = 1e-7 lens takes seconds (open issue: tangent bands); debug builds run a
     // subset.
     let deltas: &[f64] = if cfg!(debug_assertions) {
         &[1e-9, 1e-5, 1e-3]
     } else {
-        &[1e-9, 1e-7, 1e-6, 1e-5, 1e-3]
+        &[1e-9, 2e-8, 1e-7, 1e-6, 1e-5, 3e-5, 1e-4, 1e-3]
     };
     for &delta in deltas {
         for (name, a, da, b, db) in cases(delta) {
@@ -303,6 +307,128 @@ fn near_degenerate_configurations_are_correct_or_explicit() {
                     assert!(known_hard(name, delta), "{name} δ={delta:e}: {e}");
                 }
             }
+        }
+    }
+}
+
+/// A closed curve that touches the domain's periodic edge `u = π` and the line `u = 0`
+/// tangentially (a hole's cylinder under a wide cylinder whose lowest line passes through the
+/// hole's axis) is traced exactly once (it was traced twice around, one closed branch of
+/// double length).
+#[test]
+fn oval_touching_the_window_edge_is_traced_once() {
+    let hole: Surface = Cylinder::new(
+        frame([-2.5, -0.75, -1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]),
+        0.5,
+    )
+    .expect("hole")
+    .into();
+    let wide: Surface = Cylinder::new(
+        frame([3.25, 0.0, 3.0], [0.0, -1.0, 0.0], [1.0, 0.0, 0.0]),
+        4.0,
+    )
+    .expect("wide")
+    .into();
+    let da = UvBox::new(math::PI, 3.0 * math::PI, -1.05e-5, 9.500_010_5);
+    let db = UvBox::new(math::PI, 3.0 * math::PI, -8e-6, 7.000_008);
+    let g = intersect_surfaces(&hole, da, &wide, db, &tol()).expect("ssi");
+    check_contract(&g, &hole, &wide, 1e-7);
+    assert_eq!(g.branches.len(), 1, "{g:?}");
+    let br = &g.branches[0];
+    assert!(br.closed);
+    // The oval x = 3.25 ± sqrt(4 sin u − sin²u / 4) on the hole (u ∈ [0, π]), by quadrature.
+    let n = 20_000;
+    let mut exact = 0.0;
+    for side in [-1.0, 1.0] {
+        let mut prev: Option<Vec3> = None;
+        for i in 0..=n {
+            let u = math::PI * i as f64 / n as f64;
+            let (s, c) = math::sin_cos(u);
+            let w = math::sqrt((4.0 * s - 0.25 * s * s).max(0.0));
+            let p = Vec3::new(3.25 + side * w, -0.75 + 0.5 * c, -1.0 + 0.5 * s);
+            if let Some(q) = prev {
+                exact += (p - q).norm();
+            }
+            prev = Some(p);
+        }
+    }
+    let len = br.curve.arc_length(br.range.0, br.range.1);
+    assert!(
+        (len - exact).abs() <= 1e-3 * exact,
+        "length {len} vs {exact}"
+    );
+}
+
+/// A cone whose apex lies on a cylinder, the cone's domain starting at the apex (a revolved
+/// triangle against a tube's inner wall): the curve through the apex is traced and fitted
+/// without non-finite values.
+#[test]
+fn cone_apex_on_a_cylinder_is_finite() {
+    let cyl: Surface = Cylinder::new(
+        frame([0.5, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]),
+        0.5,
+    )
+    .expect("c")
+    .into();
+    let cone: Surface = Cone::new(
+        frame([1.0, 0.0, -3.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0]),
+        3.5,
+        1.165_904_540_509_813_2,
+    )
+    .expect("k")
+    .into();
+    let dc = UvBox::new(
+        math::PI,
+        3.0 * math::PI,
+        -3.500_007_283_185_307_7,
+        -0.999_992_716_814_692_7,
+    );
+    let dk = UvBox::new(math::PI, 3.0 * math::PI, -1.5, 7.283_185_307_179_585_6e-6);
+    let g = intersect_surfaces(&cyl, dc, &cone, dk, &tol()).expect("ssi");
+    check_contract(&g, &cyl, &cone, 1e-7);
+    assert!(!g.branches.is_empty());
+    for br in &g.branches {
+        let (t0, t1) = br.range;
+        for i in 0..=64 {
+            let t = t0 + (t1 - t0) * i as f64 / 64.0;
+            assert!(br.curve.eval(t).is_finite(), "{br:?}");
+        }
+    }
+}
+
+/// A plane parallel to a sphere's axis (the section circle is no latitude): the sphere's
+/// pcurve of the circle must follow the circle (it was a straight segment in (u, v) far
+/// outside the sphere's parameter range).
+#[test]
+fn plane_parallel_to_sphere_axis_has_exact_pcurves() {
+    let pl: Surface = Plane::new(frame([0.0, -1.5, 0.0], [0.0, -1.0, 0.0], [1.0, 0.0, 0.0])).into();
+    let sp: Surface = Sphere::new(
+        frame([0.0, 0.5, 3.5], [0.0, 0.0, 1.0], [-1.0, 0.0, 0.0]),
+        2.5,
+    )
+    .expect("s")
+    .into();
+    let dp = UvBox::new(-2.000_009, 2.000_009, -2.000_009, 6.000_009);
+    let ds = UvBox::new(0.0, math::TAU, -math::FRAC_PI_2, math::FRAC_PI_2);
+    let g = intersect_surfaces(&pl, dp, &sp, ds, &tol()).expect("ssi");
+    check_contract(&g, &pl, &sp, 1e-7);
+    assert!(!g.branches.is_empty());
+    for br in &g.branches {
+        let (t0, t1) = br.range;
+        for i in 0..=256 {
+            let t = t0 + (t1 - t0) * i as f64 / 256.0;
+            let p = br.curve.eval(t);
+            let a = br.pcurve_a.eval(t);
+            let b = br.pcurve_b.eval(t);
+            assert!(pl.eval(a.x, a.y).distance(p) <= 1e-7, "pcurve a at {t}");
+            assert!(
+                sp.eval(b.x, b.y).distance(p) <= 1e-7,
+                "pcurve b at {t}: {b:?}"
+            );
+            assert!(
+                b.y.abs() <= math::FRAC_PI_2 + 1e-9,
+                "v out of range at {t}: {b:?}"
+            );
         }
     }
 }

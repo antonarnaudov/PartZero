@@ -215,6 +215,11 @@ pub(crate) fn refine<S: NodeSource, R: Reference3>(
     let mut i = 0;
     while i + 1 < nodes.len() {
         let (a, b) = (nodes[i], nodes[i + 1]);
+        // Spans this short are never split (and have no interior to project onto).
+        if b.t - a.t <= opts.min_span {
+            i += 1;
+            continue;
+        }
         let (mut e3, ep) = span_errors(&a, &b, surfs, refc, opts, 3);
         // Positional check against an exact midpoint node (reused as the split node).
         let mut exact_mid = None;
