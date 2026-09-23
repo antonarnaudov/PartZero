@@ -1,0 +1,98 @@
+scripts/ci/webgl2/serve.mjs
+  s_59c0dd2af30db2::t_d7dee22eca06c5 1-40
+docs/spikes/05-renderer.md
+  s_59c0dd2af30db2::t_8fb51f228b7f20 235
+  s_59c0dd2af30db2::t_8b519eec65b6f8 155,221-234,236-237
+scripts/license-check/oracle-boundary.mjs
+  s_59c0dd2af30db2::t_83ac4386077286 1-7,29,34-35,37-38,40-74,86-91,135-138,145-146,148-150,152,159,184-187,199-200,249-259,279-293,295,297-316,318,390-391,402-403,407,410-426,428-431
+  s_59c0dd2af30db2::t_8a75d0f2583587 151,196,260,398
+  s_59c0dd2af30db2::t_a247fb5703a410 15-17,21-25,77,79-83,93,98-106,108-134,161-169,171-182,206-238,270-278
+  s_59c0dd2af30db2::t_3832f2527cfb57 8-14,18-20,26-28,30-33,36,39,84-85,92,94-97,107,139-144,147,153-157,160,183,188-195,197-198,201-202,204-205,239-248,261-269,294,296,317,319-389,392-397,401,404-406,408-409,427
+  s_59c0dd2af30db2::t_813d4b45df999d 75-76,78,158,170,203
+  s_59c0dd2af30db2::t_73a8886283dd45 399-400
+docs/adr/0000-own-the-core.md
+  s_59c0dd2af30db2::t_e3e1aecc065046 73-77
+  s_59c0dd2af30db2::t_46640ebd3f145b 66-72
+.github/workflows/ci.yml
+  s_59c0dd2af30db2::t_304b71d2150644 172
+  s_59c0dd2af30db2::t_93ecbb24f16bc3 184,186-187
+  s_59c0dd2af30db2::t_f847d8eca75369 67-75,77,80,83
+  s_59c0dd2af30db2::t_c75f921a81a808 6-15,17-19,21,24,32-37,39-66,76,78-79,81-82,84,86-110,112,118-122,124-127,129-132,135,156-171,173-183,185,188-236,246-251
+  s_59c0dd2af30db2::t_444930f5bada73 237-245
+  s_59c0dd2af30db2::t_bf61db51e62e8c 133-134,136-155
+scripts/license-check/test/license-check.test.mjs
+  s_59c0dd2af30db2::t_a9e08b1af0ce34 210-215,271-347
+  s_59c0dd2af30db2::t_db32fcaafaa866 1-2,4-9,11,14-79,89-130,145-146,160-193,200-206,216-217,348-374,424-425
+  s_59c0dd2af30db2::t_fcab1e26959c10 3,12-13,80-88,131-144,147-159,194-199,207-209,218-232,234-255,257-263,266-270,375,399-423
+  s_59c0dd2af30db2::t_abfaab277dc099 233,256,264-265
+  s_59c0dd2af30db2::t_93ecbb24f16bc3 10,376-398
+corpus/EXTERNAL_SOURCES.md
+  s_59c0dd2af30db2::t_8cfa20c860a66b 1-14
+oracle/tests/test_ci_gates.py
+  s_59c0dd2af30db2::t_cf420722eec440 73-82,103-105,115-116,139,141-154
+  s_59c0dd2af30db2::t_059912612d769d 1-72,83-102,106-114,117-138,140,155-230
+scripts/ci/webgl2/test.mjs
+  s_59c0dd2af30db2::t_2483da228a024b 7-11,44-45,109-128
+  s_59c0dd2af30db2::t_06004a445ffebc 13-14,57
+  s_59c0dd2af30db2::t_0094cc1c561f3e 1-6,12,15-43,46-56,58-108,129-285
+scripts/license-check/own-licenses.mjs
+  s_59c0dd2af30db2::t_39f58c05965d34 1-124
+forge/crates/forge-solve/tests/determinism_golden.rs
+  s_59c0dd2af30db2::t_80d9ca039fbbb6 108
+  s_59c0dd2af30db2::t_4373474062c594 1-107,109-136
+scripts/license-check/policy.mjs
+  s_59c0dd2af30db2::t_2dccf8ad9c632f 82-83,93,95-103,106-138
+  s_59c0dd2af30db2::t_b7c1d0e339e0a1 1-81,84-92,94,104-105,139
+scripts/license-check/js-licenses.mjs
+  s_59c0dd2af30db2::t_f536162b942d3d 1-14,21-23,25-83,86-103,110-166
+  s_59c0dd2af30db2::t_425c8af256e242 15-19,24,84-85,104-107,109
+  s_59c0dd2af30db2::t_6e79388a5487b6 108
+  s_59c0dd2af30db2::t_ecc8ea84c66b63 20
+.github/workflows/nightly.yml
+  s_59c0dd2af30db2::t_ebb93aa8f6e800 54-55
+  s_59c0dd2af30db2::t_db2a2d5b7672a0 47,51,53,60,62,93-94,96,109,112-114,116,119-128,130-133,135-136,138,141,146,149,152,155,157,163-165,167,185,187-247
+  s_59c0dd2af30db2::t_d7e0b074851a58 1-5,8-46,48-50,52,56-59,61,63-92,95,97-108,110-111,115,117-118,129,134,137,139-140,142-145,147-148,150-151,153-154,156,158-162,166,168-184,186,248
+  s_59c0dd2af30db2::t_35eded703fb1f8 6-7
+docs/spikes/01-forge-f0-oracle.md
+  s_59c0dd2af30db2::t_99cf70f89d2377 40-41,44-50,52
+  s_59c0dd2af30db2::t_56a4ca0753f811 37
+  s_59c0dd2af30db2::t_4da8f8d7c69bd8 39,51,53-55
+  s_59c0dd2af30db2::t_935c179983fad9 56
+forge/deny.toml
+  s_59c0dd2af30db2::t_87ab0df93a4f87 1-6,11-65
+  s_59c0dd2af30db2::t_304b71d2150644 7-10
+scripts/license-check/spdx.mjs
+  s_59c0dd2af30db2::t_dede7b855b42bc 16-17,19,23
+  s_59c0dd2af30db2::t_709bf7f0586f01 1-15,18,20-22,24-108
+scripts/license-check/dataset-record.mjs
+  s_59c0dd2af30db2::t_ac8aa7ce543056 1-82
+LICENSING.md
+  s_59c0dd2af30db2::t_251aeed4202b8e 30
+  s_59c0dd2af30db2::t_d9ca910a3be792 7-10,14-18,26-29,31,34-35
+  s_59c0dd2af30db2::t_ed42bed9bd2c12 33
+  s_59c0dd2af30db2::t_6efd9b3bc48680 32
+.gitignore
+  s_59c0dd2af30db2::t_9d208319e18933 22-23
+docs/adr/0001-open-core-licensing.md
+  s_59c0dd2af30db2::t_094587c903d41c 20-22,51-58
+oracle/src/aicad_oracle/cli.py
+  s_59c0dd2af30db2::t_aeaf12923548f3 72,114-117,122-128,155-156,368-369,371-372,377-378
+oracle/src/aicad_oracle/invalidgen.py
+  s_59c0dd2af30db2::t_2175dfd8f8ebbb 18-20,256-312,358,361-364
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b5f103997484fed2b59fd600fb687458adf7cb7f",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
