@@ -65,16 +65,28 @@ impl From<crate::ValidationError> for ValidationError {
 }
 
 /// Validation options.
-#[derive(Default)]
 pub struct ValidateOptions<'a> {
-    /// W1's expression validator; `None` checks only what needs no parser.
+    /// The expression validator of §0.5 rule 4 step 5. The default is W1's checker
+    /// ([`super::expr::CHECKER`]), so every default entry point ([`validate`],
+    /// [`super::from_json`], `VersionedDocument::from_json`) runs the whole rejection pipeline;
+    /// `None` opts out and checks only what needs no parser (W0's structural checks).
     pub expr: Option<&'a dyn ExprValidator>,
     /// Optional feature types this engine does not implement (e.g. `["draft"]`, §6.9):
     /// rejected with `UNSUPPORTED_FEATURE`.
     pub unsupported_features: &'a [&'a str],
 }
 
-/// Validate a document with default options. Returns every problem found.
+impl Default for ValidateOptions<'_> {
+    fn default() -> Self {
+        Self {
+            expr: Some(&super::expr::CHECKER),
+            unsupported_features: &[],
+        }
+    }
+}
+
+/// Validate a document with default options (the whole rejection pipeline, W1's expression
+/// checks included). Returns every problem found.
 pub fn validate(doc: &Document) -> Result<(), Vec<ValidationError>> {
     validate_with(doc, &ValidateOptions::default())
 }

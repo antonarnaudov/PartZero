@@ -220,11 +220,19 @@ fn invalid_documents_are_rejected_with_the_expected_codes_and_paths() {
             Err(e) => panic!("{id}: unexpected parse error {e}"),
         };
         if requires_expr {
-            // TODO(W1): run these with W1's ExprValidator plugged into ValidateOptions and
-            // require an exact match. Without it, W0 must accept them structurally.
+            // The default loader runs W1's checker (SPEC-v1 §0.5 rule 4 step 5): the codes and
+            // paths must match exactly. With the checker opted out, W0 alone accepts them
+            // structurally.
+            assert_eq!(got, expected_code_paths(&c["expected"]), "{id} (with W1)");
+            let w0_only = v1::ValidateOptions {
+                expr: None,
+                ..Default::default()
+            };
+            let structural = forge_ir::VersionedDocument::from_json_with(&text, &w0_only)
+                .map(forge_ir::VersionedDocument::into_v1);
             assert!(
-                got.is_empty(),
-                "{id}: W0 alone should accept it structurally, got {got:?}"
+                structural.is_ok(),
+                "{id}: W0 alone should accept it structurally, got {structural:?}"
             );
             w1 += 1;
             continue;
@@ -531,17 +539,73 @@ fn expression_fixtures_are_well_formed() {
     }
 }
 
+/// For every case of `conformance/expressions/cases.json`:
+///   1. `parse(text)` (§2.3), with the `params` environment in scope (§2.8);
+///   2. `canonical(ast) == case.canonical`, and `parse(canonical) == ast` (§2.4);
+///   3. `typecheck` gives `case.type` (`mm`, `deg`, `1`, `mm^2`, `flex`, `bool`, …) and the
+///      use-site check at `case.field` passes, or fails with `case.error.code` (stage R);
+///   4. evaluation gives `case.value` bit for bit (or within `tolerance_rel`), or fails with
+///      `case.error.code` (stage E).
+///
+/// Steps 1–3 run here, on forge-ir alone. Step 4 needs the evaluator of record, which lives in
+/// `forge-params` (MPL-2.0; it depends on this Apache-2.0 crate): its test of the same name,
+/// `forge-params/tests/conformance.rs::expression_fixtures_parse_type_and_evaluate`, runs all
+/// four steps over the same fixture. Here, every stage-E case must pass steps 1–3 (it is
+/// accepted by validation and fails only when evaluated).
 #[test]
-#[ignore = "TODO(W1): needs forge_ir::expr::{parse, canonical, typecheck} and forge_regen::params::evaluate"]
 fn expression_fixtures_parse_type_and_evaluate() {
-    // TODO(W1): for every case of conformance/expressions/cases.json:
-    //   1. parse(text) with the `params` environment in scope (§2.8);
-    //   2. canonical(ast) == case.canonical, and parse(canonical) == ast;
-    //   3. typecheck gives case.type ("mm", "deg", "1", "mm^2", "flex", "bool", …) and the use-site
-    //      check at case.field passes (or fails with case.error.code, stage R);
-    //   4. evaluate gives case.value with bits == case.bits (or within tolerance_rel), or fails with
-    //      case.error.code at stage E.
-    unimplemented!("W1");
+    use v1::expr::{canonical, check_use_site, parse, typecheck};
+    let f = fixture("conformance/expressions/cases.json");
+    let mut env = v1::expr::Env::new();
+    for p in f["params"].as_array().unwrap() {
+        let unit: v1::ParamUnit = serde_json::from_value(p["unit"].clone()).unwrap();
+        env.add_param(p["name"].as_str().unwrap(), unit);
+    }
+    let cases = f["cases"].as_array().unwrap();
+    let (mut accepted, mut rejected) = (0, 0);
+    for c in cases {
+        let id = c["id"].as_str().unwrap();
+        let text = c["text"].as_str().unwrap();
+        let field: v1::FieldType = serde_json::from_value(c["field"].clone()).unwrap();
+        let code = c.get("error").map(|e| e["code"].as_str().unwrap());
+        let stage_r = c.get("error").is_some_and(|e| e["stage"] == json!("R"));
+        let ast = match parse(text) {
+            Ok(ast) => ast,
+            Err(se) => {
+                assert!(stage_r && code == Some("EXPR_SYNTAX"), "{id}: {se:?}");
+                assert_eq!(se.to_error(text).code, "EXPR_SYNTAX");
+                rejected += 1;
+                continue;
+            }
+        };
+        assert_ne!(code, Some("EXPR_SYNTAX"), "{id}: parsed");
+        if let Some(want) = c.get("canonical") {
+            let got = canonical(&ast);
+            assert_eq!(got, want.as_str().unwrap(), "{id}");
+            assert_eq!(parse(&got).unwrap(), ast, "{id}: parse(canonical)");
+        }
+        let checked = typecheck(&ast, &env).and_then(|t| {
+            if let Some(want) = c.get("type") {
+                assert_eq!(t.notation(), want.as_str().unwrap(), "{id}");
+            }
+            check_use_site(&ast, t, field)
+        });
+        match checked {
+            Err(e) => {
+                assert!(stage_r && code == Some(e.code), "{id}: {e}");
+                rejected += 1;
+            }
+            Ok(()) => {
+                assert!(!stage_r, "{id}: expected {code:?}");
+                accepted += 1;
+            }
+        }
+    }
+    assert_eq!(accepted + rejected, cases.len());
+    assert!(
+        cases.len() >= 376 && rejected >= 90,
+        "{accepted} accepted, {rejected} rejected"
+    );
 }
 
 // ---- constraint vocabulary --------------------------------------------------------------------

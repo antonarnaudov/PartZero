@@ -1,0 +1,19 @@
+[package]
+name = "forge-params"
+description = "IR v1 parameters: the expression evaluator of record (SPEC-v1 §2.7–§2.8)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MPL-2.0"
+publish.workspace = true
+
+[dependencies]
+forge-core.workspace = true
+forge-ir.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true

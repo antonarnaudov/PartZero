@@ -16,6 +16,29 @@
 use super::scalar::FieldType;
 use super::{Document, Feature, PartStudio};
 
+// ---- W1: the expression language (SPEC-v1 §2.3–§2.8), implemented in `expr/` ----------------
+mod ast;
+mod canon;
+mod checker;
+mod lexer;
+mod parser;
+mod printer;
+mod types;
+
+pub use ast::{BinaryOp, Expr, UnaryOp, Unit};
+pub use canon::{CanonicalizeError, canonicalize_expressions, canonicalize_expressions_with};
+pub use checker::{
+    CHECKER, ExprChecker, ParamCycle, ParamGraph, ParamId, ParamScopes, options, param_expressions,
+    used_params,
+};
+pub use parser::{SyntaxError, parse};
+pub use printer::{canonical, format_number, nesting};
+pub use types::{
+    Arity, Binding, Dim, EXPECTED_EVEN, EXPECTED_INTEGER_LITERAL, EXPECTED_NUMBER,
+    EXPECTED_REPRESENTABLE, Env, ExprError, FUNCTIONS, PI_NAME, Type, check, check_text,
+    check_use_site, div_type, function_arity, mul_type, typecheck, unify,
+};
+
 /// Where an expression's identifiers are resolved (SPEC-v1 §2.8).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ExprScope {
