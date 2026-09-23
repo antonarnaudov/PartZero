@@ -25,6 +25,7 @@ ADRs are immutable once accepted. To change a decision, write a new ADR that sup
 | [0010](0010-local-first.md) | Local-first | Accepted | 2026-09-23 | §2 D10 |
 | [0011](0011-native-freeform.md) | Freeform is native to Forge | Accepted | 2026-09-23 | §2 D11 |
 | [0012](0012-no-seam-edges.md) | No seam edges; ring edges and surface singularities | Accepted | 2026-09-23 | [FORGE.md](../FORGE.md#topology-model) |
+| [0013](0013-ir-v1-references-and-parameters.md) | IR v1: references (typed queries, fail-on-uncertain), parameters, constrained sketches | Accepted | 2026-09-23 | [SPEC-v1-DRAFT](../../forge/crates/forge-ir/SPEC-v1-DRAFT.md), [plan](../IR-V1-IMPLEMENTATION-PLAN.md) |
 
 Plan refs point to [PLAN-2026-09-23.md](../PLAN-2026-09-23.md).
 

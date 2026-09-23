@@ -1,6 +1,6 @@
 # ADR 0006: Persistent naming is native to the kernel
 
-- **Status:** Accepted
+- **Status:** Accepted; resolution policy amended by [ADR 0013](0013-ir-v1-references-and-parameters.md) (uncertain matches fail with repair candidates instead of proceeding)
 - **Date:** 2026-09-23
 - **Plan reference:** PLAN-2026-09-23 §2 D6, §3 "References"
 
