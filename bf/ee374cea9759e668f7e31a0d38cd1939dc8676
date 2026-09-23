@@ -1,0 +1,101 @@
+forge/crates/forge-render/src/viewport.rs
+  s_59c0dd2af30db2::t_713828187426ef 1755-1759,1808-1812
+  s_59c0dd2af30db2::t_7621216de911a7 1079-1082,1084,1089,1092,1094-1096,1160-1163,1165,1169-1173,1227,1482-1486,1614,1618-1621,1626-1628,1635,1740-1741,1748,1751-1754,1760-1764,1804-1806,1813-1818,1822-1823,1825,1827,1829,1831-1847,1883-1886,1892
+  s_59c0dd2af30db2::t_b00c5b6f1c1dc0 18-27,34,56-123,882,1083,1085-1088,1090-1091,1093,2120-2145
+  s_59c0dd2af30db2::t_3b8f820897ed36 2146
+forge/crates/forge-wasm/src/scopes.rs
+  s_59c0dd2af30db2::t_f301cc19e46c63 1-75,77-148,152-168
+  s_59c0dd2af30db2::t_ae10e9809e4551 76
+  s_59c0dd2af30db2::t_2d939f884f0f31 149-151
+forge/crates/forge-wasm/src/web.rs
+  s_59c0dd2af30db2::t_5359a265e44806 773-775
+  s_59c0dd2af30db2::t_f5f664d2c3c522 20,37-47,236-312,331-333,404-439,446-473,478-484,521-522,525,527-530,868-869
+  s_59c0dd2af30db2::t_3c8012e951a445 11-12,531,534-549,551-553,711-726,730,737,742,745,760-761,763-766,768-772,776-795,819,841,854-857,859-864,867,870-874,879-898
+forge/crates/forge-core/src/scalar/interval.rs
+  s_59c0dd2af30db2::t_940c2132ba724a 65-77,138-139,190,208-209,225-226,252-255,266-267,329,343,350,418,429,443,448,454,483,570,579,602-603,611-612
+forge/crates/forge-core/src/scalar/mod.rs
+  s_59c0dd2af30db2::t_0f49dd90591fb8 278-301
+  s_59c0dd2af30db2::t_48d98f37bf49a6 302,304-369
+  s_59c0dd2af30db2::t_68f6f202858873 247
+  s_59c0dd2af30db2::t_738a03b7f057d8 143-145,147-148
+  s_59c0dd2af30db2::t_fdccf0dcde8443 243-244,249-250,253
+  s_59c0dd2af30db2::t_97cf877502f5ea 303,370
+packages/forge-web/test/browser/webgpu-errors.mjs
+  s_59c0dd2af30db2::t_71acc9eb2cdf93 106-114,167,182
+  s_59c0dd2af30db2::t_274991c871b35a 1-105,115-166,168-181,183-358
+packages/forge-web/test/viewport-errors.test.mjs
+  s_59c0dd2af30db2::t_5a64a8d7b85e11 73
+  s_59c0dd2af30db2::t_bea4fea38f0b97 1-72,74-142,146-174
+  s_59c0dd2af30db2::t_f81fafe511319e 143-145
+  s_59c0dd2af30db2::t_48f4eba0203335 175-201
+forge/crates/forge-solve/src/solver.rs
+  s_59c0dd2af30db2::t_70f5117c858178 128
+  s_59c0dd2af30db2::t_77c97ed8702868 8,26-34,269,273-280,307-314,347,357,369,380,399,816-819
+  s_59c0dd2af30db2::t_b6c8a46f7d22ed 125-126
+forge/crates/forge-core/src/math.rs
+  s_59c0dd2af30db2::t_879fa843628e2b 144-159,165-185,191-203,207-213,216,218
+  s_59c0dd2af30db2::t_7ec1dc11eeb022 356-357
+  s_59c0dd2af30db2::t_060f78bc09b531 365-369
+  s_59c0dd2af30db2::t_e002c5d3196c68 160-164,186-190
+  s_59c0dd2af30db2::t_cebfcc4ab14030 11-21
+  s_59c0dd2af30db2::t_60ce27d6c94b47 205-206
+  s_59c0dd2af30db2::t_3c6caec7263ad7 328-355,358-364,370-392
+  s_59c0dd2af30db2::t_3a7dd97d131d78 267-268,270
+  s_59c0dd2af30db2::t_fbf0ca70eb8722 204,393
+forge/crates/forge-wasm/src/lib.rs
+  s_59c0dd2af30db2::t_aab0f1354bdfec 14-16,19
+forge/crates/forge-solve/src/error.rs
+  s_59c0dd2af30db2::t_a82a3af0f8e1b6 142
+  s_59c0dd2af30db2::t_a49f90b57dd1a1 108-118
+forge/crates/forge-naming/src/fingerprint.rs
+  s_59c0dd2af30db2::t_5ef71df96e856c 893-1026
+  s_59c0dd2af30db2::t_aa320a107dc680 13-14,86-89,157-161,164,188,200,225,229,242,297-313,317
+  s_59c0dd2af30db2::t_711104283a35d6 1027
+packages/forge-web/src/types.ts
+  s_59c0dd2af30db2::t_19cb6209d40127 249-254
+packages/forge-web/LICENSE
+  s_59c0dd2af30db2::t_57be31b0bbde71 1-373
+forge/crates/forge-render/src/lib.rs
+  s_59c0dd2af30db2::t_e87564a9fefc12 47
+  s_59c0dd2af30db2::t_713828187426ef 53
+forge/crates/forge-render/src/context.rs
+  s_59c0dd2af30db2::t_425c8af256e242 29,199-210
+  s_59c0dd2af30db2::t_713828187426ef 60-61
+  s_59c0dd2af30db2::t_e87564a9fefc12 1-28,30-59,62-69,167-168,189-192,194-198,231,235-259
+  s_59c0dd2af30db2::t_033c428398f3f6 260
+forge/crates/forge-solve/src/result.rs
+  s_59c0dd2af30db2::t_77c97ed8702868 23-37,53,57,59-61
+  s_59c0dd2af30db2::t_fbd53e990e37e7 71-101
+  s_59c0dd2af30db2::t_47531b56326e2b 6
+  s_59c0dd2af30db2::t_78ed29922f757c 102-104
+forge/crates/forge-render/tests/offscreen.rs
+  s_59c0dd2af30db2::t_425c8af256e242 513-529
+  s_59c0dd2af30db2::t_697ef69050d27f 14-15,207,231,236,247-250,273-275,301,312,360-362,369-512
+forge/crates/forge-solve/src/analysis.rs
+  s_59c0dd2af30db2::t_415bedbb574f91 290-300,302-353,355-357
+  s_59c0dd2af30db2::t_b6c8a46f7d22ed 354
+  s_59c0dd2af30db2::t_77c97ed8702868 34-57,95-96,103,130,143-148,166,200,220-289,301,358-359
+packages/forge-web/src/viewport.ts
+  s_59c0dd2af30db2::t_19cb6209d40127 58,62,68-69,74,83,91,94,115-116,118-145,176-224,247-258,265,271-281,301-315,334-338,348-353,366-371,468-482,487-488,493-494,516,520-525,529,533-537,570,618,633,692,701-706,725-746
+  s_59c0dd2af30db2::t_96c6a9d44eaf49 14
+  s_59c0dd2af30db2::t_5d92325f7d0a2e 509-511
+  s_59c0dd2af30db2::t_b116663e030d23 111,113,146-175
+  s_59c0dd2af30db2::t_485b461147de43 483-486,489-492
+  s_59c0dd2af30db2::t_7de8da71331942 59-61,63-67,70-73,75-82,84-90,92-93,95-110,112,114,117,495,747
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bfee374cea9759e668f7e31a0d38cd1939dc8676",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
