@@ -1,0 +1,21 @@
+docs/spikes/01-forge-f0-oracle.md
+  s_59c0dd2af30db2::t_9ed20e57cf9150 1-62
+docs/spikes/06-cadscript-roundtrip.md
+  s_59c0dd2af30db2::t_3f7c85d841f0a1 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f50fe41cf1fdbf56c278ab4fe9910167d7bda90e",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
