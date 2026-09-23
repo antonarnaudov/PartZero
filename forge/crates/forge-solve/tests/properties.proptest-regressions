@@ -5,3 +5,11 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc 7a9721deb5f33f2ef47b866f5c202bf7184e87595293b69366718c5d671a70dc # shrinks to seed = 187208046203652576, pick = 0
+# results_are_deterministic_and_backend_independent: seed = 1455554950525772012, pick = 6
+# (polygon/c/…/k4, failed near-degenerate cluster, QRCP DOF 2 vs SVD DOF 3) is pinned as the
+# explicit test `backends_may_disagree_on_dof_only_for_failed_near_degenerate_clusters`
+# (the failing run's RNG seed was not persisted, so it cannot be replayed from a `cc` line).
+cc 6a6f64b5dd29e733be02d8502c4a86250e12b5cef70917e73a27bda0c3d1dca9 # shrinks to seed = 6121581300860278226, pick = 6
+# solutions_satisfy_constraints: seed = 6121581300860278226, pick = 6 (a point shared by a solved
+# and a conflicting cluster) is pinned as the explicit test
+# `a_point_shared_by_a_solved_and_a_conflicting_cluster_may_move_in_the_solved_one`.

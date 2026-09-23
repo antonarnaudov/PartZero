@@ -948,4 +948,49 @@ impl Solver {
         let unknowns = self.sys.unknown.iter().filter(|&&u| u).count();
         (self.sys.nq(), unknowns)
     }
+
+    /// The cluster owning each of entity `id`'s own quantities — a point's `[x, y]`, a
+    /// circle's `[radius]`, nothing for lines and arcs (their shape is their points') — as
+    /// the [`crate::ClusterReport::index`] of the solve's clusters; `None` for a fixed
+    /// quantity or an unknown no equation touches. `None` for an unknown id.
+    ///
+    /// Read-only diagnostics: an entity listed under several clusters (a point whose `x` is
+    /// in one and `y` in another) is split here quantity by quantity.
+    pub fn quantity_clusters(&self, id: &str) -> Option<Vec<Option<usize>>> {
+        let info = &self.sys.entities[*self.sys.entity_index.get(id)?];
+        let own: Vec<Q> = match (info.point, info.radius) {
+            (Some(p), _) => vec![p.x, p.y],
+            (None, Some(r)) => vec![r],
+            (None, None) => Vec::new(),
+        };
+        Some(
+            own.into_iter()
+                .map(|q| {
+                    let c = self.q_cluster[q as usize];
+                    (c != NONE).then_some(c as usize)
+                })
+                .collect(),
+        )
+    }
+
+    /// The largest `|residual|` over the equations of cluster `index` (a
+    /// [`crate::ClusterReport::index`]) at the current geometry — after [`Solver::solve`], the
+    /// geometry it returned, where [`crate::ClusterReport::max_residual`] is measured. The
+    /// same value as that field, except that a residual that is not a number (NaN) makes the
+    /// result NaN instead of being skipped by the maximum. `None` for an unknown index.
+    ///
+    /// Read-only diagnostics for callers that must not report an unmeasurable residual as a
+    /// small number.
+    pub fn cluster_max_residual(&self, index: usize) -> Option<f64> {
+        let cl = self.clusters.get(index)?;
+        let mut m = 0.0f64;
+        for &e in &cl.problem.eqs {
+            let r = self.sys.residual(e, &self.values).abs();
+            if r.is_nan() {
+                return Some(f64::NAN);
+            }
+            m = m.max(r);
+        }
+        Some(m)
+    }
 }

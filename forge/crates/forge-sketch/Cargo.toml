@@ -1,0 +1,27 @@
+[package]
+name = "forge-sketch"
+description = "Forge IR v1 sketch evaluation: explicit sketches with expressions and compound curves, constrained sketches solved with forge-solve, regions, the sketch replay trace"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MPL-2.0"
+publish.workspace = true
+
+[dependencies]
+forge-core.workspace = true
+forge-ir.workspace = true
+forge-ops.workspace = true
+forge-solve = { path = "../forge-solve" }
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+forge-check.workspace = true
+serde_json.workspace = true
+
+# proptest only on native targets, as in forge-solve and forge-core.
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true
