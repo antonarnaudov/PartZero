@@ -1,0 +1,148 @@
+packages/agent/src/trace.ts
+  s_59c0dd2af30db2::t_b01b3b4e8f96e8 1-179
+packages/agent/src/spec-writer.ts
+  s_59c0dd2af30db2::t_689349f90e92f0 1-101
+packages/agent-tools/src/session.ts
+  s_59c0dd2af30db2::t_c3dbc64962452f 18,347,395-399
+  s_59c0dd2af30db2::t_726eca98820562 301-302
+  s_59c0dd2af30db2::t_b811b60f7c4fb6 1-17,19-300,303-346,348-394,400-436
+packages/agent-tools/src/spec.ts
+  s_59c0dd2af30db2::t_80416bb1bf69d7 1-163
+packages/agent/src/triage.ts
+  s_59c0dd2af30db2::t_f2768f98573d1d 1-76
+packages/evals/src/index.ts
+  s_59c0dd2af30db2::t_c6ffc4a04f7aa8 40
+  s_59c0dd2af30db2::t_124a01c8fbb8fd 70
+packages/agent/src/agent.ts
+  s_59c0dd2af30db2::t_454427726892d5 1-653
+packages/agent/prompts/designer.v1.md
+  s_59c0dd2af30db2::t_7d3d1a490cf049 1-45
+packages/agent/src/solver.ts
+  s_59c0dd2af30db2::t_ca45b825591027 1-100
+docs/spikes/07-agent-vertical-slice.md
+  s_59c0dd2af30db2::t_68ed382fb19963 218,236
+  s_59c0dd2af30db2::t_ed32772051a2c6 1-217,219-235,237-251
+packages/agent/test/fixtures/engine-reports.json
+  s_59c0dd2af30db2::t_1bf2cf0d4d9af2 1-6,235-570
+  s_59c0dd2af30db2::t_7adda345f4e018 7-234
+packages/agent/test/scenarios.ts
+  s_59c0dd2af30db2::t_7adda345f4e018 38-69
+  s_59c0dd2af30db2::t_a219b03f356cfc 1-37,70-76
+packages/agent-tools/src/summaries.ts
+  s_59c0dd2af30db2::t_e63ad2e1414d69 1-185
+packages/agent-tools/test/registry.test.ts
+  s_59c0dd2af30db2::t_c583c15786c126 1-103
+packages/agent-tools/src/index.ts
+  s_59c0dd2af30db2::t_d2d101cca0c5bf 1-21
+packages/agent/prompts/spec_writer.v1.md
+  s_59c0dd2af30db2::t_7e043df8e3cbbf 1-96
+packages/agent-tools/tsconfig.json
+  s_59c0dd2af30db2::t_9d73b1d9d365bf 1-10
+packages/agent/test/helpers.ts
+  s_59c0dd2af30db2::t_7adda345f4e018 11-15
+  s_59c0dd2af30db2::t_b1bd39af908ef2 1-10,16-32
+packages/agent-tools/src/playbooks.ts
+  s_59c0dd2af30db2::t_b3ffb6dd0735bc 1-369
+packages/agent/vitest.config.ts
+  s_59c0dd2af30db2::t_cb47929868b9e6 1-21
+packages/agent/test/context.test.ts
+  s_59c0dd2af30db2::t_219f9e7ace4b5c 1-82
+packages/agent/src/bench.ts
+  s_59c0dd2af30db2::t_3623411a87fc4c 1-147
+packages/agent/src/models.ts
+  s_59c0dd2af30db2::t_b9d52e546c7979 1-70
+packages/agent/test/makerbench.test.ts
+  s_59c0dd2af30db2::t_3ca4e062a81194 1-110
+packages/agent/src/cli.ts
+  s_59c0dd2af30db2::t_72a655fecab422 1-16
+packages/agent-tools/src/format.ts
+  s_59c0dd2af30db2::t_c5ce807de9c6c5 1-79
+packages/agent/prompts/triage.v1.md
+  s_59c0dd2af30db2::t_6e7f3ba1cffd2f 1-17
+packages/agent/src/cli-main.ts
+  s_59c0dd2af30db2::t_8d670ae762623e 9-21,57-58,95-96,182-211,236-240
+  s_59c0dd2af30db2::t_e68e6fea1435ae 277,280-286
+  s_59c0dd2af30db2::t_32e1c55c34fe13 1-8,22-56,59-94,97-181,212-235,241-276,278-279,287-330
+packages/agent-tools/src/source.ts
+  s_59c0dd2af30db2::t_e1eaf1dddd0471 1-179
+packages/agent/src/testing.ts
+  s_59c0dd2af30db2::t_a575b43d07b6d4 1-164
+packages/evals/src/task.ts
+  s_59c0dd2af30db2::t_2f43d4f4940959 194-232
+packages/agent-tools/vitest.config.ts
+  s_59c0dd2af30db2::t_9d73b1d9d365bf 1-20
+packages/agent-tools/test/tools.test.ts
+  s_59c0dd2af30db2::t_00cc82000b93ea 87,90,123
+  s_59c0dd2af30db2::t_98f0d29400b4f9 1-86,88-89,91-122,124-225
+packages/agent/tsconfig.build.json
+  s_59c0dd2af30db2::t_cb47929868b9e6 1-9
+packages/agent/test/cli.test.ts
+  s_59c0dd2af30db2::t_e68e6fea1435ae 115-117
+  s_59c0dd2af30db2::t_8d670ae762623e 5,65-80,89-91
+  s_59c0dd2af30db2::t_219f9e7ace4b5c 1-4,6-64,81-88,92-114,118-119
+packages/agent-tools/tsconfig.build.json
+  s_59c0dd2af30db2::t_9d73b1d9d365bf 1-9
+packages/agent-tools/src/registry.ts
+  s_59c0dd2af30db2::t_d2d101cca0c5bf 55-57
+  s_59c0dd2af30db2::t_c9e447f686ce5a 1-54,58-178
+packages/agent/src/index.ts
+  s_59c0dd2af30db2::t_72a655fecab422 1-21
+packages/agent/src/prompts.ts
+  s_59c0dd2af30db2::t_7570f002b50d5b 1-62
+packages/agent/src/reference.ts
+  s_59c0dd2af30db2::t_74a59143a390a1 47-55,116,121
+  s_59c0dd2af30db2::t_fc56cd82343c05 1-46,56-115,117-120,122-130
+packages/agent/test/live/live.test.ts
+  s_59c0dd2af30db2::t_e72c20e943f0b6 1-53
+packages/agent-tools/src/sketch-geom.ts
+  s_59c0dd2af30db2::t_eb7f0b97c4426f 1-336
+packages/agent-tools/package.json
+  s_59c0dd2af30db2::t_9d73b1d9d365bf 1-42
+packages/agent-tools/test/source.test.ts
+  s_59c0dd2af30db2::t_c583c15786c126 1-44
+packages/evals/test/test-problems.test.ts
+  s_59c0dd2af30db2::t_b7bf2baf7c26e6 1-25
+packages/agent/src/run-context.ts
+  s_59c0dd2af30db2::t_ffc1a03bf09f86 1-98
+packages/agent/package.json
+  s_59c0dd2af30db2::t_cb47929868b9e6 1-47
+packages/agent/test/scripts.ts
+  s_59c0dd2af30db2::t_a221e5e2f113a7 1-57
+packages/agent-tools/test/fixtures/engine-reports.json
+  s_59c0dd2af30db2::t_258a7cd87218a4 1-474
+packages/agent/tsconfig.json
+  s_59c0dd2af30db2::t_cb47929868b9e6 1-10
+packages/agent/test/agent.test.ts
+  s_59c0dd2af30db2::t_89cdc495530ead 1-334
+packages/agent-tools/src/tools.ts
+  s_59c0dd2af30db2::t_202bc101a41d12 1-154,156-159,162-172,174-184,186,189-203,205-218,220-224,226-229,231-241,243-250,252-253,255-257,259-262,264,266-275,277-279,281-282,284-287,289-292,294-301,303-305,307,309-312,314-316,318-320,322-330,332-346,349-357,359-366,368,372-378,381-414
+  s_59c0dd2af30db2::t_dbdb0589dc2411 155,160-161,173,185,187-188,204,219,225,230,242,251,254,258,263,265,276,280,283,288,293,302,306,308,313,317,321,331,347-348,358,367,369-371,379-380
+packages/agent-tools/test/helpers.ts
+  s_59c0dd2af30db2::t_cbe464bdd8487d 1-20
+packages/agent-tools/test/playbooks.test.ts
+  s_59c0dd2af30db2::t_b8f21637feece1 1-97
+packages/agent-tools/test/record-fixtures.test.ts
+  s_59c0dd2af30db2::t_02625f9b02c19f 1-28
+packages/agent-tools/test/scenarios.ts
+  s_59c0dd2af30db2::t_9357b456aa5e35 1-78
+packages/agent/test/record-fixtures.test.ts
+  s_59c0dd2af30db2::t_99a554693deca0 1-28
+pnpm-lock.yaml
+  s_59c0dd2af30db2::t_6dc306ff4f58ee 18-122,140-167,189,205,217,230,247-290,300-303,307-322,326-345,466-469,476-479,510-512,516-518,525-536,540-553,557-575,605-612,620-641,646-669,676-692,696-722,727-778,782-794,808-827,832-858,862-911,915-933,941-943,973-979,984-1010,1016-1018,1027-1054,1063-1065,1067-1069,1071-1072,1074-1168,1171-1184,1191-1196,1267-1269,1273-1280,1284-1350,1359-1365,1375-1395,1400-1402,1427-1434,1439-1446,1450-1453,1461-1478,1483-1505,1510-1512,1516-1546,1551-1564,1569-1577,1583-1585,1589-1631,1635-1641,1646-1655,1662-1665,1669-1701,1717-1726,1730-1732,1737-1740,1749-1776,1865-1882,1888-1894,1907-1933,1948-2041,2053-2056,2059-2061,2063-2070,2072,2074,2076,2078,2080-2082,2084-2116,2171-2172,2177-2180,2199-2205,2211-2214,2219-2230,2235-2250,2253-2260,2270,2276-2284,2310-2313,2323-2384,2387-2400,2405-2422,2425-2471,2474-2515,2518-2530,2537-2558,2561-2598,2603-2681,2684-2702,2709-2710,2732-2743,2748-2786,2790-2791,2808-2856,2870-2922,2930-2962,2967-2968,2976-2990,3002-3007,3057-3058,3061-3066,3071-3124,3129-3136,3145-3168,3171-3175,3177,3181-3186,3192-3195,3198-3199,3204-3224,3231-3252,3267-3271,3274-3306,3309-3320,3323-3336,3358-3359,3362-3391,3394-3399,3402-3411,3419-3420,3423-3468,3480-3489,3492-3493,3503-3505,3510-3533,3543-3555,3557,3560,3577,3584-3610,3613-3632,3638-3645,3648-3669
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "435d9bfc5133a16eaf187f6dd2c77cdb431c1c44",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
