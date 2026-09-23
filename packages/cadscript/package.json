@@ -1,7 +1,7 @@
 {
   "name": "@aicad/cadscript",
   "version": "0.0.1",
-  "description": "CadScript v0: a statically compiled TypeScript subset that compiles to (and prints from) the aicad Feature-Graph IR.",
+  "description": "CadScript: a statically compiled TypeScript subset that compiles to (and prints from) the aicad Feature-Graph IR (v0 at the root, v1 under `v1` / `@aicad/cadscript/v1`).",
   "license": "Apache-2.0",
   "type": "module",
   "sideEffects": false,
@@ -15,10 +15,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./v1": {
+      "types": "./dist/v1/index.d.ts",
+      "import": "./dist/v1/index.js"
+    },
     "./std": {
       "types": "./std/index.d.ts"
     },
-    "./std/index.d.ts": "./std/index.d.ts"
+    "./std/index.d.ts": "./std/index.d.ts",
+    "./std/v1": {
+      "types": "./std/v1/index.d.ts"
+    },
+    "./std/v1/index.d.ts": "./std/v1/index.d.ts"
   },
   "files": [
     "dist",
@@ -28,7 +36,7 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "generate": "vitest run test/generated-files.test.ts --update"
+    "generate": "vitest run test/generated-files.test.ts test/v1/generated.test.ts --update"
   },
   "dependencies": {
     "@aicad/ir-types": "workspace:*",

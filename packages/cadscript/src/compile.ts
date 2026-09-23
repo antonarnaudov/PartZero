@@ -27,6 +27,7 @@ import { assignIds } from "./identity.js";
 import {
   BUILTINS,
   closest,
+  COMPILE_AS_V1,
   CURVE_BUILTINS,
   FEATURE_BUILTINS,
   formatNumber,
@@ -176,7 +177,7 @@ const FEATURE_USAGE: Record<FeatureBuiltin, string> = {
   revolve: "const body = revolve(profile, { axis: { origin: [0, 0], direction: [0, 1] }, angle: 360 })",
 };
 
-const V1_HINT = "expressions and param() arrive in CadScript v1; use a numeric literal";
+const V1_HINT = `expressions and param() are CadScript v1: ${COMPILE_AS_V1}`;
 
 class Ctx {
   readonly diagnostics: Diagnostic[] = [];
@@ -295,9 +296,16 @@ function fold(root: ts.Expression): number | undefined {
   return values[0];
 }
 
+/**
+ * The hint for literal arithmetic / parentheses / a unary sign in v0: the constant-folded value
+ * first (the concrete repair an agent in a v0 session can apply right away), then the v1 pointer.
+ * Falls back to the v1 pointer alone when the expression does not fold to a finite number.
+ */
 function literalHint(e: ts.Expression): string {
   const v = fold(e);
-  return v !== undefined && Number.isFinite(v) ? `${V1_HINT}: ${formatNumber(v)}` : V1_HINT;
+  return v !== undefined && Number.isFinite(v)
+    ? `use a numeric literal: ${formatNumber(v)}; or keep the expression and ${COMPILE_AS_V1}`
+    : V1_HINT;
 }
 
 /** A non-literal expression where a literal was expected. */
@@ -323,14 +331,15 @@ function unsupported(ctx: Ctx, e: ts.Node, expected: string, what: string): unde
     if (isBuiltin(e.text)) {
       return ctx.report("CS_BAD_ARGUMENT", e, `\`${e.text}\` is not ${expected}`, `${what} expects ${expected}`);
     }
+    // The folded value of `const t = 8 * 2;` first (the concrete repair in a v0 session), then v1.
     const v = entry?.value;
     return ctx.report(
       "CS_EXPR_UNSUPPORTED",
       e,
       `\`${e.text}\` is a variable reference; CadScript v0 arguments must be literals`,
       v !== undefined && Number.isFinite(v)
-        ? `named values and param() arrive in CadScript v1; inline the literal ${formatNumber(v)}`
-        : "named values and param() arrive in CadScript v1; inline the value as a literal",
+        ? `inline the literal ${formatNumber(v)}; or keep \`${e.text}\` as a param() const and ${COMPILE_AS_V1}`
+        : `named values are param() consts of CadScript v1: ${COMPILE_AS_V1}`,
     );
   }
   if (ts.isCallExpression(e)) {
@@ -339,7 +348,7 @@ function unsupported(ctx: Ctx, e: ts.Node, expected: string, what: string): unde
       return ctx.report("CS_BAD_ARGUMENT", e, `${callee}() is not ${expected}`, `${what} expects ${expected}`);
     }
     const future = callee ? FUTURE_BUILTINS[callee] : undefined;
-    return ctx.report("CS_EXPR_UNSUPPORTED", e, `function calls are not supported ${where}`, future ?? literalHint(e));
+    return ctx.report("CS_EXPR_UNSUPPORTED", e, `function calls are not supported ${where}`, future ?? V1_HINT);
   }
   if (ts.isTemplateExpression(e) || ts.isNoSubstitutionTemplateLiteral(e) || ts.isTaggedTemplateExpression(e)) {
     return ctx.report("CS_EXPR_UNSUPPORTED", e, `template strings are not supported ${where}`, 'use a plain "double-quoted" string literal');
@@ -348,7 +357,7 @@ function unsupported(ctx: Ctx, e: ts.Node, expected: string, what: string): unde
     return ctx.report("CS_EXPR_UNSUPPORTED", e, `spreads are not supported ${where}`, "list every element explicitly");
   }
   if (ts.isPropertyAccessExpression(e) || ts.isElementAccessExpression(e)) {
-    return ctx.report("CS_EXPR_UNSUPPORTED", e, `property access is not supported ${where}`, "queries and param() arrive in CadScript v1; use a literal");
+    return ctx.report("CS_EXPR_UNSUPPORTED", e, `property access is not supported ${where}`, `queries and param() are CadScript v1: ${COMPILE_AS_V1}`);
   }
   if (ts.isConditionalExpression(e)) {
     return ctx.report("CS_EXPR_UNSUPPORTED", e, `conditional expressions are not supported ${where}`, "write the chosen value as a literal");
@@ -528,7 +537,7 @@ function readPlane(ctx: Ctx, e: ts.Expression, lf: LFeature): PlaneSpec | undefi
     }
     const entry = ctx.names.get(e.text);
     if (entry && entry.type !== "invalid") {
-      return ctx.report("CS_BAD_ARGUMENT", e, `\`${e.text}\` is a ${entry.type} feature, not a plane`, "sketching on faces arrives in CadScript v1; use XY, XZ, YZ or frame({ … })");
+      return ctx.report("CS_BAD_ARGUMENT", e, `\`${e.text}\` is a ${entry.type} feature, not a plane`, `sketching on faces is CadScript v1: ${COMPILE_AS_V1}`);
     }
     return ctx.report("CS_EXPR_UNSUPPORTED", e, `\`${e.text}\` is not a plane constant`, "use XY, XZ, YZ or an inline frame({ origin, normal, xDir })");
   }
@@ -731,7 +740,7 @@ function readDirection(ctx: Ctx, e: ts.Expression): SweepDirection | undefined {
 }
 
 const SWEEP_KEY_HINTS: Record<string, string> = {
-  op: "v0 features always create new bodies; `op` arrives in CadScript v1",
+  op: `v0 features always create new bodies; \`op\` is CadScript v1: ${COMPILE_AS_V1}`,
   regions: "v0 features always use every region of the sketch",
   reverse: 'use direction: "reverse"',
   symmetric: 'use direction: "symmetric"',
@@ -1230,12 +1239,17 @@ function lowerFeatureStatement(ctx: Ctx, stmt: ts.VariableStatement, ensurePart:
       init.kind === ts.SyntaxKind.TrueKeyword ||
       init.kind === ts.SyntaxKind.FalseKeyword;
     if (literal) {
-      const shown = v !== undefined && Number.isFinite(v) ? formatNumber(v) : ctx.text(init);
+      const numeric = v !== undefined && Number.isFinite(v);
+      const shown = numeric ? formatNumber(v) : ctx.text(init);
+      // Parameters are numbers and booleans (SPEC-v1 §2): other literals are only inlined.
+      const asParam = numeric || init.kind === ts.SyntaxKind.TrueKeyword || init.kind === ts.SyntaxKind.FalseKeyword;
       ctx.report(
         "CS_EXPR_UNSUPPORTED",
         init,
         `\`const ${name}\` must be a feature: sketch(…), extrude(…) or revolve(…)`,
-        `named values arrive with param() in CadScript v1; inline ${shown} where \`${name}\` is used`,
+        asParam
+          ? `inline ${shown} where \`${name}\` is used; or make it a parameter (const ${name} = param(${shown})) and ${COMPILE_AS_V1}`
+          : `inline ${shown} where \`${name}\` is used`,
       );
     } else {
       unsupported(ctx, init, "a feature: sketch(…), extrude(…) or revolve(…)", `\`const ${name}\``);

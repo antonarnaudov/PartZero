@@ -45,9 +45,12 @@ import { readFileSync as readConstants } from "node:fs";
 import { fileURLToPath as toPath } from "node:url";
 
 describe("forge-ir constants mirror", () => {
-  it("IR_RESERVED_NAMES equals forge-ir RESERVED_NAMES", () => {
-    const path = toPath(new URL("../../../forge/crates/forge-ir/schema/ir-v0.constants.json", import.meta.url));
-    const constants = JSON.parse(readConstants(path, "utf8")) as { RESERVED_NAMES: string[] };
-    expect([...IR_RESERVED_NAMES].sort()).toEqual([...constants.RESERVED_NAMES].sort());
+  // SPEC-v1 §9.3: CadScript reads the reserved names from ir-v1.constants.json. The v0 compiler's
+  // list (feature names of v0 and migrated documents) is its RESERVED_NAMES_V0; the v1 list is
+  // checked in test/v1/generated.test.ts.
+  it("IR_RESERVED_NAMES equals forge-ir RESERVED_NAMES_V0 (ir-v1.constants.json)", () => {
+    const path = toPath(new URL("../../../forge/crates/forge-ir/schema/ir-v1.constants.json", import.meta.url));
+    const constants = JSON.parse(readConstants(path, "utf8")) as { RESERVED_NAMES_V0: string[] };
+    expect([...IR_RESERVED_NAMES].sort()).toEqual([...constants.RESERVED_NAMES_V0].sort());
   });
 });

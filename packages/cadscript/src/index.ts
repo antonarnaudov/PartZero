@@ -1,6 +1,11 @@
 /**
- * @aicad/cadscript — CadScript v0: a statically compiled subset of TypeScript that compiles to the
- * Feature-Graph IR (`aicad.ir/0`) and prints back from it losslessly.
+ * @aicad/cadscript — CadScript: a statically compiled subset of TypeScript that compiles to the
+ * Feature-Graph IR and prints back from it losslessly.
+ *
+ * The root exports are CadScript **v0** (`aicad.ir/0`), unchanged while the consumers migrate.
+ * **CadScript v1** (`aicad.ir/1`: parameters, expressions, compound curves, constraints,
+ * references, holes, blends, patterns, datums) is the namespace {@link v1} (also
+ * `@aicad/cadscript/v1`); v0 sources are valid v1 sources and compile to their migration.
  *
  * - {@link compile}: source → IR, with diagnostics and source maps. Never executes the source.
  * - {@link print}: IR → canonical source.
@@ -22,6 +27,7 @@ export {
   parseWithinLimits,
   tooComplexDiagnostic,
   type GuardedParse,
+  type NestingLimits,
   type TooComplex,
 } from "./complexity.js";
 export {
@@ -49,3 +55,5 @@ export { applyIrEdit, CadScriptEditError } from "./splice.js";
 export { BUILTINS, formatNumber, STD_MODULE, type Builtin } from "./syntax.js";
 export { typecheck } from "./typecheck.js";
 export { validateIr, type IrValidationError } from "./validate.js";
+/** CadScript v1 (`aicad.ir/1`): `v1.compile`, `v1.print`, `v1.applyIrEdit`, `v1.typecheck`, … */
+export * as v1 from "./v1/index.js";

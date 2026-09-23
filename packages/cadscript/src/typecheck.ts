@@ -11,9 +11,11 @@ import ts from "typescript";
 import {
   checkerWorkProblem,
   isStackOverflow,
+  LIMITS_V0,
   parseWithinLimits,
   stackOverflowProblem,
   tooComplexDiagnostic,
+  type NestingLimits,
 } from "./complexity.js";
 import type { Diagnostic, Severity } from "./diagnostics.js";
 import { STD_DTS } from "./generated/std-dts.js";
@@ -51,17 +53,21 @@ const OPTIONS: ts.CompilerOptions = {
   types: [],
 };
 
-let cached: { std: ts.SourceFile; lib: ts.SourceFile } | undefined;
-function libs(): { std: ts.SourceFile; lib: ts.SourceFile } {
-  cached ??= {
-    std: ts.createSourceFile(STD_PATH, STD_DTS, ts.ScriptTarget.ES2022, true),
-    lib: ts.createSourceFile(LIB_PATH, MIN_LIB, ts.ScriptTarget.ES2022, true),
-  };
-  return cached;
+const cached = new Map<string, { std: ts.SourceFile; lib: ts.SourceFile }>();
+function libs(stdDts: string): { std: ts.SourceFile; lib: ts.SourceFile } {
+  let c = cached.get(stdDts);
+  if (!c) {
+    c = {
+      std: ts.createSourceFile(STD_PATH, stdDts, ts.ScriptTarget.ES2022, true),
+      lib: ts.createSourceFile(LIB_PATH, MIN_LIB, ts.ScriptTarget.ES2022, true),
+    };
+    cached.set(stdDts, c);
+  }
+  return c;
 }
 
-function createProgram(main: ts.SourceFile): ts.Program {
-  const { std, lib } = libs();
+function createProgram(main: ts.SourceFile, stdDts: string): ts.Program {
+  const { std, lib } = libs(stdDts);
   const files = new Map<string, ts.SourceFile>([
     [MAIN_PATH, main],
     [STD_PATH, std],
@@ -121,16 +127,23 @@ function convert(d: ts.Diagnostic, main: ts.SourceFile): Diagnostic {
  *   takes time growing with the square of the input: "not type-checked: …".
  */
 export function typecheck(source: string): Diagnostic[] {
+  return typecheckWith(source, STD_DTS);
+}
+
+/**
+ * @internal {@link typecheck} against a given `@aicad/std` declaration text (v0's or v1's).
+ */
+export function typecheckWith(source: string, stdDts: string, limits: NestingLimits = LIMITS_V0, workLimit: "error" | "warning" = "error"): Diagnostic[] {
   try {
-    const parsed = parseWithinLimits(MAIN_PATH, source, ts.ScriptTarget.ES2022);
+    const parsed = parseWithinLimits(MAIN_PATH, source, ts.ScriptTarget.ES2022, limits);
     if (parsed.problem) return [tooComplexDiagnostic(source, parsed.problem)];
     const main = parsed.sf;
-    const program = createProgram(main);
+    const program = createProgram(main, stdDts);
     // tsc's own order (`emitFilesAndReportErrors`): semantic diagnostics only for a file that parses.
     const syntactic = program.getSyntacticDiagnostics(main);
     if (syntactic.length > 0) return syntactic.map((d) => convert(d, main));
     const heavy = checkerWorkProblem(main);
-    if (heavy) return [tooComplexDiagnostic(source, heavy)];
+    if (heavy) return [{ ...tooComplexDiagnostic(source, heavy), severity: workLimit }];
     const diags = [...program.getOptionsDiagnostics(), ...program.getGlobalDiagnostics(), ...program.getSemanticDiagnostics(main)];
     return diags.map((d) => convert(d, main));
   } catch (e) {
@@ -142,9 +155,9 @@ export function typecheck(source: string): Diagnostic[] {
 }
 
 /** @internal Diagnostics of the std declarations themselves (must be empty). */
-export function stdLibDiagnostics(): Diagnostic[] {
+export function stdLibDiagnostics(stdDts: string = STD_DTS): Diagnostic[] {
   const main = ts.createSourceFile(MAIN_PATH, `import {} from "${STD_MODULE}";\n`, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
-  const program = createProgram(main);
+  const program = createProgram(main, stdDts);
   const std = program.getSourceFile(STD_PATH)!;
   return [...program.getSyntacticDiagnostics(std), ...program.getSemanticDiagnostics(std)].map((d) => convert(d, main));
 }

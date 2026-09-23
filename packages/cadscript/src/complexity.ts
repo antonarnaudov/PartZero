@@ -23,6 +23,17 @@
  * within 40% of Node's default stack (the costliest, nested generic types, needs about a third;
  * see `test/robustness.test.ts`), so hosts with far smaller stacks agree too.
  *
+ * CadScript v1 ({@link LIMITS_V1}) accepts deeper *CadScript-shaped* nesting, because every IR v1
+ * document must print and compile back (SPEC-v1 §2.9) and IR v1 expressions nest up to
+ * `MAX_EXPR_DEPTH` (64) levels: printed, one level costs at most one bracket and two syntax
+ * levels (`-(-x)`, `a - (b - c)`, `(c ? a : b) ? …`), on top of a statement's own structure
+ * (at most 5 brackets and 12 syntax levels) and its query chains. v1 counts the node kinds the
+ * printer emits (calls, member access, literals, operators, …) one level each and every other
+ * node two, so non-CadScript nesting (types, `new`, arrow functions, …) keeps v0's effective
+ * limit and the stack budget above holds (`test/v1/limits.test.ts`). IR v1 does not bound query
+ * nesting; a document whose printed statement exceeds these limits is not printable
+ * (`printabilityProblemsV1`).
+ *
  * Type-checker work limits.
  *
  * `compile()` takes linear time. The TypeScript checker (TS 5.9) takes time growing with the
@@ -52,11 +63,71 @@ import type { Diagnostic, Position } from "./diagnostics.js";
 export const MAX_BRACKET_DEPTH = 32;
 
 /**
+ * CadScript v1's bracket limit: an expression at `MAX_EXPR_DEPTH` (64) prints within 65 brackets
+ * (a unit call such as `mm(12)` at the leaf), a statement adds at most 5, and the rest is for
+ * query arguments (`edgesBetween(…)`, `.and(…)`, `.radius({ … })`, `{ edge: … }`).
+ */
+export const MAX_BRACKET_DEPTH_V1 = 128;
+
+/**
  * Deepest syntax-tree nesting accepted. The left operand of a binary expression does not add a
  * level: the parser, binder and checker walk left-associative chains (`1 + 1 + … + 1`)
  * iteratively, and so does the compiler.
  */
 export const MAX_SYNTAX_DEPTH = 128;
+
+/**
+ * CadScript v1's syntax limit, in levels of CadScript-shaped nodes ({@link LIMITS_V1}; any other
+ * node counts two): an expression at `MAX_EXPR_DEPTH` prints within 130 levels, a statement adds
+ * at most 12, and each link of a query chain (`.edges()`) adds 2.
+ */
+export const MAX_SYNTAX_DEPTH_V1 = 256;
+
+/** Nesting limits of one CadScript version (checks 1 and 2). */
+export interface NestingLimits {
+  /** Deepest bracket nesting accepted. */
+  readonly brackets: number;
+  /** Deepest syntax-tree nesting accepted, in {@link NestingLimits.cost} units. */
+  readonly syntax: number;
+  /** The levels a node adds below its parent (the left operand of a binary expression adds none). */
+  cost(node: ts.Node): number;
+}
+
+/** CadScript v0: {@link MAX_BRACKET_DEPTH}, {@link MAX_SYNTAX_DEPTH}, every node one level. */
+export const LIMITS_V0: NestingLimits = { brackets: MAX_BRACKET_DEPTH, syntax: MAX_SYNTAX_DEPTH, cost: () => 1 };
+
+/** The node kinds the CadScript v1 printer emits: one level each under {@link LIMITS_V1}. */
+const V1_FORMS: ReadonlySet<ts.SyntaxKind> = new Set([
+  ts.SyntaxKind.ImportDeclaration,
+  ts.SyntaxKind.ImportClause,
+  ts.SyntaxKind.NamedImports,
+  ts.SyntaxKind.ImportSpecifier,
+  ts.SyntaxKind.ExpressionStatement,
+  ts.SyntaxKind.VariableStatement,
+  ts.SyntaxKind.VariableDeclarationList,
+  ts.SyntaxKind.VariableDeclaration,
+  ts.SyntaxKind.Identifier,
+  ts.SyntaxKind.CallExpression,
+  ts.SyntaxKind.PropertyAccessExpression,
+  ts.SyntaxKind.ObjectLiteralExpression,
+  ts.SyntaxKind.PropertyAssignment,
+  ts.SyntaxKind.ArrayLiteralExpression,
+  ts.SyntaxKind.ParenthesizedExpression,
+  ts.SyntaxKind.PrefixUnaryExpression,
+  ts.SyntaxKind.BinaryExpression,
+  ts.SyntaxKind.ConditionalExpression,
+  ts.SyntaxKind.StringLiteral,
+  ts.SyntaxKind.NumericLiteral,
+  ts.SyntaxKind.TrueKeyword,
+  ts.SyntaxKind.FalseKeyword,
+]);
+
+/** CadScript v1: {@link MAX_BRACKET_DEPTH_V1}, {@link MAX_SYNTAX_DEPTH_V1}; non-CadScript nodes count two. */
+export const LIMITS_V1: NestingLimits = {
+  brackets: MAX_BRACKET_DEPTH_V1,
+  syntax: MAX_SYNTAX_DEPTH_V1,
+  cost: (node) => (V1_FORMS.has(node.kind) || ts.isToken(node) ? 1 : 2),
+};
 
 /** Deepest syntax tree that `typecheck()` type-checks, counting every level, left operands too. */
 export const MAX_CHECKED_DEPTH = 512;
@@ -125,7 +196,7 @@ function endsExpression(kind: ts.SyntaxKind): boolean {
  * scanning tokens (iteratively; comments and strings are skipped). Unclosed brackets count too:
  * the parser recurses into them all the same.
  */
-export function bracketNestingProblem(source: string): TooComplex | undefined {
+export function bracketNestingProblem(source: string, max: number = MAX_BRACKET_DEPTH): TooComplex | undefined {
   const scanner = ts.createScanner(ts.ScriptTarget.Latest, true, ts.LanguageVariant.Standard, source);
   const open: ts.SyntaxKind[] = [];
   let prev = ts.SyntaxKind.Unknown;
@@ -136,11 +207,11 @@ export function bracketNestingProblem(source: string): TooComplex | undefined {
       case ts.SyntaxKind.OpenBraceToken:
       case ts.SyntaxKind.TemplateHead:
         open.push(t);
-        if (open.length > MAX_BRACKET_DEPTH) {
+        if (open.length > max) {
           return {
             start: scanner.getTokenStart(),
             end: scanner.getTokenEnd(),
-            message: `brackets are nested more than ${MAX_BRACKET_DEPTH} levels deep`,
+            message: `brackets are nested more than ${max} levels deep`,
           };
         }
         break;
@@ -170,18 +241,18 @@ export function bracketNestingProblem(source: string): TooComplex | undefined {
 }
 
 /**
- * Check 2: the first node (in source order) nested deeper than {@link MAX_SYNTAX_DEPTH}, found
- * with an explicit stack (never recursion).
+ * Check 2: the first node (in source order) nested deeper than the syntax limit
+ * ({@link MAX_SYNTAX_DEPTH} for v0), found with an explicit stack (never recursion).
  */
-export function syntaxNestingProblem(sf: ts.SourceFile): TooComplex | undefined {
+export function syntaxNestingProblem(sf: ts.SourceFile, limits: NestingLimits = LIMITS_V0): TooComplex | undefined {
   const nodes: ts.Node[] = [sf];
   const depths: number[] = [0];
   const children: ts.Node[] = [];
   while (nodes.length > 0) {
     const node = nodes.pop()!;
     const depth = depths.pop()!;
-    if (depth > MAX_SYNTAX_DEPTH) {
-      return { start: node.getStart(sf), end: node.getEnd(), message: `code is nested more than ${MAX_SYNTAX_DEPTH} levels deep` };
+    if (depth > limits.syntax) {
+      return { start: node.getStart(sf), end: node.getEnd(), message: `code is nested more than ${limits.syntax} levels deep` };
     }
     children.length = 0;
     ts.forEachChild(node, (child) => {
@@ -191,7 +262,7 @@ export function syntaxNestingProblem(sf: ts.SourceFile): TooComplex | undefined 
     for (let i = children.length - 1; i >= 0; i--) {
       const child = children[i]!;
       nodes.push(child);
-      depths.push(binary && child === node.left ? depth : depth + 1);
+      depths.push(binary && child === node.left ? depth : depth + limits.cost(child));
     }
   }
   return undefined;
@@ -320,12 +391,12 @@ function resetParser(): void {
 export type GuardedParse = { sf: ts.SourceFile; problem?: undefined } | { sf: ts.SourceFile | undefined; problem: TooComplex };
 
 /**
- * Parse `source` as TypeScript, applying checks 1–3: the parse `compile()` and `typecheck()` use.
- * Tools that parse CadScript themselves should use it too, so that deep input cannot overflow
- * their parse either.
+ * Parse `source` as TypeScript, applying checks 1–3: the parse `compile()` and `typecheck()` use
+ * (v1's with {@link LIMITS_V1}). Tools that parse CadScript themselves should use it too, so that
+ * deep input cannot overflow their parse either.
  */
-export function parseWithinLimits(fileName: string, source: string, target: ts.ScriptTarget): GuardedParse {
-  const brackets = bracketNestingProblem(source);
+export function parseWithinLimits(fileName: string, source: string, target: ts.ScriptTarget, limits: NestingLimits = LIMITS_V0): GuardedParse {
+  const brackets = bracketNestingProblem(source, limits.brackets);
   if (brackets) return { sf: undefined, problem: brackets };
   let sf: ts.SourceFile;
   try {
@@ -336,7 +407,7 @@ export function parseWithinLimits(fileName: string, source: string, target: ts.S
     if (!isStackOverflow(e)) throw e;
     return { sf: undefined, problem: stackOverflowProblem("parse") };
   }
-  const deep = syntaxNestingProblem(sf);
+  const deep = syntaxNestingProblem(sf, limits);
   return deep ? { sf, problem: deep } : { sf };
 }
 

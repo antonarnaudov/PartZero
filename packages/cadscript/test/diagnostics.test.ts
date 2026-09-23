@@ -1,5 +1,6 @@
 import { IR_SCHEMA, type IrDocument } from "@aicad/ir-types";
 import { describe, expect, it } from "vitest";
+import { COMPILE_AS_V1 } from "../src/syntax.js";
 import {
   compile,
   DIAGNOSTIC_CODES,
@@ -95,7 +96,7 @@ const cases: Record<DiagnosticCode, () => Diagnostic | void> = {
   },
   CS_UNKNOWN_BUILTIN: () => {
     const d = one(diagnosticsOf(src(`part("part");\nconst r = rect({ center: [0, 0], w: 10, h: 5 });\n`)), "CS_UNKNOWN_BUILTIN");
-    expect(d.hint).toContain("four line()s");
+    expect(d.hint).toBe(`rect() is CadScript v1: ${COMPILE_AS_V1}`);
     const curve = one(diagnosticsOf(src(`part("part");\nconst s = sketch(XY, { a: polyline([0, 0]) });\n`)), "CS_UNKNOWN_BUILTIN");
     expect(curve.message).toContain("polyline()");
     const notFeature = one(diagnosticsOf(src(`part("part");\nconst l = line([0, 0], [1, 1]);\n`)), "CS_UNKNOWN_BUILTIN");
@@ -115,13 +116,32 @@ const cases: Record<DiagnosticCode, () => Diagnostic | void> = {
   CS_EXPR_UNSUPPORTED: () => {
     const d = one(diagnosticsOf(src(`${BOX}const plate = extrude(base, { distance: 4 * 2 });\n`)), "CS_EXPR_UNSUPPORTED");
     expect(d.message).toContain("arithmetic");
-    expect(d.hint).toBe("expressions and param() arrive in CadScript v1; use a numeric literal: 8");
+    // The folded literal comes first (the concrete repair in a v0 session: agent-tools passes the
+    // hint to the model as its "fix:" line), then the pointer at v1 (the CLI's default).
+    expect(d.hint).toBe(`use a numeric literal: 8; or keep the expression and ${COMPILE_AS_V1}`);
+    const hintOf = (arg: string) =>
+      one(diagnosticsOf(src(`${BOX}const plate = extrude(base, { distance: ${arg} });\n`)), "CS_EXPR_UNSUPPORTED").hint;
+    expect(hintOf("(8)")).toBe(`use a numeric literal: 8; or keep the expression and ${COMPILE_AS_V1}`);
+    expect(hintOf("+8")).toBe(`use a numeric literal: 8; or keep the expression and ${COMPILE_AS_V1}`);
+    expect(hintOf("-(-8)")).toBe(`use a numeric literal: 8; or keep the expression and ${COMPILE_AS_V1}`);
+    expect(hintOf("10 / 4")).toBe(`use a numeric literal: 2.5; or keep the expression and ${COMPILE_AS_V1}`);
+    // no finite fold (division by zero, a non-numeric operand): only the v1 pointer
+    expect(hintOf("1 / 0")).toBe(`expressions and param() are CadScript v1: ${COMPILE_AS_V1}`);
+    expect(hintOf("(8 + t)")).toBe(`expressions and param() are CadScript v1: ${COMPILE_AS_V1}`);
     expect(d.span).toEqual({ start: { line: 10, col: 41 }, end: { line: 10, col: 46 } });
     const variable = diagnosticsOf(src(`${BOX}const t = 8;\nconst plate = extrude(base, { distance: t });\n`));
     expect(variable.filter((x) => x.code === "CS_EXPR_UNSUPPORTED").map((x) => x.hint)).toEqual([
-      "named values arrive with param() in CadScript v1; inline 8 where `t` is used",
-      "named values and param() arrive in CadScript v1; inline the literal 8",
+      `inline 8 where \`t\` is used; or make it a parameter (const t = param(8)) and ${COMPILE_AS_V1}`,
+      `inline the literal 8; or keep \`t\` as a param() const and ${COMPILE_AS_V1}`,
     ]);
+    // not a number: no parameter suggestion at the const; the v1 pointer alone at the use
+    const nonNumeric = diagnosticsOf(src(`${BOX}const t = "8";\nconst plate = extrude(base, { distance: t });\n`));
+    expect(nonNumeric.filter((x) => x.code === "CS_EXPR_UNSUPPORTED").map((x) => x.hint)).toEqual([
+      `inline "8" where \`t\` is used`,
+      `named values are param() consts of CadScript v1: ${COMPILE_AS_V1}`,
+    ]);
+    const flag = diagnosticsOf(src(`${BOX}const on = true;\n`)).find((x) => x.code === "CS_EXPR_UNSUPPORTED");
+    expect(flag?.hint).toBe(`inline true where \`on\` is used; or make it a parameter (const on = param(true)) and ${COMPILE_AS_V1}`);
     const template = one(diagnosticsOf(src("doc({ name: `box` });\n")), "CS_EXPR_UNSUPPORTED");
     expect(template.message).toContain("template strings");
     const spread = one(diagnosticsOf(src(`part("part");\nconst s = sketch(XY, { a: line(...[[0, 0], [1, 1]]) });\n`)), "CS_EXPR_UNSUPPORTED");

@@ -11,11 +11,19 @@
  *    exactly one new item is left unmatched, at the same position (and, for features, of the same
  *    type), the new item keeps the old id and a `CS_RENAME_DETECTED` info diagnostic is emitted.
  */
-import type { Feature, IrDocument, PartStudio } from "@aicad/ir-types";
+/** The parts of a base document identity matching needs (an `aicad.ir/0` or `aicad.ir/1` IR). */
+export interface IdentityBase<P extends IdentityBasePart = IdentityBasePart> {
+  parts: readonly P[];
+}
+export interface IdentityBasePart {
+  id: string;
+  name: string;
+  features: readonly { id: string; name: string; type: string }[];
+}
 
 export interface IdentityInput {
   name: string;
-  features: { name: string; type: Feature["type"] }[];
+  features: { name: string; type: string }[];
 }
 
 export interface Rename {
@@ -28,12 +36,12 @@ export interface Rename {
   id: string;
 }
 
-export interface IdentityResult {
+export interface IdentityResult<P extends IdentityBasePart = IdentityBasePart> {
   partIds: string[];
   /** Matched base part per part (for preserving explicit default fields). */
-  baseParts: (PartStudio | undefined)[];
+  baseParts: (P | undefined)[];
   featureIds: string[][];
-  baseFeatures: (Feature | undefined)[][];
+  baseFeatures: (P["features"][number] | undefined)[][];
   renames: Rename[];
 }
 
@@ -53,12 +61,21 @@ interface Taken {
 
 const taken = (ids: Iterable<string>): Taken => ({ ids: new Set(ids), next: new Map() });
 
-/** The first of `stem`, `stem_2`, `stem_3`, … that is not taken; it becomes taken. */
-function fresh(prefix: string, name: string, t: Taken): string {
-  const stem = `${prefix}${sanitize(name)}`;
+/**
+ * The first of `stem`, `stem_2`, `stem_3`, … that is not taken; it becomes taken. With
+ * `maxLen` (IR v1's 64-byte id limit) the stem is cut so that every candidate fits.
+ */
+function fresh(prefix: string, name: string, t: Taken, maxLen?: number): string {
+  let stem = `${prefix}${sanitize(name)}`;
+  if (maxLen !== undefined) stem = stem.slice(0, maxLen);
+  const cut = (i: number): string => {
+    if (i === 1) return stem;
+    const suffix = `_${i}`;
+    return maxLen === undefined ? `${stem}${suffix}` : `${stem.slice(0, maxLen - suffix.length)}${suffix}`;
+  };
   let i = t.next.get(stem) ?? 1;
-  let id = i === 1 ? stem : `${stem}_${i}`;
-  while (t.ids.has(id)) id = `${stem}_${++i}`;
+  let id = cut(i);
+  while (t.ids.has(id)) id = cut(++i);
   t.ids.add(id);
   t.next.set(stem, i + 1);
   return id;
@@ -66,8 +83,8 @@ function fresh(prefix: string, name: string, t: Taken): string {
 
 /** Match `new` items to `base` items: by key first, then a single same-position rename. */
 function match<N, B>(
-  items: N[],
-  bases: B[],
+  items: readonly N[],
+  bases: readonly B[],
   same: (n: N, b: B) => boolean,
   renameOk: (n: N, b: B) => boolean,
 ): { matched: (number | undefined)[]; renamed: number | undefined } {
@@ -91,8 +108,13 @@ function match<N, B>(
   return { matched, renamed };
 }
 
-export function assignIds(parts: IdentityInput[], base: IrDocument | undefined): IdentityResult {
-  const baseParts = base?.parts ?? [];
+export function assignIds<P extends IdentityBasePart>(
+  parts: IdentityInput[],
+  base: IdentityBase<P> | undefined,
+  options: { maxIdLength?: number } = {},
+): IdentityResult<P> {
+  const maxLen = options.maxIdLength;
+  const baseParts: readonly P[] = base?.parts ?? [];
   const takenParts = taken(baseParts.map((p) => p.id));
   const takenFeatures = taken(baseParts.flatMap((p) => p.features.map((f) => f.id)));
   const renames: Rename[] = [];
@@ -105,7 +127,7 @@ export function assignIds(parts: IdentityInput[], base: IrDocument | undefined):
   );
   const partIds = parts.map((p, i) => {
     const j = pm.matched[i];
-    if (j === undefined) return fresh("p_", p.name, takenParts);
+    if (j === undefined) return fresh("p_", p.name, takenParts, maxLen);
     const id = baseParts[j]!.id;
     if (pm.renamed === i) renames.push({ kind: "part", partIndex: i, featureIndex: -1, from: baseParts[j]!.name, to: p.name, id });
     return id;
@@ -116,7 +138,7 @@ export function assignIds(parts: IdentityInput[], base: IrDocument | undefined):
   });
 
   const featureIds: string[][] = [];
-  const baseFeatures: (Feature | undefined)[][] = [];
+  const baseFeatures: (P["features"][number] | undefined)[][] = [];
   parts.forEach((p, pi) => {
     const bp = matchedParts[pi];
     const bfs = bp?.features ?? [];
@@ -129,7 +151,7 @@ export function assignIds(parts: IdentityInput[], base: IrDocument | undefined):
     featureIds.push(
       p.features.map((f, fi) => {
         const k = fm.matched[fi];
-        if (k === undefined) return fresh("f_", f.name, takenFeatures);
+        if (k === undefined) return fresh("f_", f.name, takenFeatures, maxLen);
         const id = bfs[k]!.id;
         if (fm.renamed === fi) renames.push({ kind: "feature", partIndex: pi, featureIndex: fi, from: bfs[k]!.name, to: f.name, id });
         return id;

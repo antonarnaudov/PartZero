@@ -17,20 +17,26 @@ export function isBuiltin(name: string): name is Builtin {
   return (BUILTINS as readonly string[]).includes(name);
 }
 
-/** Builtins that are planned for later CadScript versions, with a pointer for the hint text. */
+/**
+ * How to get the v1 language from a v0 compile: CadScript v1 is the `cadscript` CLI's default and
+ * the `v1` namespace (`@aicad/cadscript/v1`); v0 sources are v1 sources, so nothing else changes.
+ */
+export const COMPILE_AS_V1 = "compile the file as CadScript v1 (the cadscript CLI's default; compile() of @aicad/cadscript/v1)";
+
+/** Builtins of later CadScript versions (v1, or after it), with a pointer for the hint text. */
 export const FUTURE_BUILTINS: Readonly<Record<string, string>> = {
-  param: "param() arrives in CadScript v1; use a numeric literal for now",
-  rect: "rect() arrives in CadScript v1; draw the rectangle as four line()s",
-  polygon: "polygon() arrives in CadScript v1; draw it with line()s",
-  hole: "hole() arrives in CadScript v1; add the hole as a circle() in the sketch (it becomes a loop)",
-  fillet: "fillet() arrives in CadScript v1",
-  chamfer: "chamfer() arrives in CadScript v1",
-  shell: "shell() arrives in CadScript v1",
-  pattern: "patterns arrive in CadScript v1; write each instance explicitly",
-  mirror: "mirror() arrives in CadScript v1; write the mirrored curves explicitly",
-  boolean: "booleans arrive in CadScript v1",
-  union: "booleans arrive in CadScript v1",
-  cut: "booleans arrive in CadScript v1",
+  param: `param() is CadScript v1: ${COMPILE_AS_V1}`,
+  rect: `rect() is CadScript v1: ${COMPILE_AS_V1}`,
+  polygon: `polygon() is CadScript v1: ${COMPILE_AS_V1}`,
+  hole: `hole() is CadScript v1: ${COMPILE_AS_V1}`,
+  fillet: `fillet() is CadScript v1: ${COMPILE_AS_V1}`,
+  chamfer: `chamfer() is CadScript v1: ${COMPILE_AS_V1}`,
+  shell: `shell() is CadScript v1: ${COMPILE_AS_V1}`,
+  pattern: `patterns are CadScript v1 (linearPattern, circularPattern, mirror): ${COMPILE_AS_V1}`,
+  mirror: `mirror() is CadScript v1: ${COMPILE_AS_V1}`,
+  boolean: `boolean() is CadScript v1: ${COMPILE_AS_V1}`,
+  union: `booleans are CadScript v1 (boolean(), or op on extrude/revolve): ${COMPILE_AS_V1}`,
+  cut: `booleans are CadScript v1 (boolean(), or op on extrude/revolve): ${COMPILE_AS_V1}`,
   customFeature: "customFeature() (sandboxed loops) arrives after v1",
 };
 

@@ -8,6 +8,7 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import type { IrDocument } from "@aicad/ir-types";
 import { MAX_BRACKET_DEPTH, MAX_CHECKED_DEPTH, MAX_FLOW_STEPS, MAX_OVERLOADS, MAX_SYNTAX_DEPTH, tooComplexDiagnostic } from "../src/complexity.js";
+import { COMPILE_AS_V1 } from "../src/syntax.js";
 import {
   applyIrEdit,
   CadScriptEditError,
@@ -103,15 +104,15 @@ describe("L20: deep nesting gives a diagnostic, never a RangeError", () => {
     it(`left-deep arithmetic, ${n} terms: CS_EXPR_UNSUPPORTED with the folded value`, () => {
       const r = compile(`${HEAD}${SK}const w = ${sum(n)};\n`);
       expect(r.diagnostics.map((d) => [d.code, d.hint])).toEqual([
-        ["CS_EXPR_UNSUPPORTED", `named values arrive with param() in CadScript v1; inline ${n} where \`w\` is used`],
+        ["CS_EXPR_UNSUPPORTED", `inline ${n} where \`w\` is used; or make it a parameter (const w = param(${n})) and ${COMPILE_AS_V1}`],
       ]);
     });
   }
 
-  it("left-deep arithmetic in an argument (literalHint → fold), 50000 terms", () => {
+  it("left-deep arithmetic in an argument, 50000 terms", () => {
     const r = compile(`${HEAD}${SK}const e = extrude(s, { distance: ${sum(50000)} });\n`);
     expect(r.diagnostics.map((d) => [d.code, d.message, d.hint])).toEqual([
-      ["CS_EXPR_UNSUPPORTED", "arithmetic is not supported in distance", "expressions and param() arrive in CadScript v1; use a numeric literal: 50000"],
+      ["CS_EXPR_UNSUPPORTED", "arithmetic is not supported in distance", `use a numeric literal: 50000; or keep the expression and ${COMPILE_AS_V1}`],
     ]);
     // tsc accepts long chains too, but in quadratic time: typecheck() checks them up to
     // MAX_CHECKED_DEPTH (see "type-checker work limits" below).
