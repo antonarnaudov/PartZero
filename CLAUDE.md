@@ -29,19 +29,33 @@ The full plan is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/FORGE.md
 ## Repo map
 ```
 forge/            Rust workspace (MPL-2.0)
-  crates/forge-core     scalar trait, math, exact predicates, arenas/typed ids, topology + provenance, geometry
-  crates/forge-ir       Feature-Graph IR types (serde + JSON Schema) — the contract with TS and the oracle
-  crates/forge-ops      modeling operations (regions, extrude, revolve, booleans, fillet, …)
-  crates/forge-mesh     tessellation, mesh bodies (later SubD/SDF)
-  crates/forge-check    validity, mass properties, distances, DFM analyses
-  crates/forge-io       STL / 3MF / STEP / OBJ / glTF readers & writers (our own)
-  crates/forge-regen    IR evaluation, expressions, queries, caching
-  crates/forge-cli      `aicad` binary: headless eval/export/metrics (the harness for agents and CI)
+  crates/forge-core     scalar trait (f64/Dual/Interval), math, exact predicates, arenas/typed ids, geometry, seam-free topology + provenance
+  crates/forge-ir       Feature-Graph IR types (serde + JSON Schema) + normative SPEC.md — the contract with TS and the oracle
+  crates/forge-ops      modeling operations (sketch regions, extrude, revolve; booleans/fillets next)
+  crates/forge-ssi      surface–surface / curve–surface intersection (foundation for booleans)
+  crates/forge-check    exact mass properties, tight bbox, validation, metrics
+  crates/forge-mesh     watertight seam-free tessellation, own CDT, render meshes
+  crates/forge-io       STL / 3MF / OBJ readers & writers (our own); STEP planned
+  crates/forge-regen    IR evaluation → bodies + aicad.metrics reports
+  crates/forge-solve    own 2D constraint solver with DOF / redundancy / minimal-conflict diagnostics
+  crates/forge-naming   persistent-reference resolver + naming stability harness
+  crates/forge-render   own wgpu CAD renderer (WebGPU + WebGL2 fallback): edges, silhouettes, ID picking, sections
+  crates/forge-wasm     wasm-bindgen bindings (evaluate, exportMesh, Viewport)
+  crates/forge-cli      `aicad` binary: eval / export (the harness for agents and CI)
 packages/         TypeScript (pnpm + Turborepo)
-oracle/           Python (uv): OCCT/build123d evaluator of the same IR, for differential testing (CI only)
-corpus/           IR test programs and golden metrics
+  ir-types        TS types + zod generated from forge-ir schemas (Apache-2.0)
+  cadscript       CadScript compiler / printer / edit splicing / typecheck (Apache-2.0)
+  forge-web       JS API over forge-wasm (engine + renderer), worker evaluator, demo
+  llm-gateway     model-agnostic LLM layer (Anthropic, OpenAI, Google, OpenAI-compatible)
+  agent-tools     DesignSession + strict tools + error-code repair playbooks
+  agent           orchestrator state machine, prompts, LLMSolver, bake-off CLI
+  evals           MakerBench runner, check DSL, engines (forge CLI / oracle / fixtures)
+  app             React UI (timeline, code view, viewport, chat, command layer)
+  desktop         Electron shell (sandboxed, app:// with COOP/COEP), e2e tests
+oracle/           Python (uv): OCCT/build123d evaluator of the same IR, differential diff, program generator (CI only)
+corpus/           IR programs, golden reports, CadScript prints, MakerBench tasks
 skills/           part-family skills for the agent
-docs/             vision, architecture, roadmap, ADRs, spike reports
+docs/             vision, architecture, Forge, roadmap, research, ADRs, spike reports, BACKLOG
 ```
 
 ## Commands
@@ -57,7 +71,10 @@ uv run oracle eval ../corpus/programs/extrude_box.json               # the same 
 uv run oracle diff ../corpus/programs                                # Forge vs OCCT over a directory
 
 # TypeScript (repo root)
-pnpm install && pnpm turbo run build test lint
+pnpm install && pnpm -r build && pnpm -r test
+pnpm --filter @aicad/desktop dev          # run the desktop app (Vite + Electron)
+pnpm --filter @aicad/desktop test:e2e     # Playwright-Electron smoke tests
+node packages/evals/dist/cli.js run --tasks corpus/makerbench --engine oracle   # MakerBench
 ```
 
 ## Rust conventions (Forge)
