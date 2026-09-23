@@ -1,0 +1,137 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AnthropicAdapter request mapping > maps a first turn for claude-opus-5-5 to the exact Messages API payload 1`] = `
+{
+  "cache_control": {
+    "type": "ephemeral",
+  },
+  "max_tokens": 64000,
+  "messages": [
+    {
+      "content": [
+        {
+          "text": "Is the bracket wall thick enough for PLA?",
+          "type": "text",
+        },
+        {
+          "source": {
+            "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+            "media_type": "image/png",
+            "type": "base64",
+          },
+          "type": "image",
+        },
+      ],
+      "role": "user",
+    },
+  ],
+  "model": "claude-opus-5-5",
+  "output_config": {
+    "effort": "high",
+  },
+  "system": [
+    {
+      "text": "You are the aicad designer agent. Use tools; never guess geometry.",
+      "type": "text",
+    },
+    {
+      "cache_control": {
+        "type": "ephemeral",
+      },
+      "text": "CadScript reference: box(w, d, h), fillet(edges, r), hole(face, d).",
+      "type": "text",
+    },
+  ],
+  "thinking": {
+    "type": "adaptive",
+  },
+  "tool_choice": {
+    "type": "auto",
+  },
+  "tools": [
+    {
+      "description": "Render the current part from named views. Call this before judging geometry visually.",
+      "eager_input_streaming": true,
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "highlight": {
+            "description": "Entity id to highlight",
+            "pattern": "^(face|edge):\\d+$",
+            "type": "string",
+          },
+          "scale": {
+            "description": "(minimum: 0.1, maximum: 10)",
+            "type": "number",
+          },
+          "views": {
+            "items": {
+              "enum": [
+                "iso",
+                "top",
+                "front",
+                "right",
+              ],
+              "type": "string",
+            },
+            "minItems": 1,
+            "type": "array",
+          },
+        },
+        "required": [
+          "views",
+        ],
+        "type": "object",
+      },
+      "name": "render_views",
+      "strict": true,
+    },
+    {
+      "description": "Measure an entity (face, edge) by id.",
+      "eager_input_streaming": true,
+      "input_schema": {
+        "properties": {
+          "entity": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "entity",
+        ],
+        "type": "object",
+      },
+      "name": "measure",
+    },
+  ],
+}
+`;
+
+exports[`AnthropicAdapter streaming and replay > replays the assistant turn byte-for-byte on the next request (append-only history) 1`] = `
+{
+  "content": [
+    {
+      "content": [
+        {
+          "text": "2 views rendered",
+          "type": "text",
+        },
+        {
+          "source": {
+            "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+            "media_type": "image/png",
+            "type": "base64",
+          },
+          "type": "image",
+        },
+      ],
+      "tool_use_id": "toolu_01RenderA",
+      "type": "tool_result",
+    },
+    {
+      "text": "(render attached)",
+      "type": "text",
+    },
+  ],
+  "role": "user",
+}
+`;

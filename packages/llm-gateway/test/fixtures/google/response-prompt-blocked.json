@@ -1,0 +1,20 @@
+{
+  "name": "Prompt blocked (no candidates)",
+  "provider": "google",
+  "operation": "google.models.generateContent",
+  "mode": "send",
+  "source": "Hand-authored from documented GenerateContentResponse shapes: ai.google.dev/gemini-api/docs/generate-content/thought-signatures.md (parallel calls: signature only on the first functionCall part; streaming: signature may arrive in a part with empty text), generate-content/thinking.md (thought parts), and GenerateContentResponse/UsageMetadata types in @google/genai 2.24.0. (GenerateContentResponsePromptFeedback)",
+  "request": {},
+  "response": {
+    "responseId": "resp-gem-04",
+    "modelVersion": "gemini-3.8-flash",
+    "promptFeedback": {
+      "blockReason": "PROHIBITED_CONTENT",
+      "blockReasonMessage": "Prompt blocked."
+    },
+    "usageMetadata": {
+      "promptTokenCount": 90,
+      "totalTokenCount": 90
+    }
+  }
+}

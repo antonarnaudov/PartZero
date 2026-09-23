@@ -1,0 +1,48 @@
+{
+  "name": "vLLM gpt-oss-120b tool call with reasoning_content",
+  "provider": "openai-compat",
+  "operation": "openai-compat.chat.completions.create",
+  "mode": "send",
+  "source": "Hand-authored from the Chat Completions shapes (ChatCompletion / ChatCompletionChunk types in openai 7.22.0); reasoning_content as returned by vLLM reasoning parsers; OpenRouter usage.cost and reasoning_details per openrouterteam/docs (reasoning-tokens.mdx, openapi ChatUsage).",
+  "request": {},
+  "response": {
+    "id": "chatcmpl-vllm-01",
+    "object": "chat.completion",
+    "created": 1790000100,
+    "model": "openai/gpt-oss-120b",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "tool_calls",
+        "logprobs": null,
+        "message": {
+          "role": "assistant",
+          "content": "Measuring the wall.",
+          "refusal": null,
+          "reasoning_content": "The user wants wall thickness; call measure.",
+          "tool_calls": [
+            {
+              "id": "chatcmpl-tool-7a",
+              "type": "function",
+              "function": {
+                "name": "measure",
+                "arguments": "{\"entity\": \"face:12\"}"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 1500,
+      "completion_tokens": 90,
+      "total_tokens": 1590,
+      "prompt_tokens_details": {
+        "cached_tokens": 1024
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 40
+      }
+    }
+  }
+}

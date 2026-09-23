@@ -1,0 +1,66 @@
+{
+  "name": "Refusal content part",
+  "provider": "openai",
+  "operation": "openai.responses.create",
+  "mode": "send",
+  "source": "Hand-authored from documented Response shapes: developers.openai.com/api/docs/guides/reasoning.md (reasoning item with summary + encrypted_content in stateless mode), function-calling.md (function_call items), prompt-caching.md (input_tokens_details.cached_tokens/cache_write_tokens), and the Response/ResponseStreamEvent types in openai 7.22.0. (structured-outputs guide: message content of type 'refusal')",
+  "request": {},
+  "response": {
+    "id": "resp_04Refusal",
+    "object": "response",
+    "created_at": 1790000000,
+    "status": "completed",
+    "completed_at": 1790000009,
+    "error": null,
+    "incomplete_details": null,
+    "instructions": null,
+    "max_output_tokens": 32000,
+    "model": "gpt-6-astra",
+    "output": [
+      {
+        "id": "msg_04Refuse",
+        "type": "message",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "refusal",
+            "refusal": "I can't help with that request."
+          }
+        ]
+      }
+    ],
+    "parallel_tool_calls": true,
+    "previous_response_id": null,
+    "reasoning": {
+      "effort": "high",
+      "summary": "auto",
+      "context": "all_turns"
+    },
+    "store": false,
+    "temperature": null,
+    "text": {
+      "format": {
+        "type": "text"
+      }
+    },
+    "tool_choice": "auto",
+    "tools": [],
+    "top_p": null,
+    "truncation": "disabled",
+    "usage": {
+      "input_tokens": 200,
+      "input_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      },
+      "output_tokens": 12,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 212
+    },
+    "user": null,
+    "metadata": {}
+  }
+}

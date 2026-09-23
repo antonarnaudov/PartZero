@@ -1,0 +1,121 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`OpenAIAdapter request mapping (Responses API) > maps a first turn for gpt-6-astra to the exact Responses payload 1`] = `
+{
+  "include": [
+    "reasoning.encrypted_content",
+  ],
+  "input": [
+    {
+      "content": [
+        {
+          "text": "You are the aicad designer agent. Use tools; never guess geometry.",
+          "type": "input_text",
+        },
+        {
+          "prompt_cache_breakpoint": {
+            "mode": "explicit",
+          },
+          "text": "CadScript reference: box(w, d, h), fillet(edges, r), hole(face, d).",
+          "type": "input_text",
+        },
+      ],
+      "role": "developer",
+      "type": "message",
+    },
+    {
+      "content": [
+        {
+          "text": "Is the bracket wall thick enough for PLA?",
+          "type": "input_text",
+        },
+        {
+          "detail": "high",
+          "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+          "type": "input_image",
+        },
+      ],
+      "role": "user",
+      "type": "message",
+    },
+  ],
+  "max_output_tokens": 32000,
+  "model": "gpt-6-astra",
+  "prompt_cache_key": "task-42",
+  "prompt_cache_options": {
+    "mode": "implicit",
+    "ttl": "30m",
+  },
+  "reasoning": {
+    "effort": "high",
+    "summary": "auto",
+  },
+  "store": false,
+  "tool_choice": "auto",
+  "tools": [
+    {
+      "description": "Render the current part from named views. Call this before judging geometry visually.",
+      "name": "render_views",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "highlight": {
+            "description": "Entity id to highlight",
+            "pattern": "^(face|edge):\\d+$",
+            "type": [
+              "string",
+              "null",
+            ],
+          },
+          "scale": {
+            "maximum": 10,
+            "minimum": 0.1,
+            "type": [
+              "number",
+              "null",
+            ],
+          },
+          "views": {
+            "items": {
+              "enum": [
+                "iso",
+                "top",
+                "front",
+                "right",
+              ],
+              "type": "string",
+            },
+            "minItems": 1,
+            "type": "array",
+          },
+        },
+        "required": [
+          "views",
+          "highlight",
+          "scale",
+        ],
+        "type": "object",
+      },
+      "strict": true,
+      "type": "function",
+    },
+    {
+      "description": "Measure an entity (face, edge) by id.",
+      "name": "measure",
+      "parameters": {
+        "properties": {
+          "entity": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "entity",
+        ],
+        "type": "object",
+      },
+      "strict": false,
+      "type": "function",
+    },
+  ],
+}
+`;

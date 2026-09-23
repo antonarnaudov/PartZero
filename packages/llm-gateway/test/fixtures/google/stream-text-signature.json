@@ -1,0 +1,70 @@
+{
+  "name": "Gemini 3.8 Flash streamed text; signature in a trailing empty-text part",
+  "provider": "google",
+  "operation": "google.models.generateContent",
+  "mode": "stream",
+  "source": "Hand-authored from documented GenerateContentResponse shapes: ai.google.dev/gemini-api/docs/generate-content/thought-signatures.md (parallel calls: signature only on the first functionCall part; streaming: signature may arrive in a part with empty text), generate-content/thinking.md (thought parts), and GenerateContentResponse/UsageMetadata types in @google/genai 2.24.0.",
+  "request": {},
+  "events": [
+    {
+      "responseId": "resp-gem-02",
+      "modelVersion": "gemini-3.8-flash",
+      "candidates": [
+        {
+          "index": 0,
+          "content": {
+            "role": "model",
+            "parts": [
+              {
+                "text": "The wall is "
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "responseId": "resp-gem-02",
+      "modelVersion": "gemini-3.8-flash",
+      "candidates": [
+        {
+          "index": 0,
+          "content": {
+            "role": "model",
+            "parts": [
+              {
+                "text": "2.4 mm thick."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "responseId": "resp-gem-02",
+      "modelVersion": "gemini-3.8-flash",
+      "candidates": [
+        {
+          "index": 0,
+          "finishReason": "STOP",
+          "content": {
+            "role": "model",
+            "parts": [
+              {
+                "text": "",
+                "thoughtSignature": "SIG_C_base64=="
+              }
+            ]
+          }
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 6000,
+        "cachedContentTokenCount": 0,
+        "candidatesTokenCount": 12,
+        "thoughtsTokenCount": 150,
+        "totalTokenCount": 6162
+      }
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`OpenAICompatAdapter request mapping (Chat Completions) > maps a turn for gpt-oss-120b (vLLM) to the exact chat.completions payload 1`] = `
+{
+  "max_tokens": 16000,
+  "messages": [
+    {
+      "content": "You are a CAD assistant.",
+      "role": "system",
+    },
+    {
+      "content": "How thick is the wall?",
+      "role": "user",
+    },
+  ],
+  "model": "openai/gpt-oss-120b",
+  "reasoning_effort": "high",
+  "tool_choice": "auto",
+  "tools": [
+    {
+      "function": {
+        "description": "Render the current part from named views. Call this before judging geometry visually.",
+        "name": "render_views",
+        "parameters": {
+          "properties": {
+            "highlight": {
+              "description": "Entity id to highlight",
+              "pattern": "^(face|edge):\\d+$",
+              "type": "string",
+            },
+            "scale": {
+              "maximum": 10,
+              "minimum": 0.1,
+              "type": "number",
+            },
+            "views": {
+              "items": {
+                "enum": [
+                  "iso",
+                  "top",
+                  "front",
+                  "right",
+                ],
+                "type": "string",
+              },
+              "minItems": 1,
+              "type": "array",
+            },
+          },
+          "required": [
+            "views",
+          ],
+          "type": "object",
+        },
+      },
+      "type": "function",
+    },
+    {
+      "function": {
+        "description": "Measure an entity (face, edge) by id.",
+        "name": "measure",
+        "parameters": {
+          "properties": {
+            "entity": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "entity",
+          ],
+          "type": "object",
+        },
+      },
+      "type": "function",
+    },
+  ],
+}
+`;

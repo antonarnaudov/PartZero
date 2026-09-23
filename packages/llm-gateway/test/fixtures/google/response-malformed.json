@@ -1,0 +1,27 @@
+{
+  "name": "Malformed function call",
+  "provider": "google",
+  "operation": "google.models.generateContent",
+  "mode": "send",
+  "source": "Hand-authored from documented GenerateContentResponse shapes: ai.google.dev/gemini-api/docs/generate-content/thought-signatures.md (parallel calls: signature only on the first functionCall part; streaming: signature may arrive in a part with empty text), generate-content/thinking.md (thought parts), and GenerateContentResponse/UsageMetadata types in @google/genai 2.24.0. (FinishReason.MALFORMED_FUNCTION_CALL)",
+  "request": {},
+  "response": {
+    "responseId": "resp-gem-05",
+    "modelVersion": "gemini-3.8-flash",
+    "candidates": [
+      {
+        "index": 0,
+        "finishReason": "MALFORMED_FUNCTION_CALL",
+        "content": {
+          "role": "model",
+          "parts": []
+        }
+      }
+    ],
+    "usageMetadata": {
+      "promptTokenCount": 120,
+      "candidatesTokenCount": 0,
+      "totalTokenCount": 120
+    }
+  }
+}

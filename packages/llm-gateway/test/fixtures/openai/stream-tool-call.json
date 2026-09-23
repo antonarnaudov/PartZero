@@ -1,0 +1,305 @@
+{
+  "name": "GPT-6 Astra streamed tool call",
+  "provider": "openai",
+  "operation": "openai.responses.create",
+  "mode": "stream",
+  "source": "Hand-authored from documented Response shapes: developers.openai.com/api/docs/guides/reasoning.md (reasoning item with summary + encrypted_content in stateless mode), function-calling.md (function_call items), prompt-caching.md (input_tokens_details.cached_tokens/cache_write_tokens), and the Response/ResponseStreamEvent types in openai 7.22.0.",
+  "request": {},
+  "events": [
+    {
+      "type": "response.created",
+      "sequence_number": 0,
+      "response": {
+        "id": "resp_02Stream",
+        "object": "response",
+        "created_at": 1790000000,
+        "status": "in_progress",
+        "completed_at": null,
+        "error": null,
+        "incomplete_details": null,
+        "instructions": null,
+        "max_output_tokens": 32000,
+        "model": "gpt-6-astra",
+        "output": [],
+        "parallel_tool_calls": true,
+        "previous_response_id": null,
+        "reasoning": {
+          "effort": "high",
+          "summary": "auto",
+          "context": "all_turns"
+        },
+        "store": false,
+        "temperature": null,
+        "text": {
+          "format": {
+            "type": "text"
+          }
+        },
+        "tool_choice": "auto",
+        "tools": [],
+        "top_p": null,
+        "truncation": "disabled",
+        "usage": null,
+        "user": null,
+        "metadata": {}
+      }
+    },
+    {
+      "type": "response.output_item.added",
+      "sequence_number": 1,
+      "output_index": 0,
+      "item": {
+        "id": "rs_01Astra",
+        "type": "reasoning",
+        "summary": []
+      }
+    },
+    {
+      "type": "response.reasoning_summary_part.added",
+      "sequence_number": 2,
+      "item_id": "rs_01Astra",
+      "output_index": 0,
+      "summary_index": 0,
+      "part": {
+        "type": "summary_text",
+        "text": ""
+      }
+    },
+    {
+      "type": "response.reasoning_summary_text.delta",
+      "sequence_number": 3,
+      "item_id": "rs_01Astra",
+      "output_index": 0,
+      "summary_index": 0,
+      "delta": "Need a render before measuring."
+    },
+    {
+      "type": "response.reasoning_summary_text.done",
+      "sequence_number": 4,
+      "item_id": "rs_01Astra",
+      "output_index": 0,
+      "summary_index": 0,
+      "text": "Need a render before measuring."
+    },
+    {
+      "type": "response.output_item.done",
+      "sequence_number": 5,
+      "output_index": 0,
+      "item": {
+        "id": "rs_01Astra",
+        "type": "reasoning",
+        "summary": [
+          {
+            "type": "summary_text",
+            "text": "Need a render before measuring."
+          }
+        ],
+        "encrypted_content": "gAAAAABoEncryptedReasoningBlob=="
+      }
+    },
+    {
+      "type": "response.output_item.added",
+      "sequence_number": 6,
+      "output_index": 1,
+      "item": {
+        "id": "msg_01Astra",
+        "type": "message",
+        "status": "in_progress",
+        "role": "assistant",
+        "phase": "commentary",
+        "content": []
+      }
+    },
+    {
+      "type": "response.content_part.added",
+      "sequence_number": 7,
+      "item_id": "msg_01Astra",
+      "output_index": 1,
+      "content_index": 0,
+      "part": {
+        "type": "output_text",
+        "text": "",
+        "annotations": []
+      }
+    },
+    {
+      "type": "response.output_text.delta",
+      "sequence_number": 8,
+      "item_id": "msg_01Astra",
+      "output_index": 1,
+      "content_index": 0,
+      "delta": "Rendering the ",
+      "logprobs": []
+    },
+    {
+      "type": "response.output_text.delta",
+      "sequence_number": 9,
+      "item_id": "msg_01Astra",
+      "output_index": 1,
+      "content_index": 0,
+      "delta": "bracket first.",
+      "logprobs": []
+    },
+    {
+      "type": "response.output_text.done",
+      "sequence_number": 10,
+      "item_id": "msg_01Astra",
+      "output_index": 1,
+      "content_index": 0,
+      "text": "Rendering the bracket first.",
+      "logprobs": []
+    },
+    {
+      "type": "response.output_item.done",
+      "sequence_number": 11,
+      "output_index": 1,
+      "item": {
+        "id": "msg_01Astra",
+        "type": "message",
+        "status": "completed",
+        "role": "assistant",
+        "phase": "commentary",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Rendering the bracket first.",
+            "annotations": [],
+            "logprobs": []
+          }
+        ]
+      }
+    },
+    {
+      "type": "response.output_item.added",
+      "sequence_number": 12,
+      "output_index": 2,
+      "item": {
+        "id": "fc_01Astra",
+        "type": "function_call",
+        "status": "in_progress",
+        "call_id": "call_Render1",
+        "name": "render_views",
+        "arguments": ""
+      }
+    },
+    {
+      "type": "response.function_call_arguments.delta",
+      "sequence_number": 13,
+      "item_id": "fc_01Astra",
+      "output_index": 2,
+      "delta": "{\"views\":[\"iso\",\"top\"],"
+    },
+    {
+      "type": "response.function_call_arguments.delta",
+      "sequence_number": 14,
+      "item_id": "fc_01Astra",
+      "output_index": 2,
+      "delta": "\"highlight\":null}"
+    },
+    {
+      "type": "response.function_call_arguments.done",
+      "sequence_number": 15,
+      "item_id": "fc_01Astra",
+      "output_index": 2,
+      "name": "render_views",
+      "arguments": "{\"views\":[\"iso\",\"top\"],\"highlight\":null}"
+    },
+    {
+      "type": "response.output_item.done",
+      "sequence_number": 16,
+      "output_index": 2,
+      "item": {
+        "id": "fc_01Astra",
+        "type": "function_call",
+        "status": "completed",
+        "call_id": "call_Render1",
+        "name": "render_views",
+        "arguments": "{\"views\":[\"iso\",\"top\"],\"highlight\":null}"
+      }
+    },
+    {
+      "type": "response.completed",
+      "sequence_number": 17,
+      "response": {
+        "id": "resp_02Stream",
+        "object": "response",
+        "created_at": 1790000000,
+        "status": "completed",
+        "completed_at": 1790000009,
+        "error": null,
+        "incomplete_details": null,
+        "instructions": null,
+        "max_output_tokens": 32000,
+        "model": "gpt-6-astra",
+        "output": [
+          {
+            "id": "rs_01Astra",
+            "type": "reasoning",
+            "summary": [
+              {
+                "type": "summary_text",
+                "text": "Need a render before measuring."
+              }
+            ],
+            "encrypted_content": "gAAAAABoEncryptedReasoningBlob=="
+          },
+          {
+            "id": "msg_01Astra",
+            "type": "message",
+            "status": "completed",
+            "role": "assistant",
+            "phase": "commentary",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Rendering the bracket first.",
+                "annotations": [],
+                "logprobs": []
+              }
+            ]
+          },
+          {
+            "id": "fc_01Astra",
+            "type": "function_call",
+            "status": "completed",
+            "call_id": "call_Render1",
+            "name": "render_views",
+            "arguments": "{\"views\":[\"iso\",\"top\"],\"highlight\":null}"
+          }
+        ],
+        "parallel_tool_calls": true,
+        "previous_response_id": null,
+        "reasoning": {
+          "effort": "high",
+          "summary": "auto",
+          "context": "all_turns"
+        },
+        "store": false,
+        "temperature": null,
+        "text": {
+          "format": {
+            "type": "text"
+          }
+        },
+        "tool_choice": "auto",
+        "tools": [],
+        "top_p": null,
+        "truncation": "disabled",
+        "usage": {
+          "input_tokens": 12000,
+          "input_tokens_details": {
+            "cached_tokens": 8000,
+            "cache_write_tokens": 2000
+          },
+          "output_tokens": 600,
+          "output_tokens_details": {
+            "reasoning_tokens": 400
+          },
+          "total_tokens": 12600
+        },
+        "user": null,
+        "metadata": {}
+      }
+    }
+  ]
+}

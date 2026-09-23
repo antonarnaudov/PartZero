@@ -1,0 +1,196 @@
+{
+  "name": "OpenRouter-style stream: reasoning + reasoning_details, content, tool call deltas, usage chunk with cost",
+  "provider": "openai-compat",
+  "operation": "openai-compat.chat.completions.create",
+  "mode": "stream",
+  "source": "Hand-authored from the Chat Completions shapes (ChatCompletion / ChatCompletionChunk types in openai 7.22.0); reasoning_content as returned by vLLM reasoning parsers; OpenRouter usage.cost and reasoning_details per openrouterteam/docs (reasoning-tokens.mdx, openapi ChatUsage).",
+  "request": {},
+  "events": [
+    {
+      "id": "gen-or-02",
+      "object": "chat.completion.chunk",
+      "created": 1790000200,
+      "model": "openai/gpt-oss-120b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": ""
+          },
+          "finish_reason": null,
+          "logprobs": null
+        }
+      ]
+    },
+    {
+      "id": "gen-or-02",
+      "object": "chat.completion.chunk",
+      "created": 1790000200,
+      "model": "openai/gpt-oss-120b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "reasoning": "Need the ",
+            "reasoning_details": [
+              {
+                "type": "reasoning.text",
+                "text": "Need the ",
+                "format": "unknown",
+                "index": 0
+              }
+            ]
+          },
+          "finish_reason": null,
+          "logprobs": null
+        }
+      ]
+    },
+    {
+      "id": "gen-or-02",
+      "object": "chat.completion.chunk",
+      "created": 1790000200,
+      "model": "openai/gpt-oss-120b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "reasoning": "hole diameter.",
+            "reasoning_details": [
+              {
+                "type": "reasoning.text",
+                "text": "hole diameter.",
+                "format": "unknown",
+                "index": 0
+              }
+            ]
+          },
+          "finish_reason": null,
+          "logprobs": null
+        }
+      ]
+    },
+    {
+      "id": "gen-or-02",
+      "object": "chat.completion.chunk",
+      "created": 1790000200,
+      "model": "openai/gpt-oss-120b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "content": "Checking the hole."
+          },
+          "finish_reason": null,
+          "logprobs": null
+        }
+      ]
+    },
+    {
+      "id": "gen-or-02",
+      "object": "chat.completion.chunk",
+      "created": 1790000200,
+      "model": "openai/gpt-oss-120b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "tool_calls": [
+              {
+                "index": 0,
+                "id": "call_or_1",
+                "type": "function",
+                "function": {
+                  "name": "measure",
+                  "arguments": ""
+                }
+              }
+            ]
+          },
+          "finish_reason": null,
+          "logprobs": null
+        }
+      ]
+    },
+    {
+      "id": "gen-or-02",
+      "object": "chat.completion.chunk",
+      "created": 1790000200,
+      "model": "openai/gpt-oss-120b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "tool_calls": [
+              {
+                "index": 0,
+                "function": {
+                  "arguments": "{\"entity\":"
+                }
+              }
+            ]
+          },
+          "finish_reason": null,
+          "logprobs": null
+        }
+      ]
+    },
+    {
+      "id": "gen-or-02",
+      "object": "chat.completion.chunk",
+      "created": 1790000200,
+      "model": "openai/gpt-oss-120b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "tool_calls": [
+              {
+                "index": 0,
+                "function": {
+                  "arguments": "\"edge:4\"}"
+                }
+              }
+            ]
+          },
+          "finish_reason": null,
+          "logprobs": null
+        }
+      ]
+    },
+    {
+      "id": "gen-or-02",
+      "object": "chat.completion.chunk",
+      "created": 1790000200,
+      "model": "openai/gpt-oss-120b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {},
+          "finish_reason": "tool_calls",
+          "logprobs": null
+        }
+      ]
+    },
+    {
+      "id": "gen-or-02",
+      "object": "chat.completion.chunk",
+      "created": 1790000200,
+      "model": "openai/gpt-oss-120b",
+      "choices": [],
+      "usage": {
+        "prompt_tokens": 800,
+        "completion_tokens": 60,
+        "total_tokens": 860,
+        "cost": 0.00042,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 20
+        }
+      }
+    }
+  ]
+}

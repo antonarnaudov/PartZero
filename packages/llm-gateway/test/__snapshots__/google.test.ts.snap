@@ -1,0 +1,142 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GoogleAdapter request mapping (generateContent) > maps a first turn for gemini-3.8-flash to the exact generateContent parameters 1`] = `
+{
+  "config": {
+    "maxOutputTokens": 32768,
+    "systemInstruction": {
+      "parts": [
+        {
+          "text": "You are the aicad designer agent. Use tools; never guess geometry.",
+        },
+        {
+          "text": "CadScript reference: box(w, d, h), fillet(edges, r), hole(face, d).",
+        },
+      ],
+    },
+    "thinkingConfig": {
+      "thinkingLevel": "MEDIUM",
+    },
+    "toolConfig": {
+      "functionCallingConfig": {
+        "mode": "VALIDATED",
+      },
+    },
+    "tools": [
+      {
+        "functionDeclarations": [
+          {
+            "description": "Render the current part from named views. Call this before judging geometry visually.",
+            "name": "render_views",
+            "parametersJsonSchema": {
+              "properties": {
+                "highlight": {
+                  "description": "Entity id to highlight (pattern: "^(face|edge):\\\\d+$")",
+                  "type": "string",
+                },
+                "scale": {
+                  "maximum": 10,
+                  "minimum": 0.1,
+                  "type": "number",
+                },
+                "views": {
+                  "items": {
+                    "enum": [
+                      "iso",
+                      "top",
+                      "front",
+                      "right",
+                    ],
+                    "type": "string",
+                  },
+                  "minItems": 1,
+                  "type": "array",
+                },
+              },
+              "required": [
+                "views",
+              ],
+              "type": "object",
+            },
+          },
+          {
+            "description": "Measure an entity (face, edge) by id.",
+            "name": "measure",
+            "parametersJsonSchema": {
+              "properties": {
+                "entity": {
+                  "type": "string",
+                },
+              },
+              "required": [
+                "entity",
+              ],
+              "type": "object",
+            },
+          },
+        ],
+      },
+    ],
+  },
+  "contents": [
+    {
+      "parts": [
+        {
+          "text": "Is the bracket wall thick enough for PLA?",
+        },
+        {
+          "inlineData": {
+            "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+            "mimeType": "image/png",
+          },
+          "mediaResolution": {
+            "level": "MEDIA_RESOLUTION_HIGH",
+          },
+        },
+      ],
+      "role": "user",
+    },
+  ],
+  "model": "gemini-3.8-flash",
+}
+`;
+
+exports[`GoogleAdapter responses, thought signatures and replay > replays the model turn unmerged and in order, then sends all functionResponses after the calls 1`] = `
+{
+  "parts": [
+    {
+      "functionResponse": {
+        "id": "fc-render-1",
+        "name": "render_views",
+        "parts": [
+          {
+            "inlineData": {
+              "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+              "displayName": "fc-render-1-image-1.png",
+              "mimeType": "image/png",
+            },
+          },
+        ],
+        "response": {
+          "images": [
+            {
+              "$ref": "fc-render-1-image-1.png",
+            },
+          ],
+          "output": "iso view",
+        },
+      },
+    },
+    {
+      "functionResponse": {
+        "id": "fc-measure-2",
+        "name": "measure",
+        "response": {
+          "output": "2.4 mm",
+        },
+      },
+    },
+  ],
+  "role": "user",
+}
+`;

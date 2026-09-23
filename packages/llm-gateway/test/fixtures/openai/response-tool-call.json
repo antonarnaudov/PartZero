@@ -1,0 +1,88 @@
+{
+  "name": "GPT-6 Astra: reasoning + commentary message + strict function call",
+  "provider": "openai",
+  "operation": "openai.responses.create",
+  "mode": "send",
+  "source": "Hand-authored from documented Response shapes: developers.openai.com/api/docs/guides/reasoning.md (reasoning item with summary + encrypted_content in stateless mode), function-calling.md (function_call items), prompt-caching.md (input_tokens_details.cached_tokens/cache_write_tokens), and the Response/ResponseStreamEvent types in openai 7.22.0.",
+  "request": {},
+  "response": {
+    "id": "resp_01Astra",
+    "object": "response",
+    "created_at": 1790000000,
+    "status": "completed",
+    "completed_at": 1790000009,
+    "error": null,
+    "incomplete_details": null,
+    "instructions": null,
+    "max_output_tokens": 32000,
+    "model": "gpt-6-astra",
+    "output": [
+      {
+        "id": "rs_01Astra",
+        "type": "reasoning",
+        "summary": [
+          {
+            "type": "summary_text",
+            "text": "Need a render before measuring."
+          }
+        ],
+        "encrypted_content": "gAAAAABoEncryptedReasoningBlob=="
+      },
+      {
+        "id": "msg_01Astra",
+        "type": "message",
+        "status": "completed",
+        "role": "assistant",
+        "phase": "commentary",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Rendering the bracket first.",
+            "annotations": [],
+            "logprobs": []
+          }
+        ]
+      },
+      {
+        "id": "fc_01Astra",
+        "type": "function_call",
+        "status": "completed",
+        "call_id": "call_Render1",
+        "name": "render_views",
+        "arguments": "{\"views\":[\"iso\",\"top\"],\"highlight\":null}"
+      }
+    ],
+    "parallel_tool_calls": true,
+    "previous_response_id": null,
+    "reasoning": {
+      "effort": "high",
+      "summary": "auto",
+      "context": "all_turns"
+    },
+    "store": false,
+    "temperature": null,
+    "text": {
+      "format": {
+        "type": "text"
+      }
+    },
+    "tool_choice": "auto",
+    "tools": [],
+    "top_p": null,
+    "truncation": "disabled",
+    "usage": {
+      "input_tokens": 12000,
+      "input_tokens_details": {
+        "cached_tokens": 8000,
+        "cache_write_tokens": 2000
+      },
+      "output_tokens": 600,
+      "output_tokens_details": {
+        "reasoning_tokens": 400
+      },
+      "total_tokens": 12600
+    },
+    "user": null,
+    "metadata": {}
+  }
+}
