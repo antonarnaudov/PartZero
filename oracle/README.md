@@ -13,7 +13,7 @@ under the rules in `forge/crates/forge-ir/SPEC.md` §6.
 ```bash
 cd oracle
 uv sync                 # creates .venv with the pinned CPython and wheels
-uv run pytest           # 161 tests, about 13 s
+uv run pytest           # 172 tests, about 13 s
 ```
 
 **Python is pinned to 3.13** (`.python-version`).
@@ -111,9 +111,11 @@ The crossing test [R-4] is analytic. It examines the pair's **contact points** a
    - a torus with major radius ≤ tol is a `sphere`; horn and spindle tori stay `torus`;
    - surfaces of revolution and extrusion are classified from the basis curve and the axis;
    - free-form faces go through `ShapeAnalysis_CanonicalRecognition`.
-8. **The bounding box is tight.**
-   - `BRepBndLib::AddOptimal` enlarges analytic tori by `Precision::Confusion()`, even with shape tolerances off; the corpus torus came out as ±19.0000001.
-   - The box is therefore built from exact pieces: non-degenerated edges, vertices, and the analytic interior critical points of sphere and torus faces, kept only if the face classifier puts them inside the face.
+8. **The bounding box is tight, and computed without `AddOptimal` on faces.**
+   - `BRepBndLib::AddOptimal` enlarges analytic tori by `Precision::Confusion()`.
+   - Worse, OCCT represents **horn tori as `SurfaceOfRevolution`**, and on that face type `AddOptimal`'s numerical search stops short of the interior maximum. It was off by 8.7e-4 mm and 4.9e-2 mm on two generated programs; Forge's first diff flagged both, and **the oracle was the wrong side**.
+   - The box is now the union of exact pieces: vertices; interior extremes of circular edges; the closed-form critical points of sphere, torus and circle-revolution faces, located on the face by projection and kept if the classifier puts them inside; and a sampled-plus-refined search for any other surface type.
+   - The body gate cross-checks the result against an independent closed-form bbox of the swept profile.
 9. **Mass properties use the non-adaptive `BRepGProp` integrator**, on the exact surfaces, measured against closed forms on 526 bodies:
    - **Adaptive `VolumeProperties(S, P, Eps)`:** has a false-convergence error estimator. With `Eps=1e-9` it was off by **1.2e-5 relative** while reporting an estimated error of 2e-16.
    - **`VolumePropertiesGK`:** takes 18–150 s on some bodies.
@@ -133,7 +135,7 @@ Every body is gated before it is reported. `selfcheck.py` predicts each quantity
 | Area | extrude 2A + P·d; revolve θ·Σ\|∫ρ ds\| + 2A for partial revolves | 1e-8 relative |
 | Centroid | extrudes only | 1e-8·s |
 | `faces`, `edges`, `face_types`, `edge_types` | the §4.4 rules | exact |
-| bbox | inside and within 1e-6 of `AddOptimal` | — |
+| bbox | closed-form extremes of the swept profile boundary | 1e-8·s per component |
 
 The 1e-8 tolerance is 100× inside the §6 tolerance and about 300× above OCCT's measured integration noise.
 
@@ -183,17 +185,38 @@ Every consumer of a broken sketch expects `DEPENDENCY_FAILED`.
 
 | Seed | Programs | Oracle failures | Error-corpus mismatches |
 |---|---|---|---|
-| 5 | 1000 | 1 | 0 |
+| 5 | 2000 | 1 | 0 |
+| 11 | 2000 | 0 | 0 |
+| 23 | 2000 | 1 | 0 |
 | 3 | 3000 | 2 | 0 |
-| 11 | 3000 | 0 | 0 |
 
-All four oracle failures are OCCT defects, caught and reported as engine-internal errors:
+All oracle failures are OCCT defects, caught and reported as engine-internal errors:
 
 | Seed / program | Code | What OCCT did |
 |---|---|---|
-| 5 / 724 | `OCCT_SELF_CHECK_FAILED` | Snapped a line 1.0e-4 rad off parallel to a cylinder |
+| 5 / 724 | `OCCT_SELF_CHECK_FAILED` | Snapped a line 1.0e-4 rad off parallel to a cylinder; volume off by 2.9e-7 |
 | 3 / 2600 | `OCCT_SELF_CHECK_FAILED` | Returned a full turn for a 311.5° horn torus |
-| 3 / 763 | `OCCT_INVALID_RESULT` | Built an invalid solid for a 120° revolve of a horn torus with r = 0.024 (rare: 1 of 143 small partial horn tori in a targeted sweep) |
+| 3 / 763 | `OCCT_INVALID_RESULT` | Built an invalid solid for a 120° revolve of a small horn torus |
+| 23 / 1562 | `OCCT_INVALID_RESULT` | Built an invalid solid of volume −6.7e-14 for a 21.4° symmetric revolve of a horn torus |
+
+In all of these, Forge's body matches the closed-form volume, area and bbox to about 1e-15, with the §4.4 topology.
+
+## Forge vs oracle
+
+Diff of Forge (`forge/target/debug/aicad`) against the oracle, after the horn-torus bbox fix:
+
+| Set | Programs | MATCH | ROBUSTNESS | CODE_MISMATCH | POTENTIAL_SILENT_WRONG |
+|---|---|---|---|---|---|
+| `corpus/programs` | 8 | 8 | 0 | 0 | 0 |
+| generated seed 5 | 2000 | 2000 | 0 | 0 | 0 |
+| generated seed 11 | 2000 | 2000 | 0 | 0 | 0 |
+| generated seed 23 | 2000 | 2000 | 0 | 0 | 0 |
+| error corpus, seeds 5, 11, 23 | 3 × 70 | 210 | 0 | 0 | 0 |
+| OCCT-failed programs (`failed/`, seeds 5 and 23) | 2 | 0 | 2 (OCCT side) | 0 | 0 |
+
+The error corpus includes 24 rejected documents, where both engines exit 2.
+
+Regression tests for the diff findings are in `tests/test_forge_diff_regressions.py`.
 
 ## Known limitations
 

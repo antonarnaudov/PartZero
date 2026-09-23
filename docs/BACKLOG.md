@@ -28,7 +28,7 @@ This list collects follow-ups from agent reports and reviews. Items are grouped 
 - **P1 IR v1 additions:** parameters and expressions, constraints (feeding `forge-solve`), booleans, holes as features, fillet and chamfer, and face and edge references through semantic queries.
 
 ## Oracle / verification
-- **P0 Two horn-torus bbox differences.** The Forge agent's analysis says the oracle is wrong. Being investigated.
+- ~~**P0 Two horn-torus bbox differences.**~~ **Resolved 2026-09-23:** the oracle was wrong, because OCCT's `AddOptimal` stops short on surfaces of revolution. The oracle now uses closed-form bounds. Forge matches OCCT on 6,218 of 6,220 programs. The other 2 are OCCT defects where Forge equals the closed form.
 - **P1 Run the nightly differential job in CI** with a fresh seed each night, and track the MATCH rate over time.
 
 ## AI

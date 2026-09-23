@@ -489,60 +489,181 @@ def _critical_uv(ad: BRepAdaptor_Surface, t) -> list[tuple[float, float]]:
     return out
 
 
+def _revolution_critical_points(ad: BRepAdaptor_Surface) -> list[gp_Pnt]:
+    """3D points where the normal is parallel to a coordinate axis, for a surface of
+    revolution whose basis curve is a circle in a plane containing the axis (a torus — OCCT
+    represents horn tori (R = r) this way — or a sphere when the centre is on the axis).
+
+    For the torus (centre C, axis Z, major R, minor r) and a coordinate direction e not
+    parallel to Z, with ρ̂ = unit(e − (e·Z)Z), the critical points are C ± R·ρ̂ ± r·e.
+    (e ∥ Z: the critical sets are circles on which the coordinate is constant; they reach the
+    face boundary or a seam, both covered by the edges.)
+    """
+    if ad.BasisCurve().GetType() != _CT.GeomAbs_Circle:
+        return []
+    ax = ad.AxeOfRevolution()
+    A, Z = _vec(ax.Location()), _dirv(ax.Direction())
+    circ = ad.BasisCurve().Circle()
+    cc, cn, r = _vec(circ.Location()), _dirv(circ.Axis().Direction()), circ.Radius()
+    if abs(_dot3(cn, Z)) > CANON_TOL:
+        return []  # circle plane does not contain the axis: not a torus
+    t = _dot3(_sub3(cc, A), Z)
+    C = (A[0] + t * Z[0], A[1] + t * Z[1], A[2] + t * Z[2])
+    R = _len3(_sub3(cc, C))
+    out = []
+    for e in ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)):
+        ez = _dot3(e, Z)
+        h = (e[0] - ez * Z[0], e[1] - ez * Z[1], e[2] - ez * Z[2])
+        hn = _len3(h)
+        if hn <= 1e-15:
+            continue
+        rho = (h[0] / hn, h[1] / hn, h[2] / hn)
+        for s1 in (1.0, -1.0):
+            for s2 in (1.0, -1.0):
+                out.append(gp_Pnt(*(C[i] + s1 * R * rho[i] + s2 * r * e[i] for i in range(3))))
+    return out
+
+
+def _grid_refine_points(f, ad: BRepAdaptor_Surface, umin, umax, vmin, vmax, classify) -> list:
+    """Generic fallback for surface types without a closed form: for each of ±x, ±y, ±z, take
+    the best of a 24×24 in-face sample and refine it by a shrinking 9×9 local grid search."""
+    n = 24
+    pts = []
+    samples = []
+    for i in range(n + 1):
+        for j in range(n + 1):
+            u = umin + (umax - umin) * i / n
+            v = vmin + (vmax - vmin) * j / n
+            if classify(u, v):
+                p = ad.Value(u, v)
+                samples.append((u, v, (p.X(), p.Y(), p.Z())))
+    if not samples:
+        return pts
+    for k in range(3):
+        for sign in (1.0, -1.0):
+            u, v, _ = max(samples, key=lambda q: sign * q[2][k])
+            du, dv = (umax - umin) / n, (vmax - vmin) / n
+            best = None
+            for _ in range(40):
+                best = None
+                for a in range(-4, 5):
+                    for b in range(-4, 5):
+                        uu = min(max(u + a * du / 4, umin), umax)
+                        vv = min(max(v + b * dv / 4, vmin), vmax)
+                        q = ad.Value(uu, vv)
+                        c = sign * (q.X(), q.Y(), q.Z())[k]
+                        if best is None or c > best[0]:
+                            best = (c, uu, vv)
+                _, u, v = best
+                du, dv = du / 2.5, dv / 2.5
+            if classify(u, v):
+                pts.append(ad.Value(u, v))
+    return pts
+
+
+def _circle_edge_points(e) -> list[gp_Pnt]:
+    """Interior coordinate extremes of a circular edge (end points are vertices)."""
+    ad = BRepAdaptor_Curve(e)
+    if ad.GetType() == _CT.GeomAbs_Line:
+        return []
+    if ad.GetType() != _CT.GeomAbs_Circle:
+        return None  # caller falls back
+    circ = ad.Circle()
+    X, Y = _dirv(circ.XAxis().Direction()), _dirv(circ.YAxis().Direction())
+    t0, t1 = ad.FirstParameter(), ad.LastParameter()
+    out = []
+    for k in range(3):
+        base = math.atan2(Y[k], X[k])
+        for t in (base, base + math.pi):
+            tt = _periodic_into(t, t0, t1, 2 * math.pi)
+            if tt is not None:
+                out.append(ad.Value(tt))
+    return out
+
+
 def tight_bbox(solid) -> tuple[list[float], list[float]]:
     """Tight axis-aligned box of the exact geometry, not enlarged by tolerances (SPEC §5).
 
-    BRepBndLib::AddOptimal enlarges analytic tori by Precision::Confusion(), so the box is
-    assembled from exact pieces instead:
-      * every non-degenerated edge (lines/circles: exact analytic boxes) and every vertex;
-      * planes, cylinders and cones attain their extremes on their boundary edges;
-      * spheres and tori: the analytic interior critical points of each coordinate, kept
+    BRepBndLib::AddOptimal is NOT used for faces: it enlarges analytic tori by
+    Precision::Confusion(), and on OCCT's surface-of-revolution horn tori its numerical search
+    stops short of the true maximum (by 4.9e-2 mm on a R = r = 114 torus). The box is the union of
+    exact pieces:
+      * every vertex, and the interior extremes of every circular edge (closed form);
+      * planes, cylinders, cones and extrusion / line-revolution faces attain their extremes on
+        their boundary edges;
+      * spheres, tori and circle-revolution faces: closed-form interior critical points, kept
         when the face classifier puts them inside the face;
-      * any other surface type falls back to BRepBndLib::AddOptimal on that face.
+      * any other surface: a sampled + refined search over the face (not exercised by IR v0).
     """
     from OCP.BRepClass import BRepClass_FaceClassifier
     from OCP.BRepTools import BRepTools
+    from OCP.GeomAPI import GeomAPI_ProjectPointOnSurf
     from OCP.gp import gp_Pnt2d
     from OCP.TopAbs import TopAbs_IN, TopAbs_ON, TopAbs_VERTEX
 
     box = Bnd_Box()
-    ex = TopExp_Explorer(solid, TopAbs_EDGE)
-    while ex.More():
-        e = TopoDS.Edge_s(ex.Current())
-        if not BRep_Tool.Degenerated_s(e):
-            BRepBndLib.AddOptimal_s(e, box, False, False)
-        ex.Next()
     ex = TopExp_Explorer(solid, TopAbs_VERTEX)
     while ex.More():
         box.Add(BRep_Tool.Pnt_s(TopoDS.Vertex_s(ex.Current())))
         ex.Next()
+    ex = TopExp_Explorer(solid, TopAbs_EDGE)
+    while ex.More():
+        e = TopoDS.Edge_s(ex.Current())
+        ex.Next()
+        if BRep_Tool.Degenerated_s(e):
+            continue
+        pts = _circle_edge_points(e)
+        if pts is None:
+            BRepBndLib.AddOptimal_s(e, box, False, False)
+            continue
+        for q in pts:
+            box.Add(q)
     ex = TopExp_Explorer(solid, TopAbs_FACE)
     while ex.More():
         f = TopoDS.Face_s(ex.Current())
         ex.Next()
         ad = BRepAdaptor_Surface(f, False)
         t = ad.GetType()
-        if t in (_ST.GeomAbs_Plane, _ST.GeomAbs_Cylinder, _ST.GeomAbs_Cone):
-            continue
-        if t not in (_ST.GeomAbs_Sphere, _ST.GeomAbs_Torus):
-            BRepBndLib.AddOptimal_s(f, box, False, False)
+        if t in (_ST.GeomAbs_Plane, _ST.GeomAbs_Cylinder, _ST.GeomAbs_Cone, _ST.GeomAbs_SurfaceOfExtrusion):
             continue
         umin, umax, vmin, vmax = BRepTools.UVBounds_s(f)
-        for u, v in _critical_uv(ad, t):
-            uu = _periodic_into(u, umin, umax, 2 * math.pi)
-            if uu is None:
-                continue
-            if t == _ST.GeomAbs_Torus:
-                vv = _periodic_into(v, vmin, vmax, 2 * math.pi)
-                if vv is None:
+
+        def inside(u: float, v: float, f=f) -> bool:
+            return BRepClass_FaceClassifier(f, gp_Pnt2d(u, v), 1e-9).State() in (TopAbs_IN, TopAbs_ON)
+
+        if t in (_ST.GeomAbs_Sphere, _ST.GeomAbs_Torus):
+            for u, v in _critical_uv(ad, t):
+                uu = _periodic_into(u, umin, umax, 2 * math.pi)
+                if uu is None:
                     continue
-            else:
-                vv = v
-                if not (vmin - 1e-12 <= vv <= vmax + 1e-12):
-                    continue
-            st = BRepClass_FaceClassifier(f, gp_Pnt2d(uu, vv), 1e-9).State()
-            if st in (TopAbs_IN, TopAbs_ON):
-                box.Add(ad.Value(uu, vv))
+                if t == _ST.GeomAbs_Torus:
+                    vv = _periodic_into(v, vmin, vmax, 2 * math.pi)
+                    if vv is None:
+                        continue
+                else:
+                    vv = v
+                    if not (vmin - 1e-12 <= vv <= vmax + 1e-12):
+                        continue
+                if inside(uu, vv):
+                    box.Add(ad.Value(uu, vv))
+            continue
+        if t == _ST.GeomAbs_SurfaceOfRevolution and ad.BasisCurve().GetType() == _CT.GeomAbs_Line:
+            continue  # cone/cylinder/plane-like: extremes on edges
+        if t == _ST.GeomAbs_SurfaceOfRevolution and ad.BasisCurve().GetType() == _CT.GeomAbs_Circle:
+            surf = BRep_Tool.Surface_s(f)
+            for P in _revolution_critical_points(ad):
+                proj = GeomAPI_ProjectPointOnSurf(P, surf)
+                for i in range(1, proj.NbPoints() + 1):
+                    if proj.Distance(i) > 1e-9 * max(1.0, abs(P.X()) + abs(P.Y()) + abs(P.Z())):
+                        continue
+                    u, v = proj.Parameters(i)
+                    uu = _periodic_into(u, umin, umax, 2 * math.pi)
+                    vv = _periodic_into(v, vmin, vmax, 2 * math.pi)
+                    if uu is not None and vv is not None and inside(uu, vv):
+                        box.Add(ad.Value(uu, vv))
+            continue
+        for q in _grid_refine_points(f, ad, umin, umax, vmin, vmax, inside):
+            box.Add(q)
     xmin, ymin, zmin, xmax, ymax, zmax = box.Get()
     gap = box.GetGap()
     return [xmin + gap, ymin + gap, zmin + gap], [xmax - gap, ymax - gap, zmax - gap]

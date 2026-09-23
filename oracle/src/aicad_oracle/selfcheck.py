@@ -7,7 +7,8 @@ For every body the oracle builds with OCCT, predict from the 2D profile alone:
   * faces / edges / face_types / edge_types — from the SPEC §4–§5 counting rules
     (one face per non-axis profile curve, end caps when angle < 360, no seams, no degenerate
     edges, profile edges on the axis generate no faces);
-  * bbox — cross-checked against OCCT's own BRepBndLib::AddOptimal.
+  * bbox — closed form: extremes of the swept profile boundary (not OCCT's AddOptimal, which
+    is wrong for OCCT's surface-of-revolution horn tori).
 Any disagreement means OCCT (or the oracle's normalisation of OCCT conventions) did not
 produce the exact geometry the spec defines — e.g. BRepSweep_Rotation turns a profile line up
 to ~3e-4 rad off parallel into a cylinder. evaluate.py then fails the feature with the
@@ -136,6 +137,97 @@ def analytic_area(feat, curves: list[Curve], region: Region) -> float:
     return math.radians(feat.angle) * lateral + caps
 
 
+def _linear_extremes(curves: list[Curve], region: Region, o: Vec2, g: Vec2) -> tuple[float, float]:
+    """(max, min) of dot(p − o, g) over the region's boundary curves (closed form)."""
+    from .sketch import curve_geometry
+
+    def f(p) -> float:
+        return (p[0] - o[0]) * g[0] + (p[1] - o[1]) * g[1]
+
+    gn = math.hypot(*g)
+    if gn == 0.0:
+        return 0.0, 0.0  # the coordinate does not depend on the sketch point
+    vals: list[float] = []
+    for lp in _loops(region):
+        for e in lp.edges:
+            c = curves[e.index]
+            geo = curve_geometry(c)
+            if isinstance(c, Line):
+                vals += [f(c.start), f(c.end)]
+                continue
+            if not geo.full:
+                vals += [f(geo.p0), f(geo.p1)]
+            t = math.atan2(g[1], g[0])
+            for tt in (t, t + math.pi):
+                if geo.contains_angle(tt):
+                    vals.append(f(geo.point(tt)))
+    return max(vals), min(vals)
+
+
+def predicted_bbox(feat, curves: list[Curve], region: Region, pl: ResolvedPlane) -> tuple[list[float], list[float]]:
+    """Closed-form tight bbox of the swept region (independent of OCCT).
+
+    The maximum of a coordinate over the solid is attained on the swept boundary curves.
+    Extrude: coordinate(p + t·n) = e·O + dot(p, (e·x, e·y)) + t·(e·n), t over the sweep range.
+    Revolve (axis A, Z; profile side ρ̂₀; ρ ≥ 0; sweep θ ∈ [θ₀, θ₁]):
+      coordinate = e·A + z·(e·Z) + ρ·m·cos(θ − θ*), m = |(e·ρ̂₀, e·(Z×ρ̂₀))|; for fixed θ this is
+      linear in the sketch point, and the optimal θ is θ*, θ*+π (when inside the sweep) or an end.
+    """
+    lo3: list[float] = []
+    hi3: list[float] = []
+    if isinstance(feat, ExtrudeFeature):
+        a, b = {"normal": (0.0, feat.distance), "reverse": (-feat.distance, 0.0),
+                "symmetric": (-feat.distance / 2, feat.distance / 2)}[feat.direction]
+        for k in range(3):
+            g = (pl.x[k], pl.y[k])
+            mx, mn = _linear_extremes(curves, region, (0.0, 0.0), g)
+            nk = pl.normal[k]
+            hi3.append(pl.origin[k] + mx + max(a * nk, b * nk))
+            lo3.append(pl.origin[k] + mn + min(a * nk, b * nk))
+        return lo3, hi3
+    L = math.hypot(*feat.axis_direction)
+    dh = (feat.axis_direction[0] / L, feat.axis_direction[1] / L)
+    n2 = (-dh[1], dh[0])
+    o = feat.axis_origin
+    from .sketch import signed_extent
+
+    smin, smax = signed_extent(curves, region.outer, o, feat.axis_direction)
+    side = 1.0 if smax >= -smin else -1.0
+    A = pl.to3d(o)
+    Zv = pl.dir3d(dh)
+    zl = math.sqrt(sum(c * c for c in Zv))
+    Z = tuple(c / zl for c in Zv)
+    r0 = pl.dir3d((side * n2[0], side * n2[1]))
+    rl = math.sqrt(sum(c * c for c in r0))
+    rho0 = tuple(c / rl for c in r0)
+    w = (Z[1] * rho0[2] - Z[2] * rho0[1], Z[2] * rho0[0] - Z[0] * rho0[2], Z[0] * rho0[1] - Z[1] * rho0[0])
+    ang = math.radians(feat.angle)
+    t0, t1 = {"normal": (0.0, ang), "reverse": (-ang, 0.0), "symmetric": (-ang / 2, ang / 2)}[feat.direction]
+    for k in range(3):
+        alpha, beta, gamma = Z[k], rho0[k], w[k]
+        m = math.hypot(beta, gamma)
+        ts = [t0, t1]
+        if m > 0.0:
+            tstar = math.atan2(gamma, beta)
+            for cand in (tstar, tstar + math.pi):
+                if ang >= 2 * math.pi - 1e-15:
+                    ts.append(cand)
+                else:
+                    d = (cand - t0) % (2 * math.pi)
+                    if d <= t1 - t0:
+                        ts.append(t0 + d)
+        best_hi, best_lo = -math.inf, math.inf
+        for th in ts:
+            c = beta * math.cos(th) + gamma * math.sin(th)
+            # z-coefficient α along dh, ρ-coefficient c along side·n2
+            g = (alpha * dh[0] + c * side * n2[0], alpha * dh[1] + c * side * n2[1])
+            mx, mn = _linear_extremes(curves, region, o, g)
+            best_hi, best_lo = max(best_hi, A[k] + mx), min(best_lo, A[k] + mn)
+        hi3.append(best_hi)
+        lo3.append(best_lo)
+    return lo3, hi3
+
+
 def check_body(
     feat, curves: list[Curve], region: Region, pl: ResolvedPlane, metrics: dict, solid=None
 ) -> list[str]:
@@ -172,17 +264,10 @@ def check_body(
             problems.append(f"{k} {metrics[k]} != spec-predicted {exp[k]}")
     if not metrics["valid"]:
         problems.append("BRepCheck_Analyzer reports the solid invalid")
-    if solid is not None:
-        from OCP.Bnd import Bnd_Box
-        from OCP.BRepBndLib import BRepBndLib
-
-        box = Bnd_Box()
-        BRepBndLib.AddOptimal_s(solid, box, False, False)
-        v = box.Get()
-        lo, hi = v[:3], v[3:]
-        for i in range(3):
-            if not (lo[i] - 1e-9 * s <= metrics["bbox_min"][i] and metrics["bbox_max"][i] <= hi[i] + 1e-9 * s):
-                problems.append(f"tight bbox not inside OCCT AddOptimal box on axis {i}")
-            if abs(lo[i] - metrics["bbox_min"][i]) > 1e-6 * s or abs(hi[i] - metrics["bbox_max"][i]) > 1e-6 * s:
-                problems.append(f"tight bbox differs from OCCT AddOptimal box by > 1e-6·s on axis {i}")
+    lo, hi = predicted_bbox(feat, curves, region, pl)
+    for i in range(3):
+        if abs(metrics["bbox_min"][i] - lo[i]) > METRIC_GATE * s or abs(metrics["bbox_max"][i] - hi[i]) > METRIC_GATE * s:
+            problems.append(
+                f"bbox {metrics['bbox_min']}..{metrics['bbox_max']} != analytic {lo}..{hi} (axis {i})"
+            )
     return problems
