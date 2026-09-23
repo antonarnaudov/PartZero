@@ -150,7 +150,8 @@ pub enum OpError {
     /// SPEC §4 [R-12]: the produced body failed Forge's validity check.
     #[error("the produced body is invalid: {}", issues.join("; "))]
     InvalidResult {
-        /// The validation findings (`[CODE] entity: message`).
+        /// The validation findings (`[CODE] entity: message`), entities named by provenance
+        /// (`forge_core::topo::EntityNames`), never by arena id.
         issues: Vec<String>,
     },
     /// An internal geometry construction failed (a Forge bug, never a user error).

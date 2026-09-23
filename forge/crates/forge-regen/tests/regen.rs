@@ -2,7 +2,7 @@
 //! forms, determinism, the SPEC §6 comparison with the oracle's golden reports, and the
 //! dependency / suppression / failure semantics.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use forge_core::math::PI;
 use forge_ir::{BodyMetrics, EvalReport, FeatureReport, Status};
@@ -190,31 +190,49 @@ fn compare_features(a: &FeatureReport, b: &FeatureReport, out: &mut Vec<String>)
     }
 }
 
-#[test]
-fn reports_match_the_oracle_golden_reports_per_spec_6() {
+/// Why a golden comparison could not run. Outside CI a missing `corpus/golden` is only a
+/// skip (a partial checkout); in CI (`CI` set, as on every hosted runner) it fails, and a
+/// missing or unparseable golden report always fails: the comparison must never pass
+/// having compared nothing (audit M6).
+fn golden_dir_or_skip() -> Option<PathBuf> {
     let golden = corpus_dir().join("golden");
-    if !golden.is_dir() {
-        eprintln!("corpus/golden is absent; skipping the golden comparison");
-        return;
+    if golden.is_dir() {
+        return Some(golden);
     }
+    assert!(
+        std::env::var_os("CI").is_none(),
+        "corpus/golden is missing under CI: the SPEC §6 golden comparison cannot run"
+    );
+    eprintln!("corpus/golden is absent; skipping the golden comparison (not CI)");
+    None
+}
+
+/// Compare Forge's report of every program in `names` with `golden/<name>.metrics.json`.
+/// Returns how many were compared and the problems; a missing or unparseable golden
+/// report is a problem, never a skip.
+fn golden_problems(names: &[String], golden: &Path) -> (usize, Vec<String>) {
     let mut compared = 0;
     let mut problems = Vec::new();
-    for name in program_names() {
+    for name in names {
         let path = golden.join(format!("{name}.metrics.json"));
-        let Ok(text) = std::fs::read_to_string(&path) else {
-            continue;
+        let text = match std::fs::read_to_string(&path) {
+            Ok(t) => t,
+            Err(e) => {
+                problems.push(format!("{name}: no golden report {} ({e})", path.display()));
+                continue;
+            }
         };
         let g: EvalReport = match serde_json::from_str(&text) {
             Ok(g) => g,
             Err(e) => {
-                eprintln!(
-                    "{}: not an aicad.metrics/0 report ({e}); skipped",
+                problems.push(format!(
+                    "{name}: {} is not an aicad.metrics/0 report ({e})",
                     path.display()
-                );
+                ));
                 continue;
             }
         };
-        let f = eval_program(&name);
+        let f = eval_program(name);
         compared += 1;
         if f.status != g.status {
             problems.push(format!(
@@ -231,8 +249,48 @@ fn reports_match_the_oracle_golden_reports_per_spec_6() {
         }
         problems.extend(out.into_iter().map(|p| format!("{name}: {p}")));
     }
+    (compared, problems)
+}
+
+#[test]
+fn reports_match_the_oracle_golden_reports_per_spec_6() {
+    let Some(golden) = golden_dir_or_skip() else {
+        return;
+    };
+    let names = program_names();
+    assert!(!names.is_empty(), "corpus/programs is empty");
+    let (compared, problems) = golden_problems(&names, &golden);
     eprintln!("compared {compared} golden reports");
     assert!(problems.is_empty(), "{problems:#?}");
+    assert_eq!(
+        compared,
+        names.len(),
+        "every corpus program must be compared with its golden report"
+    );
+}
+
+#[test]
+fn missing_or_unparseable_golden_reports_are_problems_not_skips() {
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("regen-golden-m6");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let names: Vec<String> = ["extrude_box", "extrude_plate_with_holes", "revolve_torus"]
+        .map(String::from)
+        .to_vec();
+    // A good golden (Forge's own report), a truncated one, and none for revolve_torus.
+    let good = serde_json::to_string_pretty(&eval_program("extrude_box")).expect("json");
+    std::fs::write(dir.join("extrude_box.metrics.json"), &good).expect("write");
+    std::fs::write(
+        dir.join("extrude_plate_with_holes.metrics.json"),
+        &good[..good.len() / 2],
+    )
+    .expect("write");
+    let (compared, problems) = golden_problems(&names, &dir);
+    let _ = std::fs::remove_dir_all(&dir);
+    assert_eq!(compared, 1);
+    assert_eq!(problems.len(), 2, "{problems:#?}");
+    assert!(problems[0].contains("is not an aicad.metrics/0 report"));
+    assert!(problems[1].contains("no golden report"));
 }
 
 // ---- evaluation semantics ------------------------------------------------------------------

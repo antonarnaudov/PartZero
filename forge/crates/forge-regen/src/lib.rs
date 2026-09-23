@@ -13,14 +13,17 @@
 //! - a failure never stops later features.
 //!
 //! [`report`] turns an [`Evaluation`] into the `aicad.metrics/0` report. The output is
-//! deterministic: same document, same bytes, on every target.
+//! deterministic: same document, same bytes, on every target. Error messages name
+//! entities by provenance, never by arena id: forge-check and forge-ops name them with
+//! [`forge_core::topo::EntityNames`] while the body exists, and every message still passes
+//! [`forge_core::topo::scrub_arena_ids`] as a backstop.
 
 use std::collections::BTreeMap;
 
 use forge_check::{CheckError, body_metrics, validate};
 use forge_core::Tolerance;
 use forge_core::linalg::Frame;
-use forge_core::topo::{Body, Severity};
+use forge_core::topo::{Body, Severity, scrub_arena_ids};
 use forge_ir::{
     BodyMetrics, Document, EvalReport, Feature, FeatureReport, METRICS_SCHEMA, RegionMetrics,
     ReportError, SketchFeature, Status,
@@ -196,7 +199,12 @@ fn metrics_of(body: &Body) -> Result<BodyMetrics, CheckError> {
     Ok(m)
 }
 
+/// A failed feature's report entry. Every message passes [`scrub_arena_ids`], a backstop:
+/// entities are named where the body exists (forge-ops' `INVALID_RESULT`, forge-check's
+/// issues), but an error built without the body (a builder error) may still carry
+/// `Debug`-formatted arena ids, which never leave the process.
 fn error_entry(fe: &FeatureEval, code: &str, message: String) -> FeatureReport {
+    let message = scrub_arena_ids(&message);
     FeatureReport {
         part: fe.part.clone(),
         feature: fe.feature.clone(),
@@ -282,4 +290,182 @@ pub fn report(doc: &Document, eval: &Evaluation, engine: &str, document_name: &s
 /// The engine identifier Forge writes into reports: `forge <version>`.
 pub fn engine_id() -> String {
     format!("forge {}", env!("CARGO_PKG_VERSION"))
+}
+
+#[cfg(test)]
+mod tests {
+    //! SPEC §4 [R-12]: a body that fails Forge's own validity check never reaches a report
+    //! as `ok`; the feature fails with `INVALID_RESULT`.
+
+    use forge_core::geom::{Sphere, Surface};
+    use forge_core::linalg::Frame;
+    use forge_core::topo::{BodyBuilder, Provenance, samples};
+
+    use super::*;
+
+    /// Balls centred at the origin, one shell each: `(radius, sense, shell closed)`.
+    fn balls(spec: &[(f64, bool, bool)]) -> Body {
+        let mut b = BodyBuilder::new();
+        for (i, &(r, sense, closed)) in spec.iter().enumerate() {
+            let shell = b.add_shell(closed);
+            let s = Sphere::new(Frame::world(), r).expect("sphere");
+            b.add_face(
+                shell,
+                Surface::Sphere(s),
+                sense,
+                Provenance::side("ball", format!("s{i}")),
+            )
+            .expect("face");
+        }
+        b.finish()
+    }
+
+    fn invalid_issues(body: Body) -> Vec<String> {
+        match checked(body) {
+            Err(e @ OpError::InvalidResult { .. }) => {
+                assert_eq!(e.code(), "INVALID_RESULT");
+                let OpError::InvalidResult { issues } = e else {
+                    unreachable!()
+                };
+                issues
+            }
+            Err(e) => panic!("expected INVALID_RESULT, got {} ({e})", e.code()),
+            Ok(_) => panic!("an invalid body passed checked()"),
+        }
+    }
+
+    #[test]
+    fn checked_passes_valid_bodies() {
+        assert!(checked(samples::unit_cube()).is_ok());
+        // A hollow ball: the cavity shell points into the void (sense false).
+        assert!(checked(balls(&[(3.0, true, true), (1.0, false, true)])).is_ok());
+    }
+
+    #[test]
+    fn checked_turns_an_inward_body_into_invalid_result() {
+        let issues = invalid_issues(balls(&[(2.0, false, true)]));
+        assert_eq!(issues.len(), 1, "{issues:?}");
+        assert!(issues[0].starts_with("[NEGATIVE_VOLUME]"), "{issues:?}");
+    }
+
+    #[test]
+    fn checked_turns_an_open_shell_into_invalid_result() {
+        let issues = invalid_issues(balls(&[(2.0, true, false)]));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.starts_with("[SHELL_NOT_CLOSED] shell 0 (ball/side:s0)")),
+            "{issues:?}"
+        );
+    }
+
+    #[test]
+    fn checked_rejects_a_cavity_that_points_into_the_material() {
+        // Outer ball and a cavity ball both oriented outwards: the signed volume
+        // V_outer + V_cavity is positive, so only the per-shell check catches it.
+        let issues = invalid_issues(balls(&[(3.0, true, true), (1.0, true, true)]));
+        assert_eq!(issues.len(), 1, "{issues:?}");
+        assert!(
+            issues[0].starts_with("[FORGE_SHELL_ORIENTATION] shell 1 (ball/side:s1)"),
+            "{issues:?}"
+        );
+    }
+
+    #[test]
+    fn invalid_result_reaches_the_report_as_an_error_without_arena_ids() {
+        let doc = forge_ir::from_json(
+            r#"{"schema":"aicad.ir/0","meta":{"name":"x"},"parts":[{"id":"p1","name":"p",
+               "features":[{"type":"sketch","id":"s1","name":"sk","plane":"XY","curves":[
+               {"kind":"circle","id":"c","center":[0,0],"radius":1}]}]}]}"#,
+        )
+        .expect("valid IR");
+        let outcome = checked(balls(&[(3.0, true, true), (1.0, true, true)]))
+            .map(|b| FeatureOutput::Bodies(vec![b]));
+        let eval = Evaluation {
+            features: vec![FeatureEval {
+                part: "p".into(),
+                feature: "body".into(),
+                feature_type: "revolve",
+                outcome,
+            }],
+        };
+        let r = report(&doc, &eval, "forge test", "x");
+        assert_eq!(r.status, Status::Error);
+        let f = &r.features[0];
+        assert_eq!(f.status, Status::Error);
+        assert!(f.bodies.is_empty());
+        let e = f.error.as_ref().expect("error");
+        assert_eq!(e.code, "INVALID_RESULT");
+        assert!(!has_arena_id(&e.message), "arena id in {:?}", e.message);
+    }
+
+    /// `true` if `s` holds a forge-core id's `Debug` form `Kind#<index>v<generation>`.
+    fn has_arena_id(s: &str) -> bool {
+        s.match_indices('#').any(|(i, _)| {
+            let before = s[..i]
+                .chars()
+                .next_back()
+                .is_some_and(|c| c.is_ascii_alphabetic());
+            let rest = &s[i + 1..];
+            let n = rest.chars().take_while(char::is_ascii_digit).count();
+            before && n > 0 && rest[n..].starts_with('v')
+        })
+    }
+
+    #[test]
+    fn arena_ids_in_error_messages_never_reach_the_report() {
+        // Audit L3, the backstop: forge-ops names entities while the body exists (see
+        // `forge_ops` plan tests), but an error built without the body can still carry
+        // `TopoIssue`'s Display, `[CODE] Edge(Edge#3v0): …`. Build such a message (a unit
+        // cube with a second copy of one face: its edges are used three times) with the
+        // in-process Display and check that the report scrubs it.
+        let cube = samples::unit_cube();
+        let (_, f) = cube.faces().iter().next().expect("face");
+        let uses: Vec<_> = cube
+            .loop_(f.loops[0])
+            .expect("loop")
+            .coedges
+            .iter()
+            .map(|&c| {
+                let c = cube.coedge(c).expect("coedge");
+                (c.edge, c.forward)
+            })
+            .collect();
+        let (surface, sense, shell) = (f.surface.clone(), f.sense, f.shell);
+        let mut bb = BodyBuilder::from_body(cube.clone(), Tolerance::IR_DEFAULT);
+        let dup = bb
+            .add_face(shell, surface, sense, Provenance::side("dup", "a"))
+            .expect("face");
+        bb.add_loop(dup, &uses).expect("loop");
+        let issues = bb.finish_validated().expect_err("edges used three times");
+        let err = OpError::InvalidResult {
+            issues: issues
+                .iter()
+                .filter(|i| i.severity == Severity::Error)
+                .map(ToString::to_string)
+                .collect(),
+        };
+        // The op-level message does carry ids …
+        assert!(has_arena_id(&err.to_string()), "{err}");
+        let doc = forge_ir::from_json(
+            r#"{"schema":"aicad.ir/0","meta":{"name":"x"},"parts":[{"id":"p1","name":"p",
+               "features":[{"type":"sketch","id":"s1","name":"sk","plane":"XY","curves":[
+               {"kind":"circle","id":"c","center":[0,0],"radius":1}]}]}]}"#,
+        )
+        .expect("valid IR");
+        let eval = Evaluation {
+            features: vec![FeatureEval {
+                part: "p".into(),
+                feature: "body".into(),
+                feature_type: "extrude",
+                outcome: Err(err),
+            }],
+        };
+        // … the report's does not.
+        let r = report(&doc, &eval, "forge test", "x");
+        let e = r.features[0].error.as_ref().expect("error");
+        assert_eq!(e.code, "INVALID_RESULT");
+        assert!(!has_arena_id(&e.message), "arena id in {:?}", e.message);
+        assert!(e.message.contains("an edge"), "{:?}", e.message);
+    }
 }

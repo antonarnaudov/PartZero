@@ -34,7 +34,9 @@
 //!
 //! # Identity
 //! Ids are process-local and body-local. Anything persisted uses
-//! [`Provenance::name`], which every face, edge and vertex carries.
+//! [`Provenance::name`], which every face, edge and vertex carries. Messages that leave
+//! the process name entities through [`EntityNames`] (or, without the body,
+//! [`scrub_arena_ids`]); an id's `Debug` form is for in-process logs only.
 //!
 //! # Checking
 //! [`validate`] reports structured [`TopoIssue`]s with stable codes; see its docs for
@@ -43,6 +45,7 @@
 
 mod builder;
 mod entities;
+mod names;
 mod provenance;
 pub mod samples;
 mod validate;
@@ -52,6 +55,7 @@ pub use entities::{
     Body, Coedge, CoedgeId, Edge, EdgeId, Face, FaceId, Loop, LoopId, Shell, ShellId, TopoCounts,
     Vertex, VertexId,
 };
+pub use names::{EntityNames, entity_name, scrub_arena_ids, shell_name};
 pub use provenance::{Provenance, RESERVED_NAME_CHARS, Role};
 pub use validate::{
     EntityRef, EulerSummary, IssueCode, Severity, TopoIssue, ValidateOptions, euler_summary,

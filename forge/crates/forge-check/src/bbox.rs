@@ -12,13 +12,27 @@
 //!   apex, sphere poles, spindle-torus axis points, horn-torus centre). Planes,
 //!   cylinders and cones have no interior extremes besides the apex.
 
+use std::collections::BTreeSet;
+
 use forge_core::geom::{Curve3, Surface};
 use forge_core::linalg::{Frame, Point3, Vec3};
 use forge_core::math;
-use forge_core::topo::Body;
+use forge_core::topo::{Body, EdgeId, ShellId};
 
 use crate::CheckError;
-use crate::domain::{FaceDomain, contains, face_domain, singular_v, touches_singular};
+use crate::domain::{
+    FaceDomain, SINGULAR_LINE_EPS, contains, face_domain, singular_v, touches_singular,
+};
+
+/// An angle `t` lies in an edge's range `[t0, t1]` (mod 2π) up to this, relative to
+/// `1 + |t1|`: the range ends are computed values, so an extreme exactly at an end may
+/// round a few ulps outside it (it is then also the end point, which is added anyway).
+const ANGLE_RANGE_EPS: f64 = 1e-15;
+
+/// A world axis is parallel to a sphere's or torus's axis when its component orthogonal
+/// to that axis (a unit-vector component) is at most this: the coordinate is then extreme
+/// along whole circles `v = ±π/2` rather than at isolated points.
+const AXIS_PARALLEL_EPS: f64 = 1e-15;
 
 /// Axis-aligned box accumulator.
 #[derive(Clone, Copy, Debug)]
@@ -57,7 +71,7 @@ fn axis(i: usize) -> Vec3 {
 /// `true` if angle `t` lies in `[t0, t1]` modulo 2π.
 fn in_range(t: f64, t0: f64, t1: f64) -> bool {
     let d = math::wrap_angle(t - t0, 0.0);
-    d <= t1 - t0 + 1e-15 * (1.0 + t1.abs())
+    d <= t1 - t0 + ANGLE_RANGE_EPS * (1.0 + t1.abs())
 }
 
 fn add_edge(b: &mut Aabb, curve: &Curve3, t0: f64, t1: f64) {
@@ -126,7 +140,7 @@ fn critical_uv(f: &Frame, torus: bool) -> Vec<(Option<f64>, f64)> {
         let e = axis(i);
         let (ex, ey, ez) = (e.dot(f.x()), e.dot(f.y()), e.dot(f.z()));
         let h = math::hypot(ex, ey);
-        if h <= 1e-15 {
+        if h <= AXIS_PARALLEL_EPS {
             out.push((None, math::FRAC_PI_2));
             out.push((None, -math::FRAC_PI_2));
             continue;
@@ -154,12 +168,21 @@ fn v_candidates(dom: &FaceDomain<'_>, v: f64) -> Vec<f64> {
     match dom.surface.periodicity().1 {
         None => {
             // A spindle-torus patch is 2π-periodic as a formula but not as a domain:
-            // bring the angle into the patch's representation, centred on its range.
+            // bring the angle into the patch's representation, centred on its range. An
+            // angle outside the patch's range is a critical point of the *other* sheet,
+            // never of this face (Phase 0 audit H2: wrapping it into the range put
+            // points of the other sheet into the box).
             if let Surface::Torus(t) = dom.surface
                 && let Some((v0, v1)) = t.spindle_v_range()
             {
                 let mid = 0.5 * (v0 + v1);
-                return vec![math::wrap_angle(v, mid - math::PI)];
+                let w = math::wrap_angle(v, mid - math::PI);
+                let eps = SINGULAR_LINE_EPS * (1.0 + w.abs());
+                return if w >= v0 - eps && w <= v1 + eps {
+                    vec![w]
+                } else {
+                    Vec::new()
+                };
             }
             vec![v]
         }
@@ -232,6 +255,39 @@ pub(crate) fn body_box(body: &Body, gap_tol: f64) -> Result<Aabb, CheckError> {
     for f in body.faces().values() {
         let dom = face_domain(body, f, gap_tol)?;
         add_face(&mut b, &dom)?;
+    }
+    if b.is_empty() {
+        return Err(CheckError::Empty);
+    }
+    Ok(b)
+}
+
+/// The tight box of one shell: its faces' edges, their vertices and the faces' interior
+/// extremes (it bounds the shell-nesting rays and rules out points outside it).
+pub(crate) fn shell_box(body: &Body, shell: ShellId, gap_tol: f64) -> Result<Aabb, CheckError> {
+    let sh = body.shell(shell).ok_or(CheckError::Empty)?;
+    let mut edges: BTreeSet<EdgeId> = BTreeSet::new();
+    let mut b = Aabb::empty();
+    for &fid in &sh.faces {
+        let f = body.face(fid).ok_or(CheckError::Empty)?;
+        let dangling = || CheckError::Dangling {
+            face: f.provenance.name(),
+        };
+        for &lid in &f.loops {
+            for &cid in &body.loop_(lid).ok_or_else(dangling)?.coedges {
+                edges.insert(body.coedge(cid).ok_or_else(dangling)?.edge);
+            }
+        }
+        add_face(&mut b, &face_domain(body, f, gap_tol)?)?;
+    }
+    for eid in edges {
+        let Some(e) = body.edge(eid) else { continue };
+        for v in [e.start, e.end].into_iter().flatten() {
+            if let Some(v) = body.vertex(v) {
+                b.add(v.point);
+            }
+        }
+        add_edge(&mut b, &e.curve, e.t_range.0, e.t_range.1);
     }
     if b.is_empty() {
         return Err(CheckError::Empty);

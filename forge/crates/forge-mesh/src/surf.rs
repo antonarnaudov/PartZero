@@ -5,6 +5,7 @@
 use forge_core::geom::{Curve2, Curve3, Surface};
 use forge_core::math;
 use forge_core::tolerance::IR_LINEAR_TOLERANCE;
+use forge_core::topo::{Body, Face};
 use forge_core::{Point3, Vec3};
 
 use crate::TessParams;
@@ -104,6 +105,8 @@ pub(crate) struct Surf<'a> {
     pub per: [Option<f64>; 2],
     /// Parameter spans used to turn `|S_u|`, `|S_v|` into iso-line lengths.
     span: [f64; 2],
+    /// Cone faces only: a `v` on the nappe the face lies on (see [`face_nappe_v`]).
+    nappe_v: Option<f64>,
 }
 
 impl<'a> Surf<'a> {
@@ -118,6 +121,23 @@ impl<'a> Surf<'a> {
             sense,
             per: [pu, pv],
             span: [span(pu, u0, u1), span(pv, v0, v1)],
+            nappe_v: None,
+        }
+    }
+
+    /// The surface of `face`, with the face's cone nappe fixed ([`face_nappe_v`]).
+    pub fn for_face(body: &Body, face: &'a Face) -> Self {
+        Self {
+            nappe_v: face_nappe_v(body, face),
+            ..Self::new(&face.surface, face.sense)
+        }
+    }
+
+    /// [`Surf::new`] with a known cone nappe (`None`: evaluate the nappe per point).
+    pub fn with_nappe(s: &'a Surface, sense: bool, nappe_v: Option<f64>) -> Self {
+        Self {
+            nappe_v,
+            ..Self::new(s, sense)
         }
     }
 
@@ -127,10 +147,14 @@ impl<'a> Surf<'a> {
     }
 
     /// Parametric normal direction `normalize(S_u × S_v)` (limit value at singular
-    /// points).
+    /// points). On a cone face the normal is that of the face's nappe even at the apex,
+    /// where rounding can put the apex vertex's `v` a few ulps onto the other nappe.
     #[inline]
     pub fn normal_param(&self, uv: [f64; 2]) -> Option<Vec3> {
-        self.s.normal(uv[0], uv[1])
+        match (self.s, self.nappe_v) {
+            (Surface::Cone(c), Some(v)) => Some(c.normal(uv[0], v)),
+            _ => self.s.normal(uv[0], uv[1]),
+        }
     }
 
     /// Outward normal of the face.
@@ -195,6 +219,40 @@ impl<'a> Surf<'a> {
         }
         uv
     }
+}
+
+/// The nappe of a cone face, as the `v` of the boundary point farthest from the apex
+/// (edge midpoints, through the coedge pcurves or by projection); `None` for other
+/// surfaces or when no boundary point lies off the apex.
+///
+/// A face never crosses the apex, so its outward normal is that of one nappe. The
+/// `v`-dependent nappe choice of `Cone::normal` must not be applied at the apex itself:
+/// an apex vertex whose `v` rounds to just beyond `apex_v` would get the opposite normal,
+/// every normal-angle test next to it would fail, and edge and face refinement would
+/// crowd points into the apex until they give up with an infinite deviation estimate
+/// (the `revolve[point_touch]` failures of V1 in the Phase 0 audit).
+pub(crate) fn face_nappe_v(body: &Body, face: &Face) -> Option<f64> {
+    let Surface::Cone(cone) = &face.surface else {
+        return None;
+    };
+    let mut best: Option<(f64, f64)> = None;
+    for &lid in &face.loops {
+        let Some(lp) = body.loop_(lid) else { continue };
+        for &cid in &lp.coedges {
+            let Some(c) = body.coedge(cid) else { continue };
+            let Some(e) = body.edge(c.edge) else { continue };
+            let tm = 0.5 * (e.t_range.0 + e.t_range.1);
+            let v = match &c.pcurve {
+                Some(pc) => pc.eval(tm).y,
+                None => face.surface.project(e.curve.eval(tm)).1,
+            };
+            let r = cone.radius_at(v).abs();
+            if r.is_finite() && r > 0.0 && best.is_none_or(|(br, _)| r > br) {
+                best = Some((r, v));
+            }
+        }
+    }
+    best.map(|(_, v)| v)
 }
 
 /// Replace the irrelevant coordinate of a singular endpoint by the other endpoint's, so

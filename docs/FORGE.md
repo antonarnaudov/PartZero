@@ -62,7 +62,7 @@ Legacy kernels cannot retrofit these properties:
 
 - **Structure.** A half-edge B-rep stored in arenas and addressed by **typed generational IDs** (`BodyId`, `ShellId`, `FaceId`, `LoopId`, `HalfEdgeId`, `EdgeId`, `VertexId`). There are no `Rc<RefCell<…>>` pointer graphs.
 - **Generational IDs.** A stale ID is detected instead of aliasing a reused slot.
-- **IDs stay in-process.** They never leave the process and are never persisted. Anything stored in a file or shown to an agent uses provenance names or semantic queries.
+- **IDs stay in-process.** They never leave the process and are never persisted. Anything stored in a file or shown to an agent uses provenance names or semantic queries. Error messages follow the same rule: `forge_core::topo::EntityNames` names every entity (a face, edge or vertex by provenance, a loop or coedge by its face or edge, a shell by ordinal and first face) while the body exists, and reports pass `scrub_arena_ids` as a backstop. An ID's `Debug` form (`Edge#3v0`) is for in-process logs only.
 
 ### Periodic surfaces: no seam edges
 
@@ -120,8 +120,8 @@ The verification machine is built **before** the features. It is our answer to t
 - **Exact matches required:**
   - status and error codes;
   - region, body, face and edge counts;
-  - face and edge type histograms;
-  - validity.
+  - face and edge type histograms.
+- **Validity is not compared between the engines** ([SPEC §5 R-13](../forge/crates/forge-ir/SPEC.md#5-metrics-aicadmetrics0)): their checkers cover different things. Instead each report must satisfy [R-12] on its own: an `ok` feature never carries a body with `valid` ≠ `true`. `kernel-diff` checks this on each report on its own and classifies a violation by either engine as a **potential silent-wrong**, whatever the other engine reported (ok, an error, or a rejected document), and Forge's `forge-regen` turns a body that fails `forge-check::validate` into `INVALID_RESULT`.
 - **Tolerance matches:** volume, area, centroid and bbox, using the tolerances in [SPEC §6](../forge/crates/forge-ir/SPEC.md#6-diff-rules-kernel-diff). Hausdorff distance is added for general geometry.
 - **Classifying mismatches:**
   - One engine errors and the other doesn't → **robustness difference**.

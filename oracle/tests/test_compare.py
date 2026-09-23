@@ -51,7 +51,6 @@ def test_identical_reports_match_regardless_of_engine_and_document():
         lambda r: body(r)["bbox_max"].__setitem__(2, 10.0 + 1.5e-5),
         lambda r: r["features"][0]["regions"][0].update(area=100.0 * (1 + 0.9e-6)),
         lambda r: body(r).update(face_types={"plane": 6, "cone": 0}),  # zero counts ignored
-        lambda r: body(r).update(valid=False),  # [R-13] `valid` is not compared
     ],
 )
 def test_within_tolerance_matches(mutate):
@@ -75,6 +74,9 @@ def test_within_tolerance_matches(mutate):
         lambda r: r["features"][0]["regions"][0].update(area=101.0),
         lambda r: r["features"][0]["regions"].append({"area": 1.0, "loops": 1, "outer_curves": ["z"]}),
         lambda r: r["features"].pop(),
+        # [R-12] per report: an `ok` body must have `valid: true` (the engines' `valid`
+        # values are not compared with each other [R-13]; this one is wrong on its own).
+        lambda r: body(r).update(valid=False),
     ],
 )
 def test_metric_difference_with_both_ok_is_potential_silent_wrong(mutate):
@@ -174,10 +176,11 @@ def test_cli_report_pair(tmp_path, capsys):
     assert "POTENTIAL_SILENT_WRONG" in (tmp_path / "r.md").read_text()
 
 
-def test_cli_missing_forge_falls_back_to_golden(capsys):
+def test_cli_missing_forge_bin_is_a_usage_error(capsys):
+    # An explicit --forge-bin that does not exist must not fall back to the golden reports
+    # (the gate would compare OCCT with OCCT); see oracle/tests/test_ci_gates.py.
     rc = _cli("diff", REPO / "corpus" / "programs", "--forge-bin", "/nonexistent/aicad")
-    out = capsys.readouterr().out
-    assert rc == 0 and "MATCH=8" in out
+    assert rc == 2 and "forge binary not found" in capsys.readouterr().err
 
 
 def _fake_forge(tmp_path, body_py):

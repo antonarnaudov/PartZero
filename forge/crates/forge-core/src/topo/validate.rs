@@ -1,5 +1,6 @@
 //! Structural and geometric validation of bodies.
 
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -9,6 +10,8 @@ use super::entities::{
 };
 use crate::geom::Surface;
 use crate::linalg::Vec2;
+use crate::math;
+use crate::predicates::orient2d;
 use crate::tolerance::is_within;
 
 /// How bad an issue is.
@@ -89,9 +92,10 @@ pub enum IssueCode {
     /// A pcurve mapped through the surface deviates from the edge curve.
     PcurveDeviation,
     /// A loop of a planar face winds the wrong way for its role (outer/inner) and the
-    /// face sense.
+    /// face sense (decided with an exact orientation predicate).
     LoopOrientation,
-    /// A loop of a planar face encloses zero area.
+    /// A loop of a planar face encloses an area of at most `tolerance²` (the largest
+    /// tolerance of its edges), the sketch's degeneracy rule (SPEC §3.1).
     LoopDegenerate,
     /// The Euler–Poincaré characteristic of a closed shell is impossible.
     EulerCharacteristic,
@@ -754,6 +758,8 @@ impl<'a> Validator<'a> {
             return;
         };
         let mut pts: Vec<Vec2> = Vec::new();
+        // Linear tolerance of the loop: the largest tolerance recorded on its edges.
+        let mut tol = 0.0f64;
         for &cid in &lp.coedges {
             let (Some(c), Some(e)) = (
                 body.coedge(cid),
@@ -761,6 +767,7 @@ impl<'a> Validator<'a> {
             ) else {
                 return;
             };
+            tol = math::max(tol, e.tolerance);
             let mut ts = self.sample_params(e);
             if !c.forward {
                 ts.reverse();
@@ -771,32 +778,45 @@ impl<'a> Validator<'a> {
                 pts.push(Vec2::new(u, v));
             }
         }
-        let twice_area = polygon_twice_signed_area(&pts);
         let lent = EntityRef::Loop(lid);
-        if twice_area == 0.0 {
+        if !pts.iter().all(|p| p.is_finite()) {
             self.error(
-                IssueCode::LoopDegenerate,
+                IssueCode::NonFiniteGeometry,
                 lent,
                 vec![EntityRef::Face(fid)],
-                "loop encloses zero area".into(),
+                "loop samples are not finite in plane coordinates".into(),
             );
             return;
         }
-        let expected = if (index == 0) == face.sense {
-            1.0
-        } else {
-            -1.0
-        };
-        if twice_area * expected < 0.0 {
+        // SPEC §3.1 (the sketch's rule): a loop must enclose more than tol².
+        let area = 0.5 * polygon_twice_signed_area(&pts);
+        let min_area = tol * tol;
+        if pts.len() < 3 || is_within(area.abs(), min_area) {
+            self.push(
+                IssueCode::LoopDegenerate,
+                Severity::Error,
+                lent,
+                vec![EntityRef::Face(fid)],
+                Some(area.abs()),
+                Some(min_area),
+                format!(
+                    "loop encloses area {:e}, at most tolerance² = {min_area:e}",
+                    area.abs()
+                ),
+            );
+            return;
+        }
+        let expected = if (index == 0) == face.sense { 1 } else { -1 };
+        if polygon_orientation(&pts, area) != expected {
             let role = if index == 0 { "outer" } else { "inner" };
             self.push(
                 IssueCode::LoopOrientation,
                 Severity::Error,
                 lent,
                 vec![EntityRef::Face(fid)],
-                Some(0.5 * twice_area),
+                Some(area),
                 None,
-                format!("{role} loop winds the wrong way (signed area {} in plane coordinates, face sense {})", 0.5 * twice_area, face.sense),
+                format!("{role} loop winds the wrong way (signed area {area} in plane coordinates, face sense {})", face.sense),
             );
         }
     }
@@ -935,9 +955,194 @@ impl<'a> Validator<'a> {
     }
 }
 
-/// Twice the signed area of a closed polygon (shoelace; positive if counter-clockwise).
-/// Used for the orientation check of planar loops, which samples curved edges.
+/// Twice the signed area of a closed polygon (shoelace; positive if counter-clockwise),
+/// summed relative to the first point: a small loop far from the plane origin keeps its
+/// accuracy (the differences of nearby coordinates are exact). Used for the
+/// degeneracy check of planar loops, which samples curved edges.
 fn polygon_twice_signed_area(pts: &[Vec2]) -> f64 {
     let n = pts.len();
-    (0..n).map(|i| pts[i].perp_dot(pts[(i + 1) % n])).sum()
+    let Some(&o) = pts.first() else {
+        return 0.0;
+    };
+    (0..n)
+        .map(|i| (pts[i] - o).perp_dot(pts[(i + 1) % n] - o))
+        .sum()
+}
+
+/// Orientation of a closed sampled polygon: `1` counter-clockwise, `-1` clockwise.
+///
+/// Decided exactly with [`orient2d`] at the lexicographically smallest vertex, which is
+/// convex for a simple polygon (the same rule as forge-mesh's ring orientation). Only
+/// when that corner is flat (collinear neighbours) does the sign of `area` (the
+/// conditioned shoelace area, non-zero after the degeneracy check) decide. Returns `0`
+/// for fewer than 3 points or when both are zero.
+fn polygon_orientation(pts: &[Vec2], area: f64) -> i32 {
+    let n = pts.len();
+    if n < 3 {
+        return 0;
+    }
+    let mut k = 0;
+    for i in 1..n {
+        let (a, b) = (pts[i], pts[k]);
+        if a.x.total_cmp(&b.x).then(a.y.total_cmp(&b.y)) == Ordering::Less {
+            k = i;
+        }
+    }
+    let o = orient2d(pts[(k + n - 1) % n], pts[k], pts[(k + 1) % n]);
+    let s = if o != 0.0 { o } else { area };
+    if s > 0.0 {
+        1
+    } else if s < 0.0 {
+        -1
+    } else {
+        0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::geom::{Curve3, Line3, Plane};
+    use crate::linalg::{Frame, Vec3};
+    use crate::topo::BodyBuilder;
+
+    /// One planar face (open shell) bounded by the polygon `corners` (plane z = 0, world
+    /// frame, so plane coordinates are the x, y of the corners).
+    fn polygon_face(corners: &[[f64; 2]], sense: bool) -> Body {
+        const F: &str = "poly";
+        let n = corners.len();
+        let p = |i: usize| Vec3::new(corners[i % n][0], corners[i % n][1], 0.0);
+        let side = |i: usize| Provenance::side(F, format!("s{}", i % n)).name();
+        let mut b = BodyBuilder::new();
+        let vs: Vec<_> = (0..n)
+            .map(|i| {
+                b.add_vertex(p(i), Provenance::vertex_at(F, [side(i + n - 1), side(i)]))
+                    .expect("vertex")
+            })
+            .collect();
+        let es: Vec<_> = (0..n)
+            .map(|i| {
+                let line = Line3::through(p(i), p(i + 1)).expect("distinct corners");
+                let len = p(i).distance(p(i + 1));
+                let prov = Provenance::edge_between(F, Provenance::cap_end(F).name(), side(i));
+                b.add_edge(Curve3::Line(line), (0.0, len), vs[i], vs[(i + 1) % n], prov)
+                    .expect("edge")
+            })
+            .collect();
+        let shell = b.add_shell(false);
+        let face = b
+            .add_face(
+                shell,
+                Surface::Plane(Plane::new(Frame::world())),
+                sense,
+                Provenance::cap_end(F),
+            )
+            .expect("face");
+        let uses: Vec<_> = es.iter().map(|&e| (e, true)).collect();
+        b.add_loop(face, &uses).expect("closed loop");
+        b.finish()
+    }
+
+    fn loop_codes(body: &Body) -> Vec<IssueCode> {
+        validate(body)
+            .into_iter()
+            .map(|i| i.code)
+            .filter(|c| matches!(c, IssueCode::LoopOrientation | IssueCode::LoopDegenerate))
+            .collect()
+    }
+
+    /// Deterministic placements about 1e5 mm from the plane origin, with "random"
+    /// fractional parts (a fixed LCG), so the absolute coordinates carry ~1e-11 ulps.
+    fn far_offsets(count: usize) -> Vec<[f64; 2]> {
+        let mut s = 0x2545_f491_4f6c_dd1du64;
+        let mut next = || {
+            s = s
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            (s >> 11) as f64 / (1u64 << 53) as f64
+        };
+        (0..count)
+            .map(|_| [1e5 * (1.0 + next()), -1e5 * (1.0 + next())])
+            .collect()
+    }
+
+    /// Audit finding L1: a 1e-3 mm square far from the plane origin. A plain shoelace in
+    /// absolute plane coordinates cancels catastrophically (terms ~1e10, area 1e-6) and
+    /// gets the orientation wrong or zero for most placements.
+    #[test]
+    fn tiny_square_far_from_the_plane_origin_has_the_right_orientation() {
+        let h = 1e-3;
+        for [x, y] in far_offsets(400) {
+            let ccw = [[x, y], [x + h, y], [x + h, y + h], [x, y + h]];
+            // Outer loop counter-clockwise on a face with sense = true: valid.
+            let ok = polygon_face(&ccw, true);
+            assert_eq!(loop_codes(&ok), [], "square at ({x}, {y})");
+            // The same loop on the flipped face: exactly one orientation error.
+            let flipped = polygon_face(&ccw, false);
+            assert_eq!(
+                loop_codes(&flipped),
+                [IssueCode::LoopOrientation],
+                "square at ({x}, {y})"
+            );
+        }
+    }
+
+    #[test]
+    fn well_formed_polygon_face_validates_cleanly() {
+        let body = polygon_face(&[[0.0, 0.0], [4.0, 0.0], [4.0, 3.0], [0.0, 3.0]], true);
+        let issues = validate(&body);
+        assert!(issues.is_empty(), "{issues:#?}");
+    }
+
+    /// A sliver whose area is non-zero but at most tolerance² is degenerate, as in the
+    /// sketch stage (SPEC §3.1); the old `== 0.0` test let it through.
+    #[test]
+    fn loop_with_area_at_most_tolerance_squared_is_degenerate() {
+        // Area = ½ · 4e-6 · 2.5e-7 = 5e-13 ≤ (1e-6)².
+        let sliver = polygon_face(&[[0.0, 0.0], [4e-6, 0.0], [2e-6, 2.5e-7]], true);
+        let issues = validate(&sliver);
+        let deg: Vec<_> = issues
+            .iter()
+            .filter(|i| i.code == IssueCode::LoopDegenerate)
+            .collect();
+        assert_eq!(deg.len(), 1, "{issues:#?}");
+        let tol = crate::Tolerance::IR_DEFAULT.linear;
+        assert_eq!(deg[0].allowed, Some(tol * tol));
+        assert!(deg[0].measured.is_some_and(|a| a > 0.0 && a <= tol * tol));
+        // Well above tol²: not degenerate (and correctly oriented).
+        let thin = polygon_face(&[[0.0, 0.0], [4e-6, 0.0], [2e-6, 1e-6]], true);
+        assert_eq!(loop_codes(&thin), []);
+    }
+
+    #[test]
+    fn orientation_is_exact_at_the_lexicographic_minimum() {
+        // A clockwise L-shape far from the origin with a reflex corner.
+        let (x, y) = (123_456.789, -98_765.432_1);
+        let cw = [
+            [x, y],
+            [x, y + 2e-3],
+            [x + 1e-3, y + 2e-3],
+            [x + 1e-3, y + 1e-3],
+            [x + 2e-3, y + 1e-3],
+            [x + 2e-3, y],
+        ];
+        let pts: Vec<Vec2> = cw.iter().map(|p| Vec2::new(p[0], p[1])).collect();
+        let area = 0.5 * polygon_twice_signed_area(&pts);
+        assert!(area < 0.0 && (area + 3e-6).abs() < 1e-12, "{area}");
+        assert_eq!(polygon_orientation(&pts, area), -1);
+        let ccw: Vec<Vec2> = pts.iter().rev().copied().collect();
+        assert_eq!(polygon_orientation(&ccw, -area), 1);
+        // A flat corner at the minimum (both neighbours on one ray: a spike) falls back
+        // to the sign of the area.
+        let spike = [
+            Vec2::new(0.0, 0.0),
+            Vec2::new(2.0, 0.0),
+            Vec2::new(2.0, 1.0),
+            Vec2::new(1.0, 0.0),
+        ];
+        let a = 0.5 * polygon_twice_signed_area(&spike);
+        assert!((a - 0.5).abs() < 1e-15, "{a}");
+        assert_eq!(polygon_orientation(&spike, a), 1);
+        assert_eq!(polygon_orientation(&spike, -a), -1);
+    }
 }

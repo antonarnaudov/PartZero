@@ -92,6 +92,8 @@ struct FaceRun {
     name: String,
     surface: forge_core::Surface,
     sense: bool,
+    /// Cone nappe of the face (see `surf::face_nappe_v`).
+    nappe_v: Option<f64>,
     out: FaceOut,
 }
 
@@ -135,7 +137,7 @@ fn run(body: &Body, params: &TessParams) -> Result<Run, MeshError> {
                     detail: format!("edge {name}: coedge without face"),
                 })?;
             views.push(CoedgeView {
-                surf: Surf::new(&f.surface, f.sense),
+                surf: Surf::for_face(body, f),
                 pcurve: c.pcurve.as_ref(),
             });
         }
@@ -180,6 +182,7 @@ fn run(body: &Body, params: &TessParams) -> Result<Run, MeshError> {
             name,
             surface: f.surface.clone(),
             sense: f.sense,
+            nappe_v: surf::face_nappe_v(body, f),
             out,
         });
     }
@@ -252,7 +255,7 @@ pub fn tessellate(body: &Body, params: &TessParams) -> Result<BodyMesh, MeshErro
     let mut triangles = Vec::new();
     let mut face_ranges = Vec::with_capacity(r.faces.len());
     for (fi, fr) in r.faces.iter().enumerate() {
-        let surf = Surf::new(&fr.surface, fr.sense);
+        let surf = Surf::with_nappe(&fr.surface, fr.sense, fr.nappe_v);
         for p in &fr.out.pts {
             let g = p.gid as usize;
             if p.sing != Sing::No || stamp[g] == fi {
@@ -335,7 +338,7 @@ pub fn tessellate_render(body: &Body, params: &TessParams) -> Result<RenderMesh,
     let r = run(body, params)?;
     let mut out = RenderMesh::default();
     for fr in &r.faces {
-        let surf = Surf::new(&fr.surface, fr.sense);
+        let surf = Surf::with_nappe(&fr.surface, fr.sense, fr.nappe_v);
         let start = out.triangles.len();
         let mut local: Vec<u32> = vec![u32::MAX; fr.out.pts.len()];
         for &t in &fr.out.tris {

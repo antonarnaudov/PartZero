@@ -4,7 +4,13 @@ Pure functions over two `aicad.metrics/0` report dicts; no I/O, no OCCT.
 
 Exact:     status, per-feature status, per-feature error code when BOTH codes are semantic,
            region count / loops / outer_curves, body count, faces / edges / face_types /
-           edge_types.  (`valid` is NOT compared — [R-13].)
+           edge_types.  (`valid` is NOT compared between the engines — [R-13].)
+Per report: [R-12] every body of an `ok` feature has `valid: true`. A body reported `ok` with
+           `valid` ≠ true (false, missing, null) is an engine returning geometry its own
+           checker rejected: that is classified POTENTIAL_SILENT_WRONG, whichever engine did it
+           and whatever the other engine reported (ok, a feature error, a rejected document),
+           so it is never MATCH and never only ROBUSTNESS. Checked on each report on its own,
+           before and independently of the pairwise comparison.
 Tolerance: rel(a,b) = |a−b| / max(|a|,|b|); abs(a,b) = |a−b|; s = max(1, diagA, diagB)
            (s = 1 for regions); vectors per component.
              volume              rel ≤ 1e-6 or abs ≤ 1e-9·s³
@@ -16,7 +22,8 @@ Classes:
   ROBUSTNESS              only one engine reported an error / rejected the document, or either
                           engine reported an engine-prefixed internal error (OCCT_*, FORGE_*);
   CODE_MISMATCH           both engines failed the same feature with different semantic codes;
-  POTENTIAL_SILENT_WRONG  both engines reported ok but exact or tolerance fields differ.
+  POTENTIAL_SILENT_WRONG  both engines reported ok but exact or tolerance fields differ, or
+                          either engine reported a body with `valid` ≠ true as ok [R-12].
 A program's class is the most severe of its differences, in the order
 POTENTIAL_SILENT_WRONG > CODE_MISMATCH > ROBUSTNESS > MATCH (the spec does not rank them).
 """
@@ -166,8 +173,22 @@ def compare_bodies(ba: list, bb: list, path: str, cmp: Comparison, la: str, lb: 
             if not close_abs_vec(x.get(k), y.get(k), POS_TOL * s):
                 cmp.add(p, f"{k} {la}={x.get(k)} {lb}={y.get(k)} (allowed ±{POS_TOL * s:.3g} per component)",
                         SILENT_WRONG)
-        if x.get("valid") is not True or y.get("valid") is not True:
-            cmp.notes.append(f"{p}: valid {la}={x.get('valid')} {lb}={y.get('valid')} (not compared, [R-13])")
+
+
+def check_valid_bodies(report: dict, label: str, cmp: Comparison) -> None:
+    """[R-12] on one report: every body of an `ok` feature must have `valid: true`.
+
+    [R-13]: `valid` is not compared between the engines; this holds per report, whatever the
+    other engine reported, so a violation is never hidden behind a status mismatch.
+    """
+    for i, f in enumerate(report.get("features") or []):
+        if not isinstance(f, dict) or f.get("status") != "ok":
+            continue
+        for j, body in enumerate(f.get("bodies") or []):
+            valid = body.get("valid") if isinstance(body, dict) else None
+            if valid is not True:
+                cmp.add(f"features[{i}] {_feature_label(f)}.bodies[{j}]",
+                        f"{label} reports a body with valid={valid} as ok [R-12]", SILENT_WRONG)
 
 
 def compare_features(fa: dict, fb: dict, path: str, cmp: Comparison, la: str, lb: str) -> None:
@@ -195,6 +216,8 @@ def compare_reports(a: dict, b: dict, label_a: str = "a", label_b: str = "b") ->
     """Compare two metrics reports per SPEC §6 [R-11]. By convention A = Forge, B = oracle."""
     cmp = Comparison()
     la, lb = label_a, label_b
+    check_valid_bodies(a, la, cmp)
+    check_valid_bodies(b, lb, cmp)
     rej_a, rej_b = is_rejected(a), is_rejected(b)
     ea = (a.get("error") or {}).get("code")
     eb = (b.get("error") or {}).get("code")

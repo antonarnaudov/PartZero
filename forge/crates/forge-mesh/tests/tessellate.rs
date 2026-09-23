@@ -416,6 +416,27 @@ fn cone_wedge_with_an_apex_vertex_uses_a_singular_jump() {
     assert_converges("cone wedge", &errs, 5.0, 3e-4);
 }
 
+/// Phase 0 audit V1: `gen_s23_00000/00101/00116/00159/00169` (revolves whose profile
+/// touches the axis at a point) failed export with "refinement stopped … estimated
+/// deviation inf". The cone apex vertex's pcurve `v` had rounded a few ulps onto the other
+/// nappe, where `Cone::normal` flips; every normal-angle test next to the apex then
+/// failed and refinement crowded points into the apex. The face's nappe now decides.
+#[test]
+fn cone_apex_vertex_rounded_onto_the_other_nappe_still_meshes() {
+    let (r, h) = (5.0, 12.0);
+    let exact = math::PI * r * r * h / 12.0;
+    for ulps in [0, 1, 2, 8, 64] {
+        let body = common::cone_wedge_apex_rounding(r, h, ulps);
+        let mut errs = Vec::new();
+        for delta in [0.1, 0.01] {
+            let m = mesh(&body, delta);
+            assert_eq!(assert_good(&body, &m, delta), 2, "{ulps} ulps");
+            errs.push((delta, rel(mesh_volume(&m), exact)));
+        }
+        assert_converges(&format!("cone wedge, apex +{ulps} ulps"), &errs, 5.0, 3e-3);
+    }
+}
+
 #[test]
 fn pipe_elbow_torus_face_wrapping_in_v() {
     let (big, r) = (10.0, 3.0);

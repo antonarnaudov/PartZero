@@ -33,14 +33,15 @@ The JSON Schemas and `ir-v0.constants.json` are **read at run time** from `forge
 | Command | What it does | Exit code |
 |---|---|---|
 | `oracle eval FILE [--out R.json] [--self-check] [--step OUT.step]` | Validates FILE (JSON Schema + the `validate.rs` rules), evaluates it, validates the report against `metrics-v0.schema.json`, and prints or writes the report. `--self-check` also prints the gate's findings. | 0 = ok, 1 = a feature failed, **2 = document rejected [R-10]** or usage error, 3 = internal schema violation, 4 = gate findings (only with `--self-check`) |
-| `oracle diff DIR\|FILE [--forge-bin BIN] [--golden-dir D] [--report out.md] [--fail-on-robustness]` | For each program, runs the oracle and `BIN eval FILE --format json`, then classifies per §6. Prints a table and optionally writes a Markdown report. | 1 on any `POTENTIAL_SILENT_WRONG` or `CODE_MISMATCH` (also on `ROBUSTNESS` with the flag) |
+| `oracle diff DIR\|FILE [--forge-bin BIN] [--golden-dir D] [--report out.md] [--fail-on-robustness] [--fail-on-no-reference]` | For each program, runs the oracle and `BIN eval FILE --format json`, then classifies per §6. Prints a table and optionally writes a Markdown report. | 1 on any `POTENTIAL_SILENT_WRONG` or `CODE_MISMATCH` (also on `ROBUSTNESS` / `NO_REFERENCE` with the flags); 2 on a usage error, including a `--forge-bin` that does not exist or a target with no programs |
 | `oracle diff --a A.json --b B.json [--report out.md]` | Compares two reports directly (A = Forge, B = oracle). | same as above |
 | `oracle golden DIR [--out D]` | Writes `<D>/<stem>.metrics.json` for every program in DIR. D defaults to `DIR/../golden`. These files **are committed**. | 4 if a gate fails |
 | `oracle gen [--count 1000] [--seed 0] [--out ../corpus/generated/] [--jobs N] [--with-reports] [--invalid-per-kind 4] [--invalid-out D]` | Generates random valid F0 programs **and** an error corpus in `<out>/invalid/`. See [Generator](#generator). | 1 if a program could not be produced, or the oracle disagrees with an error-corpus expectation |
 
 `oracle diff` details:
 - **Rejection [R-10].** Forge exiting with code 2 means the document was rejected. Both engines rejecting is `MATCH`; only one rejecting is `ROBUSTNESS`.
-- **Missing Forge binary.** If `--forge-bin` is missing or doesn't exist, it warns and compares the oracle against `corpus/golden/*.metrics.json`. This happens in CI until `aicad` exists, and it doubles as an OCCT-drift check.
+- **Golden mode.** Without `--forge-bin`, the oracle is compared against `corpus/golden/*.metrics.json`. This is an OCCT-drift check only; it says nothing about Forge. A program without a golden file is `NO_REFERENCE`.
+- **Missing Forge binary.** A `--forge-bin` that doesn't exist exits 2; there is no fallback to the goldens. CI builds `forge-cli` and runs `oracle diff … --forge-bin ../forge/target/debug/aicad --fail-on-robustness --fail-on-no-reference`.
 - **Crash.** A Forge run that produces no report and doesn't exit 2 counts as `ROBUSTNESS`.
 
 Classification (§6, [R-11]) is the most severe class found in a program, in the order POTENTIAL_SILENT_WRONG > CODE_MISMATCH > ROBUSTNESS > MATCH. The spec does not rank them; this order is the oracle's choice.
@@ -50,13 +51,13 @@ Classification (§6, [R-11]) is the most severe class found in a program, in the
 | `MATCH` | Every rule holds, or both engines rejected the document. |
 | `ROBUSTNESS` | Only one engine errored or rejected; or either engine reported an engine-prefixed internal code (`OCCT_*`, `FORGE_*`). |
 | `CODE_MISMATCH` | Both engines failed the same feature with different **semantic** codes. |
-| `POTENTIAL_SILENT_WRONG` | Both engines reported `ok`, but an exact field or a tolerance field differs. |
+| `POTENTIAL_SILENT_WRONG` | Both engines reported `ok`, but an exact field or a tolerance field differs; or either engine reported a body with `valid` ≠ true (false, missing, null) as `ok` [R-12]. |
 
 §6 arithmetic, implemented exactly in `compare.py`:
 - `rel = |a−b| / max(|a|, |b|)`;
 - `s = max(1, diagA, diagB)`, with `s = 1` for regions;
 - vectors are compared per component;
-- `valid` is **not** compared [R-13].
+- the engines' `valid` values are **not** compared with each other [R-13], but each report must have `valid: true` on every body of an `ok` feature [R-12]; a violation is `POTENTIAL_SILENT_WRONG`.
 
 ## How it evaluates (module map)
 
@@ -164,7 +165,7 @@ Content:
 - **Revolve angles:** 360°, classic values, random, tiny (0.01°–1°) and almost-closed.
 - **Stress cases:** shuffled curve order, directions and ids; suppressed features; second parts; scale ×0.01…×100; far origins; thin walls.
 
-**Error corpus.** Written to `<out>/invalid/`. `invalidgen.py` produces `inv_s<seed>_<kind>_<k>.json`, 70 per seed. Every case has an expected per-feature outcome under the SPEC, and `gen` checks the oracle against it.
+**Error corpus.** Written to `<out>/invalid/`. `invalidgen.py` produces `inv_s<seed>_<kind>_<k>.json`, 82 per seed at the default `--invalid-per-kind 4` (near_touch, crosses_axis, degenerate_loop and rejected always cover every variant). Every case has an expected per-feature outcome under the SPEC, and `gen` checks the oracle against it.
 
 | Kind | Construction | Expected outcome |
 |---|---|---|
@@ -175,6 +176,8 @@ Content:
 | | the same pairs at {1.5, 3, 50}·tol (controls) | `ok` |
 | `crosses_axis` | δ ∈ {2·tol, 10·tol, 1e-3, 0.5} past the axis, with and without an extra valid region | `REVOLVE_CROSSES_AXIS` |
 | | δ = 0.5·tol, or regions on opposite sides (controls) | `ok` |
+| `degenerate_loop` | triangle (0,0), (2·tol,0), (tol,tol) of area exactly tol² [R-5]: alone, next to a valid region, or as a hole in one; under the 8 symmetries of the square, either direction | `SKETCH_DEGENERATE_LOOP`; the extrude `DEPENDENCY_FAILED` |
+| | the same with apex (tol, (1+1e-9)·tol), area 1.000000001·tol² (control) | `ok` |
 | `dependency` | a broken sketch with two consumers, followed by independent features | `DEPENDENCY_FAILED` for the consumers; the rest `ok` |
 | `suppressed` | the consumed sketch is suppressed | `SKETCH_SUPPRESSED` |
 | `rejected` | `RESERVED_NAME`, cross-part `DUPLICATE_NAME`, an unknown curve field, `INCONSISTENT_ARC`, a line of length exactly tol, `INVALID_ANGLE`, `INVALID_PLANE`, `UNRESOLVED_SKETCH` | rejected, exit 2 |
@@ -216,14 +219,16 @@ Diff of Forge (`forge/target/debug/aicad`) against the oracle, after the horn-to
 
 The error corpus includes 24 rejected documents, where both engines exit 2.
 
+The `degenerate_loop` kind came after these runs. With the current tree (debug `aicad`, 2026-09-23), its 120 cases of seeds 0–9 give 112 MATCH and 8 ROBUSTNESS: every failure is the 1.000000001·tol² control, which Forge's sketch accepts and its body validation (`forge-core/src/topo/validate.rs`) then rejects as `LOOP_DEGENERATE`. That is an open Forge regression ([spike 01](../docs/spikes/01-forge-f0-oracle.md)); until it is fixed, CI's error-corpus diff fails on `inv_s1_degenerate_loop_001`.
+
 Regression tests for the diff findings are in `tests/test_forge_diff_regressions.py`.
 
 ## Known limitations
 
-- **Validity is BRepCheck, not a self-intersection check.** It is not compared anyway [R-13].
+- **Validity is BRepCheck, not a self-intersection check.** It is not compared between the engines [R-13]; each report is only held to `valid: true` on its own `ok` bodies [R-12].
 - **Small float budget.** Exact-geometry numbers still carry one: volume ≤ 3e-11, area ≤ 1e-12, centroid ~1e-13·s relative. Golden files are not bit-reproducible across platforms or OCCT versions, so diff with tolerances.
 - **Gate false alarms.** The 2D predicates are plain doubles. The gate can fire on legal edge cases: a line within 1e-9 rad of parallel with length/radius > ~10, where §4.4 says "cylinder" but no cylinder radius is specified. Such a case shows up as ROBUSTNESS, never as a silent pass.
-- **Unreachable codes.** `SKETCH_DEGENERATE_LOOP` is preceded by `SKETCH_CURVES_CROSS` for every zero-area loop. `SKETCH_NO_REGIONS` is defensive only.
+- **Reachability of `SKETCH_DEGENERATE_LOOP`.** A thin loop whose apex lies within tol of another curve fails earlier, with `SKETCH_CURVES_CROSS`. A loop whose sides are all ~tol long reaches [R-5]: the error corpus's `degenerate_loop` kind uses the triangle (0,0), (2·tol,0), (tol,tol), whose area is exactly tol² in floating point, and a control just above it. `SKETCH_NO_REGIONS` is defensive only.
 
 ## Open spec points
 

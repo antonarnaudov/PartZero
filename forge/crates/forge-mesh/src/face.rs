@@ -1489,7 +1489,7 @@ impl Mesher<'_, '_> {
 
 /// Mesh one face.
 pub(crate) fn mesh_face(ctx: &FaceCtx, global: &mut Global) -> Result<FaceOut, MeshError> {
-    let surf = Surf::new(&ctx.face.surface, ctx.face.sense);
+    let surf = Surf::for_face(ctx.body, ctx.face);
     let domain = build_domain(ctx, &surf, global)?;
     let swap = domain.swap;
 

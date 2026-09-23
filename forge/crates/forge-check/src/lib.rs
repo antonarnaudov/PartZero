@@ -5,26 +5,54 @@
 //!   `mass` module docs for the periodic-domain formulation).
 //! - [`bbox`]: the tight axis-aligned box from analytic edge extremes, interior critical
 //!   points of spheres and tori, and surface singular points.
-//! - [`validate`]: `forge_core::topo::validate` plus closed shells, outward orientation
-//!   (positive signed volume) and parameter-domain consistency.
+//! - [`validate`]: `forge_core::topo::validate` plus closed shells, parameter-domain
+//!   consistency, a positive domain area per face, per-shell orientation (a shell inside
+//!   an even number of other shells encloses positive volume, inside an odd number
+//!   negative: decided by point-in-shell ray casting, see the `nesting` module) and a
+//!   positive total.
 //! - [`body_metrics`]: the `aicad.metrics/0` numbers of one body (SPEC §5).
 //!
 //! Nothing here uses a tessellation. Failures are structured [`CheckError`]s with stable
-//! codes; a metric is never silently approximated.
+//! codes; a metric is never silently approximated. Messages name entities by provenance
+//! (or by shell ordinal, [`forge_core::topo::EntityNames`]), never by arena id: ids never
+//! leave the process.
+//!
+//! # Tolerances
+//! Every threshold is a named constant: [`PERIOD_EPS`] and [`SINGULAR_LINE_EPS`] for
+//! parameter-space joins, [`GAP_TOLERANCE_FACTOR`] for 3D gap segments,
+//! [`ZERO_VOLUME_REL`] for empty shells, [`ANGULAR_PANEL`] for the quadrature,
+//! [`NESTING_GRAZING_COS`] for the shell-nesting rays.
 
 mod bbox;
 mod domain;
 mod mass;
+mod nesting;
 
 use std::collections::BTreeMap;
 
 use forge_core::linalg::{Point3, Vec3};
-use forge_core::topo::{Body, EntityRef, Severity, validate as topo_validate};
+use forge_core::topo::{
+    Body, EntityNames, FaceId, Severity, entity_name, shell_name, validate as topo_validate,
+};
 use forge_ir::BodyMetrics;
 use thiserror::Error;
 
-pub use domain::PERIOD_EPS;
+pub use domain::{PERIOD_EPS, SINGULAR_LINE_EPS};
 pub use mass::ANGULAR_PANEL;
+pub use nesting::{NESTING_GRAZING_COS, RAY_DIRECTIONS};
+
+/// A gap segment between consecutive pcurves may span at most this many times the
+/// largest vertex or edge tolerance of the body in 3D: a vertex is within its tolerance
+/// of each curve end, so two ends of the same vertex may be two tolerances apart; the
+/// factor 4 leaves room for the curve-end rounding on top.
+pub const GAP_TOLERANCE_FACTOR: f64 = 4.0;
+
+/// A shell encloses no volume when `|V| ≤ ZERO_VOLUME_REL · A^{3/2}` (`A` its area,
+/// clamped below at 1 mm²). `A^{3/2}` is the volume scale of the area (a ball of area `A`
+/// holds `≈ 0.094·A^{3/2}`), and the boundary quadrature is accurate to `~1e-14`
+/// relative, so `1e-12` separates a real (if thin) solid from a sheet whose two sides
+/// cancel.
+pub const ZERO_VOLUME_REL: f64 = 1e-12;
 
 /// A check could not be carried out on a body.
 #[derive(Debug, Clone, PartialEq, Error)]
@@ -57,6 +85,20 @@ pub enum CheckError {
         /// Provenance name of the face.
         face: String,
     },
+    /// A loop passes through a singular point (pole, apex) between pcurves that both run
+    /// along the singular line, so the side of the domain there cannot be decided.
+    #[error("face {face} meets a singular line along its pcurves; the domain side is ambiguous")]
+    AmbiguousSingularJoin {
+        /// Provenance name of the face.
+        face: String,
+    },
+    /// Whether a shell lies inside another could not be decided: the point-in-shell rays
+    /// were ill-conditioned or disagreed evenly (see the `nesting` module).
+    #[error("cannot decide whether {shell} lies inside another shell")]
+    AmbiguousNesting {
+        /// Name of the shell whose nesting is undecided.
+        shell: String,
+    },
     /// A geometry type the check does not support yet.
     #[error("unsupported: {what}")]
     Unsupported {
@@ -83,6 +125,8 @@ impl CheckError {
             CheckError::Dangling { .. } => "FORGE_DANGLING_REFERENCE",
             CheckError::OpenBoundary { .. } => "FORGE_OPEN_PARAMETER_BOUNDARY",
             CheckError::UnboundedDomain { .. } => "FORGE_UNBOUNDED_DOMAIN",
+            CheckError::AmbiguousSingularJoin { .. } => "FORGE_AMBIGUOUS_SINGULAR_JOIN",
+            CheckError::AmbiguousNesting { .. } => "FORGE_AMBIGUOUS_SHELL_NESTING",
             CheckError::Unsupported { .. } => "FORGE_UNSUPPORTED",
             CheckError::Empty => "FORGE_EMPTY_BODY",
             CheckError::NonFinite { .. } => "FORGE_NON_FINITE",
@@ -101,8 +145,8 @@ pub struct MassProps {
     pub centroid: [f64; 3],
 }
 
-/// Largest distance a pcurve gap may span in 3D: a few times the largest vertex or edge
-/// tolerance of the body.
+/// Largest distance a pcurve gap may span in 3D: [`GAP_TOLERANCE_FACTOR`] times the
+/// largest vertex or edge tolerance of the body.
 fn gap_tolerance(body: &Body) -> f64 {
     let t = body
         .vertices()
@@ -110,16 +154,25 @@ fn gap_tolerance(body: &Body) -> f64 {
         .map(|v| v.tolerance)
         .chain(body.edges().values().map(|e| e.tolerance))
         .fold(forge_core::tolerance::IR_LINEAR_TOLERANCE, f64::max);
-    4.0 * t
+    GAP_TOLERANCE_FACTOR * t
 }
 
-/// Per-shell `[area, volume, Mx, My, Mz]` about `c`.
-fn shell_integrals(body: &Body, c: Point3) -> Result<Vec<[f64; 5]>, CheckError> {
+/// The integrals of one shell about a reference point.
+struct ShellIntegrals {
+    /// `[area, volume, Mx, My, Mz]` summed over the shell's faces.
+    total: [f64; 5],
+    /// Each face's `(id, domain area ∬|n| du dv)` (signed by the domain orientation).
+    face_areas: Vec<(FaceId, f64)>,
+}
+
+/// Per-shell integrals about `c`.
+fn shell_integrals(body: &Body, c: Point3) -> Result<Vec<ShellIntegrals>, CheckError> {
     let gap_tol = gap_tolerance(body);
     let mut out = Vec::new();
     for &sid in body.shell_ids() {
         let shell = body.shell(sid).ok_or(CheckError::Empty)?;
         let mut acc = [0.0; 5];
+        let mut face_areas = Vec::with_capacity(shell.faces.len());
         for &fid in &shell.faces {
             let face = body.face(fid).ok_or(CheckError::Empty)?;
             let dom = domain::face_domain(body, face, gap_tol)?;
@@ -134,8 +187,12 @@ fn shell_integrals(body: &Body, c: Point3) -> Result<Vec<[f64; 5]>, CheckError> 
             for i in 0..5 {
                 acc[i] += q[i];
             }
+            face_areas.push((fid, q[0]));
         }
-        out.push(acc);
+        out.push(ShellIntegrals {
+            total: acc,
+            face_areas,
+        });
     }
     Ok(out)
 }
@@ -144,13 +201,29 @@ fn shell_integrals(body: &Body, c: Point3) -> Result<Vec<[f64; 5]>, CheckError> 
 /// integrals `[area, volume, Mx, My, Mz]` about the box centre.
 struct Analysis {
     aabb: bbox::Aabb,
-    shells: Vec<[f64; 5]>,
+    shells: Vec<ShellIntegrals>,
+    /// Per-shell tight boxes, only for bodies with several shells (they bound the
+    /// nesting rays and exclude shells whose box does not hold the point).
+    shell_boxes: Vec<bbox::Aabb>,
 }
 
 fn analyze(body: &Body) -> Result<Analysis, CheckError> {
-    let aabb = bbox::body_box(body, gap_tolerance(body))?;
+    let gap_tol = gap_tolerance(body);
+    let aabb = bbox::body_box(body, gap_tol)?;
     let shells = shell_integrals(body, aabb.center())?;
-    Ok(Analysis { aabb, shells })
+    let shell_boxes = if body.shell_ids().len() > 1 {
+        body.shell_ids()
+            .iter()
+            .map(|&sid| bbox::shell_box(body, sid, gap_tol))
+            .collect::<Result<_, _>>()?
+    } else {
+        Vec::new()
+    };
+    Ok(Analysis {
+        aabb,
+        shells,
+        shell_boxes,
+    })
 }
 
 impl Analysis {
@@ -158,7 +231,7 @@ impl Analysis {
         let c = self.aabb.center();
         let mut t = [0.0; 5];
         for s in &self.shells {
-            for (acc, x) in t.iter_mut().zip(s) {
+            for (acc, x) in t.iter_mut().zip(&s.total) {
                 *acc += x;
             }
         }
@@ -214,30 +287,21 @@ impl std::fmt::Display for Issue {
     }
 }
 
-fn entity_name(body: &Body, e: EntityRef) -> Option<String> {
-    match e {
-        EntityRef::Face(id) => body.face(id).map(|f| f.provenance.name()),
-        EntityRef::Edge(id) => body.edge(id).map(|x| x.provenance.name()),
-        EntityRef::Vertex(id) => body.vertex(id).map(|x| x.provenance.name()),
-        EntityRef::Loop(id) => body
-            .loop_(id)
-            .and_then(|l| body.face(l.face))
-            .map(|f| format!("loop of {}", f.provenance.name())),
-        EntityRef::Coedge(id) => body
-            .coedge(id)
-            .and_then(|c| body.edge(c.edge))
-            .map(|e| format!("coedge of {}", e.provenance.name())),
-        EntityRef::Shell(id) => Some(format!("{id:?}")),
-        EntityRef::Body => None,
-    }
-}
-
 /// Validate a body: `forge_core::topo::validate`, plus
 /// - every shell is declared closed (`SHELL_NOT_CLOSED`);
 /// - every face's parameter domain can be reconstructed from its pcurves
 ///   (`FORGE_*` codes of [`CheckError`]);
-/// - every shell encloses non-zero volume (`SHELL_ZERO_VOLUME`) and the body's signed
-///   volume is positive, i.e. faces point outwards (`NEGATIVE_VOLUME`).
+/// - every face's domain has a positive area `∬|n| du dv`, signed by the orientation the
+///   face's `sense` gives its loops (`FORGE_FACE_AREA_NOT_POSITIVE`: an inverted or
+///   collapsed domain);
+/// - every shell encloses non-zero volume (`SHELL_ZERO_VOLUME`); in a body with several
+///   shells, a shell that lies inside an odd number of other shells is a cavity and must
+///   enclose negative volume, every other shell (a lump, or an island inside a cavity)
+///   positive volume (`FORGE_SHELL_ORIENTATION`). Containment is decided by point-in-shell
+///   ray casting on the exact geometry, not by boxes: a lump in the hole of a ring lies in
+///   the ring's box but outside the ring (`FORGE_AMBIGUOUS_SHELL_NESTING` if the rays
+///   cannot decide);
+/// - the body's signed volume is positive, i.e. faces point outwards (`NEGATIVE_VOLUME`).
 ///
 /// Issues are returned in a deterministic order; the body is valid when no issue has
 /// [`Severity::Error`].
@@ -262,13 +326,17 @@ fn error_issue(code: &str, entity: Option<String>, message: String) -> Issue {
 
 /// `forge_core` validation plus the closed-shell requirement.
 fn structural_issues(body: &Body) -> Vec<Issue> {
-    let mut out: Vec<Issue> = topo_validate(body)
+    let topo = topo_validate(body);
+    let names = (!topo.is_empty()).then(|| EntityNames::new(body));
+    let mut out: Vec<Issue> = topo
         .into_iter()
         .map(|i| Issue {
             code: i.code.as_str().to_string(),
             severity: i.severity,
             entity: entity_name(body, i.entity),
-            message: i.message,
+            message: names
+                .as_ref()
+                .map_or_else(|| i.message.clone(), |n| n.rewrite(&i.message)),
         })
         .collect();
     for &sid in body.shell_ids() {
@@ -277,7 +345,7 @@ fn structural_issues(body: &Body) -> Vec<Issue> {
         {
             out.push(error_issue(
                 "SHELL_NOT_CLOSED",
-                Some(format!("{sid:?}")),
+                Some(shell_name(body, sid)),
                 "a solid body needs closed shells".into(),
             ));
         }
@@ -285,23 +353,101 @@ fn structural_issues(body: &Body) -> Vec<Issue> {
     out
 }
 
-/// Domain reconstruction and orientation findings.
+/// How many other shells contain each shell (see the `nesting` module). `signs` are the
+/// signs of the shells' volumes, which tell which side of each shell its region is.
+fn nesting_depths(body: &Body, a: &Analysis, signs: &[f64]) -> Result<Vec<usize>, CheckError> {
+    let tol = gap_tolerance(body);
+    let ids = body.shell_ids();
+    let shells = ids
+        .iter()
+        .map(|&sid| nesting::ShellFaces::new(body, sid, tol))
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut depths = vec![0; ids.len()];
+    for (i, si) in shells.iter().enumerate() {
+        let p = si.sample_point()?;
+        for (j, sj) in shells.iter().enumerate() {
+            if j != i
+                && nesting::inside(sj, signs[j], &a.shell_boxes[j], p, tol, &|| {
+                    shell_name(body, ids[i])
+                })?
+            {
+                depths[i] += 1;
+            }
+        }
+    }
+    Ok(depths)
+}
+
+/// Domain, orientation and volume findings.
 fn analysis_issues(body: &Body, analysis: Result<&Analysis, &CheckError>) -> Vec<Issue> {
     let a = match analysis {
         Ok(a) => a,
         Err(e) => return vec![error_issue(e.code(), None, e.to_string())],
     };
     let mut out = Vec::new();
+    // Per face: a domain whose Green's-theorem area is not positive is inverted (its
+    // loops run against the orientation its sense implies) or empty.
+    for s in &a.shells {
+        for &(fid, area) in &s.face_areas {
+            if area.partial_cmp(&0.0) != Some(std::cmp::Ordering::Greater) {
+                out.push(error_issue(
+                    "FORGE_FACE_AREA_NOT_POSITIVE",
+                    body.face(fid).map(|f| f.provenance.name()),
+                    format!(
+                        "the face's parameter domain has area {area:e} mm²: its loops are \
+                         inverted or enclose nothing"
+                    ),
+                ));
+            }
+        }
+    }
     let mut total = 0.0;
-    for (s, sid) in a.shells.iter().zip(body.shell_ids()) {
-        total += s[1];
-        // Zero-volume shells: |V| negligible against area^(3/2).
-        if s[1].abs() <= 1e-12 * s[0].max(1.0) * s[0].max(1.0).sqrt() {
+    let mut signs = Vec::with_capacity(a.shells.len());
+    for (s, &sid) in a.shells.iter().zip(body.shell_ids()) {
+        let [area, volume, ..] = s.total;
+        total += volume;
+        let scale = area.max(1.0) * area.max(1.0).sqrt();
+        if volume.abs() <= ZERO_VOLUME_REL * scale {
             out.push(error_issue(
                 "SHELL_ZERO_VOLUME",
-                Some(format!("{sid:?}")),
-                format!("shell encloses no volume ({:e} mm³)", s[1]),
+                Some(shell_name(body, sid)),
+                format!("shell encloses no volume ({volume:e} mm³)"),
             ));
+        }
+        signs.push(volume.signum());
+    }
+    // Per-shell orientation, once every shell has a side (a zero-volume shell is
+    // already an error and bounds no region).
+    let sided = !out.iter().any(|i| i.code == "SHELL_ZERO_VOLUME");
+    if a.shells.len() > 1 && sided {
+        match nesting_depths(body, a, &signs) {
+            Ok(depths) => {
+                for ((s, &sid), depth) in a.shells.iter().zip(body.shell_ids()).zip(depths) {
+                    let volume = s.total[1];
+                    let cavity = depth % 2 == 1;
+                    if cavity && volume > 0.0 {
+                        out.push(error_issue(
+                            "FORGE_SHELL_ORIENTATION",
+                            Some(shell_name(body, sid)),
+                            format!(
+                                "cavity shell (inside {depth} other shell(s)) encloses \
+                                 positive volume ({volume:e} mm³): its faces point into the \
+                                 material"
+                            ),
+                        ));
+                    } else if !cavity && volume < 0.0 {
+                        out.push(error_issue(
+                            "FORGE_SHELL_ORIENTATION",
+                            Some(shell_name(body, sid)),
+                            format!(
+                                "outer shell (inside {depth} other shell(s)) encloses \
+                                 negative volume ({volume:e} mm³): its faces point inwards"
+                            ),
+                        ));
+                    }
+                }
+            }
+            Err(e) => out.push(error_issue(e.code(), None, e.to_string())),
         }
     }
     if total.partial_cmp(&0.0) != Some(std::cmp::Ordering::Greater) {

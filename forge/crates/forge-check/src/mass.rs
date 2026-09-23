@@ -38,7 +38,7 @@ use forge_core::linalg::{Point3, Vec2};
 use forge_core::math;
 
 use crate::CheckError;
-use crate::domain::{FaceDomain, singular_v};
+use crate::domain::FaceDomain;
 
 /// Maximum panel width (radians) for angular coordinates.
 pub const ANGULAR_PANEL: f64 = math::PI / 8.0;
@@ -174,25 +174,10 @@ pub(crate) fn face_integrals(
         return Ok(total);
     }
     // v-form.
-    let w = dom.winding_u();
-    let v_star = if w == 0 {
+    let v_star = if dom.winding_u() == 0 {
         first.y
     } else {
-        let (lo, hi) = dom.v_extent();
-        let eps = 1e-9 * (1.0 + lo.abs().max(hi.abs()));
-        let sing = singular_v(s);
-        let pick = if w > 0 {
-            sing.iter()
-                .copied()
-                .filter(|x| *x >= hi - eps)
-                .reduce(f64::min)
-        } else {
-            sing.iter()
-                .copied()
-                .filter(|x| *x <= lo + eps)
-                .reduce(f64::max)
-        };
-        pick.ok_or(CheckError::UnboundedDomain {
+        dom.band_singular_v().ok_or(CheckError::UnboundedDomain {
             face: String::new(),
         })?
     };

@@ -15,6 +15,18 @@
 //! The lifted loop's net displacement is a whole number of periods: a loop that wraps
 //! around a periodic direction (a ring on a cylinder) is **non-contractible**.
 //!
+//! # Joins on a singular line
+//! Where a loop passes through a singular point (a B-rep vertex at a pole or apex), the
+//! outgoing pcurve may start at any `u`: the whole iso-line is one 3D point. The period
+//! shift there is **not** the nearest one. The gap segment runs along the singular line in
+//! the direction that keeps the domain on the correct side (the rule of forge-mesh's
+//! `jump_sign`/`continuation_shift`): with the domain below the line (the path arrived
+//! from smaller `v`) it runs towards −u, above the line towards +u, both times `σ`; its
+//! length is brought into `(0, P]`. A join is "no jump" only when the two `u` values are
+//! bitwise equal modulo whole periods: a revolve of `2π − ε` has a face bounded by two
+//! meridians `ε` apart whose domain is `[0, 2π − ε]`, not the `ε`-sliver between them
+//! (Phase 0 audit H1).
+//!
 //! # Orientation
 //! Loops run with the face on their left seen from outside. In `(u, v)` the domain is
 //! therefore on the left of the path when `sense` is true (`S_u × S_v` is the outward
@@ -28,8 +40,17 @@ use forge_core::topo::{Body, Face};
 use crate::CheckError;
 
 /// Two pcurve end points are a whole number of periods apart when the residual is at most
-/// this (radians). Pcurves built by Forge meet exactly; this only absorbs rounding.
+/// this (radians, relative to `1 + |Δ|`). Pcurves built by Forge meet exactly; this only
+/// absorbs rounding. Also the parameter distance below which two regular pcurve ends are
+/// the same point (relative to `1 + |uv|`), so no gap segment is needed.
 pub const PERIOD_EPS: f64 = 1e-9;
+
+/// A parameter value `v` lies on the singular line `v = v_s` when `|v − v_s|` is at most
+/// this, relative to `1 + |v_s|` (radians, or mm for a cone's axial parameter). Singular
+/// `v` values come from `acos`/`atan2`/`−R/tan α` and pcurve ends from other formulas,
+/// so they agree only to rounding; a point this close to a singular line is, in 3D,
+/// within `radius × 1e-9` of the singular point, far below any vertex tolerance.
+pub const SINGULAR_LINE_EPS: f64 = 1e-9;
 
 /// A piece of a lifted boundary path.
 #[derive(Clone, Debug)]
@@ -167,6 +188,38 @@ impl<'a> FaceDomain<'a> {
         }
         (lo, hi)
     }
+    /// The singular line that closes a band domain (`winding_u() != 0`): for a positive
+    /// winding the domain extends from its boundary up to the first singular line at or
+    /// above the highest boundary point, for a negative winding down to the last one at or
+    /// below the lowest. `None` for a contractible domain or a band that no singular line
+    /// closes (an unbounded domain). Periodic `v` (horn torus) considers every period.
+    pub fn band_singular_v(&self) -> Option<f64> {
+        let w = self.winding_u();
+        if w == 0 {
+            return None;
+        }
+        let (lo, hi) = self.v_extent();
+        let eps = SINGULAR_LINE_EPS * (1.0 + lo.abs().max(hi.abs()));
+        let pv = self.surface.periodicity().1;
+        let reps = singular_v(self.surface).into_iter().filter_map(|vs| {
+            if w > 0 {
+                match pv {
+                    Some(p) => Some(vs + ((hi - eps - vs) / p).ceil() * p),
+                    None => (vs >= hi - eps).then_some(vs),
+                }
+            } else {
+                match pv {
+                    Some(p) => Some(vs + ((lo + eps - vs) / p).floor() * p),
+                    None => (vs <= lo + eps).then_some(vs),
+                }
+            }
+        });
+        if w > 0 {
+            reps.reduce(f64::min)
+        } else {
+            reps.reduce(f64::max)
+        }
+    }
     /// Smallest and largest `u` over the piece end points.
     pub fn u_extent(&self) -> (f64, f64) {
         let mut lo = f64::INFINITY;
@@ -210,6 +263,7 @@ pub(crate) fn face_domain<'a>(
     let fname = || face.provenance.name();
     let (pu, pv) = face.surface.periodicity();
     let periods = [pu, pv];
+    let sigma = if face.sense { 1.0 } else { -1.0 };
     let mut loops = Vec::with_capacity(face.loops.len());
     for &lid in &face.loops {
         let lp = body
@@ -237,36 +291,49 @@ pub(crate) fn face_domain<'a>(
                 shift: Vec2::zero(),
             });
         }
-        let first_start = raw[0].start();
+        let Some(first) = raw.first().cloned() else {
+            return Err(CheckError::Dangling { face: fname() });
+        };
+        let join = |prev: &Piece<'a>, next: &Piece<'a>, pe: Vec2, st: Vec2| {
+            join_shift(
+                &face.surface,
+                sigma,
+                periods,
+                (prev, pe),
+                (next, st),
+                &fname,
+            )
+        };
         let mut pieces: Vec<Piece<'a>> = Vec::with_capacity(raw.len() + 2);
-        let mut prev_end: Option<Vec2> = None;
         for mut p in raw {
-            let st = p.start();
-            if let Some(pe) = prev_end {
-                let shift = period_shift(pe - st, periods);
+            if let Some(prev) = pieces.last() {
+                let pe = prev.end();
+                let (shift, singular) = join(prev, &p, pe, p.start())?;
                 p.shift = shift;
-                let st = st + shift;
-                if !same_point(pe, st) {
-                    check_gap(&face.surface, pe, st, gap_tol, &fname)?;
-                    pieces.push(Piece {
-                        kind: PieceKind::Segment { a: pe, b: st },
-                        shift: Vec2::zero(),
-                    });
-                }
+                push_gap(
+                    &mut pieces,
+                    &face.surface,
+                    pe,
+                    p.start(),
+                    singular,
+                    gap_tol,
+                    &fname,
+                )?;
             }
-            prev_end = Some(p.end());
             pieces.push(p);
         }
-        let pe = prev_end.expect("non-empty loop");
-        let wrap = period_shift(pe - first_start, periods);
-        let closing = first_start + wrap;
-        if !same_point(pe, closing) {
-            check_gap(&face.surface, pe, closing, gap_tol, &fname)?;
-            pieces.push(Piece {
-                kind: PieceKind::Segment { a: pe, b: closing },
-                shift: Vec2::zero(),
-            });
-        }
+        let last = pieces.last().expect("non-empty loop").clone();
+        let pe = last.end();
+        let (wrap, singular) = join(&last, &first, pe, first.start())?;
+        push_gap(
+            &mut pieces,
+            &face.surface,
+            pe,
+            first.start() + wrap,
+            singular,
+            gap_tol,
+            &fname,
+        )?;
         let k = |w: f64, per: Option<f64>| per.map_or(0, |t| (w / t).round() as i64);
         loops.push(LoopPath {
             pieces,
@@ -275,9 +342,98 @@ pub(crate) fn face_domain<'a>(
     }
     Ok(FaceDomain {
         surface: &face.surface,
-        sigma: if face.sense { 1.0 } else { -1.0 },
+        sigma,
         loops,
     })
+}
+
+/// Add the gap segment `a → b` if the join is not exact: at a singular join any
+/// difference counts (bitwise), elsewhere differences below [`PERIOD_EPS`] are rounding.
+fn push_gap<'a>(
+    pieces: &mut Vec<Piece<'a>>,
+    surface: &Surface,
+    a: Vec2,
+    b: Vec2,
+    singular: bool,
+    gap_tol: f64,
+    face: &dyn Fn() -> String,
+) -> Result<(), CheckError> {
+    let exact = a.x.to_bits() == b.x.to_bits() && a.y.to_bits() == b.y.to_bits();
+    if exact || (!singular && same_point(a, b)) {
+        return Ok(());
+    }
+    check_gap(surface, a, b, gap_tol, face)?;
+    pieces.push(Piece {
+        kind: PieceKind::Segment { a, b },
+        shift: Vec2::zero(),
+    });
+    Ok(())
+}
+
+/// The whole-period shift of the next piece at a join from `pe` (end of `prev`) to `st`
+/// (start of `next`, unshifted), and whether the join lies on a singular line (see the
+/// module docs).
+fn join_shift(
+    surface: &Surface,
+    sigma: f64,
+    periods: [Option<f64>; 2],
+    (prev, pe): (&Piece<'_>, Vec2),
+    (next, st): (&Piece<'_>, Vec2),
+    face: &dyn Fn() -> String,
+) -> Result<(Vec2, bool), CheckError> {
+    let (Some(pu), Some(vs)) = (periods[0], singular_line_at(surface, pe.y)) else {
+        return Ok((period_shift(pe - st, periods), false));
+    };
+    if singular_line_at(surface, st.y).is_none() {
+        // Only one end on the singular line: an inconsistent join, which the gap check
+        // then reports as an open boundary.
+        return Ok((period_shift(pe - st, periods), false));
+    }
+    let sy = periods[1].map_or(0.0, |p| ((pe.y - st.y) / p).round() * p);
+    // Which side of the line the domain lies on: where the arriving piece comes from,
+    // or else where the departing one goes (both in lifted coordinates).
+    let side = side_of(prev, vs, 0.0)
+        .or_else(|| side_of(next, vs, sy))
+        .ok_or_else(|| CheckError::AmbiguousSingularJoin { face: face() })?;
+    // Domain below the line: run towards −u; above: towards +u (times σ).
+    let sign = side * sigma;
+    let mut k = ((pe.x - st.x) / pu).round();
+    let du = st.x + k * pu - pe.x;
+    if du != 0.0 {
+        if sign > 0.0 && du < 0.0 {
+            k += 1.0;
+        } else if sign < 0.0 && du > 0.0 {
+            k -= 1.0;
+        }
+    }
+    Ok((Vec2::new(k * pu, sy), true))
+}
+
+/// The representative `v_s` (in the period of `v`) of the singular line through `v`.
+fn singular_line_at(surface: &Surface, v: f64) -> Option<f64> {
+    let pv = surface.periodicity().1;
+    singular_v(surface).into_iter().find_map(|vs| {
+        let vs = match pv {
+            Some(p) => vs + ((v - vs) / p).round() * p,
+            None => vs,
+        };
+        ((v - vs).abs() <= SINGULAR_LINE_EPS * (1.0 + vs.abs())).then_some(vs)
+    })
+}
+
+/// `+1` if the middle of `piece` (its `v` plus `dv`) lies above the line `v = vs`, `−1`
+/// below, `None` on it.
+fn side_of(piece: &Piece<'_>, vs: f64, dv: f64) -> Option<f64> {
+    let (t0, t1) = piece.range();
+    let v = piece.eval(0.5 * (t0 + t1)).0.y + dv;
+    let eps = SINGULAR_LINE_EPS * (1.0 + vs.abs());
+    if v > vs + eps {
+        Some(1.0)
+    } else if v < vs - eps {
+        Some(-1.0)
+    } else {
+        None
+    }
 }
 
 fn same_point(a: Vec2, b: Vec2) -> bool {
@@ -325,43 +481,75 @@ fn check_gap(
 }
 
 /// `true` if the lifted domain reaches the singular line `v = vs` (a boundary point
-/// lies on it, or the domain extends towards it without a boundary).
+/// lies on it, or the domain is a band that this line closes).
 pub(crate) fn touches_singular(dom: &FaceDomain<'_>, vs: f64) -> bool {
     if dom.is_loopless() {
         return true;
     }
-    let eps = 1e-9 * (1.0 + vs.abs());
+    let eps = SINGULAR_LINE_EPS * (1.0 + vs.abs());
     if dom
         .pieces()
         .any(|p| (p.start().y - vs).abs() <= eps || (p.end().y - vs).abs() <= eps)
     {
         return true;
     }
-    let w = dom.winding_u();
-    let (lo, hi) = dom.v_extent();
-    (w > 0 && vs >= hi - eps) || (w < 0 && vs <= lo + eps)
+    let pv = dom.surface.periodicity().1;
+    dom.band_singular_v().is_some_and(|b| {
+        let d = match pv {
+            Some(p) => vs - b - ((vs - b) / p).round() * p,
+            None => vs - b,
+        };
+        d.abs() <= eps
+    })
 }
 
 /// Point-in-face test in `(u, v)` (see the module docs of `bbox` for its use). Points on
 /// the boundary may be classified either way.
+///
+/// A band closed by a singular line ([`FaceDomain::band_singular_v`]) is the region
+/// between its boundary and that line: points beyond the line are outside even though no
+/// boundary piece separates them (a spindle-torus patch or a horn torus ends there; the
+/// rest of the surface's parameter range is another sheet or the other side of the horn),
+/// and the ray towards the line must not wrap around a periodic `v` through it.
 pub(crate) fn contains(dom: &FaceDomain<'_>, u: f64, v: f64) -> bool {
     if dom.is_loopless() {
         let (_, (v0, v1)) = dom.surface.domain();
         let pv = dom.surface.periodicity().1;
-        return pv.is_some() || (v >= v0 - 1e-12 && v <= v1 + 1e-12);
+        let eps = SINGULAR_LINE_EPS * (1.0 + v.abs());
+        return pv.is_some() || (v >= v0 - eps && v <= v1 + eps);
     }
     let (pu, pv) = dom.surface.periodicity();
     if dom.wraps_v() && !dom.wraps_u() {
         // Cast towards +u; the nearest crossing's direction decides.
-        match nearest_crossing(dom, [v, u], 1, 0, pv, pu) {
+        return match nearest_crossing(dom, [v, u], 1, 0, pv, pu) {
             Some(dv_pos) => dv_pos > 0.0,
             None => false,
+        };
+    }
+    let w = dom.winding_u();
+    if w != 0 {
+        let Some(vs) = dom.band_singular_v() else {
+            // Unbounded: the mass properties report it.
+            return false;
+        };
+        let v = match pv {
+            // The representative on the domain's side of the line, within one period.
+            Some(p) if w > 0 => vs - math::rem_euclid(vs - v, p),
+            Some(p) => vs + math::rem_euclid(v - vs, p),
+            None => v,
+        };
+        let eps = SINGULAR_LINE_EPS * (1.0 + vs.abs());
+        if (w > 0 && v > vs + eps) || (w < 0 && v < vs - eps) {
+            return false;
         }
-    } else {
-        match nearest_crossing(dom, [u, v], 0, 1, pu, pv) {
+        return match nearest_crossing(dom, [u, v], 0, 1, pu, None) {
             Some(du_pos) => du_pos < 0.0,
-            None => dom.winding_u() > 0,
-        }
+            None => w > 0,
+        };
+    }
+    match nearest_crossing(dom, [u, v], 0, 1, pu, pv) {
+        Some(du_pos) => du_pos < 0.0,
+        None => false,
     }
 }
 

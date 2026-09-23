@@ -1,7 +1,8 @@
 //! A two-pass body construction: operations first *plan* vertices, edges and faces with
 //! their geometry, then [`Plan::build`] derives every edge's and vertex's provenance from
 //! the faces that use it, assigns canonical instance indices, splits the faces into
-//! connected shells, and builds the body through [`BodyBuilder`] (which validates it).
+//! connected shells, builds the body through [`BodyBuilder`] and validates it; the issues of
+//! an invalid result name entities by provenance ([`EntityNames`]), never by arena id.
 //!
 //! # Naming
 //! - A face carries the provenance its operation gives it (`side:<curve>`, caps, …).
@@ -17,7 +18,9 @@ use std::collections::BTreeMap;
 use forge_core::Tolerance;
 use forge_core::geom::{Curve2, Curve3, Surface};
 use forge_core::linalg::Point3;
-use forge_core::topo::{Body, BodyBuilder, Provenance, RESERVED_NAME_CHARS, Severity};
+use forge_core::topo::{
+    Body, BodyBuilder, EntityNames, Provenance, RESERVED_NAME_CHARS, Severity, has_errors, validate,
+};
 
 use crate::error::OpError;
 
@@ -266,14 +269,21 @@ impl Plan {
                 }
             }
         }
-        bb.finish_validated()
-            .map_err(|issues| OpError::InvalidResult {
-                issues: issues
-                    .iter()
-                    .filter(|i| i.severity == Severity::Error)
-                    .map(ToString::to_string)
-                    .collect(),
-            })
+        // Validate here rather than with `finish_validated`: the issues are named while the
+        // body still exists (audit L3; arena ids never leave the process).
+        let body = bb.finish();
+        let issues = validate(&body);
+        if !has_errors(&issues) {
+            return Ok(body);
+        }
+        let names = EntityNames::new(&body);
+        Err(OpError::InvalidResult {
+            issues: issues
+                .iter()
+                .filter(|i| i.severity == Severity::Error)
+                .map(|i| names.describe(i))
+                .collect(),
+        })
     }
 }
 
@@ -304,4 +314,78 @@ pub(crate) fn check_curve_ids<'a>(ids: impl IntoIterator<Item = &'a str>) -> Res
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use forge_core::geom::{Circle2, Circle3, Plane};
+    use forge_core::linalg::{Frame, Point2};
+    use forge_core::math;
+
+    use super::*;
+
+    /// `true` if `s` holds a forge-core id's `Debug` form `Kind#<index>v<generation>`.
+    fn has_arena_id(s: &str) -> bool {
+        s.match_indices('#').any(|(i, _)| {
+            let before = s[..i]
+                .chars()
+                .next_back()
+                .is_some_and(|c| c.is_ascii_alphabetic());
+            let rest = &s[i + 1..];
+            let n = rest.chars().take_while(char::is_ascii_digit).count();
+            before && n > 0 && rest[n..].starts_with('v')
+        })
+    }
+
+    /// Audit L3: an invalid result's issues name entities by provenance, not by the
+    /// process-local arena ids of `TopoIssue`'s Display (`Edge(Edge#0v0)`).
+    #[test]
+    fn invalid_result_names_entities_by_provenance() {
+        let tol = Tolerance::IR_DEFAULT;
+        let mut plan = Plan::new("f", tol);
+        let ring = plan.ring(
+            Circle3::new(Frame::world(), 1.0).expect("circle"),
+            (0.0, math::TAU),
+            tol.linear,
+            "c".into(),
+        );
+        let pc: Curve2 = Circle2::new(Point2::new(0.0, 0.0), 1.0)
+            .expect("circle")
+            .into();
+        // Two disks on the ring that both traverse it forward: the edge's two uses have
+        // the same direction (EDGE_ORIENTATION), and the second disk's loop winds the
+        // wrong way for its sense (LOOP_ORIENTATION).
+        for (sense, prov) in [
+            (true, Provenance::cap_start("f")),
+            (false, Provenance::cap_end("f")),
+        ] {
+            plan.face(
+                Plane::new(Frame::world()),
+                sense,
+                prov,
+                vec![vec![PUse {
+                    edge: ring,
+                    forward: true,
+                    pcurve: pc.clone(),
+                }]],
+            );
+        }
+        let Err(OpError::InvalidResult { issues }) = plan.build() else {
+            panic!("expected INVALID_RESULT");
+        };
+        for i in &issues {
+            assert!(!has_arena_id(i), "arena id in {i:?}");
+        }
+        let edge = Provenance::edge_between(
+            "f",
+            Provenance::cap_start("f").name(),
+            Provenance::cap_end("f").name(),
+        )
+        .name();
+        let want = format!("[EDGE_ORIENTATION] {edge}: ");
+        assert!(
+            issues.iter().any(|i| i.starts_with(&want)),
+            "no {want:?} in {issues:?}"
+        );
+    }
 }

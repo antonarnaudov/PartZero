@@ -4,7 +4,8 @@
 #![allow(dead_code)]
 
 use forge_core::geom::{
-    Circle2, Circle3, Cone, Curve2, Curve3, Cylinder, Line2, Line3, Plane, Surface, Torus,
+    Circle2, Circle3, Cone, Curve2, Curve3, Cylinder, Line2, Line3, NurbsCurve2, Plane, Surface,
+    Torus,
 };
 use forge_core::topo::{Body, BodyBuilder, EdgeId, Provenance};
 use forge_core::{Frame, Vec2, Vec3, math};
@@ -474,6 +475,116 @@ pub fn cone_wedge(r: f64, h: f64) -> Body {
         .expect("f");
     b.add_loop(f, &[(arc, true), (bp, true), (pa, true)])
         .expect("loop");
+    let f = b
+        .add_face(
+            shell,
+            Surface::Plane(Plane::new(Frame::world())),
+            false,
+            base_f,
+        )
+        .expect("f");
+    b.add_loop(f, &[(ob, true), (arc, false), (oa, false)])
+        .expect("loop");
+    let xz = Frame::from_normal_x(o, Vec3::new(0.0, -1.0, 0.0), Vec3::unit_x()).expect("f");
+    let f = b
+        .add_face(shell, Surface::Plane(Plane::new(xz)), true, xz_f)
+        .expect("f");
+    b.add_loop(f, &[(oa, true), (pa, false), (op, false)])
+        .expect("loop");
+    let yz = Frame::from_normal_x(o, Vec3::new(-1.0, 0.0, 0.0), Vec3::unit_y()).expect("f");
+    let f = b
+        .add_face(shell, Surface::Plane(Plane::new(yz)), true, yz_f)
+        .expect("f");
+    b.add_loop(f, &[(op, true), (bp, false), (ob, false)])
+        .expect("loop");
+    finish(b)
+}
+
+/// The [`cone_wedge`] as forge-ops' revolve builds it: the cone frame sits at the base
+/// (`radius = r`, so `apex_v = −r / tan α` is rounded) and the cone face's coedges carry
+/// pcurves, the two generators as degree-1 B-splines like `revolve::copy_pcurve`. The
+/// generators' apex end is placed `apex_ulps` ulps beyond `apex_v`, on the *other* nappe
+/// (`radius_at < 0`), which is what rounding in `v_of_h` produced for the
+/// `revolve[point_touch]` programs of the Phase 0 audit (V1).
+pub fn cone_wedge_apex_rounding(r: f64, h: f64, apex_ulps: u32) -> Body {
+    const F: &str = "wedge";
+    let (o, a, bb, p) = (
+        Vec3::zero(),
+        Vec3::new(r, 0.0, 0.0),
+        Vec3::new(0.0, r, 0.0),
+        Vec3::new(0.0, 0.0, h),
+    );
+    let (cone_f, base_f, xz_f, yz_f) = (
+        Provenance::side(F, "slant"),
+        Provenance::cap_start(F),
+        Provenance::side(F, "xz"),
+        Provenance::side(F, "yz"),
+    );
+    let e = |x: &Provenance, y: &Provenance| Provenance::edge_between(F, x.name(), y.name());
+    let mut b = BodyBuilder::new();
+    let vo = b.add_vertex(o, Provenance::vertex_at(F, ["o"])).expect("v");
+    let va = b.add_vertex(a, Provenance::vertex_at(F, ["a"])).expect("v");
+    let vb = b
+        .add_vertex(bb, Provenance::vertex_at(F, ["b"]))
+        .expect("v");
+    let vp = b
+        .add_vertex(p, Provenance::vertex_at(F, ["apex"]))
+        .expect("v");
+    let line = |b: &mut BodyBuilder, s: Vec3, t: Vec3, vs, vt, prov| {
+        b.add_edge(
+            Curve3::Line(Line3::through(s, t).expect("l")),
+            (0.0, s.distance(t)),
+            vs,
+            vt,
+            prov,
+        )
+        .expect("line")
+    };
+    let arc = b
+        .add_edge(
+            Curve3::Circle(Circle3::new(Frame::world(), r).expect("c")),
+            (0.0, math::FRAC_PI_2),
+            va,
+            vb,
+            e(&cone_f, &base_f),
+        )
+        .expect("arc");
+    let bp = line(&mut b, bb, p, vb, vp, e(&cone_f, &yz_f));
+    let pa = line(&mut b, p, a, vp, va, e(&cone_f, &xz_f));
+    let oa = line(&mut b, o, a, vo, va, e(&base_f, &xz_f));
+    let ob = line(&mut b, o, bb, vo, vb, e(&base_f, &yz_f));
+    let op = line(&mut b, o, p, vo, vp, e(&xz_f, &yz_f));
+    let shell = b.add_shell(true);
+    // Local z = world −z (the widening side), local y = world −y: u runs clockwise.
+    let base_frame =
+        Frame::from_normal_x(o, Vec3::new(0.0, 0.0, -1.0), Vec3::unit_x()).expect("frame");
+    let cone = Cone::new(base_frame, r, math::atan(r / h)).expect("cone");
+    let mut v_apex = cone.apex_v();
+    for _ in 0..apex_ulps {
+        v_apex = f64::from_bits(v_apex.to_bits() + 1); // more negative: the other nappe
+    }
+    let len = bb.distance(p);
+    let generator = |u: f64, v0: f64, v1: f64| {
+        Curve2::BSpline(
+            NurbsCurve2::new(1, vec![0.0, 0.0, len, len], vec![[u, v0], [u, v1]], None)
+                .expect("pcurve"),
+        )
+    };
+    let f = b
+        .add_face(shell, Surface::Cone(cone), true, cone_f)
+        .expect("f");
+    let lp = b
+        .add_loop(f, &[(arc, true), (bp, true), (pa, true)])
+        .expect("loop");
+    let cids = b.body().loop_(lp).expect("loop").coedges.clone();
+    let pcurves = [
+        Curve2::Line(Line2::new(Vec2::zero(), Vec2::new(-1.0, 0.0)).expect("line")),
+        generator(-math::FRAC_PI_2, 0.0, v_apex),
+        generator(0.0, v_apex, 0.0),
+    ];
+    for (cid, pc) in cids.into_iter().zip(pcurves) {
+        b.set_pcurve(cid, pc).expect("pcurve");
+    }
     let f = b
         .add_face(
             shell,
