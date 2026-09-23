@@ -1,0 +1,28 @@
+oracle/README.md
+  s_59c0dd2af30db2::t_d3d98004a71221 16,114-118,138,188-190,193,197,199-219
+oracle/tests/test_forge_diff_regressions.py
+  s_59c0dd2af30db2::t_c48eda53e212bd 1-151
+oracle/src/aicad_oracle/selfcheck.py
+  s_59c0dd2af30db2::t_71c24c9b42e59d 148-163
+  s_59c0dd2af30db2::t_52090c93a27d89 10-11,140-147,164-230,267-272
+docs/BACKLOG.md
+  s_59c0dd2af30db2::t_b7d991f5048101 31
+oracle/src/aicad_oracle/occt.py
+  s_59c0dd2af30db2::t_041e29b816b9e1 492-583,587-594,596,600,609-620,627,630-637,639-666
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "97a4eeb2456ba1803ab7203b2f968807d187d17e",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
