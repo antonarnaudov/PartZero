@@ -1,0 +1,142 @@
+packages/app/test/commands.test.ts
+  s_59c0dd2af30db2::t_6bea1c154ad8cf 283,287,291
+packages/desktop/scripts/e2e-fallback.mjs
+  s_59c0dd2af30db2::t_a07bb358a98511 24
+packages/agent/src/agent.ts
+  s_59c0dd2af30db2::t_a8df86c2b6ae9a 46,62-71,80-81,115-120,239,299,419,430,485-488,491,539,549-556
+  s_59c0dd2af30db2::t_412ef05170dbe1 557-558
+packages/app/src/ui/App.tsx
+  s_59c0dd2af30db2::t_3789f1981084cf 10-11,65-66,115-140,146-155,172
+packages/app/src/host/electron-host.ts
+  s_59c0dd2af30db2::t_9a018c0aa6fbd7 1,16-17,24-26
+packages/desktop/e2e/agent.e2e.ts
+  s_59c0dd2af30db2::t_e30c7ea2d8c78e 20-21,113,207
+  s_59c0dd2af30db2::t_d65001656693c8 1-19,22-35,43-79,82-83,85-90,92-112,114-167,169-177,180-206,208-237
+  s_59c0dd2af30db2::t_f930c1d5be896b 179
+  s_59c0dd2af30db2::t_a8405761092c1c 36-42,80-81,84,91,168,178
+packages/desktop/src/menu.ts
+  s_59c0dd2af30db2::t_d55da74606dbdc 55-56,83,110-119
+  s_59c0dd2af30db2::t_bd02ef3ed338ef 120-121
+packages/desktop/src/ipc.ts
+  s_59c0dd2af30db2::t_d55da74606dbdc 19-20,33-34,149-169
+  s_59c0dd2af30db2::t_c44b4a2c6408a8 170
+packages/desktop/e2e/agent-live.e2e.ts
+  s_59c0dd2af30db2::t_401679f15d9f1e 1-81
+packages/app/src/ui/ProposalView.tsx
+  s_59c0dd2af30db2::t_f930c1d5be896b 55-56,61
+  s_59c0dd2af30db2::t_79363e47a6b790 1-47,50-54,62-222
+  s_59c0dd2af30db2::t_cc261758bb9c0d 48-49,60
+  s_59c0dd2af30db2::t_bb9590d858ad6e 57-59
+packages/desktop/src/agent/setup.ts
+  s_59c0dd2af30db2::t_fc3d0b0770bfb9 1-74
+packages/app/test/helpers.ts
+  s_59c0dd2af30db2::t_55c591d898fb42 2-21,119-198,203-204,265-267,270,277-280,289,292-293,307
+packages/desktop/src/agent/host.ts
+  s_59c0dd2af30db2::t_bfc8ee4c46563f 1-220
+packages/app/src/agent/agent-service.ts
+  s_59c0dd2af30db2::t_32ffd8908b6f89 265,269,271
+  s_59c0dd2af30db2::t_d3bc6b2ffd6b30 1-264,266-268,270,272-593
+packages/agent/src/run-context.ts
+  s_59c0dd2af30db2::t_c897ace7ec2eb0 59-65,70,73,82
+packages/desktop/src/preload.cts
+  s_59c0dd2af30db2::t_d55da74606dbdc 8,27,51-68
+packages/desktop/electron-builder.config.cjs
+  s_59c0dd2af30db2::t_4041dfcb3d3775 3-8
+packages/app/src/agent/selection.ts
+  s_59c0dd2af30db2::t_f59bbc3b186749 1-68
+packages/app/src/commands/registry.ts
+  s_59c0dd2af30db2::t_2f83e5b6e5dc42 14,37-41,146,148,155
+packages/desktop/src/agent/runner.ts
+  s_59c0dd2af30db2::t_2d02bf2cd9da5b 1-400
+packages/app/src/ui/Timeline.tsx
+  s_59c0dd2af30db2::t_cc261758bb9c0d 82-83
+  s_59c0dd2af30db2::t_7c41fef3743038 55,66,81,84-85,110-111,139,141-147
+packages/app/src/host/host.ts
+  s_59c0dd2af30db2::t_9a018c0aa6fbd7 6,13,30-33
+packages/app/src/ui/SettingsDialog.tsx
+  s_59c0dd2af30db2::t_15587ae5532935 1-247
+packages/desktop/src/agent/protocol.ts
+  s_59c0dd2af30db2::t_db62cdca75d22c 239-249
+  s_59c0dd2af30db2::t_c77ba313394f22 1-238,250-271
+packages/desktop/package.json
+  s_59c0dd2af30db2::t_6756f1840edb7d 24-31
+packages/app/src/ui/Viewport.tsx
+  s_59c0dd2af30db2::t_f432126f9561f6 5-6,9,30-45,68-72,123-124,127-132,134,138-139,143,226,262-279
+  s_59c0dd2af30db2::t_9ff39f8795de85 280-281
+packages/desktop/src/main.ts
+  s_59c0dd2af30db2::t_d55da74606dbdc 14-19,21,55-90,169,181,227-237,239,269
+  s_59c0dd2af30db2::t_1740967a194284 270
+packages/app/src/agent/proposal.ts
+  s_59c0dd2af30db2::t_c1572fd39bd641 1-291
+docs/AGENT-IN-APP.md
+  s_59c0dd2af30db2::t_c495416c5db7a9 1-169
+packages/app/src/bootstrap.ts
+  s_59c0dd2af30db2::t_8fd7f094d83488 6,31-50,65-66,97-142,168,191,193,203,246
+packages/agent/src/index.ts
+  s_59c0dd2af30db2::t_a8df86c2b6ae9a 10,16
+packages/app/src/agent-protocol.ts
+  s_59c0dd2af30db2::t_2e624867312c8a 1-225
+packages/app/test/agent.test.ts
+  s_59c0dd2af30db2::t_f827c3540b8aea 1-303
+packages/app/src/services.ts
+  s_59c0dd2af30db2::t_2f83e5b6e5dc42 6,77-78
+packages/app/src/ui/Toolbar.tsx
+  s_59c0dd2af30db2::t_3789f1981084cf 75-77
+packages/desktop/src/agent/worker.ts
+  s_59c0dd2af30db2::t_e0a6eb9439df10 1-10,12-34,36-38
+  s_59c0dd2af30db2::t_db62cdca75d22c 11,35
+packages/app/src/ui/ChatPanel.tsx
+  s_59c0dd2af30db2::t_2bd6b8efb45cb8 2-4,7-9,11,30-332,337-339,351,354,356,358,361,366-370,376-377,379-383,387,396,418
+packages/agent/src/trace.ts
+  s_59c0dd2af30db2::t_c897ace7ec2eb0 20-22
+packages/desktop/e2e/smoke.e2e.ts
+  s_59c0dd2af30db2::t_291a89b3bb7af9 49-51,53-54,194-196
+packages/desktop/src/agent/keys.ts
+  s_59c0dd2af30db2::t_db62cdca75d22c 84
+  s_59c0dd2af30db2::t_dc694bee5796df 1-83,85-250
+packages/app/src/ui/icons.tsx
+  s_59c0dd2af30db2::t_cc261758bb9c0d 208-212
+  s_59c0dd2af30db2::t_dfb8be33a645ec 206-207,213-238
+packages/app/src/bridge.ts
+  s_59c0dd2af30db2::t_e4d2780a42ef3a 12-13,15-29,144-147,162-168,183
+packages/desktop/e2e/fixtures/nema17-thicker.script.json
+  s_59c0dd2af30db2::t_02bad85ff0b91c 1-58
+packages/desktop/src/agent/engine.ts
+  s_59c0dd2af30db2::t_243d289a8c4468 1-65
+packages/app/src/engine/types.ts
+  s_59c0dd2af30db2::t_32ffd8908b6f89 38-39
+packages/app/src/host/browser-host.ts
+  s_59c0dd2af30db2::t_9a018c0aa6fbd7 12-13
+packages/desktop/src/agent/settings.ts
+  s_59c0dd2af30db2::t_7a20f9790f8b46 1-161
+packages/agent/test/agent.test.ts
+  s_59c0dd2af30db2::t_faaf76fcd744cb 335-380
+packages/app/src/commands/commands.ts
+  s_59c0dd2af30db2::t_8cc7b7e196a120 31-32,607,610-821
+packages/app/src/ui/styles.css
+  s_59c0dd2af30db2::t_406dcb63eb4a8d 1346-2083
+packages/desktop/test/agent.test.ts
+  s_59c0dd2af30db2::t_45e7c9b4430e1f 409
+  s_59c0dd2af30db2::t_a2a2ae50abff56 1-408,410-415
+packages/app/src/ui-store.ts
+  s_59c0dd2af30db2::t_32ffd8908b6f89 22-23,27-30,39,98-99,104-108,164-170
+  s_59c0dd2af30db2::t_2f83e5b6e5dc42 113,128
+pnpm-lock.yaml
+  s_59c0dd2af30db2::t_fdb90388ad874a 143-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e678adf6900e3f556462597522b3dc8d0d5c1ba7",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
