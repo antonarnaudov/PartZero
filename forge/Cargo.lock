@@ -370,6 +370,10 @@ dependencies = [
 name = "forge-ir"
 version = "0.0.1"
 dependencies = [
+ "forge-regen",
+ "forge-solve",
+ "libm",
+ "proptest",
  "schemars",
  "serde",
  "serde_json",
