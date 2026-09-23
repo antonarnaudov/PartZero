@@ -35,7 +35,8 @@ pub use curve3::{Circle3, Curve3, Ellipse3, Line3};
 pub use error::{GeomError, NurbsError};
 pub use nurbs::{NurbsCurve, NurbsCurve2, NurbsCurve3, NurbsSurface};
 pub use surface::{
-    BSPLINE_NORMAL_DEGENERACY, Cone, Cylinder, Plane, Sphere, Surface, SurfaceDerivs, Torus,
+    BSPLINE_NORMAL_DEGENERACY, Cone, Cylinder, Plane, Sphere, SpindlePatch, Surface, SurfaceDerivs,
+    Torus,
 };
 
 /// A 2D B-spline curve (alias of [`NurbsCurve2`]).

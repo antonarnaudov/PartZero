@@ -72,7 +72,8 @@ pub mod topo;
 pub use arena::{Arena, Id};
 pub use geom::{
     Circle2, Circle3, Cone, Curve2, Curve3, Cylinder, Ellipse2, Ellipse3, GeomError, Line2, Line3,
-    NurbsCurve2, NurbsCurve3, NurbsError, NurbsSurface, Plane, Sphere, Surface, Torus,
+    NurbsCurve2, NurbsCurve3, NurbsError, NurbsSurface, Plane, Sphere, SpindlePatch, Surface,
+    Torus,
 };
 pub use linalg::{Frame, Mat3, Point2, Point3, Transform, Vec2, Vec3};
 pub use predicates::{Sign, incircle, insphere, orient2d, orient3d};

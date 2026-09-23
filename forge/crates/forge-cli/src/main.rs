@@ -1,0 +1,217 @@
+//! `aicad` — headless evaluation of IR documents (the harness for agents and CI).
+//!
+//! ```text
+//! aicad eval <file.json> [--format json|text] [--out <path>]
+//! ```
+//!
+//! Exit codes:
+//! - `0`: the document parsed, validated and was evaluated (the report's `status` may
+//!   still be `error` when features failed);
+//! - `2`: the document was **rejected** (unreadable, unparseable, or structurally
+//!   invalid, SPEC §0 [R-10]); diagnostics go to stderr, and a report with a
+//!   document-level `error` is still written so tools that parse the output see why.
+
+use std::path::{Path, PathBuf};
+use std::process::ExitCode;
+
+use clap::{Parser, Subcommand, ValueEnum};
+use forge_ir::{EvalReport, IrError, METRICS_SCHEMA, ReportError, Status};
+
+#[derive(Parser)]
+#[command(
+    name = "aicad",
+    version,
+    about = "AI-native CAD: headless Forge evaluation"
+)]
+struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// Evaluate an IR document and print its `aicad.metrics/0` report.
+    Eval {
+        /// IR document (`aicad.ir/0` JSON).
+        file: PathBuf,
+        /// Output format.
+        #[arg(long, value_enum, default_value_t = Format::Json)]
+        format: Format,
+        /// Write the report to this file instead of stdout.
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum Format {
+    /// Pretty-printed `aicad.metrics/0` JSON.
+    Json,
+    /// A human-readable summary.
+    Text,
+}
+
+fn main() -> ExitCode {
+    let cli = Cli::parse();
+    match cli.command {
+        Command::Eval { file, format, out } => eval(&file, format, out.as_deref()),
+    }
+}
+
+fn file_stem(path: &Path) -> String {
+    path.file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+/// `meta.name` of a JSON document, if it has a non-empty one.
+fn meta_name(text: &str) -> Option<String> {
+    let v: serde_json::Value = serde_json::from_str(text).ok()?;
+    let name = v.get("meta")?.get("name")?.as_str()?;
+    (!name.is_empty()).then(|| name.to_string())
+}
+
+fn rejected(document: String, code: &str, message: String) -> EvalReport {
+    EvalReport {
+        schema: METRICS_SCHEMA.to_string(),
+        engine: forge_regen::engine_id(),
+        document,
+        status: Status::Error,
+        error: Some(ReportError {
+            code: code.to_string(),
+            message,
+        }),
+        features: Vec::new(),
+    }
+}
+
+fn eval(file: &Path, format: Format, out: Option<&Path>) -> ExitCode {
+    let text = match std::fs::read_to_string(file) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("aicad: cannot read {}: {e}", file.display());
+            let r = rejected(file_stem(file), "IR_READ_ERROR", e.to_string());
+            return emit(&r, format, out, ExitCode::from(2));
+        }
+    };
+    let name = meta_name(&text).unwrap_or_else(|| file_stem(file));
+    let doc = match forge_ir::from_json(&text) {
+        Ok(d) => d,
+        Err(IrError::Parse(e)) => {
+            eprintln!("aicad: {}: IR_PARSE_ERROR: {e}", file.display());
+            let r = rejected(name, "IR_PARSE_ERROR", e.to_string());
+            return emit(&r, format, out, ExitCode::from(2));
+        }
+        Err(IrError::Invalid(errs)) => {
+            for e in &errs {
+                eprintln!("aicad: {}: {e}", file.display());
+            }
+            let code = errs.first().map_or("IR_INVALID", |e| e.code);
+            let message = errs
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join("; ");
+            let r = rejected(name, code, message);
+            return emit(&r, format, out, ExitCode::from(2));
+        }
+    };
+    let evaluation = forge_regen::evaluate(&doc);
+    let report = forge_regen::report(&doc, &evaluation, &forge_regen::engine_id(), &name);
+    emit(&report, format, out, ExitCode::SUCCESS)
+}
+
+fn emit(report: &EvalReport, format: Format, out: Option<&Path>, code: ExitCode) -> ExitCode {
+    let text = match format {
+        Format::Json => match serde_json::to_string_pretty(report) {
+            Ok(s) => s + "\n",
+            Err(e) => {
+                eprintln!("aicad: cannot serialize the report: {e}");
+                return ExitCode::from(3);
+            }
+        },
+        Format::Text => text_report(report),
+    };
+    match out {
+        Some(path) => {
+            if let Err(e) = std::fs::write(path, text) {
+                eprintln!("aicad: cannot write {}: {e}", path.display());
+                return ExitCode::from(3);
+            }
+        }
+        None => print!("{text}"),
+    }
+    code
+}
+
+fn status_str(s: Status) -> &'static str {
+    match s {
+        Status::Ok => "ok",
+        Status::Error => "error",
+    }
+}
+
+fn text_report(r: &EvalReport) -> String {
+    use std::fmt::Write as _;
+    let mut s = String::new();
+    let _ = writeln!(
+        s,
+        "{} — {} ({})",
+        r.document,
+        status_str(r.status),
+        r.engine
+    );
+    if let Some(e) = &r.error {
+        let _ = writeln!(s, "  rejected: {}: {}", e.code, e.message);
+    }
+    for f in &r.features {
+        let _ = write!(
+            s,
+            "{}/{} [{}]: {}",
+            f.part,
+            f.feature,
+            f.feature_type,
+            status_str(f.status)
+        );
+        match &f.error {
+            Some(e) => {
+                let _ = writeln!(s, " — {}: {}", e.code, e.message);
+            }
+            None => {
+                let _ = writeln!(s);
+            }
+        }
+        for g in &f.regions {
+            let _ = writeln!(
+                s,
+                "  region [{}]: area {} mm², {} loop(s)",
+                g.outer_curves.join(", "),
+                g.area,
+                g.loops
+            );
+        }
+        for (i, b) in f.bodies.iter().enumerate() {
+            let hist = |h: &std::collections::BTreeMap<String, u32>| {
+                h.iter()
+                    .map(|(k, v)| format!("{k} {v}"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            };
+            let _ = writeln!(
+                s,
+                "  body {i}: volume {} mm³, area {} mm², centroid {:?}\n    bbox {:?} .. {:?}\n    {} faces ({}), {} edges ({}), valid {}",
+                b.volume,
+                b.area,
+                b.centroid,
+                b.bbox_min,
+                b.bbox_max,
+                b.faces,
+                hist(&b.face_types),
+                b.edges,
+                hist(&b.edge_types),
+                b.valid
+            );
+        }
+    }
+    s
+}

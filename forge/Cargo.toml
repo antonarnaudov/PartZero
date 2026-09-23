@@ -28,6 +28,9 @@ smallvec = "1"
 clap = { version = "4", features = ["derive"] }
 proptest = "1"
 libm = "0.2"
+# Raw DEFLATE (compress + inflate) for the 3MF zip container in forge-io; pure Rust, no
+# unsafe in the used paths, deterministic output. MIT OR Zlib OR Apache-2.0.
+miniz_oxide = "0.8"
 # Test-only exact arithmetic oracles (forge-core predicate tests). MIT/Apache-2.0.
 num-bigint = "0.4"
 num-rational = "0.4"

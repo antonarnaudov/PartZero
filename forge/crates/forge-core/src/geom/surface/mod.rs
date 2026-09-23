@@ -2,7 +2,7 @@
 
 mod analytic;
 
-pub use analytic::{Cone, Cylinder, Plane, Sphere, Torus};
+pub use analytic::{Cone, Cylinder, Plane, Sphere, SpindlePatch, Torus};
 
 use super::nurbs::NurbsSurface;
 use crate::linalg::{Point3, Transform, Vec3};
@@ -42,7 +42,7 @@ pub const BSPLINE_NORMAL_DEGENERACY: f64 = 1e-8;
 /// | [`Cylinder`] | angle about z from x | height along z | (2π, —) | — |
 /// | [`Cone`] | angle about z from x | height along z | (2π, —) | apex `v = −R/tan α` |
 /// | [`Sphere`] | longitude | latitude `∈ [−π/2, π/2]` | (2π, —) | poles `v = ±π/2` |
-/// | [`Torus`] | angle about z | angle around the tube | (2π, 2π) | horn torus centre |
+/// | [`Torus`] | angle about z | angle around the tube | (2π, 2π); spindle patch (2π, —) | horn torus centre; spindle patch ends `v = ±v_s` |
 /// | [`NurbsSurface`] | knot parameter | knot parameter | — | where `S_u × S_v = 0` |
 ///
 /// The normal is always `normalize(S_u × S_v)` (or its limit at singular points). A
@@ -174,11 +174,13 @@ impl Surface {
         match self {
             Surface::Plane(_) | Surface::BSpline(_) => (None, None),
             Surface::Cylinder(_) | Surface::Cone(_) | Surface::Sphere(_) => (Some(math::TAU), None),
+            Surface::Torus(t) if t.spindle_patch().is_some() => (Some(math::TAU), None),
             Surface::Torus(_) => (Some(math::TAU), Some(math::TAU)),
         }
     }
     /// Natural parameter ranges `((u0, u1), (v0, v1))`; infinite for unbounded
-    /// directions, `[0, 2π)` for periodic ones.
+    /// directions, `[0, 2π)` for periodic ones, the sheet's `v` range for a spindle-torus
+    /// patch ([`Torus::spindle_v_range`]).
     pub fn domain(&self) -> ((f64, f64), (f64, f64)) {
         let inf = (f64::NEG_INFINITY, f64::INFINITY);
         let per = (0.0, math::TAU);
@@ -186,12 +188,12 @@ impl Surface {
             Surface::Plane(_) => (inf, inf),
             Surface::Cylinder(_) | Surface::Cone(_) => (per, inf),
             Surface::Sphere(_) => (per, (-math::FRAC_PI_2, math::FRAC_PI_2)),
-            Surface::Torus(_) => (per, per),
+            Surface::Torus(t) => (per, t.spindle_v_range().unwrap_or(per)),
             Surface::BSpline(s) => s.domain(),
         }
     }
     /// `true` if the surface is closed in every direction and bounded, so a face may
-    /// cover it entirely without any loop (sphere, torus).
+    /// cover it entirely without any loop (sphere, torus, a whole spindle-torus patch).
     pub fn is_closed_without_boundary(&self) -> bool {
         matches!(self, Surface::Sphere(_) | Surface::Torus(_))
     }

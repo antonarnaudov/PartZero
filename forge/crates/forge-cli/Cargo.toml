@@ -1,0 +1,21 @@
+[package]
+name = "forge-cli"
+description = "The `aicad` command line: headless evaluation and metrics of IR documents"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MPL-2.0"
+publish.workspace = true
+
+[[bin]]
+name = "aicad"
+path = "src/main.rs"
+
+[dependencies]
+forge-ir.workspace = true
+forge-regen.workspace = true
+serde_json.workspace = true
+clap.workspace = true
+
+[lints]
+workspace = true

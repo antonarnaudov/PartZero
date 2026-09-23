@@ -229,7 +229,8 @@ impl EulerSummary {
 ///   cylinder side between two rings is an annulus (`b = 2, χ = 0`), a full cone face with
 ///   only its base ring is a disc (the apex is an interior singular point), a loop-less
 ///   sphere face is a sphere (`χ = 2`). A loop-less torus face is a whole torus
-///   (`g_f = 1`, `χ = 0`).
+///   (`g_f = 1`, `χ = 0`), except on a spindle-torus patch, which is a sphere whose two
+///   axis points are singular (`g_f = 0`).
 ///
 /// Limitation: faces on a torus *with* loops are assumed planar (`g_f = 0`); a torus
 /// with a contractible hole would be mis-counted. Deciding this needs the pcurves'
@@ -243,7 +244,11 @@ pub fn euler_summary(body: &Body, shell: ShellId) -> Option<EulerSummary> {
     let (mut loops, mut face_genus, mut sum_face_chi) = (0usize, 0usize, 0i64);
     for f in sh.faces.iter().filter_map(|f| body.face(*f)) {
         let b = f.loops.len();
-        let g = usize::from(b == 0 && matches!(f.surface, Surface::Torus(_)));
+        // A loop-less face on a whole ring/horn torus is a torus (genus 1); a whole
+        // spindle-torus patch is a sphere (its v-range ends are singular points).
+        let g = usize::from(
+            b == 0 && matches!(&f.surface, Surface::Torus(t) if t.spindle_patch().is_none()),
+        );
         loops += b;
         face_genus += g;
         sum_face_chi += 2 - 2 * g as i64 - b as i64;

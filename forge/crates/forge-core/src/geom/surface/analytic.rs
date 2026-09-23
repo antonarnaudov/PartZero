@@ -401,22 +401,52 @@ impl Sphere {
 
 // ---------------------------------------------------------------------------------------
 
+/// Which sheet of a **spindle torus** (`minor > major`) a [`Torus`] stands for.
+///
+/// A spindle torus's tube crosses its own axis where `R + r·cos v = 0`, i.e. at
+/// `v = ±v_s` with `v_s = acos(−R/r) ∈ (π/2, π)`. The surface is then two sheets that meet
+/// at the two axis points, and a face uses exactly one of them:
+///
+/// | Patch | Sheet | `R + r·cos v` | `v` range |
+/// |---|---|---|---|
+/// | [`SpindlePatch::Outer`] | "apple" | `≥ 0` | `[−v_s, v_s]` |
+/// | [`SpindlePatch::Inner`] | "lemon" | `≤ 0` | `[v_s, 2π − v_s]` |
+///
+/// On a patch `v` is **not periodic**: the range ends are the two axis points, which are
+/// surface singularities (`S_u = 0`) exactly like sphere poles. A face covering a whole
+/// patch therefore has no loops (it is topologically a sphere).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum SpindlePatch {
+    /// The outer sheet ("apple"), `R + r·cos v ≥ 0`.
+    Outer,
+    /// The inner sheet ("lemon"), `R + r·cos v ≤ 0`.
+    Inner,
+}
+
 /// A torus: `S(u, v) = o + (R + r·cos v)·e_r(u) + r·sin v·z`.
 ///
 /// `u` is the angle about the axis `frame.z` from `frame.x`; `v` is the angle around the
-/// tube, measured from the outer equator towards `+z`. Both have period 2π. `R = major`,
-/// `r = minor`, with `0 < r <= R` (ring torus; `r = R` is the horn torus whose tube
-/// touches the axis at a singular point). The normal `cos v·e_r(u) + sin v·z` points out
-/// of the tube.
+/// tube, measured from the outer equator towards `+z`. `R = major`, `r = minor`.
+///
+/// - **Ring and horn tori** ([`Torus::new`]): `0 < r <= R` (`r = R` is the horn torus
+///   whose tube touches the axis at a singular point). Both parameters have period 2π.
+///   The normal `cos v·e_r(u) + sin v·z` points out of the tube.
+/// - **Spindle-torus patches** ([`Torus::spindle`]): `0 < R < r`, restricted to one sheet
+///   (see [`SpindlePatch`]); only `u` is periodic. The normal is `normalize(S_u × S_v)`:
+///   out of the tube on the outer sheet, into the tube on the inner sheet (where
+///   `R + r·cos v < 0` flips the parametric normal).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Torus {
     frame: Frame,
     major: f64,
     minor: f64,
+    /// `Some` for a spindle-torus patch (`minor > major`), `None` for ring/horn tori.
+    spindle: Option<SpindlePatch>,
 }
 
 impl Torus {
-    /// A torus; `0 < minor <= major`, both finite.
+    /// A ring or horn torus; `0 < minor <= major`, both finite. Spindle tori are built
+    /// with [`Torus::spindle`].
     pub fn new(frame: Frame, major: f64, minor: f64) -> Result<Self, GeomError> {
         let major = check_positive("torus major radius", major)?;
         let minor = check_positive("torus minor radius", minor)?;
@@ -424,14 +454,52 @@ impl Torus {
             return Err(GeomError::InvalidParameter {
                 what: "torus minor radius",
                 value: minor,
-                expected: "<= major radius (spindle tori are not supported)",
+                expected: "<= major radius (use Torus::spindle for spindle-torus patches)",
             });
         }
         Ok(Self {
             frame,
             major,
             minor,
+            spindle: None,
         })
+    }
+    /// One sheet of a spindle torus; `0 < major < minor`, both finite (see
+    /// [`SpindlePatch`] for the parameter ranges and singular points).
+    pub fn spindle(
+        frame: Frame,
+        major: f64,
+        minor: f64,
+        patch: SpindlePatch,
+    ) -> Result<Self, GeomError> {
+        let major = check_positive("torus major radius", major)?;
+        let minor = check_positive("torus minor radius", minor)?;
+        if minor <= major {
+            return Err(GeomError::InvalidParameter {
+                what: "spindle torus minor radius",
+                value: minor,
+                expected: "> major radius (use Torus::new for ring and horn tori)",
+            });
+        }
+        Ok(Self {
+            frame,
+            major,
+            minor,
+            spindle: Some(patch),
+        })
+    }
+    /// The sheet of a spindle-torus patch; `None` for ring and horn tori.
+    pub fn spindle_patch(&self) -> Option<SpindlePatch> {
+        self.spindle
+    }
+    /// The `v` range `(v0, v1)` of a spindle-torus patch (see [`SpindlePatch`]); its ends
+    /// are the two singular axis points. `None` for ring and horn tori (periodic in `v`).
+    pub fn spindle_v_range(&self) -> Option<(f64, f64)> {
+        let vs = math::acos(-self.major / self.minor);
+        match self.spindle? {
+            SpindlePatch::Outer => Some((-vs, vs)),
+            SpindlePatch::Inner => Some((vs, math::TAU - vs)),
+        }
     }
     /// Frame (axis = z).
     pub fn frame(&self) -> &Frame {
@@ -472,14 +540,27 @@ impl Torus {
             ],
         )
     }
-    /// Unit normal `cos v·e_r(u) + sin v·z`.
+    /// Unit normal `cos v·e_r(u) + sin v·z` (negated on the inner sheet of a spindle
+    /// torus, so it always equals `normalize(S_u × S_v)`).
     pub fn normal<S: Scalar>(&self, u: S, v: S) -> Vec3<S> {
         let (su, cu) = u.sin_cos();
         let (sv, cv) = v.sin_cos();
-        self.frame.eval_vector(Vec3::new(cv * cu, cv * su, sv))
+        let n = self.frame.eval_vector(Vec3::new(cv * cu, cv * su, sv));
+        if self.spindle == Some(SpindlePatch::Inner) {
+            -n
+        } else {
+            n
+        }
     }
-    /// Closest point `(u, v, distance)`, `u, v ∈ [0, 2π)`. Points on the axis get `u = 0`;
+    /// Closest point `(u, v, distance)`, `u ∈ [0, 2π)`. Points on the axis get `u = 0`;
     /// points on the tube's centre circle get `v = 0`.
+    ///
+    /// Ring and horn tori return `v ∈ [0, 2π)`. For a spindle-torus patch both tube
+    /// circles of the meridian plane through `p` are considered (the inner sheet lies on
+    /// the circle centred on the far side of the axis), the closer one wins (ties go to
+    /// the near circle), and `v` is returned in the patch's range representation
+    /// (`[−π, π)` for the outer sheet, `[0, 2π)` for the inner one). The distance is to
+    /// the whole spindle torus, not only to the patch.
     pub fn project(&self, p: Point3) -> (f64, f64, f64) {
         let l = self.frame.to_local_point(p);
         let (rho, phi) = polar(l);
@@ -489,7 +570,24 @@ impl Torus {
         } else {
             0.0
         };
-        (phi, v, (math::hypot(dx, dz) - self.minor).abs())
+        let d = (math::hypot(dx, dz) - self.minor).abs();
+        let Some(patch) = self.spindle else {
+            return (phi, v, d);
+        };
+        // The tube circle of the opposite half-plane: p's radial coordinate along
+        // e_r(phi + π) is −rho.
+        let (fx, fz) = (-rho - self.major, l.z);
+        let d_far = (math::hypot(fx, fz) - self.minor).abs();
+        let start = match patch {
+            SpindlePatch::Outer => -math::PI,
+            SpindlePatch::Inner => 0.0,
+        };
+        if d_far < d {
+            let vf = math::wrap_angle(math::atan2(fz, fx), start);
+            (math::wrap_angle(phi + math::PI, 0.0), vf, d_far)
+        } else {
+            (phi, math::wrap_angle(v, start), d)
+        }
     }
     /// The torus moved by a rigid transform.
     pub fn transformed(&self, t: &Transform) -> Self {

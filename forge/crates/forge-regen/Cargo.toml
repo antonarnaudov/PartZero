@@ -1,0 +1,21 @@
+[package]
+name = "forge-regen"
+description = "Forge regeneration: evaluate an IR document's feature timeline and report metrics"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MPL-2.0"
+publish.workspace = true
+
+[dependencies]
+forge-core.workspace = true
+forge-ir.workspace = true
+forge-ops.workspace = true
+forge-check.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+proptest.workspace = true
+
+[lints]
+workspace = true

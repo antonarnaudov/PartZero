@@ -58,7 +58,13 @@ pub fn validate(doc: &Document) -> Result<(), Vec<ValidationError>> {
                 format!("part id {:?}", part.id),
             ));
         }
-        if !part_names.insert(part.name.as_str()) {
+        if part.name.is_empty() {
+            errs.push(err(
+                "INVALID_NAME",
+                format!("{pp}/name"),
+                "part names must be non-empty",
+            ));
+        } else if !part_names.insert(part.name.as_str()) {
             errs.push(err(
                 "DUPLICATE_NAME",
                 format!("{pp}/name"),

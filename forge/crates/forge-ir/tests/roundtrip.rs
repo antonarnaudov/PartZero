@@ -127,3 +127,17 @@ fn canonical_json_omits_defaults() {
         );
     }
 }
+
+#[test]
+fn rejects_empty_part_name() {
+    let text = r#"{ "schema": "aicad.ir/0", "parts": [{ "id": "p", "name": "", "features": [
+        { "type": "sketch", "id": "s", "name": "base", "plane": "XY",
+          "curves": [ { "kind": "circle", "id": "c", "center": [0,0], "radius": 1 } ] } ] }] }"#;
+    let IrError::Invalid(errs) = from_json(text).unwrap_err() else {
+        panic!()
+    };
+    assert_eq!(
+        (errs[0].code, errs[0].path.as_str()),
+        ("INVALID_NAME", "/parts/0/name")
+    );
+}
