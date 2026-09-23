@@ -1,0 +1,127 @@
+packages/desktop/test/hardening.test.ts
+  s_59c0dd2af30db2::t_6c27c2c17d32f9 7,24,28
+  s_59c0dd2af30db2::t_01692aaae7a440 17-19,71-72,149-154,244-271,318-320,322,324,328-361
+  s_59c0dd2af30db2::t_3e3f4448deddad 1-6,8,10-16,20-23,25-26,29-65,67-70,73-81,83-148,155-243,272-317,321,323,325-327,362-403,407-422
+  s_59c0dd2af30db2::t_9e5fca3d218f81 9,27,66,82
+  s_59c0dd2af30db2::t_aa320a107dc680 404-406
+packages/desktop/e2e/smoke.e2e.ts
+  s_59c0dd2af30db2::t_53e914016696c5 6,70,191-209
+  s_59c0dd2af30db2::t_85bb93437ea231 210-211
+packages/ir-types/LICENSE
+  s_59c0dd2af30db2::t_52cc330dd93208 1-202
+packages/desktop/src/agent/setup.ts
+  s_59c0dd2af30db2::t_2b2cc08de6f13a 5-6,20-24,76
+packages/desktop/test/main-process.test.ts
+  s_59c0dd2af30db2::t_6c27c2c17d32f9 1,10,12
+  s_59c0dd2af30db2::t_01692aaae7a440 5,69-75,84,87
+packages/desktop/src/web-preferences.ts
+  s_59c0dd2af30db2::t_2cbf917b4e6493 1-19
+packages/desktop/e2e/packaged.e2e.ts
+  s_59c0dd2af30db2::t_c48d59f9ebd143 32,35,40
+  s_59c0dd2af30db2::t_31f88d7b5b5088 1-12,14-31,33-34,36-39,41-51,53-120,122-186
+  s_59c0dd2af30db2::t_ea85b4daf4ee91 52
+  s_59c0dd2af30db2::t_b668bee8c3ede2 13,121
+packages/app/src/bootstrap.ts
+  s_59c0dd2af30db2::t_937b7a576f19da 24-29,177-181,245-246,249-260
+packages/desktop/e2e/agent-live.e2e.ts
+  s_59c0dd2af30db2::t_53e914016696c5 12,35,38,41,49
+packages/desktop/package.json
+  s_59c0dd2af30db2::t_9ee61300866f86 18
+packages/desktop/src/ipc.ts
+  s_59c0dd2af30db2::t_ef3c393bc4389b 95-104,108,123,130-131
+  s_59c0dd2af30db2::t_dd590293ab8c51 21,85,92,106-107,113,116,119,132,182-183
+packages/app/src/ui/styles.css
+  s_59c0dd2af30db2::t_26e5224bca2ea6 1310-1344
+packages/desktop/src/agent/settings.ts
+  s_59c0dd2af30db2::t_dd590293ab8c51 14,82-85
+packages/app/src/ui/Dialogs.tsx
+  s_59c0dd2af30db2::t_26e5224bca2ea6 6-8
+packages/desktop/src/agent/runner.ts
+  s_59c0dd2af30db2::t_9881759ba4a185 83-84,87-88
+  s_59c0dd2af30db2::t_57c22796bd947b 31,73-75,171,177-199
+packages/desktop/e2e/agent.e2e.ts
+  s_59c0dd2af30db2::t_53e914016696c5 11,78
+packages/desktop/src/main.ts
+  s_59c0dd2af30db2::t_937b7a576f19da 8,10,24-25,29,31,35-42,50-56,60,82,137,160,193,232,260,267-268
+  s_59c0dd2af30db2::t_7e3f2d60154731 48
+  s_59c0dd2af30db2::t_ae693f7570aa59 11-12,20,23,43-47,211-219,234-238,287-293
+  s_59c0dd2af30db2::t_93d9b269d78f2d 294
+packages/desktop/src/env.ts
+  s_59c0dd2af30db2::t_444a51b6a2e090 1-13,15-139,141,145,149
+  s_59c0dd2af30db2::t_b22a3156b2268e 14,147
+  s_59c0dd2af30db2::t_47dc534f77b351 140,142-144,146,148
+packages/desktop/src/debug-switches.ts
+  s_59c0dd2af30db2::t_45cbd7b942d608 1-50
+packages/app/src/ui/About.tsx
+  s_59c0dd2af30db2::t_767546661b7ab2 1-145
+packages/desktop/electron-builder.config.cjs
+  s_59c0dd2af30db2::t_c736e557f0a325 3-13,17-18,26,30-32,36-51,56-59,63-64
+packages/forge-web/package.json
+  s_59c0dd2af30db2::t_9ee61300866f86 27-28
+packages/desktop/test/agent.test.ts
+  s_59c0dd2af30db2::t_6c27c2c17d32f9 1,8-9,24,26,162-163
+packages/llm-gateway/LICENSE
+  s_59c0dd2af30db2::t_57be31b0bbde71 1-373
+packages/desktop/src/forge-cli.ts
+  s_59c0dd2af30db2::t_dd590293ab8c51 15,40-43,46,78-80
+packages/desktop/test/temp-dirs.ts
+  s_59c0dd2af30db2::t_7c60884cf7a3f8 1-20
+packages/desktop/src/agent/protocol.ts
+  s_59c0dd2af30db2::t_dd590293ab8c51 128-139,142,144,146-158
+packages/llm-gateway/package.json
+  s_59c0dd2af30db2::t_57be31b0bbde71 5
+packages/desktop/test/temp-dirs.test.ts
+  s_59c0dd2af30db2::t_6dd4f414eeadb9 1-22
+packages/desktop/src/menu.ts
+  s_59c0dd2af30db2::t_96718074e5be64 15,156
+packages/desktop/test/notices.test.ts
+  s_59c0dd2af30db2::t_6c27c2c17d32f9 10,14,18
+  s_59c0dd2af30db2::t_b4afd93541de25 229
+  s_59c0dd2af30db2::t_fa65d742ea2fd4 1-8,11-13,15-17,19-115,117-141,157-228,230-242
+  s_59c0dd2af30db2::t_7010e9d90f0133 9,116,142-156
+packages/desktop/src/agent/worker.ts
+  s_59c0dd2af30db2::t_dd590293ab8c51 8-10
+packages/desktop/.gitignore
+  s_59c0dd2af30db2::t_9ee61300866f86 5-6
+packages/desktop/src/protocol-core.ts
+  s_59c0dd2af30db2::t_4cdc200f702b03 57-76
+packages/desktop/src/files.ts
+  s_59c0dd2af30db2::t_a69f327766bdbb 2-9,17-20,26-51,54-55,57-59,65-75,78-80,116-149
+  s_59c0dd2af30db2::t_f848761d3f32f6 10-15,21-25,60,64,81,83-93,95-99,101-115,157-170,172,181,187,189-194,197-198,200
+  s_59c0dd2af30db2::t_aef853a08a6ab2 82
+packages/app/vite.config.ts
+  s_59c0dd2af30db2::t_1cb70a06492680 1-3,5,18-299,304,307
+packages/forge-web/scripts/build.mjs
+  s_59c0dd2af30db2::t_17755eaf6eec4e 25,461-476,479
+  s_59c0dd2af30db2::t_9ee61300866f86 296
+  s_59c0dd2af30db2::t_d0e61aa697feca 12-14,21-23,33-152,154-160,163-235,238-241,244-295,297-327,329-459
+  s_59c0dd2af30db2::t_6617a735ceda5d 460
+packages/evals/test/engine-env.test.ts
+  s_59c0dd2af30db2::t_e223c06b58acca 62
+  s_59c0dd2af30db2::t_7c60160eb60b2d 1-61,63-67
+packages/desktop/test/ipc.test.ts
+  s_59c0dd2af30db2::t_6c27c2c17d32f9 6,11,24
+  s_59c0dd2af30db2::t_540173ff1c4433 1-5,7-10,12-23,25-89
+packages/desktop/scripts/package-notices.mjs
+  s_59c0dd2af30db2::t_7adaf5ea08b9ea 1-33
+packages/desktop/build/entitlements.mac.plist
+  s_59c0dd2af30db2::t_cb116b0f77d5e2 1-20
+packages/evals/src/engine.ts
+  s_59c0dd2af30db2::t_fbfd8b62e2c042 59,72,126-143,176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b3c9a7f5626bdcf8520e0708981e5df351b0bf81",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
