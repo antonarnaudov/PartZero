@@ -1,0 +1,23 @@
+packages/agent-tools/src/spec.ts
+  s_59c0dd2af30db2::t_21681ab38f51e2 51-60
+packages/agent/prompts/spec_writer.v1.md
+  s_59c0dd2af30db2::t_1af454e64f230e 30-31,83
+docs/BACKLOG.md
+  s_59c0dd2af30db2::t_965cf64bd1f42d 51,53-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6196c2ea5fbd4fcf7e87486258661318c543787b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
