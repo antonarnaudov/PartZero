@@ -1,0 +1,42 @@
+{
+  "name": "@aicad/agent-tools",
+  "version": "0.0.1",
+  "description": "Agent tool registry for aicad: typed tools (zod → strict JSON Schema) over an in-memory CadScript design session, the verification ladder (compile, kernel, expectations, spec tests) and operation playbooks that turn every error code into a concrete repair hint.",
+  "license": "MPL-2.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "fixtures": "AICAD_RECORD_FIXTURES=oracle vitest run test/record-fixtures.test.ts"
+  },
+  "dependencies": {
+    "@aicad/cadscript": "workspace:*",
+    "@aicad/evals": "workspace:*",
+    "@aicad/ir-types": "workspace:*",
+    "@aicad/llm-gateway": "workspace:*",
+    "typescript": "~5.9.3",
+    "zod": "^4.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "ajv": "^8.17.1",
+    "vitest": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

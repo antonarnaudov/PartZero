@@ -1,0 +1,414 @@
+/**
+ * The v0 design tools. Every result is a short, plain-text delta (≤ ~2k tokens) that names
+ * features and curves by their CadScript names and carries a repair hint for every error.
+ *
+ * Designer: apply_cadscript, ask_user, checkpoint, get_code, ir_summary, measure, propose,
+ *           rollback, run_tests
+ * Spec writer: set_spec_tests, submit_spec
+ */
+import { z } from "zod";
+import type { FeatureReport } from "@aicad/ir-types";
+import { capList, clip, num, plural } from "./format.js";
+import { defineTool, ToolRegistry, type AgentTool, type ToolOutput } from "./registry.js";
+import type { ApplyOutcome, DesignSession, Verification } from "./session.js";
+import { patchSource, PatchError, featureConstNames } from "./source.js";
+import { designSpecSchema, formatTestResult, specTestProblems, specTestSchema, summarizeTests, toHiddenTests, type SpecTestResult } from "./spec.js";
+import { featureResultText, irSummary, measureText, modelTotals, totalsText } from "./summaries.js";
+
+export interface UserQuestion {
+  id: string;
+  question: string;
+  options?: string[] | undefined;
+  default: string;
+}
+
+export interface DesignToolContext {
+  session: DesignSession;
+  /** Answers questions: the user (interactive) or the task's recorded defaults (eval). */
+  askUser(questions: readonly UserQuestion[]): Promise<string[]> | string[];
+  /** Ask/explain mode: tools that change the design refuse. */
+  readOnly?: boolean;
+}
+
+export interface Proposal {
+  summary: string;
+  assumptions: string[];
+  known_issues: string[];
+}
+
+export const DESIGNER_TOOLS = ["apply_cadscript", "ask_user", "checkpoint", "get_code", "ir_summary", "measure", "propose", "rollback", "run_tests"] as const;
+export const SPEC_WRITER_TOOLS = ["set_spec_tests", "submit_spec"] as const;
+export const READ_ONLY_TOOLS = ["get_code", "ir_summary", "measure", "run_tests"] as const;
+
+const LEVEL_NAMES = ["compile", "kernel", "expectations", "spec tests"] as const;
+
+function readOnlyRefusal(name: string): ToolOutput {
+  return { text: `${name} is not available in question mode: this request only asks about the design. Answer from get_code / ir_summary / measure.`, isError: true, data: { kind: "read_only" } };
+}
+
+// ─── Apply result formatting ─────────────────────────────────────────────────────────────────
+
+function sameResult(a: FeatureReport | undefined, b: FeatureReport): boolean {
+  return a !== undefined && a.status === b.status && JSON.stringify(a.bodies ?? a.regions ?? null) === JSON.stringify(b.bodies ?? b.regions ?? null);
+}
+
+function testsLine(tests: readonly SpecTestResult[]): string[] {
+  const s = summarizeTests(tests);
+  const lines = [`L3 spec tests: ${s.passed}/${s.total} pass`];
+  const failing = tests.filter((t) => !t.pass);
+  lines.push(...capList(failing, 8, (t) => `  ${formatTestResult(t)}`, (n) => `  … ${n} more failing (run_tests lists all)`));
+  if (failing.length === 0) {
+    const tight = tests.filter((t) => t.margin !== undefined).sort((a, b) => a.margin! - b.margin!)[0];
+    if (tight) lines.push(`  tightest: ${formatTestResult(tight)}`);
+  }
+  return lines;
+}
+
+/** The verification ladder as text (shared by apply_cadscript and rollback). */
+export function formatVerification(v: Verification, previous?: readonly FeatureReport[]): string[] {
+  const lines: string[] = [];
+  const errors = v.diagnostics.filter((d) => d.severity === "error");
+  const warnings = v.diagnostics.filter((d) => d.severity !== "error");
+  if (errors.length > 0) {
+    lines.push(`L0 compile: ${plural(errors.length, "error")}`);
+    for (const d of errors.slice(0, 6)) {
+      lines.push(`  ✗ ${d.line}:${d.col} ${d.code}${d.feature ? ` in ${d.feature}` : ""}: ${d.message}`);
+      if (d.excerpt) lines.push(`    > ${d.excerpt}`);
+      lines.push(`    fix: ${d.hint}`);
+    }
+    if (errors.length > 6) lines.push(`  … ${errors.length - 6} more errors (fix these first)`);
+  } else {
+    lines.push("L0 compile + typecheck: ok");
+  }
+  for (const d of warnings.slice(0, 2)) lines.push(`  note ${d.code}${d.feature ? ` in ${d.feature}` : ""}: ${d.message}`);
+
+  if (v.engineError) {
+    lines.push(`L1 kernel: engine error ${v.engineError.code}: ${v.engineError.message}`, `  fix: ${v.engineError.hint}`);
+  }
+  const k = v.kernel;
+  if (k) {
+    const failed = k.features.filter((f) => f.status !== "ok");
+    lines.push(`L1 kernel (${k.engine}): ${k.status}${failed.length > 0 ? `, ${plural(failed.length, "feature")} failed` : ""}`);
+    if (k.documentError) lines.push(`  ✗ document ${k.documentError.code}: ${k.documentError.message}`, `    fix: ${k.documentError.hint}`);
+    // Root causes first: a DEPENDENCY_FAILED consumer repeats its sketch's error.
+    const ordered = [...failed].sort((a, b) => Number(a.code === "DEPENDENCY_FAILED") - Number(b.code === "DEPENDENCY_FAILED"));
+    for (const f of ordered.slice(0, 6)) {
+      lines.push(`  ✗ ${f.feature} (${f.type}) ${f.code}: ${f.message}`);
+      lines.push(`    fix: ${f.hint}`);
+    }
+    if (ordered.length > 6) lines.push(`  … ${ordered.length - 6} more failed features`);
+    const prevByName = new Map((previous ?? []).map((f) => [f.feature, f] as const));
+    const okChanged = k.features.filter((f) => f.status === "ok").filter((f) => !sameResult(prevByName.get(f.feature), f as FeatureReport));
+    const okSame = k.features.filter((f) => f.status === "ok").length - okChanged.length;
+    lines.push(
+      ...capList(
+        okChanged,
+        8,
+        (f) => `  ✓ ${f.feature} (${f.type}): ${featureResultText(f as FeatureReport)}`,
+        (n) => `  … ${n} more changed features (measure lists all)`,
+      ),
+    );
+    if (okSame > 0) lines.push(`  (${plural(okSame, "other feature")} unchanged)`);
+  }
+  if (v.expectations.length > 0) {
+    lines.push(
+      `L2 expect: ${v.expectations.map((x) => `${x.pass ? "✓" : "✗"} ${x.feature}.${x.check} ${x.expected}${x.pass ? "" : ` — actual ${x.actual}`}`).join("; ")}`,
+    );
+  }
+  if (v.tests) lines.push(...testsLine(v.tests));
+  return lines;
+}
+
+export function formatApply(o: ApplyOutcome, notes: readonly string[] = []): string {
+  const v = o.after.verification;
+  const head = v.ok
+    ? `apply #${o.index}: OK (L0–L2 pass${v.tests ? `; spec tests ${summarizeTests(v.tests).passed}/${v.tests.length}` : ""})`
+    : `apply #${o.index}: FAILED at L${v.failedAt ?? 0} (${LEVEL_NAMES[v.failedAt ?? 0]})`;
+  const lines = [head];
+  if (notes.length > 0) lines.push(`patches: ${notes.join("; ")}`);
+  lines.push(`changes: ${o.changesText}`);
+  lines.push(...formatVerification(v, o.before.report?.features));
+  if (o.after.report && o.after.report.status === "ok") lines.push(`model: ${totalsText(modelTotals(o.after.report))}`);
+  if (!v.ok) lines.push("next: fix the first root-cause error above with the smallest change (patch that feature), then apply again.");
+  else if (v.tests && v.tests.some((t) => !t.pass)) lines.push("next: keep building; failing spec tests show what is still missing or off.");
+  else if (v.tests) lines.push("next: all spec tests pass — check anything else the request needs, then propose.");
+  return lines.join("\n");
+}
+
+// ─── Tools ───────────────────────────────────────────────────────────────────────────────────
+
+const expectationSchema = z.object({
+  feature: z.string().describe("Feature const name."),
+  bodies: z.number().int().optional().describe("Exact number of bodies it creates."),
+  regions: z.number().int().optional().describe("Sketch: exact number of regions."),
+  holes: z.number().int().optional().describe("Sketch: exact number of holes (inner loops) over all regions."),
+  volume: z.number().optional().describe("Total volume of its bodies, mm³ (±1%)."),
+  bbox_size: z.array(z.number()).optional().describe("Axis-aligned size [x, y, z] of its bodies, mm (±0.05)."),
+});
+
+const patchSchema = z.object({
+  feature: z.string().describe("Const name of the feature to replace or delete, or the name of a new feature to insert."),
+  code: z.string().describe("The complete replacement statement(s), e.g. `const plate = extrude(base, { distance: 8 });`. Empty string deletes the feature."),
+  after: z.string().optional().describe("New features only: insert after this feature const (default: end of file)."),
+});
+
+const getCode = defineTool({
+  name: "get_code",
+  readOnly: true,
+  description: "Read the current CadScript file, or only one feature's `const` statement (with the comments above it and its line numbers).",
+  input: z.object({ feature: z.string().optional().describe("Feature const name; omit for the whole file.") }),
+  run(input, { session }: DesignToolContext) {
+    const feature = input.feature;
+    if (feature !== undefined) {
+      const f = session.featureSource(feature);
+      if (!f) return { text: `No feature const "${feature}". Features: ${featureConstNames(session.source).join(", ") || "none"}.`, isError: true };
+      return { text: `${feature} (lines ${f.line}–${f.endLine}):\n${f.text}` };
+    }
+    if (session.source.trim() === "") return { text: "(empty file: nothing has been applied yet — start with apply_cadscript { source })" };
+    const n = session.source.split("\n").length;
+    return { text: clip(`${plural(n, "line")}:\n${session.source}`, undefined, "call get_code with feature: <name>") };
+  },
+});
+
+const applyCadscript = defineTool({
+  name: "apply_cadscript",
+  description:
+    "Change the design, then verify it: L0 compile + typecheck, L1 kernel evaluation, L2 your `expect` checks, L3 the spec tests. " +
+    "Give EITHER `source` (the complete file: first version or big rewrites) OR `patches` (edit features by const name: replace, delete, or insert new ones). " +
+    "The result is a short delta: errors with a concrete fix, bodies of changed features, spec test status. Build in small steps (1–3 features per call).",
+  input: z.object({
+    source: z.string().optional().describe("The COMPLETE new CadScript file."),
+    patches: z.array(patchSchema).optional().describe("Targeted edits, applied in order. Prefer this for small changes."),
+    expect: z.array(expectationSchema).optional().describe("L2 checks for this step, e.g. [{ feature: 'plate', bodies: 1, bbox_size: [80, 50, 8] }]."),
+    note: z.string().optional().describe("One line: what this step does."),
+  }),
+  async run(input, { session, readOnly }: DesignToolContext) {
+    if (readOnly) return readOnlyRefusal("apply_cadscript");
+    const source = input.source;
+    const patches = input.patches;
+    if ((source === undefined) === (patches === undefined || patches.length === 0)) {
+      return { text: "Give exactly one of `source` (whole file) or `patches` (non-empty list). Nothing was applied.", isError: true, data: { kind: "bad_input" } };
+    }
+    let next = source ?? "";
+    let notes: string[] = [];
+    if (patches) {
+      try {
+        const r = patchSource(session.source, patches);
+        next = r.source;
+        notes = r.notes;
+      } catch (e) {
+        if (e instanceof PatchError) return { text: `${e.message}. Nothing was applied.`, isError: true, data: { kind: "bad_input" } };
+        throw e;
+      }
+    }
+    const expect = input.expect ?? [];
+    const outcome = await session.apply(next, { expect });
+    const v = outcome.after.verification;
+    return {
+      text: formatApply(outcome, notes),
+      isError: !v.ok,
+      data: {
+        kind: "apply",
+        index: outcome.index,
+        ok: v.ok,
+        failedAt: v.failedAt,
+        level: v.level,
+        errorSignature: v.errorSignature,
+        engineError: v.engineError?.code,
+        tests: v.tests ? summarizeTests(v.tests) : undefined,
+        note: input.note,
+      },
+    };
+  },
+});
+
+const irSummaryTool = defineTool({
+  name: "ir_summary",
+  readOnly: true,
+  description: "Compact list of every feature with its key parameters (plane, curves, distances, axis) and its latest result (regions, bodies, errors).",
+  input: z.object({}),
+  run(_input, { session }: DesignToolContext) {
+    if (session.ir) return { text: irSummary(session.ir, session.report) };
+    if (session.source.trim() === "") return { text: "Nothing has been applied yet." };
+    const last = [...session.checkpoints].reverse().find((c) => c.state.ir);
+    const errs = session.verification.diagnostics.filter((d) => d.severity === "error").length;
+    return {
+      text: `The current source does not compile (${plural(errs, "error")}; see the last apply result).${last?.state.ir ? `\nLast compiled checkpoint ${last.id} "${last.label}":\n${irSummary(last.state.ir, last.state.report)}` : ""}`,
+      isError: true,
+    };
+  },
+});
+
+const measureTool = defineTool({
+  name: "measure",
+  readOnly: true,
+  description:
+    "Metrics from the latest evaluation. Without arguments: every feature briefly plus model totals. With `feature`: bodies in detail (volume, area, centroid, bbox, face/edge counts by type) or sketch regions (area, loops, holes, outer curves).",
+  input: z.object({
+    feature: z.string().optional().describe("Feature const name."),
+    body: z.number().int().optional().describe("With feature: only this body index."),
+  }),
+  run(input, { session }: DesignToolContext) {
+    const report = session.report;
+    if (!report) return { text: "No evaluation report: the current source does not compile. Fix the errors from the last apply first.", isError: true };
+    return { text: measureText(report, { feature: input.feature, body: input.body }) };
+  },
+});
+
+const setSpecTests = defineTool({
+  name: "set_spec_tests",
+  description:
+    "Set the executable spec tests (replaces any previous set). Each test is one measurement plus one expectation in the check DSL. Returns the problems if any test is invalid; fix them and call again.",
+  input: z.object({ tests: z.array(specTestSchema).describe("3–12 tests covering the requirements.") }),
+  run(input, { session }: DesignToolContext) {
+    if (session.testsFrozen) return { text: "The spec tests are frozen. The builder cannot change them; list a test you believe is wrong under known_issues when you propose.", isError: true };
+    const tests = toHiddenTests(input.tests);
+    if (tests.length === 0) return { text: "Give at least one test.", isError: true };
+    const problems = specTestProblems(tests, session.context !== undefined);
+    if (problems.length > 0) {
+      return { text: `Invalid tests (nothing stored):\n${capList(problems, 12, (p) => `- ${p}`).join("\n")}`, isError: true, data: { kind: "spec_tests", ok: false } };
+    }
+    session.setSpecTests(tests);
+    return { text: `${plural(tests.length, "test")} set: ${tests.map((t) => t.id).join(", ")}. Call submit_spec to finish.`, data: { kind: "spec_tests", ok: true, count: tests.length } };
+  },
+});
+
+const submitSpec = defineTool({
+  name: "submit_spec",
+  description: "Finish: record the DesignSpec (summary, requirements, assumptions with defaults, key dimensions) and freeze the tests set with set_spec_tests.",
+  input: designSpecSchema,
+  run(input, { session }: DesignToolContext) {
+    if (session.testsFrozen) return { text: "The spec is already frozen.", isError: true };
+    if (session.tests.length === 0) return { text: "Set valid tests with set_spec_tests first.", isError: true };
+    const spec = session.freezeSpec(input);
+    return { text: `Spec frozen: ${plural(spec.requirements.length, "requirement")}, ${plural(spec.tests.length, "test")}.`, data: { kind: "spec", spec } };
+  },
+});
+
+const runTests = defineTool({
+  name: "run_tests",
+  readOnly: true,
+  description: "Run the frozen spec tests on the current model. Every result has its margin: the slack left (passing) or how far outside the tolerance (failing).",
+  input: z.object({}),
+  run(_input, { session }: DesignToolContext) {
+    if (session.tests.length === 0) return { text: "There are no spec tests for this task; verify against the request with measure." };
+    const results = session.runTests();
+    if (!results) return { text: "No evaluation report: the current source does not compile or evaluate. Fix it first.", isError: true };
+    const s = summarizeTests(results);
+    return { text: [`${s.passed}/${s.total} spec tests pass`, ...results.map((r) => formatTestResult(r))].join("\n"), data: { kind: "tests", ...s } };
+  },
+});
+
+const checkpointTool = defineTool({
+  name: "checkpoint",
+  description: "Save the current state under a label, to roll back to later. (A checkpoint is also taken automatically after every successful apply.)",
+  input: z.object({ label: z.string().describe("Short label, e.g. 'base plate ok'.") }),
+  run(input, { session, readOnly }: DesignToolContext) {
+    if (readOnly) return readOnlyRefusal("checkpoint");
+    const cp = session.checkpoint(input.label);
+    return { text: `Checkpoint ${cp.id} "${cp.label}" saved (after apply #${cp.applyIndex}, ${cp.state.verification.ok ? "verified ok" : "NOT verified ok"}).`, data: { kind: "checkpoint", id: cp.id } };
+  },
+});
+
+const rollbackTool = defineTool({
+  name: "rollback",
+  description: "Restore a checkpoint (by id like cp3, or by label). The file, IR and report return to that state; use it when an approach is not working.",
+  input: z.object({ to: z.string().describe("Checkpoint id (cp3) or label.") }),
+  run(input, { session, readOnly }: DesignToolContext) {
+    if (readOnly) return readOnlyRefusal("rollback");
+    let cp;
+    try {
+      cp = session.rollback(input.to);
+    } catch (e) {
+      return { text: (e as Error).message, isError: true };
+    }
+    const lines = [`Rolled back to ${cp.id} "${cp.label}" (after apply #${cp.applyIndex}).`];
+    if (cp.state.ir) lines.push(irSummary(cp.state.ir, cp.state.report, { maxChars: 3500 }));
+    return { text: lines.join("\n"), data: { kind: "rollback", id: cp.id } };
+  },
+});
+
+const askUser = defineTool({
+  name: "ask_user",
+  description:
+    "Ask the user up to 3 short questions — only when an ambiguity changes topology or interfaces, the units are unclear or requirements conflict, AND there is no safe default. Every question carries the default you will use if unanswered. Otherwise state the assumption and proceed.",
+  input: z.object({
+    questions: z
+      .array(
+        z.object({
+          id: z.string().describe("q1, q2, …"),
+          question: z.string(),
+          options: z.array(z.string()).optional().describe("2–4 multiple-choice answers."),
+          default: z.string().describe("The answer you will assume."),
+        }),
+      )
+      .describe("1–3 questions."),
+  }),
+  async run(input, ctx: DesignToolContext) {
+    const qs = input.questions;
+    if (qs.length === 0 || qs.length > 3) return { text: "Ask between 1 and 3 questions.", isError: true };
+    const answers = await ctx.askUser(qs);
+    return {
+      text: qs.map((q, i) => `${q.id}: ${q.question}\n  answer: ${answers[i] ?? q.default}`).join("\n"),
+      data: { kind: "ask_user", questions: qs, answers },
+    };
+  },
+});
+
+const propose = defineTool({
+  name: "propose",
+  description:
+    "Finish the task: hand the current model to the user as a proposal. Call it once the model verifies and the spec tests pass (or you cannot make progress). List every assumption you made and every known issue honestly.",
+  input: z.object({
+    summary: z.string().describe("2–4 sentences: what was built and how it meets the request."),
+    assumptions: z.array(z.string()).describe("Each unstated choice with its value, e.g. 'wall 2 mm (not specified)'."),
+    known_issues: z.array(z.string()).describe("Anything that does not meet the request or a test; empty if none."),
+  }),
+  run(input, { session }: DesignToolContext) {
+    const proposal: Proposal = {
+      summary: input.summary,
+      assumptions: input.assumptions,
+      known_issues: input.known_issues,
+    };
+    const v = session.verification;
+    return { text: `Proposal recorded (${v.ok ? "model verified" : "model NOT verified"}).`, data: { kind: "propose", proposal } };
+  },
+});
+
+/** All v0 design tools. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function designTools(): AgentTool<DesignToolContext, any>[] {
+  return [applyCadscript, askUser, checkpointTool, getCode, irSummaryTool, measureTool, propose, rollbackTool, runTests, setSpecTests, submitSpec];
+}
+
+export function designRegistry(): ToolRegistry<DesignToolContext> {
+  return new ToolRegistry(designTools());
+}
+
+/** The designer's tools (sorted). */
+export function designerRegistry(): ToolRegistry<DesignToolContext> {
+  return designRegistry().subset([...DESIGNER_TOOLS]);
+}
+
+/** The spec writer's tools (sorted). */
+export function specWriterRegistry(): ToolRegistry<DesignToolContext> {
+  return designRegistry().subset([...SPEC_WRITER_TOOLS]);
+}
+
+/** Eval-mode answers: the task's recorded defaults, else "use your best judgement" with the question's default. */
+export function evalModeAnswers(recordedDefaults?: string): (questions: readonly UserQuestion[]) => string[] {
+  return (questions) =>
+    questions.map((q) =>
+      recordedDefaults !== undefined && recordedDefaults.trim() !== ""
+        ? `The user is not available. Recorded defaults for this request: ${recordedDefaults.trim()} For anything not covered, use your best judgement (your default "${q.default}" is fine).`
+        : `The user is not available: use your best judgement (your default "${q.default}" is fine) and list it as an assumption.`,
+    );
+}
+
+/** A one-line verdict for traces. */
+export function verificationLine(v: Verification): string {
+  if (v.ok) return `ok${v.tests ? ` (tests ${summarizeTests(v.tests).passed}/${v.tests.length})` : ""}`;
+  return `failed at L${v.failedAt ?? 0}: ${v.errorSignature.slice(0, 160)}`;
+}
+
+export { num };

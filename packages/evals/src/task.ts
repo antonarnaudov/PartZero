@@ -191,6 +191,45 @@ export function schemaProblems(value: unknown): string[] {
   return (v.errors ?? []).map(formatAjvError);
 }
 
+let hiddenTestValidator: ValidateFunction | undefined;
+
+/** The schema's `#/$defs/hiddenTest` on its own (same Ajv settings as the task validator). */
+function hiddenTestSchemaValidator(): ValidateFunction {
+  if (!hiddenTestValidator) {
+    const schema = JSON.parse(readFileSync(schemaPath(), "utf8")) as { $id: string };
+    const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false, allowUnionTypes: true });
+    ajv.addSchema(schema);
+    const v = ajv.getSchema(`${schema.$id}#/$defs/hiddenTest`);
+    if (!v) throw new Error("makerbench-task.schema.json has no #/$defs/hiddenTest");
+    hiddenTestValidator = v;
+  }
+  return hiddenTestValidator;
+}
+
+/**
+ * Validate hidden tests on their own, outside a task file: the JSON Schema for one test plus the
+ * semantic checks of {@link semanticProblems} (one comparator, allowed parameters, vector/scalar,
+ * `$context` only with a context model) and unique ids. For agents that write executable tests in
+ * the same DSL (the spec writer). Problems are prefixed with `tests[i] (id)`; empty = valid.
+ */
+export function testProblems(tests: readonly unknown[], options: { hasContext?: boolean } = {}): string[] {
+  const out: string[] = [];
+  const v = hiddenTestSchemaValidator();
+  const ids = new Set<string>();
+  tests.forEach((t, i) => {
+    const id = typeof t === "object" && t !== null && typeof (t as { id?: unknown }).id === "string" ? (t as { id: string }).id : "?";
+    const at = `tests[${i}] (${id})`;
+    if (!v(t)) {
+      for (const e of v.errors ?? []) out.push(`${at}${e.instancePath}: ${formatAjvError(e).replace(/^[^:]*: /, "")}`);
+      return;
+    }
+    if (ids.has(id)) out.push(`${at}: duplicate id "${id}"`);
+    ids.add(id);
+    out.push(...checkProblems(t as HiddenTest, at, options.hasContext ?? false, false));
+  });
+  return out;
+}
+
 // ─── Semantic validation ───────────────────────────────────────────────────────────────────
 
 const COMPARATOR_KEYS = ["eq", "approx", "between", "gte", "lte"] as const;

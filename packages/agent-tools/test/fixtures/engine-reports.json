@@ -1,0 +1,474 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "agent-tools-scenarios",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "plate_ok",
+   "ir_sha256": "a287c1ea17452b9bf86fa0c336b67e2ad67a54e17b83456d84b67ca7bbf84aad",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4000,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 31999.999999999996,
+        "area": 10079.999999999998,
+        "centroid": [
+         4.071469217351552e-17,
+         -7.115602791080501e-18,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "plate_thick",
+   "ir_sha256": "6e9bd5f293b0871befaef06043b67e57cec220de18b84e6fd7761a54bfacc026",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4000,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 39999.99999999999,
+        "area": 10599.999999999998,
+        "centroid": [
+         -8.442372429556627e-17,
+         -7.115602791080502e-18,
+         5.000000000000001
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         10
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "plate_open",
+   "ir_sha256": "f8e2188c83fa48b7a8dfff0d252e76db14c45d0b2519223df9726c4816e56e2e",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "plate",
+    "status": "error",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "type": "sketch",
+      "status": "error",
+      "error": {
+       "code": "SKETCH_OPEN_LOOP",
+       "message": "the end of curve 'right' at (40, 25) meets no other curve end"
+      }
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "type": "extrude",
+      "status": "error",
+      "error": {
+       "code": "DEPENDENCY_FAILED",
+       "message": "sketch 'base' failed with SKETCH_OPEN_LOOP: the end of curve 'right' at (40, 25) meets no other curve end"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "label": "plate_holes",
+   "ir_sha256": "ca3dd1dd70fe81a0c46a8f7d940b53f5d4f7d357d086cb0c0dad12343add7b25",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3963.683188924502,
+        "loops": 5,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 31709.465511396014,
+        "area": 10349.171658559571,
+        "centroid": [
+         -6.59688764960719e-16,
+         4.624991884778953e-16,
+         4.000000000000001
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 10,
+        "edges": 20,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "plate_hole_cross",
+   "ir_sha256": "6eafa5939c64d3926d06fe3a1f71ffb1ad243a9adddeafdd1e88594632ba7a37",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "plate",
+    "status": "error",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "type": "sketch",
+      "status": "error",
+      "error": {
+       "code": "SKETCH_CURVES_CROSS",
+       "message": "curves 'right' and 'h1' meet at (40, -2.23606798), not at a shared endpoint"
+      }
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "type": "extrude",
+      "status": "error",
+      "error": {
+       "code": "DEPENDENCY_FAILED",
+       "message": "sketch 'base' failed with SKETCH_CURVES_CROSS: curves 'right' and 'h1' meet at (40, -2.23606798), not at a shared endpoint"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "label": "plate_branch",
+   "ir_sha256": "7103bb3444b7283d0fb7fbe297578c060f2b73d4e6c97f32e83c72d0ce028a9f",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "plate",
+    "status": "error",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "type": "sketch",
+      "status": "error",
+      "error": {
+       "code": "SKETCH_BRANCHING",
+       "message": "the start of curve 'bottom' at (-40, -25) meets 2 other curve ends ('left', 'dup'); exactly one is required"
+      }
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "type": "extrude",
+      "status": "error",
+      "error": {
+       "code": "DEPENDENCY_FAILED",
+       "message": "sketch 'base' failed with SKETCH_BRANCHING: the start of curve 'bottom' at (-40, -25) meets 2 other curve ends ('left', 'dup'); exactly one is required"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "label": "rod_ok",
+   "ir_sha256": "9bc9a2495bc94c52e970c38d1522a84340abbfdb7753437c7a60d43bb3cedadf",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "rod_ok",
+    "status": "ok",
+    "features": [
+     {
+      "part": "rod",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 300,
+        "loops": 1,
+        "outer_curves": [
+         "axis_side",
+         "cap",
+         "on_axis",
+         "outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "rod",
+      "feature": "rod",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 9424.777960769381,
+        "area": 2513.2741228718346,
+        "centroid": [
+         0,
+         9.112758764909947e-17,
+         14.999999999999998
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         30
+        ],
+        "faces": 3,
+        "edges": 2,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 2
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "rod_cross",
+   "ir_sha256": "9d367465c3c4e5ffdbabaf52c63571d8ec3d98c9b313eeb936a5f7f6628d49e3",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "rod_cross",
+    "status": "error",
+    "features": [
+     {
+      "part": "rod",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 450,
+        "loops": 1,
+        "outer_curves": [
+         "axis_side",
+         "cap",
+         "on_axis",
+         "outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "rod",
+      "feature": "rod",
+      "type": "revolve",
+      "status": "error",
+      "error": {
+       "code": "REVOLVE_CROSSES_AXIS",
+       "message": "region ['axis_side', 'cap', 'on_axis', 'outer'] of sketch 'profile' has points on both sides of the revolve axis (signed distance range [-10, 5] mm)"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "label": "washer",
+   "ir_sha256": "c09d8d48c8bd6c0b82d7ed8626620bd04719528bbc8a41f5fb3c43cbb18cddb9",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "m3_washer",
+    "status": "ok",
+    "features": [
+     {
+      "part": "washer",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 30.442032813285092,
+        "loops": 2,
+        "outer_curves": [
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "washer",
+      "feature": "washer",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 30.442032813285103,
+        "area": 92.92831069318608,
+        "centroid": [
+         -8.75281646085591e-17,
+         1.281064262297256e-16,
+         0.5
+        ],
+        "bbox_min": [
+         -3.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         3.5,
+         3.5,
+         1
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}
