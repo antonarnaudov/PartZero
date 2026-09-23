@@ -1,0 +1,18 @@
+[package]
+name = "forge-mesh"
+description = "Forge tessellation: watertight, deflection-controlled triangle meshes of B-rep bodies (own constrained Delaunay triangulation)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MPL-2.0"
+publish.workspace = true
+
+[dependencies]
+forge-core.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true

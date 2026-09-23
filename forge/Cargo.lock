@@ -254,6 +254,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge-solve"
+version = "0.0.1"
+dependencies = [
+ "forge-core",
+ "proptest",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"

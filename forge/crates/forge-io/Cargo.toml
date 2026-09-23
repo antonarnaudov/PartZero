@@ -1,0 +1,21 @@
+[package]
+name = "forge-io"
+description = "Forge file I/O: our own STL (binary/ASCII), OBJ and 3MF writers and readers; STEP planned"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MPL-2.0"
+publish.workspace = true
+
+[dependencies]
+forge-mesh.workspace = true
+thiserror.workspace = true
+# Raw DEFLATE only; the zip container, CRC-32, XML and all format logic are ours.
+miniz_oxide.workspace = true
+
+[dev-dependencies]
+forge-core.workspace = true
+proptest.workspace = true
+
+[lints]
+workspace = true
