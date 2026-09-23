@@ -1,6 +1,6 @@
 # Vision
 
-> Product name: **Bozzetto**. "Forge" and "aicad" are internal codenames; see the [naming note](#naming-note).
+> Product name: **DemiCAD**. "Forge" and "aicad" are internal codenames; see the [naming note](#naming-note).
 
 ## The product in one paragraph
 
@@ -97,17 +97,29 @@ It does **not** mean a chatbot bolted onto a CAD app. Concretely:
 
 ## Naming note
 
-**Bozzetto** (chosen 2026-09-24) is the product name. In sculpture, a *bozzetto* is the quick preparatory model an artist makes to capture an idea before the final work. That is the product's promise: describe the idea, get a precise model, then refine it.
+**DemiCAD** (chosen 2026-09-24) is the product name. It comes from the **Demiurge**: in Plato's *Timaeus*, the divine craftsman who shapes the physical world after ideal forms. That is the product's promise: describe the idea, get a precise physical model, then refine it.
 
-The name was checked informally:
-- A web search found no software or CAD product using it.
-- It is free as a GitHub repository name, an npm package name and a crates.io crate name.
+**What was checked, informally:**
+- The name is free as a GitHub repository name, an npm package name and a crates.io crate name.
+- `demicad.ai` and `demicad.io` looked unregistered. `demicad.com`, `.app` and `.dev` are registered.
 
-A formal trademark search is required before the public launch. Candidates rejected on the way:
-- Partwright and Kerf: existing AI and CAD projects.
-- Formwright: a React form engine.
-- Maquette: a JavaScript library.
-- Brokkr: crowded on npm, crates.io and GitHub.
+**Known risks, which a formal trademark search must resolve before launch:**
+- `demicad.com` belongs to DEMICAD ("Diseño de Equipo y Maquinaria Industrial"), a Mexican industrial-machinery design firm. It is a services company, not software, but it works in the adjacent engineering-design space.
+- In English and French, "demi" also means "half" (as in demitasse). The Demiurge story has to carry the name.
+
+**Names rejected along the way:**
+
+| Name | Why it was rejected |
+|---|---|
+| Bozzetto | The owner didn't like it |
+| CortexCAD, MindCAD | Existing AI-CAD products |
+| Daedalus | An AI precision-manufacturing company |
+| Hephaestus | Hestus, a YC AI-CAD startup |
+| Vitruvius | ICON's AI home-design tool |
+| Partwright, Kerf | Existing AI and CAD projects |
+| Formwright, Maquette | Existing libraries |
+| Iron… names | IronCAD's AI features |
+| Brokkr, Mechanist and others | Crowded, or too close to competitors |
 
 "Forge" and "aicad" remain internal codenames, pending the same review:
 - "acad" was avoided because it is AutoCAD's executable name.
