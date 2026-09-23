@@ -1,0 +1,25 @@
+forge/crates/forge-ir/SPEC.md
+  s_59c0dd2af30db2::t_6f1f619660d947 11,25-26,84-92,173-184,242-246
+packages/cadscript/test/diagnostics.test.ts
+  s_59c0dd2af30db2::t_35e74b3cfea92f 247-251
+packages/cadscript/test/arbitraries.ts
+  s_59c0dd2af30db2::t_f058da6ff13ffd 184
+packages/cadscript/src/validate.ts
+  s_59c0dd2af30db2::t_8ef2befbd1ed24 42-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4d54427b0085e4cd9c33f969ac2fca0cf3620d02",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
