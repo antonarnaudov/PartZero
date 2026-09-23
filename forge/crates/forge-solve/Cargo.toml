@@ -1,0 +1,22 @@
+[package]
+name = "forge-solve"
+description = "Forge 2D sketch constraint solver: decomposition, Levenberg-Marquardt / drag solving, DOF, redundancy and minimal-conflict diagnostics"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MPL-2.0"
+publish.workspace = true
+
+[dependencies]
+forge-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+# proptest (and its process-fork/timeout helpers) only on native targets: the examples
+# are also built for wasm32-wasip1 to benchmark in Node.
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true

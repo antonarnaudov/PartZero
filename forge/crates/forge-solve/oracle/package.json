@@ -1,0 +1,14 @@
+{
+  "name": "forge-solve-oracle",
+  "private": true,
+  "description": "CI/dev-only oracle harness for forge-solve: compares DOF, redundancy and minimal conflicting sets against FreeCAD's PlaneGCS (LGPL, test tooling only - never a runtime dependency).",
+  "license": "MPL-2.0",
+  "type": "module",
+  "scripts": {
+    "oracle": "node planegcs_oracle.mjs",
+    "wasm-bench": "node wasm_bench.mjs"
+  },
+  "devDependencies": {
+    "@salusoft89/planegcs": "1.2.0"
+  }
+}
