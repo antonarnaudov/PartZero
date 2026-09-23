@@ -28,6 +28,19 @@ This list collects follow-ups from agent reports and reviews. Items are grouped 
 - **P1 Interval arithmetic slowed SSI by about 40%.** A concurrent `forge-core` change caused it. Add a fast path for finite bounds.
 - **P2 SSI pcurve consistency is sampled, not proven.** B-spline surfaces are unsupported in SSI.
 
+## IR v1 Phase C (from the Phase B final verification, 2026-09-24)
+- **P0 W5: holes and patterns.** Neither is implemented; `corpus/v1/programs` rows stay ROBUSTNESS until they are.
+- **P0 W6: fillet, chamfer, shell and draft** (the F2 gate).
+- **P0 W7b: oracle normalization of OCCT seam artifacts.** This covers arcs on one circle split at a seam vertex, and periodic faces split along seams. All 85 POTENTIAL_SILENT_WRONG rows on v1 seed 47 are oracle-side. SPEC §8.3 needs amending first: rule 1's merges don't hold for OCCT, and rule 3's conic tolerance must be relative to the curve.
+- **P0 W0 rulings on boolean identity edge cases:** an unchanged join target counts as `modified`?; `merged_into`/`removed` for join components; the minimum cut that counts.
+- **P1 Forge revolve fails with `FORGE_UNBOUNDED_DOMAIN`** on rounded profile corners that touch the axis (degenerate torus). The error is explicit, but must become a solved case (v1 seed 47 #675/#975).
+- **P1 Boolean explicit errors:**
+  - `FORGE_BOOLEAN_SSI` (`SSI_NOT_CONVERGED`) at tangent or singular start points;
+  - `FORGE_BOOLEAN_UNSUPPORTED` for torus minus disks.
+- **P1 W9–W11:** command-layer ops and bindings, agent playbooks for v1 codes, and MakerBench v1 tasks (+40), plus boolean, hole, fillet and pattern families in the naming harness.
+- **P2 Expression validation DoS.** Levenshtein suggestions over long unknown identifiers: prune by length difference.
+- **P2 Record the conditioning-aware tolerance for the expression oracle.** Also: the expression conformance suite has 376 cases against the plan's 600; wasm32-wasip1 CI for the forge-params golden; forge-regen's v0 golden on wasip1 needs wasmtime.
+
 ## IR / CadScript
 - **P1 Comments inside a changed statement are lost** by `applyIrEdit`. Comments above and after the statement are kept.
 - **P1 IR v1 additions:** parameters and expressions, constraints (feeding `forge-solve`), booleans, holes as features, fillet and chamfer, and face and edge references through semantic queries.
