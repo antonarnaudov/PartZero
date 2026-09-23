@@ -1,7 +1,7 @@
 [project]
 name = "aicad-oracle"
 version = "0.0.1"
-description = "OCCT (build123d/OCP) reference evaluator of the aicad IR v0, for differential testing of Forge. CI/dev tooling only - never shipped."
+description = "OCCT (build123d/OCP) reference evaluator of the aicad IR v0 and v1, for differential testing of Forge. CI/dev tooling only - never shipped."
 readme = "README.md"
 license = "MPL-2.0"
 requires-python = ">=3.13,<3.14"

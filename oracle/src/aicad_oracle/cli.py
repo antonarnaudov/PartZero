@@ -19,6 +19,59 @@ def _write(path: Path, text: str) -> None:
 # eval
 # ---------------------------------------------------------------------------------------------
 
+def _program_schema(path: Path) -> str | None:
+    """The `schema` string of an IR program file (None when unreadable)."""
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+    return data.get("schema") if isinstance(data, dict) else None
+
+
+def _uses_v1(path: Path, report_version: str = "auto") -> bool:
+    """IR v1 programs always get the v1 pipeline; v0 programs keep the v0 oracle (and its
+    `aicad.metrics/0` report) unless `--report-version v1` asks for SPEC-v1 §0.2 rule 4."""
+    return report_version == "v1" or _program_schema(path) not in (None, "aicad.ir/0")
+
+
+def _eval_v1(path: Path, args, replay: dict | None = None) -> int:
+    from .v1.evaluate import check_report, evaluate_text
+
+    checks: list[str] | None = [] if args.self_check else None
+    shapes: list | None = [] if args.step else None
+    report = evaluate_text(path.read_text(), path.stem, replay=replay, gate=checks, shapes=shapes,
+                           independent_refs=bool(getattr(args, "independent_refs", False)))
+    if args.step:
+        from .evaluate import export_step
+
+        if shapes:
+            export_step(shapes, args.step)
+            print(f"oracle eval: wrote {len(shapes)} bodies to {args.step}", file=sys.stderr)
+        else:
+            print("oracle eval: no bodies to export", file=sys.stderr)
+    errs = check_report(report)
+    if errs:
+        print("oracle eval: INTERNAL: report violates metrics-v1.schema.json:", file=sys.stderr)
+        for e in errs[:20]:
+            print(f"  {e}", file=sys.stderr)
+        return 3
+    text = json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    if args.out:
+        _write(Path(args.out), text)
+    else:
+        sys.stdout.write(text)
+    if report.get("error") and not report["features"]:
+        e = report["error"]
+        print(f"oracle eval: document rejected: {e['code']}: {e['message']}", file=sys.stderr)
+        return 2
+    if checks:
+        print("oracle eval: self-check failures:", file=sys.stderr)
+        for c in checks:
+            print(f"  {c}", file=sys.stderr)
+        return 4
+    return 0 if report["status"] == "ok" else 1
+
+
 def _cmd_eval(args) -> int:
     from .evaluate import check_report, dumps_report, evaluate_file
 
@@ -26,6 +79,15 @@ def _cmd_eval(args) -> int:
     if not path.is_file():
         print(f"oracle eval: no such file: {path}", file=sys.stderr)
         return 2
+    if _uses_v1(path, args.report_version) or args.replay:
+        replay = None
+        if args.replay:
+            try:
+                replay = json.loads(Path(args.replay).read_text())
+            except (OSError, ValueError) as e:
+                print(f"oracle eval: cannot read the replay report {args.replay}: {e}", file=sys.stderr)
+                return 2
+        return _eval_v1(path, args, replay)
     checks: list[str] | None = [] if args.self_check else None
     shapes: list | None = [] if args.step else None
     report = evaluate_file(path, checks, shapes)
@@ -88,19 +150,26 @@ def _cmd_diff(args) -> int:
             return 2
         a = json.loads(Path(args.a).read_text())
         b = json.loads(Path(args.b).read_text())
-        cmp = compare_reports(a, b, "a", "b")
+        if "aicad.metrics/1" in (a.get("schema"), b.get("schema")):
+            from .v1.compare import compare_reports as compare_v1
+
+            cmp = compare_v1(a, b, "a", "b", independent_refs=args.independent_refs)
+        else:
+            cmp = compare_reports(a, b, "a", "b")
         print(f"{cmp.classification}")
         for d in cmp.differences:
             print(f"  {d}")
         for n in cmp.notes:
             print(f"  note: {n}")
+        if getattr(cmp, "capped", 0):
+            print(f"  {cmp.capped} difference(s) capped at ROBUSTNESS (downstream of an engine divergence)")
         if args.report:
             from .diffrun import Row
 
             row = Row(Path(args.a).name + " vs " + Path(args.b).name, "b", a.get("status", "?"),
                       b.get("status", "?"), cmp.classification, cmp, list(cmp.notes))
             _write(Path(args.report), render_markdown([row], "Report diff", [f"a = `{args.a}`", f"b = `{args.b}`"]))
-        failing = {SILENT_WRONG, CODE_MISMATCH} | ({ROBUSTNESS} if args.fail_on_robustness else set())
+        failing = {SILENT_WRONG, CODE_MISMATCH, "REF_MISMATCH"} | ({ROBUSTNESS} if args.fail_on_robustness else set())
         return 1 if cmp.classification in failing else 0
 
     if not args.target:
@@ -132,26 +201,43 @@ def _cmd_diff(args) -> int:
 
     rows = []
     for prog in programs:
-        oracle_report = evaluate_file(prog)
-        bad = check_report(oracle_report)
+        if forge is not None:
+            ref, problem = run_forge(forge, prog, args.timeout)
+            ref_name = "forge"
+        else:
+            gp = golden_path(golden_dir, prog)
+            ref, problem = (json.loads(gp.read_text()) if gp.is_file() else None), None
+            ref_name = "golden"
+        v1 = _uses_v1(prog) or (isinstance(ref, dict) and ref.get("schema") == "aicad.metrics/1")
+        if v1:
+            from .v1.evaluate import check_report as check_v1
+            from .v1.evaluate import evaluate_text
+
+            # SPEC-v1 §8.1: the oracle replays Forge's v1 trace (constrained sketches, reference
+            # probes) and checks it independently.
+            replay = ref if (isinstance(ref, dict) and ref.get("schema") == "aicad.metrics/1"
+                             and ref_name == "forge") else None
+            oracle_report = evaluate_text(prog.read_text(), prog.stem, replay=replay,
+                                          independent_refs=args.independent_refs)
+            bad = check_v1(oracle_report)
+        else:
+            oracle_report = evaluate_file(prog)
+            bad = check_report(oracle_report)
         if bad:
             print(f"oracle diff: INTERNAL: oracle report for {prog} violates the schema: {bad[:3]}", file=sys.stderr)
             return 3
-        if forge is not None:
-            ref, problem = run_forge(forge, prog, args.timeout)
-            rows.append(diff_one(prog, oracle_report, ref, "forge", problem))
-        else:
-            gp = golden_path(golden_dir, prog)
-            ref = json.loads(gp.read_text()) if gp.is_file() else None
-            rows.append(diff_one(prog, oracle_report, ref, "golden", None))
+        rows.append(diff_one(prog, oracle_report, ref, ref_name, problem, independent_refs=args.independent_refs))
 
     print(render_table(rows))
     counts = summary_counts(rows)
     print("\n" + "  ".join(f"{k}={v}" for k, v in counts.items()))
+    capped = sum(getattr(r.comparison, "capped", 0) for r in rows if r.comparison is not None)
+    if capped:
+        print(f"{capped} difference(s) capped at ROBUSTNESS (downstream of an engine divergence; see the notes)")
     if args.report:
         _write(Path(args.report), render_markdown(rows, "Forge vs OCCT oracle diff", notes))
         print(f"report written to {args.report}")
-    failed = (counts.get(SILENT_WRONG, 0) + counts.get(CODE_MISMATCH, 0) > 0
+    failed = (counts.get(SILENT_WRONG, 0) + counts.get(CODE_MISMATCH, 0) + counts.get("REF_MISMATCH", 0) > 0
               or (args.fail_on_robustness and counts.get(ROBUSTNESS, 0) > 0)
               or (args.fail_on_no_reference and counts.get(NO_REFERENCE, 0) > 0))
     return 1 if failed else 0
@@ -170,6 +256,22 @@ def _cmd_golden(args) -> int:
     rc = 0
     for prog in list_programs(src):
         checks: list[str] = []
+        if _uses_v1(prog):
+            from .v1.evaluate import check_report as check_v1
+            from .v1.evaluate import evaluate_text
+
+            rep = evaluate_text(prog.read_text(), prog.stem, gate=checks)
+            bad = check_v1(rep)
+            dest = out / f"{prog.stem}.metrics.json"
+            if bad:
+                print(f"{prog.name}: INTERNAL: report violates the schema: {bad[:3]}", file=sys.stderr)
+                return 3
+            _write(dest, json.dumps(rep, indent=2, ensure_ascii=False, allow_nan=False) + "\n")
+            print(f"{prog.stem:32s} {rep['status']:5s} (aicad.metrics/1) -> {dest}")
+            for c in checks:
+                print(f"  SELF-CHECK FAILED: {c}", file=sys.stderr)
+                rc = 4
+            continue
         rep = evaluate_file(prog, checks)
         bad = check_report(rep)
         if bad:
@@ -237,6 +339,10 @@ def _gen_one(task: tuple[int, int, int]) -> dict:
 
 
 def _cmd_gen(args) -> int:
+    if getattr(args, "ir", "v0") == "v1":
+        from .v1.generator import cmd_gen_v1
+
+        return cmd_gen_v1(args)
     from concurrent.futures import ProcessPoolExecutor
 
     out = Path(args.out)
@@ -348,20 +454,36 @@ def _gen_invalid(args, out: Path) -> bool:
 # parser
 # ---------------------------------------------------------------------------------------------
 
+def _cmd_exprs(args) -> int:
+    from .v1.exprgen import cmd_exprs
+
+    return cmd_exprs(args)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="oracle",
-        description="OCCT reference evaluator of aicad IR v0 documents, for differential testing of Forge.",
+        description="OCCT reference evaluator of aicad IR documents (aicad.ir/0 and aicad.ir/1), for differential testing of Forge.",
     )
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    pe = sub.add_parser("eval", help="evaluate one IR document and print its aicad.metrics/0 report")
-    pe.add_argument("file", help="IR v0 JSON document")
+    pe = sub.add_parser("eval", help="evaluate one IR document and print its aicad.metrics report")
+    pe.add_argument("file", help="IR JSON document (aicad.ir/0 or aicad.ir/1)")
     pe.add_argument("--out", help="write the report here instead of stdout")
     pe.add_argument("--self-check", action="store_true",
                     help="print the self-check gate's findings (the gate always runs: a failing body "
                          "is reported as OCCT_SELF_CHECK_FAILED) and exit 4 if there are any")
     pe.add_argument("--step", help="also write the bodies to this STEP file (debugging, via build123d)")
+    pe.add_argument("--report-version", choices=["auto", "v1"], default="auto",
+                    help="auto: aicad.metrics/1 for aicad.ir/1 input, aicad.metrics/0 for aicad.ir/0 input; "
+                         "v1: always evaluate with the IR v1 pipeline (v0 input is migrated, SPEC-v1 §0.2 rule 4)")
+    pe.add_argument("--replay", help="a reference (Forge) aicad.metrics/1 report to replay and check: constrained "
+                                     "sketch solutions and reference probes (SPEC-v1 §8.1)")
+    pe.add_argument("--independent-refs", action="store_true",
+                    help="with --replay: independent-refs mode (SPEC-v1 §8.1): build from the oracle's own "
+                         "reference resolution and flag a difference from Forge's members as ORACLE_REF_MISMATCH "
+                         "(default: build from Forge's replayed members; a difference from the oracle's own "
+                         "resolution is ORACLE_REF_DIFFERS, classified ROBUSTNESS)")
     pe.set_defaults(func=_cmd_eval)
 
     pd = sub.add_parser("diff", help="compare Forge (or golden reports) against the oracle, per SPEC §6; "
@@ -378,6 +500,11 @@ def build_parser() -> argparse.ArgumentParser:
                     help="also exit 1 when a program has no reference report (a missing golden file)")
     pd.add_argument("--a", help="compare two report files directly: first report")
     pd.add_argument("--b", help="second report")
+    pd.add_argument("--independent-refs", action="store_true",
+                    help="v1 independent-refs mode (SPEC-v1 §8.1, §8.2, nightly): the oracle builds from its own "
+                         "reference resolution, a difference from Forge's members is REF_MISMATCH, and REF_* "
+                         "warning codes are compared. Default (PR gate): the oracle replays Forge's members, and a "
+                         "difference from its own resolution is ORACLE_REF_DIFFERS, classified ROBUSTNESS")
     pd.set_defaults(func=_cmd_diff)
 
     pg = sub.add_parser("golden", help="write <out>/<stem>.metrics.json oracle reports for every program in a directory")
@@ -396,7 +523,19 @@ def build_parser() -> argparse.ArgumentParser:
                     help="error-corpus programs per error kind (0 disables; some kinds use more to "
                          "cover every variant)")
     pn.add_argument("--invalid-out", help="error-corpus directory (default: <out>/invalid)")
+    pn.add_argument("--ir", choices=["v0", "v1"], default="v0",
+                    help="v1: generate aicad.ir/1 programs (parameters, expressions, compound curves, datums, "
+                         "sketches on faces, regions by member, booleans) and check each with the v1 oracle")
     pn.set_defaults(func=_cmd_gen)
+
+    px = sub.add_parser("exprs", help="IR v1 expressions: write random cases with the oracle's answers "
+                        "(the W1 agreement gate), or --check another implementation's answers")
+    px.add_argument("--count", type=int, default=10000)
+    px.add_argument("--seed", type=int, default=0)
+    px.add_argument("--out", help="write the cases here (default: stdout)")
+    px.add_argument("--check", help="a cases file with another implementation's answers: exit 1 on any "
+                                    "disagreement (reals 1e-12 relative, counts/bools/codes exact)")
+    px.set_defaults(func=_cmd_exprs)
     return p
 
 

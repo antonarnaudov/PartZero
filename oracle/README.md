@@ -1,8 +1,10 @@
-# aicad oracle: OCCT reference evaluator for IR v0
+# aicad oracle: OCCT reference evaluator for IR v0 and IR v1
 
-The oracle evaluates the same `aicad.ir/0` documents as Forge, using OCCT through
-build123d/OCP. It emits the same `aicad.metrics/0` report, so the two engines can be diffed
-under the rules in `forge/crates/forge-ir/SPEC.md` §6.
+The oracle evaluates the same `aicad.ir/0` and `aicad.ir/1` documents as Forge, using OCCT through
+build123d/OCP. It emits the same `aicad.metrics/0` / `aicad.metrics/1` reports, so the two engines
+can be diffed under the rules in `forge/crates/forge-ir/SPEC.md` §6 (v0) and
+`forge/crates/forge-ir/SPEC-v1-DRAFT.md` §8 (v1). IR v1 support is described in
+[IR v1 (W7a)](#ir-v1-w7a); the rest of this file describes the v0 oracle, which v1 reuses.
 
 - It is **dev/CI tooling only and is never shipped**. OCCT is LGPL. See `CLAUDE.md`, "Own the core; borrow only as oracles".
 - It implements SPEC revision **2026-09-23b** (rules tagged [R-1]…[R-15]), and nothing else.
@@ -13,7 +15,7 @@ under the rules in `forge/crates/forge-ir/SPEC.md` §6.
 ```bash
 cd oracle
 uv sync                 # creates .venv with the pinned CPython and wheels
-uv run pytest           # 172 tests, about 13 s
+uv run pytest           # about 1,360 tests (245 v0, the rest v1), about 2 min
 ```
 
 **Python is pinned to 3.13** (`.python-version`).
@@ -27,6 +29,166 @@ uv run pytest           # 172 tests, about 13 s
 - build123d is used for its version string and for the `--step` debug export.
 
 The JSON Schemas and `ir-v0.constants.json` are **read at run time** from `forge/crates/forge-ir/schema/`. They are never vendored. Override the location with `AICAD_IR_SCHEMA_DIR`.
+
+## IR v1 (W7a)
+
+Workstream W7a of [IR-V1-IMPLEMENTATION-PLAN](../docs/IR-V1-IMPLEMENTATION-PLAN.md): the oracle reads
+IR v1, evaluates it independently of Forge, and diffs it with `kernel-diff` v1. The code is in
+`src/aicad_oracle/v1/`; the v0 modules are reused for sketches, OCCT construction and the body gate.
+The schemas and `ir-v1.constants.json` are read at run time (never vendored); the handful of
+constants used in arithmetic are asserted against the constants file at load time.
+
+### What the oracle computes and what it replays (SPEC-v1 §8.1)
+
+| Item | Oracle |
+|---|---|
+| Rejection pipeline (§0.5 rule 4) | computes: strict JSON (correctly rounded, duplicate keys rejected) → v0/v1 dispatch → W0's raw pre-checks → `ir-v1.schema.json` → a port of W0's structural validation → the oracle's own expression checker (syntax, names, functions, arity, units, types, `EXPR_SCOPE`, `PARAM_CYCLE`) |
+| Migration of v0 input (§9.1) | computes: `migrate_v0_to_v1` with the rename report; canonical JSON printed byte-identically to Forge's `to_json` |
+| Parameters and expressions (§2) | computes: own lexer, parser, canonical printer, type checker and IEEE evaluator (exact degree trigonometry, binary exponentiation, `-0 → +0`), `PARAM_FAILED` propagation, bounds |
+| Explicit sketches, compound curves (§4.1, §4.2) | computes |
+| Constrained sketches (§4.3–§4.4) | never solves. Checks run in the §7.1 order: the dimension values (`SKETCH_INVALID_DIMENSION`), then the `plane` reference, then the operation. Standalone: only the §4.4 rule 4 **fixed point** (the welded stored guess, when it already satisfies every driving constraint to `SOLVE_TOLERANCE`), else `ORACLE_SOLVE_REQUIRES_REPLAY`; `sketch.status` and `sketch.dof` are then **omitted** (they are forge-solve's verdict, which the oracle cannot compute). With a Forge report (`--replay`, `oracle diff`): **replays** only the *numbers* of `sketch.solved` — the replayed geometry is the document's curves in document order, with the document's `kind`, `construction` and `ccw` — after an **independent check** written from the SPEC's constraint table (`v1/constraints.py`, one unit test per row): `solved` must list exactly the document's curves, in order, with the same kind, `construction` and `ccw` and finite numbers; every driving constraint holds to `SOLVE_CHECK_TOLERANCE` on the replayed geometry — angular conditions scaled by the welded guess's lengths (the convention of the solver pinned by §4.4 rule 3); a curve–curve `tangent` without a joint in the mode `internal` gives, or (omitted) the welded guess decides; a line–arc tangency at a joint also to first order (line ⟂ radius); an arc–arc tangency at a joint as forge-solve's `TangentCurvesAt` does — collinear radii at the joint, tangency in *either* mode, `internal` not applied; a `fix` holds every coordinate `x`/`y` do not give at the welded guess —; welded ends are bit-identical; `sketch.dimensions` lists the document's dimension constraints in order with the same `driving` flag and every driving `value` equals the oracle's own evaluation (§8.1's "equals" is read at `PARAM_VALUE_REL`, as §8.2 compares real parameters — the expression fixtures allow libm differences at 1e-12); and when the welded guess is clearly a fixed point (residuals ≤ ½·`SOLVE_TOLERANCE`), rule 4 is enforced: the solution must equal the guess bit for bit, and a Forge `SKETCH_CONSTRAINT_CONFLICT` / `SKETCH_SOLVE_FAILED` is provably wrong. Any failure is `ORACLE_REPLAY_CHECK_FAILED` (POTENTIAL_SILENT_WRONG). Two findings on rules the SPEC does not state are ROBUSTNESS warnings instead, never failures: `ORACLE_REPLAY_SIZE_BOUND` (an angular constraint within the check tolerance at the solver's scale but off by more than *tol* at the solved size) and `ORACLE_TANGENCY_MODE_DIFFERS` (an arc–arc joint tangency solved in the other mode than `internal` / the guess rule). `DEGENERATE_CURVE` then applies to every solved curve (§4.2). `status`/`dof` are copied from the replayed report and marked by an info warning `ORACLE_REPLAYED`. Off a fixed point, `SKETCH_CONSTRAINT_CONFLICT` / `SKETCH_SOLVE_FAILED` are mirrored from the reference (replay-only). |
+| Datum planes and axes, face frames (§3) | computes (every mode; the §3.1 face-frame table) |
+| References (§5) | standalone: computes them itself — provenance keys for its own bodies (§5.2 rule 3; history through booleans), the query evaluator (every op and predicate), cardinality, capture validation by key. With a Forge report, **default mode** (the §8.1 PR/nightly gate): **replays** Forge's members — an `ok` feature must report a `refs` entry per Ref field (else `ORACLE_REF_UNREPORTED` → ROBUSTNESS); every probe must match exactly one OCCT entity and no two probes the same one (a probe with an outward `normal` — face and body probes, §7.6 — also needs a face there whose outward normal agrees within 1e-3 rad, for a single candidate too, which also tells coincident faces of touching bodies apart; else `ORACLE_PROBE_UNMATCHED` → ROBUSTNESS, and the oracle falls back to its own resolution); the query's geometric predicates and picks are re-applied to them **recursively over the whole query** (union: some operand; intersect: every operand; minus: `a`, and not clearly in a key-free `b`; navigation and `between` through adjacency; `tagged` through the tag's query; key-based sources are left to the set comparison) and the member count is checked against the cardinality (`ORACLE_PREDICATE_FAILED` → POTENTIAL_SILENT_WRONG; a predicate or pick it cannot evaluate there — an empty or failing pool, a non-evaluable normal, radius or material angle — or one the member misses by less than the cross-engine tolerance — radius bounds and `eq` at rel 1e-6 / 1e-9·s, angle tests at 1e-9, extreme at 1e-6·s, size picks at the v0 §6 size tolerance — is `ORACLE_PREDICATE_UNCHECKED` → ROBUSTNESS); the oracle then **builds from Forge's members** (also when its own naming is unavailable), and a set difference from its own resolution, or its own resolution failing, is `ORACLE_REF_DIFFERS` → **ROBUSTNESS** (never MATCH, never REF_MISMATCH). **Independent-refs mode** (`--independent-refs`, nightly, W7c): builds from its own resolution; a set difference is `ORACLE_REF_MISMATCH` → REF_MISMATCH. A Ref **nested in a query's Dir** (an AxisRef such as `{parallel: {edge: Ref}}`) is always the oracle's own resolution in every mode — a wrong nested member of Forge's must steer neither the enclosing query nor the re-check of Forge's members; Forge's entry for it at its JSON pointer (e.g. `/target/q/where/parallel/edge`), when reported, goes through the same probe / predicate / set checks but is never adopted, and a missing one is not `ORACLE_REF_UNREPORTED` (forge-refs does not report them). Convexity orients each face's in-face direction in the face's parametric frame (2D classifier), not with a fixed 3D step. |
+| extrude / revolve (§6.2, §6.3) | computes: the v0 construction and body gate, `regions` by member, `new_body` |
+| `join` / `cut` / `intersect`, `boolean` (§6.0.3, §6.4) | computes with `BRepAlgoAPI_*` (no fuzzy, not parallel, non-destructive) + `ShapeUpgrade_UnifySameDomain` (§8.3 rules 1–2); identity, split, consumed; gated by set-volume identities. §8.3 rule 3: `edge_types` of body-operation results recognise free-form edges as lines/circles/ellipses within `1e-7·s` (`ShapeAnalysis_CanonicalRecognition`; the SPEC names `GeomConvert_CurveToAnalyticalCurve`, which this OCP build does not expose). `new_body` sweeps keep the v0 construction and v0 metrics (no same-domain merge; see the contract issues). |
+| hole, fillet, chamfer, shell, draft, pattern | not yet (W7b/W7c): the feature fails with the engine-internal `ORACLE_UNSUPPORTED_FEATURE`, evaluation continues |
+
+Engine-internal codes (`OCCT_*`, `ORACLE_*`) are never a silent-wrong answer: `kernel-diff` classifies
+them as ROBUSTNESS, and caps later differences in the same part at ROBUSTNESS (see "Downstream capping" below). A polygon `n` up to 2^31 never hangs the oracle: all-omitted members are computed without the loop, more than 100,000 sides are `ORACLE_RESOURCE_LIMIT`.
+
+### Commands (v1)
+
+| Command | What it does |
+|---|---|
+| `oracle eval FILE` | `aicad.ir/1` input → `aicad.metrics/1`; `aicad.ir/0` input keeps the v0 report unless `--report-version v1` (migrate, then the v1 pipeline). `--replay FORGE.json` replays and checks a Forge v1 report (default mode); add `--independent-refs` for the independent-refs mode. Exit codes as v0. |
+| `oracle diff DIR --forge-bin BIN` | runs Forge first; when it prints `aicad.metrics/1`, the oracle evaluates with that report as replay input and compares with `kernel-diff` v1. Exit 1 on POTENTIAL_SILENT_WRONG, REF_MISMATCH or CODE_MISMATCH. `--independent-refs`: the independent-refs mode (oracle builds from its own references, `REF_MISMATCH` and `REF_*` warning codes compared). `--a/--b` compares two reports. The number of differences capped at ROBUSTNESS is printed. |
+| `oracle golden DIR` | v1 programs get `aicad.metrics/1` goldens. |
+| `oracle gen --ir v1` | random valid v1 programs (parameters, derived parameters, bounds, expressions, `rect`/`slot`/`polygon`, datum planes and axes, sketches on faces and on tags, regions by member, `join`/`cut`/`intersect` extrudes, `boolean` features, `tag`s, fixed-point **constrained** sketches, suppression by expression, lifted v0 programs with exact parameters), each accepted by the pipeline and evaluated `ok`. Programs are checked against the Python port of W0's validation; checking them with Forge's v1 CLI too is for when W9 lands. |
+| `oracle exprs --count 10000 --out F` / `--check THEIRS.json` | the W1 ↔ oracle expression agreement gate: random cases in the I9 format with the oracle's answers; `--check` compares another implementation's answers (reals 1e-12 relative, counts/bools/codes exact). |
+
+### kernel-diff v1 (SPEC-v1 §8.2–§8.4)
+
+Classes, most severe first: POTENTIAL_SILENT_WRONG, REF_MISMATCH, CODE_MISMATCH, ROBUSTNESS,
+NORMALIZED, MATCH. Exact: statuses, semantic codes, the oracle-computable warning codes, count/bool
+parameters, regions, bodies (matched by origin, same-origin pieces by nearest centroid), `removed`,
+topology counts and `shells`; tolerance: real parameters (1e-12 relative), v0 §6 body metrics,
+datum origins (1e-6·s) and directions (1e-9). `valid` must be true on every reported body [R-12].
+
+Parameters: a status or code disagreement is CODE_MISMATCH (evaluation is deterministic), unless an
+engine-internal code is involved (ROBUSTNESS); `unit` is compared exactly; a `bool` against a number
+is POTENTIAL_SILENT_WRONG either way round.
+
+**Downstream capping (a policy of this tool, not of the SPEC — needs owner sign-off).** After a
+feature on which the engines disagree about **status** (one fails, the other not — including the
+oracle's `ORACLE_UNSUPPORTED_FEATURE` for hole/fillet/chamfer/shell/draft/pattern against a Forge
+`ok`, until W7b/W7c, and a failed replay check), the part states differ by construction (§7.1: a
+failed feature passes its input through), so later differences in that part would all be spurious
+POTENTIAL_SILENT_WRONG. They are capped at ROBUSTNESS instead — never hidden: each is still listed
+(suffixed "downstream of …; would be <class>"), counted in `Comparison.capped`, printed by
+`oracle diff`, and noted per part. When **both** engines fail a feature (whatever the codes,
+engine-internal or not — e.g. Forge `HOLE_MISSES_BODY` against the oracle's
+`ORACLE_UNSUPPORTED_FEATURE`), both pass their input through, the states stay identical, and later
+features are classified normally. Not capping after a status divergence on `ORACLE_UNSUPPORTED_FEATURE`
+was considered and rejected: it would turn every program with a W7b/W7c feature Forge evaluates
+`ok` into a false POTENTIAL_SILENT_WRONG. The cap also applies to the oracle's reference replay
+findings (`ORACLE_PREDICATE_FAILED`, `ORACLE_REF_MISMATCH`): downstream, Forge's probes are replayed
+onto a different B-rep. It deliberately does **not** apply to `ORACLE_REPLAY_CHECK_FAILED`: the
+constrained-sketch check is 2D and depends only on the document, the parameters (measured
+parameters, the only state-dependent ones, are v1.1) and Forge's reported solution. Until W7b/W7c land, a `POTENTIAL_SILENT_WRONG`
+downstream of such a feature is therefore only visible as a capped count.
+
+Warning codes (§8.2) are compared as a **set** per feature. A report field of the wrong JSON type
+(a violation of the frozen I5 interface) is a difference of that field's class, never an exception;
+a parameter reported twice is POTENTIAL_SILENT_WRONG.
+
+### Tests
+
+`tests/test_v1_*.py`: all 376 expression fixtures plus parse/print, type-soundness and exactness
+properties; all I9 fixtures (196 invalid documents with exact `{code, path}` multisets, 81 migrations
+byte-identical, 42 compound expansions, 134 query typings); migration equivalence (v0 report ==
+v1 report of the migrated document, bit for bit, over the corpus, the migration fixtures, generated
+programs, the error corpus, and parametrized lifts); evaluation (parameters, expression range checks,
+compounds, datums, the face-frame table, references, booleans with closed forms and inclusion–exclusion);
+`kernel-diff` v1 rows and the replay mutation tests (coordinates *and* structure of `sketch.solved`:
+extra / missing / duplicate / reordered curves, `construction` and `ccw` flips, malformed numbers,
+dimension values; §4.4 rule 4: an under-constrained fixed point moved along a free degree of freedom,
+a solver failure claimed on a fixed point, `fix` with `x` only; probes on neighbouring faces — also on
+predicate-free `cap`/`side` queries —, added members failing a predicate nested in `union`, `minus`,
+`intersect`, navigation, picks or a `tagged` query, a key-free `minus` exclusion, empty pools,
+non-evaluable predicates, radius bounds within the cross-engine tolerance, cardinality, near-ties,
+missing `refs` entries, body probes on stacked bodies, probe normals contradicting a single
+candidate, AxisRef Dirs in `filter` / `extreme` with wrong outer and wrong nested members; capping
+only after a status divergence — reference findings capped, a failed sketch replay check not —,
+warning codes as sets, malformed report fields, arc–arc joint tangency end to end); the independent constraint checker
+(`test_v1_constraints.py`: one test per row of the §4.3 table, tangency mode and joints — arc–arc
+joints with `internal` true, false and omitted —, `fix` with `x`/`y`, the guess-scaled angular
+convention and the solved-size note, the fixed point, seeded property tests); the hole-tool
+fixture's rejections (its tool dimensions are W7b, skipped); §8.3 rule 3; convexity next to narrow
+faces; generator validity and group coverage (every generated program also replays its own report
+as MATCH); the CLI.
+
+### Where the oracle had to read the contract (reported to W0)
+
+- Canonical key order is the Rust struct order (serde), not derivable from the schema
+  (`properties` are alphabetical); the oracle transcribes it (`v1/jsonio.py`).
+- v0 text is read with serde_json's non-correctly-rounded float parser, which migration then copies;
+  the oracle emulates it (`jsonio.serde_number`) to stay byte-identical.
+- `Query.instance.index` has `minItems/maxItems` in the schema but a coded `QUERY_INVALID` in the
+  fixtures; the oracle drops the two keywords from its typed parse.
+- `MAX_EXPR_DEPTH` nesting: the oracle counts parentheses, call argument lists, `?:` branches, unary
+  operands and `^` exponents (left-associative chains do not nest).
+- `datum_axis` origins: `planes` → the point of the line closest to the world origin; `points` → the
+  first point. Vertex keys of sweeps: `F/vertex:{…}` of the incident faces' keys.
+- §6.0.4 / §8.3 rule 1 ("after every body operation"): does a `new_body` extrude/revolve count? The
+  oracle merges only after `join`/`cut`/`intersect`/`boolean`; a `new_body` sweep keeps one side face
+  per profile curve (each keeps its `side:<curve>` key; migrated v0 programs keep their v0 metrics bit
+  for bit, §9.1). Two collinear adjacent profile lines therefore give two coplanar faces on a new body
+  (pinned by `test_new_body_sweeps_are_not_same_domain_merged`). Needs a SPEC decision.
+- §8.3 rule 3 names `GeomConvert_CurveToAnalyticalCurve`, which the pinned OCP build does not expose;
+  the oracle uses `ShapeAnalysis_CanonicalRecognition` (line / circle / ellipse) at `1e-7·s`.
+- §7.2 [W0-16] says the constrained `sketch` block has `status` and `dof`; the oracle cannot compute
+  them (it does not solve, §8.1). With a reference they are copied (marked `ORACLE_REPLAYED`); in the
+  standalone fixed-point mode they are omitted. The frozen report type omits an empty `dimensions`
+  list (`skip_serializing_if`), so an absent list is read as empty in the replay check.
+- §8.1 default-mode references vs the W7 acceptance ("a probe moved to a neighbouring face is never
+  MATCH"): §8.1 has the PR gate replay Forge's members and re-check only the *geometric* predicates,
+  and §8.4 reserves REF_MISMATCH for independent-refs mode, so a Forge that resolves a key-based
+  query (`cap`, `side`, `edge_at`, `body`, `tagged`) to the wrong entity builds the same wrong
+  geometry in the replaying oracle. The oracle therefore also compares Forge's set with its own
+  resolution in the default mode and classifies a difference ROBUSTNESS (`ORACLE_REF_DIFFERS`) —
+  never MATCH, never REF_MISMATCH. Needs a SPEC decision (the SPEC does not name this class).
+- §7.6 vs §8.1 probe tolerances: face and edge probes are only `≥ 10·tol` (1e-5 mm) from their
+  boundaries, but §8.1 matches probes within `1e-6·s`; for `s > 10` mm a valid probe can lie within
+  `1e-6·s` of an adjacent entity and match two (`ORACLE_PROBE_UNMATCHED`, ROBUSTNESS). Suggested:
+  probes at `≥ 10·1e-6·s` from boundaries, or match within `1e-6` mm.
+- §7.6 body probes: "the probe of its face with the smallest key" — that face is often a cap another
+  body touches, so the point alone matches both bodies. The oracle's body probes carry that face's
+  outward `normal` and the replay uses it to disambiguate; the SPEC should say body probes carry it.
+  Edge probes on edges shared by touching bodies stay ambiguous (no normal).
+- §4.3/§4.4: forge-solve's model decides a curve–curve tangency without `internal` from the input
+  geometry and holds the coordinates a `fix` does not give at their initial values; neither is in
+  the SPEC's table. The oracle checks both (from the welded guess). "Satisfies every driving
+  constraint to `SOLVE_TOLERANCE`" (rule 4) and "holds to `SOLVE_CHECK_TOLERANCE`" (§8.1) do not say
+  how angular conditions become lengths; the oracle uses forge-solve's convention (sin/cos/angle ×
+  √(product of the two guess lengths), floored at 1 µm). Its extra bound — off by at most *tol* at
+  the solved size — is not in the SPEC, so a violation is the ROBUSTNESS finding
+  `ORACLE_REPLAY_SIZE_BOUND`, not a failure, until the SPEC adopts (or rejects) it.
+- §4.3 tangency at an **arc–arc joint**: forge-solve (`system.rs::compile_constraint`,
+  `TangentCurvesAt`) requires only collinear radii at the joint and ignores `internal`, while its
+  own doc on `Tangent.internal` (`model.rs`) describes a forced mode; the SPEC row says nothing.
+  The oracle checks what forge-solve defines (collinear radii; tangency in either mode) and
+  reports a solved mode other than `internal` / the guess rule as ROBUSTNESS
+  (`ORACLE_TANGENCY_MODE_DIFFERS`). The SPEC must say whether such a tangency has a mode.
+- §5.8 and Refs **nested in a query's Dir** (an AxisRef, §3.2, e.g. `{parallel: {edge: Ref}}`):
+  "one entry per Ref-valued field" does not say whether they get an entry; forge-refs
+  (`frames::direction`) drops them. The oracle never adopts Forge's member for them (it always
+  resolves them itself), checks Forge's entry when one is reported, and does not require one.
+- §3.3 `datum_plane` `through`: only collinearity is rejected (`|cross| ≤ tol·|p1 − p0|`), not
+  `|p1 − p0| ≤ tol` as `datum_axis` `points` does; with `|p1 − p0| ≈ 1e-9` and `p2` far away,
+  `x = normalize(p1 − p0)` is set by sub-tolerance noise and two kernels' vertex positions a
+  1e-12 apart give x axes that §8.2 (1e-9) calls POTENTIAL_SILENT_WRONG. Suggested: also require
+  `|p1 − p0| > tol` (and `|p2 − p0| > tol`). The oracle follows the SPEC as written
+  (`test_datum_plane_through_with_nearly_coincident_p0_p1_is_ill_conditioned_by_the_spec`).
 
 ## Commands
 

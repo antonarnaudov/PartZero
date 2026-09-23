@@ -418,7 +418,10 @@ def face_type(face) -> str:
     return "other"
 
 
-def edge_type(edge) -> str:
+def edge_type(edge, freeform_tol: float = CANON_FREEFORM_TOL) -> str:
+    """Canonical edge type; free-form curves (B-spline, Bézier, offset) that are lines or conics
+    within `freeform_tol` are counted as such (v0: `CANON_FREEFORM_TOL`; IR v1 §8.3 rule 3 passes
+    `1e-7·s`)."""
     ad = BRepAdaptor_Curve(edge)
     t = ad.GetType()
     if t == _CT.GeomAbs_Line:
@@ -430,11 +433,11 @@ def edge_type(edge) -> str:
         return "circle" if abs(el.MajorRadius() - el.MinorRadius()) <= LINEAR_TOLERANCE else "ellipse"
     if t in (_CT.GeomAbs_BSplineCurve, _CT.GeomAbs_BezierCurve, _CT.GeomAbs_OffsetCurve):
         cr = ShapeAnalysis_CanonicalRecognition(edge)
-        if cr.IsLine(CANON_FREEFORM_TOL, gp_Lin()):
+        if cr.IsLine(freeform_tol, gp_Lin()):
             return "line"
-        if cr.IsCircle(CANON_FREEFORM_TOL, gp_Circ()):
+        if cr.IsCircle(freeform_tol, gp_Circ()):
             return "circle"
-        if cr.IsEllipse(CANON_FREEFORM_TOL, gp_Elips()):
+        if cr.IsEllipse(freeform_tol, gp_Elips()):
             return "ellipse"
         return "bspline" if t != _CT.GeomAbs_OffsetCurve else "other"
     return "other"
@@ -669,12 +672,19 @@ def tight_bbox(solid) -> tuple[list[float], list[float]]:
     return [xmin + gap, ymin + gap, zmin + gap], [xmax - gap, ymax - gap, zmax - gap]
 
 
-def body_metrics(solid) -> dict:
+def body_metrics(solid, edge_recognition_rel: float | None = None) -> dict:
+    """v0 §5 body metrics. `edge_recognition_rel` (IR v1 §8.3 rule 3): recognise free-form edges
+    as lines/conics within `rel · s` (s = max(1, bbox diagonal)) instead of v0's absolute
+    `CANON_FREEFORM_TOL`; v0 callers leave it None, so v0 metrics are unchanged."""
     vp = volume_props(solid)
     sp = surface_props(solid)
     com = vp.CentreOfMass()
 
     (xmin, ymin, zmin), (xmax, ymax, zmax) = tight_bbox(solid)
+    freeform_tol = CANON_FREEFORM_TOL
+    if edge_recognition_rel is not None:
+        diag = math.sqrt((xmax - xmin) ** 2 + (ymax - ymin) ** 2 + (zmax - zmin) ** 2)
+        freeform_tol = edge_recognition_rel * max(1.0, diag)
 
     fmap = TopTools_IndexedMapOfShape()
     TopExp.MapShapes_s(solid, TopAbs_FACE, fmap)
@@ -697,7 +707,7 @@ def body_metrics(solid) -> dict:
                     break
         if seam:
             continue  # seam edge of a periodic face
-        counted.append(edge_type(e))
+        counted.append(edge_type(e, freeform_tol))
 
     return {
         "volume": vp.Mass(),

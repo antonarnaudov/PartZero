@@ -12,6 +12,12 @@ from .compare import CODE_MISMATCH, MATCH, ROBUSTNESS, SILENT_WRONG, Comparison,
 from .ir import METRICS_SCHEMA
 
 NO_REFERENCE = "NO_REFERENCE"
+#: The report schemas Forge may print: v0 for `aicad.ir/0` input on a v0 engine, v1 otherwise.
+METRICS_SCHEMA_V1 = "aicad.metrics/1"
+METRICS_SCHEMAS = (METRICS_SCHEMA, METRICS_SCHEMA_V1)
+#: v1 classes (SPEC-v1 §8.4) in addition to v0's.
+REF_MISMATCH = "REF_MISMATCH"
+NORMALIZED = "NORMALIZED"
 
 
 @dataclass
@@ -82,8 +88,8 @@ def run_forge(forge_bin: Path, program: Path, timeout: float = 300.0) -> tuple[d
     if report is None:
         tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-3:]
         return None, f"forge exited {proc.returncode} without a JSON report: {' | '.join(tail)}"
-    if not isinstance(report, dict) or report.get("schema") != METRICS_SCHEMA:
-        return None, f"forge output is not an {METRICS_SCHEMA} report"
+    if not isinstance(report, dict) or report.get("schema") not in METRICS_SCHEMAS:
+        return None, f"forge output is not an {METRICS_SCHEMA} / {METRICS_SCHEMA_V1} report"
     return report, None
 
 
@@ -96,7 +102,8 @@ def golden_path(golden_dir: Path, program: Path) -> Path:
     return golden_dir / f"{program.stem}.metrics.json"
 
 
-def diff_one(program: Path, oracle_report: dict, reference: dict | None, ref_name: str, ref_problem: str | None) -> Row:
+def diff_one(program: Path, oracle_report: dict, reference: dict | None, ref_name: str, ref_problem: str | None,
+             *, independent_refs: bool = False) -> Row:
     ost = oracle_report.get("status", "?")
     if reference is None:
         if ref_problem is not None:
@@ -105,7 +112,13 @@ def diff_one(program: Path, oracle_report: dict, reference: dict | None, ref_nam
             cmp.add("report", ref_problem, ROBUSTNESS)
             return Row(program.stem, ref_name, ost, "crash", ROBUSTNESS, cmp)
         return Row(program.stem, "none", ost, "-", NO_REFERENCE)
-    cmp = compare_reports(reference, oracle_report, ref_name, "oracle")
+    if oracle_report.get("schema") == METRICS_SCHEMA_V1:
+        # SPEC-v1 §8: kernel-diff v1 (a v0 reference can only be a rejection stand-in here).
+        from .v1.compare import compare_reports as compare_v1
+
+        cmp = compare_v1(reference, oracle_report, ref_name, "oracle", independent_refs=independent_refs)
+    else:
+        cmp = compare_reports(reference, oracle_report, ref_name, "oracle")
     rst = "rejected" if reference.get("error") and not reference.get("features") else reference.get("status", "?")
     if oracle_report.get("error") and not oracle_report.get("features"):
         ost = "rejected"
@@ -129,7 +142,8 @@ def render_table(rows: list[Row]) -> str:
 
 
 def summary_counts(rows: list[Row]) -> dict[str, int]:
-    out = {MATCH: 0, ROBUSTNESS: 0, CODE_MISMATCH: 0, SILENT_WRONG: 0, NO_REFERENCE: 0}
+    out = {MATCH: 0, NORMALIZED: 0, ROBUSTNESS: 0, CODE_MISMATCH: 0, REF_MISMATCH: 0, SILENT_WRONG: 0,
+           NO_REFERENCE: 0}
     for r in rows:
         out[r.classification] = out.get(r.classification, 0) + 1
     return out
