@@ -23,6 +23,11 @@ This list collects follow-ups from agent reports and reviews. Items are grouped 
 - **P2 Loosen `PERIOD_EPS` for imported bodies.**
 - **P2 `SKETCH_DEGENERATE_LOOP` is effectively unreachable.** Consider folding it into the crossing stage in IR v1.
 
+- **P1 SSI near-crossings.** Equal cylinders whose axes miss by 1e-7 to 1e-5 mm fail with `SSI_NOT_CONVERGED`. Fix: pair branch ends by oriented pass-throughs. This must be closed before the DeepCAD boolean replays (spike 03 open issue 1).
+- **P1 Near-coincident surfaces along an arc.** Examples: a sphere 1e-7 mm inside a cylinder of equal radius takes 3.4 s, and at 1e-6 mm it fails. These should become tangent branches traced along the band (spike 03 open issue 2).
+- **P1 Interval arithmetic slowed SSI by about 40%.** A concurrent `forge-core` change caused it. Add a fast path for finite bounds.
+- **P2 SSI pcurve consistency is sampled, not proven.** B-spline surfaces are unsupported in SSI.
+
 ## IR / CadScript
 - **P1 Comments inside a changed statement are lost** by `applyIrEdit`. Comments above and after the statement are kept.
 - **P1 IR v1 additions:** parameters and expressions, constraints (feeding `forge-solve`), booleans, holes as features, fillet and chamfer, and face and edge references through semantic queries.
