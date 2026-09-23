@@ -1,0 +1,126 @@
+forge/crates/forge-naming/Cargo.toml
+  s_59c0dd2af30db2::t_023c64e8fdb144 1-26
+forge/crates/forge-naming/src/view.rs
+  s_59c0dd2af30db2::t_0484236c99d479 1-9,11-72,75-166,168-193,195-204,209-248,252-287,314-325
+  s_59c0dd2af30db2::t_bb56eb57417d25 10,73-74,194,205-208,288-313
+  s_59c0dd2af30db2::t_d168ad50280d5e 167,249-251
+forge/crates/forge-naming/models/extrude_two_regions.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-12
+forge/crates/forge-naming/tests/harness.rs
+  s_59c0dd2af30db2::t_d168ad50280d5e 17-22,24-28,49-53
+  s_59c0dd2af30db2::t_1559495b3d1d65 1-16,23,29-48,54-82
+forge/crates/forge-naming/models/t1-slotted-shim.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-194
+forge/crates/forge-naming/models/t1-shelf-bracket.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-102
+forge/crates/forge-naming/tests/resolver.rs
+  s_59c0dd2af30db2::t_49059ae9d648fd 1-18,21-48,51-69,75-81,86-94,99-106,113-204,206-214,221-224,229-237,240-284,290
+  s_59c0dd2af30db2::t_d168ad50280d5e 19-20,49-50,70-74,82-85,95-98,107-112,205,215-220,225-228,238-239,285-289
+forge/crates/forge-naming/src/harness/truth.rs
+  s_59c0dd2af30db2::t_df7b67423c23ad 1-32,34-166,168,170-198,200-211,217-241,243-249,251-252,256-265,267-315,317-382,384-468,471-524,530-569,572-578,582-689,693-859,862,864,866-988
+  s_59c0dd2af30db2::t_46d10275dd386e 33,167,169,199,242,250,266,316
+  s_59c0dd2af30db2::t_d168ad50280d5e 212-216,253-255,469-470,525-529,579-581,690,692
+  s_59c0dd2af30db2::t_bb56eb57417d25 860-861,863,865
+  s_59c0dd2af30db2::t_b475c10f78a6e5 383,570-571,691
+docs/spikes/02-naming.md
+  s_59c0dd2af30db2::t_2899b6349c1724 1-138,140-166,169-297
+  s_59c0dd2af30db2::t_bd277f53e0052d 139,167-168
+forge/crates/forge-naming/src/harness/report.rs
+  s_59c0dd2af30db2::t_dbacdc7ccf77ff 249-268,277-311
+  s_59c0dd2af30db2::t_a3b38f51f1a601 1-229,235-248,312-333,338-360,365-380,385-407,412-421,426-434,439-474,479-493
+  s_59c0dd2af30db2::t_d168ad50280d5e 230-234,269-276,334-337,361-364,381-384,408-411,422-425,435-438,475-478
+forge/crates/forge-naming/src/fingerprint.rs
+  s_59c0dd2af30db2::t_b475c10f78a6e5 438,460
+  s_59c0dd2af30db2::t_1273811b67b051 260-262,563-567,599,638,755,787-790
+  s_59c0dd2af30db2::t_77943d9b716035 1-241,243-259,263-278,283-437,439-459,461-562,568-598,600-637,639-754,756-778,781-786,791-799,801-808,810-875
+  s_59c0dd2af30db2::t_d168ad50280d5e 242,779-780
+  s_59c0dd2af30db2::t_02b4d5f01449db 279-282,800,809
+forge/crates/forge-naming/models/t1-cable-clip.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-165
+forge/crates/forge-naming/models/naming-d-coupler-plate.json
+  s_59c0dd2af30db2::t_fbe00b6cedf164 1-33
+forge/crates/forge-naming/src/lib.rs
+  s_59c0dd2af30db2::t_a70ec65f684bca 1-11,13-34
+  s_59c0dd2af30db2::t_5c19a581840d4b 12
+forge/crates/forge-naming/models/t1-v-pulley.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-124
+forge/crates/forge-naming/src/bin/naming-harness.rs
+  s_59c0dd2af30db2::t_01063a956c5da7 6,16-32
+  s_59c0dd2af30db2::t_a70ec65f684bca 1-5,7-15,33-54
+forge/crates/forge-ops/tests/topology_details.rs
+  s_59c0dd2af30db2::t_d168ad50280d5e 149-160
+  s_59c0dd2af30db2::t_156babb18aa905 127,129-130,132-140
+  s_59c0dd2af30db2::t_8eacfed1e47a6f 113-126,128,131,141-148,161-163
+forge/crates/forge-naming/models/revolve_partial_ring.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-14
+forge/crates/forge-naming/models/t2-spool-holder.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-199
+forge/crates/forge-naming/models/t5-pcb-spacers.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-102
+forge/crates/forge-naming/tests/props.rs
+  s_59c0dd2af30db2::t_1559495b3d1d65 1-75
+forge/crates/forge-naming/models/t1-2020-corner-plate.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-147
+forge/crates/forge-naming/src/resolve.rs
+  s_59c0dd2af30db2::t_ee504b57c42f23 1-17,21-29,31-64,69-84,86-161,165-181,183-214,217-256,266-280,282-352,358-375,413-457,462-465,467-543,550-566,580-602,609-645
+  s_59c0dd2af30db2::t_d168ad50280d5e 30,215-216,353-357,458-461,466,544-549,572-576,603-608
+  s_59c0dd2af30db2::t_f7a452180c9e4b 18-20,65-68,85,162-164,182,567-571,577-579
+  s_59c0dd2af30db2::t_b475c10f78a6e5 281
+  s_59c0dd2af30db2::t_1273811b67b051 257-265
+  s_59c0dd2af30db2::t_dbacdc7ccf77ff 376-412
+forge/crates/forge-naming/models/naming-revolve-bead-partial.json
+  s_59c0dd2af30db2::t_fbe00b6cedf164 1-20
+forge/crates/forge-naming/models/t2-enclosure-with-lid.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-401
+forge/crates/forge-ops/src/revolve.rs
+  s_59c0dd2af30db2::t_8eacfed1e47a6f 25-30,587-600
+forge/crates/forge-naming/models/t1-keychain-tag.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-97
+forge/crates/forge-naming/src/harness/mod.rs
+  s_59c0dd2af30db2::t_0116a49ddbbb4c 1-5,7-21,25-73,76-128,131-132,135-202,206-330,341-360,362-373,375,377-418
+  s_59c0dd2af30db2::t_d168ad50280d5e 203-205,339-340
+  s_59c0dd2af30db2::t_5c19a581840d4b 6
+  s_59c0dd2af30db2::t_1559495b3d1d65 129-130,374
+  s_59c0dd2af30db2::t_b475c10f78a6e5 74-75
+  s_59c0dd2af30db2::t_dbacdc7ccf77ff 22-24,133-134,361,376
+  s_59c0dd2af30db2::t_6423933fb868f0 331-338
+forge/crates/forge-naming/models/t1-tube-end-plug.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-117
+forge/crates/forge-naming/models/t1-nema17-plate.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-123
+forge/crates/forge-naming/models/t1-drawer-pull.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-160
+forge/crates/forge-naming/src/harness/models.rs
+  s_59c0dd2af30db2::t_6caa2ab03abf8c 1-74
+forge/crates/forge-naming/models/t2-wall-hook.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-202
+forge/crates/forge-naming/models/t2-parts-tray.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-332
+forge/crates/forge-naming/src/harness/mutate.rs
+  s_59c0dd2af30db2::t_d168ad50280d5e 110-116,177-179,268-270,338-346,371-375,467-469,504-507,522-524,556-559,583,585-586,623-626,684-688,810-813,841-844,856-861,960-963,990-995,1000-1003,1082-1084,1115-1116,1120-1123,1375-1382,1384-1386,1418-1420,1438-1440,1551,1553,1555,1575,1578,1651-1654
+  s_59c0dd2af30db2::t_db8123ba469d25 1-25,27-109,117-176,180-267,271-337,347-370,376-466,470-503,508-521,525-555,560-564,569-572,575,577-580,587-622,627-683,689-809,814-840,845-855,862-959,964-989,996-999,1004-1028,1030-1081,1085-1114,1117-1119,1124-1221,1226-1227,1230-1240,1245-1374,1383,1387-1417,1421-1437,1441-1530,1532,1537-1546,1549-1550,1554,1557-1564,1566-1567,1571-1572,1574,1579-1650,1655-1672
+  s_59c0dd2af30db2::t_4f5f8ce2928da2 26
+  s_59c0dd2af30db2::t_5e4842e70845a4 565-568,573-574,576,581-582,584,1029,1222-1225,1228-1229,1241-1244,1531,1533-1536,1547-1548,1552,1556,1565,1568-1570,1573,1576-1577
+forge/crates/forge-naming/models/t1-knob.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-124
+forge/crates/forge-naming/models/t2-jar-with-lid.json
+  s_59c0dd2af30db2::t_e5ac05a3703bf4 1-239
+docs/BACKLOG.md
+  s_59c0dd2af30db2::t_fcdeac747fc3cf 29-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e4833d782fe589332d8d32c257bcbd37e1fbd97b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
