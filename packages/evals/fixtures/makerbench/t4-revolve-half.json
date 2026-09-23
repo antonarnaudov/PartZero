@@ -1,0 +1,216 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t4-revolve-half",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "334a2602fd5b80660414608d88cf3cf5c8ce2337f72497e834a8a0b55a88b02a",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "pipe_collar",
+    "status": "ok",
+    "features": [
+     {
+      "part": "collar",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 90,
+        "loops": 1,
+        "outer_curves": [
+         "bore",
+         "bottom",
+         "flange_rim",
+         "flange_top",
+         "outer",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "collar",
+      "feature": "collar",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 4527.663332353611,
+        "area": 2674.9272217748708,
+        "centroid": [
+         -7.411765595267551e-17,
+         10.376319207368756,
+         6.500832639467109
+        ],
+        "bbox_min": [
+         -22,
+         0,
+         0
+        ],
+        "bbox_max": [
+         22,
+         22,
+         15
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "context",
+   "ir_sha256": "c6c527d2156d468be328582dc08aa339c182ace1524a8bd386a45d13e332ab4c",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "pipe_collar",
+    "status": "ok",
+    "features": [
+     {
+      "part": "collar",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 90,
+        "loops": 1,
+        "outer_curves": [
+         "bore",
+         "bottom",
+         "flange_rim",
+         "flange_top",
+         "outer",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "collar",
+      "feature": "collar",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 9055.326664707223,
+        "area": 4989.854443549741,
+        "centroid": [
+         5.8253771129454194e-15,
+         3.248716029944189e-16,
+         6.500832639467109
+        ],
+        "bbox_min": [
+         -22,
+         -22,
+         0
+        ],
+        "bbox_max": [
+         22,
+         22,
+         15
+        ],
+        "faces": 6,
+        "edges": 6,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 6
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "93f0bc056249aec68eaa35c509ec2fda05d25785246578d8a059d647a533417b",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "pipe_collar",
+    "status": "ok",
+    "features": [
+     {
+      "part": "collar",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 108.89999999999999,
+        "loops": 1,
+        "outer_curves": [
+         "bore",
+         "bottom",
+         "flange_rim",
+         "flange_top",
+         "outer",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "collar",
+      "feature": "collar",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 6026.319895362656,
+        "area": 3236.6619383475945,
+        "centroid": [
+         1.4113229238784e-15,
+         11.413951128105634,
+         7.15091590341382
+        ],
+        "bbox_min": [
+         -24.200000000000003,
+         0,
+         0
+        ],
+        "bbox_max": [
+         24.200000000000003,
+         24.200000000000003,
+         16.5
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

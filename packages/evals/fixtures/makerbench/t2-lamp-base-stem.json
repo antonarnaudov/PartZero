@@ -1,0 +1,259 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t2-lamp-base-stem",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "b82dbc6c150092f2762cd193d168a407bd919339dab85837ec5da7bbd754ec19",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "lamp_base_stem",
+    "status": "ok",
+    "features": [
+     {
+      "part": "base",
+      "feature": "base_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1257,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "cable_hole",
+         "rim",
+         "socket_floor",
+         "socket_wall",
+         "taper",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "base",
+      "feature": "base",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 239638.80266023733,
+        "area": 30105.81437428038,
+        "centroid": [
+         2.5352424316929043e-15,
+         1.3600356920951648e-15,
+         11.10636030173284
+        ],
+        "bbox_min": [
+         -60,
+         -60,
+         0
+        ],
+        "bbox_max": [
+         60,
+         60,
+         30
+        ],
+        "faces": 7,
+        "edges": 7,
+        "face_types": {
+         "cone": 1,
+         "cylinder": 3,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 7
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "stem",
+      "feature": "stem_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1500,
+        "loops": 1,
+        "outer_curves": [
+         "s_bore",
+         "s_bottom",
+         "s_outer",
+         "s_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "stem",
+      "feature": "stem",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 65973.44572538567,
+        "area": 22518.93614093164,
+        "centroid": [
+         -5.790023100122028e-16,
+         1.8348746981748644e-16,
+         139.99999999999997
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         15
+        ],
+        "bbox_max": [
+         10,
+         10,
+         265
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "ff6ffe196b116a94197192bf364494072eb28f2b778fb885472e9f3bd4dbf081",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "lamp_base_stem",
+    "status": "ok",
+    "features": [
+     {
+      "part": "base",
+      "feature": "base_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1520.97,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "cable_hole",
+         "rim",
+         "socket_floor",
+         "socket_wall",
+         "taper",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "base",
+      "feature": "base",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 318959.24634077586,
+        "area": 36428.035392879254,
+        "centroid": [
+         -3.0325116027584992e-15,
+         2.6120117350362486e-16,
+         12.216996331906126
+        ],
+        "bbox_min": [
+         -66,
+         -66,
+         0
+        ],
+        "bbox_max": [
+         66,
+         66,
+         33
+        ],
+        "faces": 7,
+        "edges": 7,
+        "face_types": {
+         "cone": 1,
+         "cylinder": 3,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 7
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "stem",
+      "feature": "stem_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1815,
+        "loops": 1,
+        "outer_curves": [
+         "s_bore",
+         "s_bottom",
+         "s_outer",
+         "s_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "stem",
+      "feature": "stem",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 87810.65626048831,
+        "area": 27247.91273052728,
+        "centroid": [
+         1.636477496009589e-15,
+         2.5474513190637683e-16,
+         154
+        ],
+        "bbox_min": [
+         -11,
+         -11,
+         16.5
+        ],
+        "bbox_max": [
+         11,
+         11,
+         291.5
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

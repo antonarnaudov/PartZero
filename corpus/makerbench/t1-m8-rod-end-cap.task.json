@@ -1,0 +1,61 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-m8-rod-end-cap",
+  "tier": "T1",
+  "title": "Domed end cap for M8 threaded rod",
+  "prompt": "Domed cap to cover the sharp end of an M8 threaded rod (my bed frame has a few sticking out). 14 mm outside diameter: a 10 mm tall straight section with a full hemispherical dome on top, so 17 mm tall overall. In the bottom there's an 8.4 mm hole, 12 mm deep, so it slides over the rod; I'll glue it on.",
+  "process": "fdm",
+  "tags": ["cap", "threaded-rod", "round", "revolve"],
+  "requires": ["ir/0", "feature/revolve"],
+  "reference": "t1-m8-rod-end-cap.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "14 mm diameter, 17 mm tall overall, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [14, 14, 17],
+      "abs": 0.1
+    },
+    {
+      "id": "dome",
+      "description": "The top is one spherical face (a true hemisphere, not a cone or a flat top)",
+      "check": "face_count",
+      "type": "sphere",
+      "eq": 1
+    },
+    {
+      "id": "round_faces",
+      "description": "Two cylindrical faces: the outside and the rod hole",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 2
+    },
+    {
+      "id": "flat_faces",
+      "description": "Two flat faces: the bottom ring and the end of the blind hole",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 2
+    },
+    {
+      "id": "volume",
+      "description": "Volume π·7²·10 + ⅔π·7³ − π·4.2²·12 ≈ 1592.7 mm³ ±1% (catches an 8.0 hole or a wrong depth)",
+      "check": "volume",
+      "approx": 1592.75,
+      "rel": 0.01
+    }
+  ],
+  "notes": "M8 clearance 8.4 (ISO 273 medium). A 12 mm deep hole leaves 5 mm of material above it on the axis."
+}

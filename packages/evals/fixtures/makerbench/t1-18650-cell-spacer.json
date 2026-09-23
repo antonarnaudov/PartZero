@@ -1,0 +1,279 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-18650-cell-spacer",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "01136ef7f05be7f851ead7206ae1b24a8f6e310e6e43da77928b2d9af55b1b2a",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cell_spacer_18650_4s2p",
+    "status": "ok",
+    "features": [
+     {
+      "part": "spacer",
+      "feature": "grid",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1874.26921112815,
+        "loops": 9,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "spacer",
+      "feature": "spacer",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 9371.346055640748,
+        "area": 7425.883356527106,
+        "centroid": [
+         2.426264851316344e-15,
+         -2.911517821579613e-16,
+         2.5
+        ],
+        "bbox_min": [
+         -44,
+         -23,
+         0
+        ],
+        "bbox_max": [
+         44,
+         23,
+         5
+        ],
+        "faces": 14,
+        "edges": 28,
+        "face_types": {
+         "cylinder": 8,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 16,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "a66a805301ad90673c71c7ae15e771119559971785903d3de3265430cdfd893b",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cell_spacer_18650_4s2p",
+    "status": "ok",
+    "features": [
+     {
+      "part": "spacer",
+      "feature": "grid",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2267.8657454650615,
+        "loops": 9,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "spacer",
+      "feature": "spacer",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 12473.261600057833,
+        "area": 8985.318861397798,
+        "centroid": [
+         2.1874664324414826e-15,
+         -9.232304979551946e-16,
+         2.7500000000000018
+        ],
+        "bbox_min": [
+         -48.400000000000006,
+         -25.3,
+         0
+        ],
+        "bbox_max": [
+         48.400000000000006,
+         25.3,
+         5.5
+        ],
+        "faces": 14,
+        "edges": 28,
+        "face_types": {
+         "cylinder": 8,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 16,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "3921af1af1714aff37971934b29ea043b47615a8dbb9d51ae5fef9b57943ad4e",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cell_spacer_18650_4s2p",
+    "status": "ok",
+    "features": [
+     {
+      "part": "spacer",
+      "feature": "grid",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2145.985559737131,
+        "loops": 8,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "spacer",
+      "feature": "spacer",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10729.927798685652,
+        "area": 7677.147936961218,
+        "centroid": [
+         -3.9884075372023275,
+         -1.3294691790674413,
+         2.4999999999999996
+        ],
+        "bbox_min": [
+         -44,
+         -23,
+         0
+        ],
+        "bbox_max": [
+         44,
+         23,
+         5
+        ],
+        "faces": 13,
+        "edges": 26,
+        "face_types": {
+         "cylinder": 7,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 14,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "ffe7150b07d38adce43378e0ec3ddb9575e33dfca7dbd7f7cf0e19293fef95de",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cell_spacer_18650_4s2p",
+    "status": "ok",
+    "features": [
+     {
+      "part": "spacer",
+      "feature": "grid",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1417.7857454650607,
+        "loops": 9,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "spacer",
+      "feature": "spacer",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 7088.928727325299,
+        "area": 6746.650918628009,
+        "centroid": [
+         -9.590268370941498e-15,
+         -5.131916185119196e-16,
+         2.500000000000001
+        ],
+        "bbox_min": [
+         -44,
+         -23,
+         0
+        ],
+        "bbox_max": [
+         44,
+         23,
+         5
+        ],
+        "faces": 14,
+        "edges": 28,
+        "face_types": {
+         "cylinder": 8,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 16,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

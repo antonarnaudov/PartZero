@@ -37,7 +37,21 @@ export {
 } from "./engine.js";
 export { fixtureDocuments, recordFixtures, writeFixture } from "./fixtures.js";
 export { canonicalJson, contentHash } from "./hash.js";
-export { circlesOf, curveChanges, featureChanges, featureNames, holeCircles, planeFrame, sketchesOf, toModel, type IrChange } from "./ir-geom.js";
+export {
+  circlesOf,
+  curveChanges,
+  featureChanges,
+  featureNames,
+  holeCircles,
+  logicalCurves,
+  planeFrame,
+  sketchCircles,
+  sketchesOf,
+  toModel,
+  type IrChange,
+  type LogicalCurve,
+  type SketchCircle,
+} from "./ir-geom.js";
 export { isMutationKind, mutateIr, MUTATIONS, type MutationKind } from "./mutate.js";
 export {
   distribution,

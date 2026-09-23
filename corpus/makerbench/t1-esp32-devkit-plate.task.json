@@ -1,0 +1,78 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-esp32-devkit-plate",
+  "tier": "T1",
+  "title": "ESP32 dev board mounting plate",
+  "prompt": "I need a carrier plate for my ESP32 dev board so I can screw it into an enclosure. The board has four mounting holes; I measured them at 47 x 23.5 mm centre to centre and they take M2.5 screws, so make those 2.7 mm. Plate 70 x 40 mm, 3 mm thick, with the board pattern centred on it. Also add four M3 clearance holes (3.4 mm) in the corners, 4 mm in from both edges, for screwing the plate down. Printing it in PETG.",
+  "process": "fdm",
+  "tags": ["mounting-plate", "esp32", "electronics", "hole-pattern"],
+  "requires": ["ir/0"],
+  "reference": "t1-esp32-devkit-plate.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "70 x 40 mm plate, 3 mm thick, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [3, 40, 70],
+      "abs": 0.1
+    },
+    {
+      "id": "board_pattern",
+      "description": "Four 2.7 mm (M2.5 clearance) holes on the board's 47 x 23.5 mm rectangle",
+      "check": "hole_pattern",
+      "diameter": [2.6, 2.9],
+      "points": [[0, 0], [47, 0], [47, 23.5], [0, 23.5]]
+    },
+    {
+      "id": "board_centred",
+      "description": "The board pattern is centred: each board hole is 8.25 mm from the long edge and 11.5 mm from the short edge",
+      "check": "hole_positions",
+      "relative_to": "edges",
+      "diameter": [2.6, 2.9],
+      "points": [[8.25, 11.5], [8.25, 11.5], [8.25, 11.5], [8.25, 11.5]],
+      "tol": 0.1
+    },
+    {
+      "id": "corner_holes",
+      "description": "Four M3 clearance holes (3.2–3.5 mm) on a 62 x 32 mm rectangle",
+      "check": "hole_pattern",
+      "diameter": [3.2, 3.5],
+      "points": [[0, 0], [62, 0], [62, 32], [0, 32]]
+    },
+    {
+      "id": "corner_inset",
+      "description": "Each M3 hole sits 4 mm in from both edges at its corner",
+      "check": "hole_positions",
+      "relative_to": "edges",
+      "diameter": [3.2, 3.5],
+      "points": [[4, 4], [4, 4], [4, 4], [4, 4]],
+      "tol": 0.1
+    },
+    {
+      "id": "only_holes",
+      "description": "Exactly eight holes, nothing else cut out",
+      "check": "inner_loops",
+      "eq": 8
+    },
+    {
+      "id": "volume",
+      "description": "Volume (70·40 − 4·Ø2.7 − 4·Ø3.4)·3 ≈ 8222.3 mm³ ±0.5%",
+      "check": "volume",
+      "approx": 8222.34,
+      "rel": 0.005
+    }
+  ],
+  "notes": "Board dimensions are the maker's measurements (many 30/38-pin ESP32 dev boards have no mounting holes; this one does). M2.5 clearance 2.7, M3 clearance 3.4 (ISO 273 medium). Edge offsets: board holes (70 − 47)/2 = 11.5 and (40 − 23.5)/2 = 8.25."
+}

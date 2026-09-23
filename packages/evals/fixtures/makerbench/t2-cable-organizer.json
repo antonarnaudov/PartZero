@@ -1,0 +1,1183 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t2-cable-organizer",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "53f59df2040767de8dc813fd0df9858f403ff328db027080ab2e5de4275abdcf",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cable_organizer",
+    "status": "ok",
+    "features": [
+     {
+      "part": "organizer",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1768.1913743824034,
+        "loops": 3,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "organizer",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 5304.574123147211,
+        "area": 4281.205750411731,
+        "centroid": [
+         1.2859110090538104e-16,
+         -5.28249804817033e-17,
+         1.4999999999999996
+        ],
+        "bbox_min": [
+         -45,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         45,
+         10,
+         3
+        ],
+        "faces": 8,
+        "edges": 16,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "organizer",
+      "feature": "clip_profiles",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 22.152940573679047,
+        "loops": 1,
+        "outer_curves": [
+         "c1_bottom",
+         "c1_lip_l",
+         "c1_lip_r",
+         "c1_outer_l",
+         "c1_outer_r",
+         "c1_seat"
+        ]
+       },
+       {
+        "area": 22.152940573679018,
+        "loops": 1,
+        "outer_curves": [
+         "c2_bottom",
+         "c2_lip_l",
+         "c2_lip_r",
+         "c2_outer_l",
+         "c2_outer_r",
+         "c2_seat"
+        ]
+       },
+       {
+        "area": 22.152940573679047,
+        "loops": 1,
+        "outer_curves": [
+         "c3_bottom",
+         "c3_lip_l",
+         "c3_lip_r",
+         "c3_outer_l",
+         "c3_outer_r",
+         "c3_seat"
+        ]
+       },
+       {
+        "area": 22.152940573679054,
+        "loops": 1,
+        "outer_curves": [
+         "c4_bottom",
+         "c4_lip_l",
+         "c4_lip_r",
+         "c4_outer_l",
+         "c4_outer_r",
+         "c4_seat"
+        ]
+       },
+       {
+        "area": 22.152940573679103,
+        "loops": 1,
+        "outer_curves": [
+         "c5_bottom",
+         "c5_lip_l",
+         "c5_lip_r",
+         "c5_outer_l",
+         "c5_outer_r",
+         "c5_seat"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "organizer",
+      "feature": "clips",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 221.52940573679047,
+        "area": 390.59841993315956,
+        "centroid": [
+         -30.000000000000004,
+         1.2829768281044e-16,
+         5.723307232137816
+        ],
+        "bbox_min": [
+         -34.1,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         -25.9,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 221.52940573679035,
+        "area": 390.59841993315945,
+        "centroid": [
+         -15,
+         2.565953656208801e-16,
+         5.723307232137815
+        ],
+        "bbox_min": [
+         -19.099999999999998,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         -10.9,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 221.52940573679052,
+        "area": 390.59841993315945,
+        "centroid": [
+         -1.4639086172586554e-16,
+         2.565953656208799e-16,
+         5.723307232137813
+        ],
+        "bbox_min": [
+         -4.1,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         4.1,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 221.5294057367905,
+        "area": 390.59841993315956,
+        "centroid": [
+         15.000000000000004,
+         1.2829768281043997e-16,
+         5.723307232137814
+        ],
+        "bbox_min": [
+         10.900000000000002,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         19.1,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 221.52940573679,
+        "area": 390.5984199331591,
+        "centroid": [
+         29.999999999999993,
+         2.565953656208805e-16,
+         5.723307232137812
+        ],
+        "bbox_min": [
+         25.900000000000002,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         34.099999999999994,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "9764d15e0bb4f723ef670a7777af2633208d043aaa7d6b550693bfde7f5f333d",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cable_organizer",
+    "status": "ok",
+    "features": [
+     {
+      "part": "organizer",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2139.5115630027085,
+        "loops": 3,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "organizer",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 7060.3881579089375,
+        "area": 5180.258957998194,
+        "centroid": [
+         8.493839935836276e-16,
+         1.8216027733828597e-17,
+         1.6500000000000004
+        ],
+        "bbox_min": [
+         -49.50000000000001,
+         -11,
+         0
+        ],
+        "bbox_max": [
+         49.50000000000001,
+         11,
+         3.3000000000000003
+        ],
+        "faces": 8,
+        "edges": 16,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "organizer",
+      "feature": "clip_profiles",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 26.80505809415166,
+        "loops": 1,
+        "outer_curves": [
+         "c1_bottom",
+         "c1_lip_l",
+         "c1_lip_r",
+         "c1_outer_l",
+         "c1_outer_r",
+         "c1_seat"
+        ]
+       },
+       {
+        "area": 26.805058094151633,
+        "loops": 1,
+        "outer_curves": [
+         "c2_bottom",
+         "c2_lip_l",
+         "c2_lip_r",
+         "c2_outer_l",
+         "c2_outer_r",
+         "c2_seat"
+        ]
+       },
+       {
+        "area": 26.805058094151644,
+        "loops": 1,
+        "outer_curves": [
+         "c3_bottom",
+         "c3_lip_l",
+         "c3_lip_r",
+         "c3_outer_l",
+         "c3_outer_r",
+         "c3_seat"
+        ]
+       },
+       {
+        "area": 26.805058094151683,
+        "loops": 1,
+        "outer_curves": [
+         "c4_bottom",
+         "c4_lip_l",
+         "c4_lip_r",
+         "c4_outer_l",
+         "c4_outer_r",
+         "c4_seat"
+        ]
+       },
+       {
+        "area": 26.805058094151704,
+        "loops": 1,
+        "outer_curves": [
+         "c5_bottom",
+         "c5_lip_l",
+         "c5_lip_r",
+         "c5_outer_l",
+         "c5_outer_r",
+         "c5_seat"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "organizer",
+      "feature": "clips",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 294.85563903566816,
+        "area": 472.62408811912286,
+        "centroid": [
+         -32.99999999999999,
+         -1.9278389603371895e-16,
+         6.295637955351594
+        ],
+        "bbox_min": [
+         -37.51,
+         -5.5,
+         3.3000000000000003
+        ],
+        "bbox_max": [
+         -28.490000000000002,
+         5.5,
+         10.404426934892872
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 294.85563903566805,
+        "area": 472.62408811912303,
+        "centroid": [
+         -16.500000000000004,
+         9.639194801685951e-17,
+         6.295637955351594
+        ],
+        "bbox_min": [
+         -21.009999999999998,
+         -5.5,
+         3.3000000000000003
+        ],
+        "bbox_max": [
+         -11.99,
+         5.5,
+         10.404426934892872
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 294.8556390356681,
+        "area": 472.6240881191231,
+        "centroid": [
+         -1.9986049875973555e-17,
+         -1.9278389603371898e-16,
+         6.295637955351596
+        ],
+        "bbox_min": [
+         -4.51,
+         -5.5,
+         3.3000000000000003
+        ],
+        "bbox_max": [
+         4.51,
+         5.5,
+         10.404426934892872
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 294.85563903566765,
+        "area": 472.62408811912303,
+        "centroid": [
+         16.500000000000004,
+         -9.639194801685965e-17,
+         6.2956379553515935
+        ],
+        "bbox_min": [
+         11.990000000000002,
+         -5.5,
+         3.3000000000000003
+        ],
+        "bbox_max": [
+         21.01,
+         5.5,
+         10.404426934892872
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 294.8556390356672,
+        "area": 472.6240881191229,
+        "centroid": [
+         33,
+         9.63919480168598e-17,
+         6.2956379553515935
+        ],
+        "bbox_min": [
+         28.490000000000002,
+         -5.5,
+         3.3000000000000003
+        ],
+        "bbox_max": [
+         37.51,
+         5.5,
+         10.404426934892872
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "2c59005a2b0d0985883fdc0b81144c577fa127a7d6c62f23c6328c9603583f6a",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cable_organizer",
+    "status": "ok",
+    "features": [
+     {
+      "part": "organizer",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1784.0956871912017,
+        "loops": 2,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "organizer",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 5352.287061573606,
+        "area": 4270.6028752058655,
+        "centroid": [
+         -0.35657981627291446,
+         -1.4709957853186195e-17,
+         1.5
+        ],
+        "bbox_min": [
+         -45,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         45,
+         10,
+         3
+        ],
+        "faces": 7,
+        "edges": 14,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "organizer",
+      "feature": "clip_profiles",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 22.152940573679047,
+        "loops": 1,
+        "outer_curves": [
+         "c1_bottom",
+         "c1_lip_l",
+         "c1_lip_r",
+         "c1_outer_l",
+         "c1_outer_r",
+         "c1_seat"
+        ]
+       },
+       {
+        "area": 22.152940573679018,
+        "loops": 1,
+        "outer_curves": [
+         "c2_bottom",
+         "c2_lip_l",
+         "c2_lip_r",
+         "c2_outer_l",
+         "c2_outer_r",
+         "c2_seat"
+        ]
+       },
+       {
+        "area": 22.152940573679047,
+        "loops": 1,
+        "outer_curves": [
+         "c3_bottom",
+         "c3_lip_l",
+         "c3_lip_r",
+         "c3_outer_l",
+         "c3_outer_r",
+         "c3_seat"
+        ]
+       },
+       {
+        "area": 22.152940573679054,
+        "loops": 1,
+        "outer_curves": [
+         "c4_bottom",
+         "c4_lip_l",
+         "c4_lip_r",
+         "c4_outer_l",
+         "c4_outer_r",
+         "c4_seat"
+        ]
+       },
+       {
+        "area": 22.152940573679103,
+        "loops": 1,
+        "outer_curves": [
+         "c5_bottom",
+         "c5_lip_l",
+         "c5_lip_r",
+         "c5_outer_l",
+         "c5_outer_r",
+         "c5_seat"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "organizer",
+      "feature": "clips",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 221.52940573679047,
+        "area": 390.59841993315956,
+        "centroid": [
+         -30.000000000000004,
+         1.2829768281044e-16,
+         5.723307232137816
+        ],
+        "bbox_min": [
+         -34.1,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         -25.9,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 221.52940573679035,
+        "area": 390.59841993315945,
+        "centroid": [
+         -15,
+         2.565953656208801e-16,
+         5.723307232137815
+        ],
+        "bbox_min": [
+         -19.099999999999998,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         -10.9,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 221.52940573679052,
+        "area": 390.59841993315945,
+        "centroid": [
+         -1.4639086172586554e-16,
+         2.565953656208799e-16,
+         5.723307232137813
+        ],
+        "bbox_min": [
+         -4.1,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         4.1,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 221.5294057367905,
+        "area": 390.59841993315956,
+        "centroid": [
+         15.000000000000004,
+         1.2829768281043997e-16,
+         5.723307232137814
+        ],
+        "bbox_min": [
+         10.900000000000002,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         19.1,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 221.52940573679,
+        "area": 390.5984199331591,
+        "centroid": [
+         29.999999999999993,
+         2.565953656208805e-16,
+         5.723307232137812
+        ],
+        "bbox_min": [
+         25.900000000000002,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         34.099999999999994,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "209d6be1c22b88090d5d33049d615eded0432a0fd6a0c7eb360ba458df4bf482",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cable_organizer",
+    "status": "ok",
+    "features": [
+     {
+      "part": "organizer",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1761.511563002708,
+        "loops": 3,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "organizer",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 5284.534689008125,
+        "area": 4276.328427817032,
+        "centroid": [
+         -1.936180950089646e-16,
+         -6.698841429911786e-17,
+         1.4999999999999998
+        ],
+        "bbox_min": [
+         -45,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         45,
+         10,
+         3
+        ],
+        "faces": 8,
+        "edges": 16,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "organizer",
+      "feature": "clip_profiles",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 22.152940573679047,
+        "loops": 1,
+        "outer_curves": [
+         "c1_bottom",
+         "c1_lip_l",
+         "c1_lip_r",
+         "c1_outer_l",
+         "c1_outer_r",
+         "c1_seat"
+        ]
+       },
+       {
+        "area": 22.152940573679018,
+        "loops": 1,
+        "outer_curves": [
+         "c2_bottom",
+         "c2_lip_l",
+         "c2_lip_r",
+         "c2_outer_l",
+         "c2_outer_r",
+         "c2_seat"
+        ]
+       },
+       {
+        "area": 22.152940573679047,
+        "loops": 1,
+        "outer_curves": [
+         "c3_bottom",
+         "c3_lip_l",
+         "c3_lip_r",
+         "c3_outer_l",
+         "c3_outer_r",
+         "c3_seat"
+        ]
+       },
+       {
+        "area": 22.152940573679054,
+        "loops": 1,
+        "outer_curves": [
+         "c4_bottom",
+         "c4_lip_l",
+         "c4_lip_r",
+         "c4_outer_l",
+         "c4_outer_r",
+         "c4_seat"
+        ]
+       },
+       {
+        "area": 22.152940573679103,
+        "loops": 1,
+        "outer_curves": [
+         "c5_bottom",
+         "c5_lip_l",
+         "c5_lip_r",
+         "c5_outer_l",
+         "c5_outer_r",
+         "c5_seat"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "organizer",
+      "feature": "clips",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 221.52940573679047,
+        "area": 390.59841993315956,
+        "centroid": [
+         -30.000000000000004,
+         1.2829768281044e-16,
+         5.723307232137816
+        ],
+        "bbox_min": [
+         -34.1,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         -25.9,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 221.52940573679035,
+        "area": 390.59841993315945,
+        "centroid": [
+         -15,
+         2.565953656208801e-16,
+         5.723307232137815
+        ],
+        "bbox_min": [
+         -19.099999999999998,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         -10.9,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 221.52940573679052,
+        "area": 390.59841993315945,
+        "centroid": [
+         -1.4639086172586554e-16,
+         2.565953656208799e-16,
+         5.723307232137813
+        ],
+        "bbox_min": [
+         -4.1,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         4.1,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 221.5294057367905,
+        "area": 390.59841993315956,
+        "centroid": [
+         15.000000000000004,
+         1.2829768281043997e-16,
+         5.723307232137814
+        ],
+        "bbox_min": [
+         10.900000000000002,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         19.1,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       },
+       {
+        "volume": 221.52940573679,
+        "area": 390.5984199331591,
+        "centroid": [
+         29.999999999999993,
+         2.565953656208805e-16,
+         5.723307232137812
+        ],
+        "bbox_min": [
+         25.900000000000002,
+         -5,
+         3
+        ],
+        "bbox_max": [
+         34.099999999999994,
+         5,
+         9.458569940811701
+        ],
+        "faces": 8,
+        "edges": 18,
+        "face_types": {
+         "cylinder": 3,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 6,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

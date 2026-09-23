@@ -70,6 +70,8 @@ export interface CheckParams {
   diameter?: Range;
   points?: number[][];
   tol?: number;
+  /** hole_positions: `"model"` (default) = 3D model points on the hole axes; `"edges"` = [a, b] offsets from the part's edges. */
+  relative_to?: "model" | "edges";
 }
 
 /** A per-body condition inside `bodies_matching.where`. */
@@ -257,12 +259,12 @@ const ALLOWED_PARAMS: Record<string, readonly (keyof CheckParams | "where")[]> =
   bodies_matching: ["where"],
   curve_count: ["kind", "diameter"],
   hole_pattern: ["diameter", "points", "tol"],
-  hole_positions: ["diameter", "points", "tol"],
+  hole_positions: ["diameter", "points", "tol", "relative_to", "body"],
   feature_names: [],
   changed_curves: [],
   changed_features: [],
 };
-const ALL_PARAMS = ["type", "axis", "body", "kind", "diameter", "points", "tol", "where"] as const;
+const ALL_PARAMS = ["type", "axis", "body", "kind", "diameter", "points", "tol", "relative_to", "where"] as const;
 
 /** Problems with one check (a hidden test or a `where` condition), prefixed with `at`. */
 function checkProblems(t: HiddenTest | BodyCondition, at: string, hasContext: boolean, nested: boolean): string[] {
@@ -280,7 +282,13 @@ function checkProblems(t: HiddenTest | BodyCondition, at: string, hasContext: bo
     const pts = t.points ?? [];
     const dims = new Set(pts.map((p) => p.length));
     if (dims.size > 1) out.push(`${at}: points mix 2D and 3D coordinates`);
-    if (t.check === "hole_positions" && pts.some((p) => p.length !== 3)) out.push(`${at}: hole_positions needs 3D points`);
+    if (t.check === "hole_positions") {
+      const edges = t.relative_to === "edges";
+      if (edges && pts.some((p) => p.length !== 2)) out.push(`${at}: hole_positions relative_to edges needs [a, b] offset pairs`);
+      if (!edges && pts.some((p) => p.length !== 3)) out.push(`${at}: hole_positions needs 3D points`);
+      if (!edges && t.body !== undefined) out.push(`${at}: "body" is only used by hole_positions with relative_to "edges"`);
+      if (edges && pts.some((p) => p.some((x) => x < 0))) out.push(`${at}: edge offsets cannot be negative`);
+    }
     if (t.check === "hole_pattern" && pts.length < 2) out.push(`${at}: hole_pattern needs at least 2 points`);
   } else if (comparators.length !== 1) {
     out.push(`${at}: needs exactly one comparator (eq, approx, between, gte or lte); found ${comparators.length}`);

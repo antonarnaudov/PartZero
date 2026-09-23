@@ -1,0 +1,143 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-split-shaft-collar",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "c322d1b4114e00a7c59309924dab8f7fbe33d3a682b50eb834ec284c4d060a57",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "split_shaft_collar",
+    "status": "ok",
+    "features": [
+     {
+      "part": "collar",
+      "feature": "ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 318.15562754486206,
+        "loops": 1,
+        "outer_curves": [
+         "bore",
+         "outer",
+         "slit_lower",
+         "slit_upper"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "collar",
+      "feature": "collar",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 3181.556275448621,
+        "area": 1691.7209586578415,
+        "centroid": [
+         -0.2465715461498099,
+         -3.9842285820997684e-16,
+         5
+        ],
+        "bbox_min": [
+         -11,
+         -11,
+         0
+        ],
+        "bbox_max": [
+         10.974402033823985,
+         11,
+         10
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 4
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 8
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "a6dbc63c710472f76ef625a42efc1e802a7320965705c551bd56e9276aca6ce3",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "split_shaft_collar",
+    "status": "ok",
+    "features": [
+     {
+      "part": "collar",
+      "feature": "ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 384.96830932928316,
+        "loops": 1,
+        "outer_curves": [
+         "bore",
+         "outer",
+         "slit_lower",
+         "slit_upper"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "collar",
+      "feature": "collar",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 4234.651402622114,
+        "area": 2046.9823599759884,
+        "centroid": [
+         -0.2712287007647947,
+         -2.740630962331073e-16,
+         5.5
+        ],
+        "bbox_min": [
+         -12.100000000000001,
+         -12.100000000000001,
+         0
+        ],
+        "bbox_max": [
+         12.071842237206384,
+         12.100000000000001,
+         11
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 4
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 8
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

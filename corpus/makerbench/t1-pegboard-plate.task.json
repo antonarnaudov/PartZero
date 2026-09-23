@@ -1,0 +1,71 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-pegboard-plate",
+  "tier": "T1",
+  "title": "Pegboard adapter plate",
+  "prompt": "Adapter plate for my pegboard (the standard kind: 1/4\" holes on a 1\" grid). I'll laser cut it from 4 mm plywood: 90 x 65 mm, with six 7 mm holes for 1/4\" bolts in a 3 x 2 grid on the pegboard's 25.4 mm pitch, centred on the plate. Also four M4 clearance holes (4.5 mm), 6 mm in from both edges at each corner, for whatever I mount on it.",
+  "process": "laser",
+  "tags": ["mounting-plate", "pegboard", "laser-cut", "hole-pattern"],
+  "requires": ["ir/0"],
+  "reference": "t1-pegboard-plate.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one part to cut",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "90 x 65 mm plate, 4 mm thick, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [4, 65, 90],
+      "abs": 0.1
+    },
+    {
+      "id": "peg_grid",
+      "description": "Six 7 mm bolt holes (6.8–7.2) in a 3 x 2 grid on the 25.4 mm (1 inch) pitch",
+      "check": "hole_pattern",
+      "diameter": [6.8, 7.2],
+      "points": [[0, 0], [25.4, 0], [50.8, 0], [0, 25.4], [25.4, 25.4], [50.8, 25.4]]
+    },
+    {
+      "id": "grid_centred",
+      "description": "The grid is centred: corner bolt holes 19.6 / 19.8 mm from the edges, middle ones 19.8 / 45 mm",
+      "check": "hole_positions",
+      "relative_to": "edges",
+      "diameter": [6.8, 7.2],
+      "points": [[19.6, 19.8], [19.6, 19.8], [19.6, 19.8], [19.6, 19.8], [19.8, 45], [19.8, 45]],
+      "tol": 0.1
+    },
+    {
+      "id": "m4_corners",
+      "description": "Four M4 clearance holes (4.3–4.6 mm), each 6 mm in from both edges at a corner",
+      "check": "hole_positions",
+      "relative_to": "edges",
+      "diameter": [4.3, 4.6],
+      "points": [[6, 6], [6, 6], [6, 6], [6, 6]],
+      "tol": 0.1
+    },
+    {
+      "id": "only_holes",
+      "description": "Exactly ten holes, nothing else cut out",
+      "check": "inner_loops",
+      "eq": 10
+    },
+    {
+      "id": "volume",
+      "description": "Volume (90·65 − 6·Ø7 − 4·Ø4.5)·4 ≈ 22221.9 mm³ ±0.5%",
+      "check": "volume",
+      "approx": 22221.9,
+      "rel": 0.005
+    }
+  ],
+  "notes": "Pegboard: 1/4 in holes on 1 in centres. 1/4 in bolt (6.35 mm) clearance: 6.75 close / 7.14 normal; 7.0 chosen. Edge offsets: 45 − 25.4 = 19.6, 32.5 − 12.7 = 19.8."
+}

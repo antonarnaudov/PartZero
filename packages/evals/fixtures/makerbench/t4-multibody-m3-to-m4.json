@@ -1,0 +1,627 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t4-multibody-m3-to-m4",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "86f3b7cc09a1940df1d2b1cc88ea84fffefc47edbf9d3af5b7b7905149e8f8c0",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cable_clamp",
+    "status": "ok",
+    "features": [
+     {
+      "part": "base",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2286.11726630737,
+        "loops": 6,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "base",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11430.58633153685,
+        "area": 6080.641577581413,
+        "centroid": [
+         -2.9837534424972256e-16,
+         -5.692394268378233e-17,
+         2.5000000000000004
+        ],
+        "bbox_min": [
+         -40,
+         -15,
+         0
+        ],
+        "bbox_max": [
+         40,
+         15,
+         5
+        ],
+        "faces": 11,
+        "edges": 22,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 10,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "strap",
+      "feature": "strap_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1168.1913743824034,
+        "loops": 3,
+        "outer_curves": [
+         "s_bottom",
+         "s_left",
+         "s_right",
+         "s_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "strap",
+      "feature": "strap",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 4672.765497529614,
+        "area": 3209.4800842940385,
+        "centroid": [
+         -1.836890007110316e-15,
+         32.49999999999999,
+         2
+        ],
+        "bbox_min": [
+         -40,
+         25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         40,
+         4
+        ],
+        "faces": 8,
+        "edges": 16,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "context",
+   "ir_sha256": "ff250801374a0b8bf55c80a94b5f070b6310f11cd2a5598bc1e63134cb4d5cf9",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cable_clamp",
+    "status": "ok",
+    "features": [
+     {
+      "part": "base",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2313.4177064670653,
+        "loops": 6,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "base",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11567.088532335327,
+        "area": 6066.127419521828,
+        "centroid": [
+         -3.754477359471666e-15,
+         2.1429697219198332e-17,
+         2.5000000000000004
+        ],
+        "bbox_min": [
+         -40,
+         -15,
+         0
+        ],
+        "bbox_max": [
+         40,
+         15,
+         5
+        ],
+        "faces": 11,
+        "edges": 22,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 10,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "strap",
+      "feature": "strap_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1181.841594462251,
+        "loops": 3,
+        "outer_curves": [
+         "s_bottom",
+         "s_left",
+         "s_right",
+         "s_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "strap",
+      "feature": "strap",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 4727.3663778490045,
+        "area": 3209.134509102144,
+        "centroid": [
+         -1.6834063629597757e-16,
+         32.49999999999999,
+         2
+        ],
+        "bbox_min": [
+         -40,
+         25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         40,
+         4
+        ],
+        "faces": 8,
+        "edges": 16,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "88670e14a3d8c5f973ed861bb75372487e635bc2811f02c39d304f53387ca832",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cable_clamp",
+    "status": "ok",
+    "features": [
+     {
+      "part": "base",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2766.2018922319176,
+        "loops": 6,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "base",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 15214.110407275544,
+        "area": 7357.576308873511,
+        "centroid": [
+         -1.4197674782731605e-15,
+         -2.875186442116809e-17,
+         2.75
+        ],
+        "bbox_min": [
+         -44,
+         -16.5,
+         0
+        ],
+        "bbox_max": [
+         44,
+         16.5,
+         5.5
+        ],
+        "faces": 11,
+        "edges": 22,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 10,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "strap",
+      "feature": "strap_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1413.5115630027076,
+        "loops": 3,
+        "outer_curves": [
+         "s_bottom",
+         "s_left",
+         "s_right",
+         "s_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "strap",
+      "feature": "strap",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 6219.450877211914,
+        "area": 3883.4709019957872,
+        "centroid": [
+         -2.6504898575586335e-15,
+         35.75000000000001,
+         2.2000000000000006
+        ],
+        "bbox_min": [
+         -44,
+         27.500000000000004,
+         0
+        ],
+        "bbox_max": [
+         44,
+         44,
+         4.4
+        ],
+        "faces": 8,
+        "edges": 16,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "92d026ed4e7bfd9c1c62827ec3636b7ee7d711a24ff5b14d02a687254d960b28",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cable_clamp",
+    "status": "ok",
+    "features": [
+     {
+      "part": "base",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2302.021579116168,
+        "loops": 5,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "base",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11510.10789558084,
+        "area": 6041.764368493239,
+        "centroid": [
+         -0.22799192129721535,
+         -0.05527076879932445,
+         2.5000000000000004
+        ],
+        "bbox_min": [
+         -40,
+         -15,
+         0
+        ],
+        "bbox_max": [
+         40,
+         15,
+         5
+        ],
+        "faces": 10,
+        "edges": 20,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "strap",
+      "feature": "strap_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1168.1913743824034,
+        "loops": 3,
+        "outer_curves": [
+         "s_bottom",
+         "s_left",
+         "s_right",
+         "s_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "strap",
+      "feature": "strap",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 4672.765497529614,
+        "area": 3209.4800842940385,
+        "centroid": [
+         -1.836890007110316e-15,
+         32.49999999999999,
+         2
+        ],
+        "bbox_min": [
+         -40,
+         25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         40,
+         4
+        ],
+        "faces": 8,
+        "edges": 16,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "f9c6e5ed49a307c750cf08a13ca0ff5c1ec69d14746a382a5049d0fa75c432fb",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "cable_clamp",
+    "status": "ok",
+    "features": [
+     {
+      "part": "base",
+      "feature": "base_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2272.7576435479796,
+        "loops": 6,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "base",
+      "feature": "base",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11363.788217739897,
+        "area": 6082.196665944937,
+        "centroid": [
+         1.0004308030322198e-16,
+         -2.8273241191531414e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -40,
+         -15,
+         0
+        ],
+        "bbox_max": [
+         40,
+         15,
+         5
+        ],
+        "faces": 11,
+        "edges": 22,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 10,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "strap",
+      "feature": "strap_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 1161.511563002708,
+        "loops": 3,
+        "outer_curves": [
+         "s_bottom",
+         "s_left",
+         "s_right",
+         "s_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "strap",
+      "feature": "strap",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 4646.046252010832,
+        "area": 3207.4301950875715,
+        "centroid": [
+         -6.484440826044107e-16,
+         32.5,
+         2
+        ],
+        "bbox_min": [
+         -40,
+         25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         40,
+         4
+        ],
+        "faces": 8,
+        "edges": 16,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

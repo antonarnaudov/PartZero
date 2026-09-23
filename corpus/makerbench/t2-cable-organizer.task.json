@@ -1,0 +1,93 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-cable-organizer",
+  "tier": "T2",
+  "title": "Desk cable organiser with five clips",
+  "prompt": "Desk cable organiser for five USB cables (5 mm thick). A 90 x 20 x 3 mm base strip with two M4 clearance holes (4.5 mm) on its centre line, 5 mm in from each end, and five snap-in clips standing on top, 15 mm apart and centred along the strip. Each clip is 10 mm long along the cable (centred on the strip's width) and is a C-shaped ring: 5.2 mm inside diameter, 1.5 mm wall, its centre 3.5 mm above the top of the base so the bottom of the ring sits flat on the base, with a 3.6 mm opening at the top to push the cable in; cut the opening with radial faces. Base centred on the origin, sitting on Z = 0, long side along X, so the cables run along Y.",
+  "process": "fdm",
+  "tags": ["clip", "cable-management", "multi-body", "desk"],
+  "requires": ["ir/0", "plane/frame"],
+  "reference": "t2-cable-organizer.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Six solids: the base and five clips",
+      "check": "body_count",
+      "eq": 6
+    },
+    {
+      "id": "size",
+      "description": "90 x 20 mm footprint, 9.46 mm tall (3 + 3.5 + the top of the radial lips)",
+      "check": "bbox_size",
+      "approx": [90, 20, 9.46],
+      "abs": 0.1
+    },
+    {
+      "id": "placement",
+      "description": "Base centred on the origin, on Z = 0",
+      "check": "bbox_min",
+      "approx": [-45, -10, 0],
+      "abs": 0.05
+    },
+    {
+      "id": "clips",
+      "description": "Five clips: 8.2 mm wide rings (1.5 mm wall), 10 mm long, standing on the base top (Z = 3)",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_size", "approx": [8.2, 10, 6.46], "abs": 0.1},
+        {"check": "bbox_min", "axis": "z", "approx": 3, "abs": 0.05}
+      ],
+      "eq": 5
+    },
+    {
+      "id": "seats",
+      "description": "Five 5.2 mm cable seats (5.1–5.3: a snug fit on 5 mm cables)",
+      "check": "curve_count",
+      "kind": "arc",
+      "diameter": [5.1, 5.3],
+      "gte": 5
+    },
+    {
+      "id": "pitch",
+      "description": "15 mm pitch: a clip centred at X = 15 …",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_min", "axis": "z", "approx": 3, "abs": 0.05},
+        {"check": "centroid", "axis": "x", "approx": 15, "abs": 0.05}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "end_clip",
+      "description": "… and an end clip at X = −30 (five clips centred on the strip)",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_min", "axis": "z", "approx": 3, "abs": 0.05},
+        {"check": "centroid", "axis": "x", "approx": -30, "abs": 0.05}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "m4_holes",
+      "description": "Two M4 clearance holes (4.4–4.6 mm) on the centre line, 5 mm from each end",
+      "check": "hole_positions",
+      "diameter": [4.4, 4.6],
+      "points": [[-40, 0, 0], [40, 0, 0]],
+      "tol": 0.05
+    },
+    {
+      "id": "volume",
+      "description": "Base (1800 − 2·Ø4.5)·3 + 5 clips × 22.15 mm² × 10 ≈ 6412.2 mm³ ±1%",
+      "check": "volume",
+      "approx": 6412.22,
+      "rel": 0.01
+    }
+  ],
+  "notes": "Clip profile area (closed form): outer disc above the base line [πR² − (R²·acos(3.5/R) − 3.5·√(R² − 3.5²))] − bore πr² − opening wedge ½(π − 2θ)(R² − r²), R = 4.1, r = 2.6, θ = atan2(√(r² − 1.8²), 1.8) = 22.153 mm². The 3.6 mm opening is narrower than the 5 mm cable: it snaps in."
+}

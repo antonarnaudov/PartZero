@@ -1,0 +1,147 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-m8-rod-end-cap",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "c546318f3facb353c21575160f00d94ff2e5ecad7bfacc17c5fa278c8a6f7e75",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "m8_rod_end_cap",
+    "status": "ok",
+    "features": [
+     {
+      "part": "cap",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 58.08451000647494,
+        "loops": 1,
+        "outer_curves": [
+         "axis_cap",
+         "bore",
+         "bore_end",
+         "bottom",
+         "dome",
+         "side"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "cap",
+      "feature": "cap",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1592.7455874679774,
+        "area": 1218.3096310621218,
+        "centroid": [
+         -6.424011138659743e-16,
+         -1.3557608448038818e-16,
+         8.021585051546392
+        ],
+        "bbox_min": [
+         -7,
+         -7,
+         0
+        ],
+        "bbox_max": [
+         7,
+         7,
+         17
+        ],
+        "faces": 5,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2,
+         "sphere": 1
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "a89f7347bfe703aff49415e24ba94e869305f354caa444e342a7b32aef87c7b6",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "m8_rod_end_cap",
+    "status": "ok",
+    "features": [
+     {
+      "part": "cap",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 70.28225710783474,
+        "loops": 1,
+        "outer_curves": [
+         "axis_cap",
+         "bore",
+         "bore_end",
+         "bottom",
+         "dome",
+         "side"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "cap",
+      "feature": "cap",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 2119.944376919879,
+        "area": 1474.154653585168,
+        "centroid": [
+         1.876954585967868e-16,
+         2.695220364440917e-17,
+         8.823743556701029
+        ],
+        "bbox_min": [
+         -7.700000000000001,
+         -7.700000000000001,
+         0
+        ],
+        "bbox_max": [
+         7.700000000000001,
+         7.700000000000001,
+         18.700000000000003
+        ],
+        "faces": 5,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2,
+         "sphere": 1
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

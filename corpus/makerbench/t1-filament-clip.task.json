@@ -1,0 +1,69 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-filament-clip",
+  "tier": "T1",
+  "title": "Filament end clip for a spool rim",
+  "prompt": "Little clip that slides onto the rim of a filament spool so the loose end doesn't unwind. It's a 20 x 14 mm block, 6 mm thick, with a slot 3.2 mm wide and 10 mm deep coming up from the middle of the bottom edge for the spool flange (mine are about 3 mm thick). Put a 2.2 mm hole on each side of the slot, 5 mm up from the bottom edge and 4.2 mm in from the side edge, to thread the 1.75 mm filament through.",
+  "process": "fdm",
+  "tags": ["clip", "filament", "3d-printing", "profile-extrude"],
+  "requires": ["ir/0"],
+  "reference": "t1-filament-clip.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "20 x 14 mm, 6 mm thick, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [6, 14, 20],
+      "abs": 0.1
+    },
+    {
+      "id": "filament_holes",
+      "description": "Two 2.2 mm filament holes (2.1–2.4), 11.6 mm apart",
+      "check": "hole_pattern",
+      "diameter": [2.1, 2.4],
+      "points": [[0, 0], [11.6, 0]]
+    },
+    {
+      "id": "hole_inset",
+      "description": "Each filament hole is 4.2 mm from its side edge and 5 mm up from the bottom",
+      "check": "hole_positions",
+      "relative_to": "edges",
+      "diameter": [2.1, 2.4],
+      "points": [[4.2, 5], [4.2, 5]],
+      "tol": 0.1
+    },
+    {
+      "id": "flat_faces",
+      "description": "Ten flat faces: the 8-sided outline with its rectangular slot, plus front and back",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 10
+    },
+    {
+      "id": "only_holes",
+      "description": "The slot opens to the bottom edge (it's part of the outline), so there are only the two holes",
+      "check": "inner_loops",
+      "eq": 2
+    },
+    {
+      "id": "volume",
+      "description": "Volume (20·14 − 3.2·10 − 2·Ø2.2)·6 ≈ 1442.4 mm³ ±0.5% (a 3.0 slot or an 8 mm deep one is off by >0.8%)",
+      "check": "volume",
+      "approx": 1442.38,
+      "rel": 0.005
+    }
+  ],
+  "notes": "Spool flanges are typically 2.5–3 mm; 3.2 slot for a slip fit."
+}

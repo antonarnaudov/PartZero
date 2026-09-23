@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import type { SketchFeature } from "@aicad/ir-types";
 import { describeTest, evaluateTest, type CheckContext } from "../src/checks.js";
+import { sketchCircles } from "../src/ir-geom.js";
 import type { HiddenTest } from "../src/task.js";
 import { body, compileOk, feature, report, simpleReport } from "./helpers.js";
 
@@ -201,12 +203,147 @@ describe("IR checks", () => {
     expect(evaluateTest({ ...pos, points: [[105, -5, 0], [105, -36, 0], [125, -36, 0]] }, rotated).pass).toBe(true);
   });
 
+  describe("hole_positions relative_to edges", () => {
+    // The plate is 50 x 40 x 3; h1 (5, 5) → [5, 5], h2 (36, 5) → [5, 14], h3 (36, 25) → [14, 15].
+    const plateBody = body({ min: [0, 0, 0], max: [50, 40, 3] });
+    const onPlate = { candidate: { report: simpleReport([plateBody]), ir } };
+    const edges: HiddenTest = {
+      id: "e",
+      description: "e",
+      check: "hole_positions",
+      relative_to: "edges",
+      diameter: [3.2, 3.5],
+      points: [[5, 5], [5, 14], [14, 15]],
+    };
+
+    it("measures each hole's distance to the nearest edge across the hole, order-free", () => {
+      const r = evaluateTest(edges, onPlate);
+      expect(r.pass).toBe(true);
+      expect(r.actual).toEqual([5, 5, 5, 14, 14, 15]);
+      expect(r.expected).toBe("3 holes Ø[3.2, 3.5] at [[5, 5], [5, 14], [14, 15]] mm from the nearest edges ±0.05");
+      expect(evaluateTest({ ...edges, points: [[15, 14], [5, 5], [14, 5]] }, onPlate).pass).toBe(true);
+    });
+
+    it("does not depend on placement, rotation or the face the holes are sketched on", () => {
+      // PLATE_ROTATED_TOP maps (u, v) to (100 + u, −v, 3) and extrudes down: x ∈ [100, 140], y ∈ [−50, 0].
+      const rotatedBody = body({ min: [100, -50, 0], max: [140, 0, 3] });
+      const rotated = { candidate: { report: simpleReport([rotatedBody]), ir: compileOk(PLATE_ROTATED_TOP) } };
+      expect(evaluateTest(edges, rotated).pass).toBe(true);
+    });
+
+    it("fails with the offsets it found (a centred pattern is not an edge inset)", () => {
+      const r = evaluateTest({ ...edges, points: [[5, 5], [5, 14], [14, 16]] }, onPlate);
+      expect(r.pass).toBe(false);
+      expect(r.message).toBe("no hole [14, 16] mm from the nearest edges (±0.05, measured along X/Y); found [[5, 5], [5, 14], [14, 15]]");
+      expect(evaluateTest({ ...edges, points: [[5, 5], [5, 14]] }, onPlate).message).toMatch(/found 3 circle\(s\)/);
+    });
+
+    it("uses the union box of all bodies, or the body chosen with body", () => {
+      const farAway = body({ min: [200, 0, 0], max: [201, 1, 1], volume: 1 });
+      const two = { candidate: { report: simpleReport([plateBody, farAway]), ir } };
+      expect(evaluateTest(edges, two).pass).toBe(false);
+      expect(evaluateTest({ ...edges, body: 0 }, two).pass).toBe(true);
+    });
+
+    it("needs hole axes parallel to X, Y or Z", () => {
+      const tilted = compileOk(
+        PLATE.replace("sketch(XY,", "sketch(frame({ origin: [0, 0, 0], normal: [1, 1, 0], xDir: [0, 0, 1] }),").replace(
+          "extrude, XY }",
+          "extrude, frame }",
+        ),
+      );
+      const r = evaluateTest(edges, { candidate: { report: simpleReport([plateBody]), ir: tilted } });
+      expect(r.pass).toBe(false);
+      expect(r.message).toMatch(/not parallel to X, Y or Z/);
+    });
+  });
+
   it("IR checks fail with a clear message when there is no IR", () => {
     const noIr = { candidate: { report: simpleReport([big]), ir: null } };
     expect(run({ check: "curve_count", eq: 0 }, noIr).message).toMatch(/no IR/);
     expect(evaluateTest({ id: "p", description: "p", check: "hole_pattern", diameter: [1, 2], points: [[0, 0], [1, 1]] }, noIr).message).toMatch(
       /no IR/,
     );
+  });
+});
+
+// PLATE with h3 drawn as two semicircles and the Ø12 hole as three 120° arcs (as DXF/SVG imports
+// often do), plus an obround slot and a lens: loops with arcs that are *not* full circles.
+const ARC_PLATE = `import { part, sketch, line, arc, circle, extrude, XY } from "@aicad/std";
+part("p");
+const outline = sketch(XY, {
+  a: line([0, 0], [50, 0]),
+  b: line([50, 0], [50, 40]),
+  c: line([50, 40], [0, 40]),
+  d: line([0, 40], [0, 0]),
+  h1: circle({ center: [5, 5], radius: 1.7 }),
+  h2: circle({ center: [36, 5], radius: 1.7 }),
+  h3_top: arc({ start: [37.7, 25], end: [34.3, 25], center: [36, 25], ccw: true }),
+  h3_bottom: arc({ start: [37.7, 25], end: [34.3, 25], center: [36, 25], ccw: false }),
+  big_a: arc({ start: [26, 25], end: [17, 30.196152422706632], center: [20, 25], ccw: true }),
+  big_b: arc({ start: [17, 30.196152422706632], end: [17, 19.803847577293368], center: [20, 25], ccw: true }),
+  big_c: arc({ start: [17, 19.803847577293368], end: [26, 25], center: [20, 25], ccw: true }),
+  slot_r: arc({ start: [44, 30], end: [44, 34], center: [44, 32], ccw: true }),
+  slot_t: line([44, 34], [40, 34]),
+  slot_l: arc({ start: [40, 34], end: [40, 30], center: [40, 32], ccw: true }),
+  slot_b: line([40, 30], [44, 30]),
+  lens_top: arc({ start: [8, 30], end: [14, 30], center: [11, 26], ccw: false }),
+  lens_bottom: arc({ start: [14, 30], end: [8, 30], center: [11, 34], ccw: false }),
+});
+const plate = extrude(outline, { distance: 3 });
+`;
+
+describe("full circles drawn as arcs", () => {
+  const ir = compileOk(ARC_PLATE);
+  const ctx = { candidate: { report: simpleReport([body({ max: [50, 40, 3] })]), ir } };
+  const sketch = ir.parts[0]!.features[0]! as SketchFeature;
+
+  it("recognises closed loops of co-circular arcs as circles, in curve order", () => {
+    expect(sketchCircles(sketch).map((c) => [c.id, 2 * c.radius])).toEqual([
+      ["h1", 3.4],
+      ["h2", 3.4],
+      ["h3_top+h3_bottom", 3.4000000000000057],
+      ["big_a+big_b+big_c", 12],
+    ]);
+  });
+
+  it("curve_count counts such a loop once, as a circle, and not its arcs", () => {
+    expect(run({ check: "curve_count", kind: "circle", eq: 4 }, ctx).pass).toBe(true);
+    expect(run({ check: "curve_count", kind: "circle", diameter: [3.2, 3.5], eq: 3 }, ctx).pass).toBe(true);
+    expect(run({ check: "curve_count", kind: "circle", diameter: [11.9, 12.1], eq: 1 }, ctx).pass).toBe(true);
+    // Slot and lens arcs are real arcs: they share a loop with lines or lie on different circles.
+    expect(run({ check: "curve_count", kind: "arc", eq: 4 }, ctx).pass).toBe(true);
+    expect(run({ check: "curve_count", eq: 14 }, ctx).pass).toBe(true); // 6 lines + 4 arcs + 4 circles
+  });
+
+  it("hole_pattern and hole_positions find holes drawn as arcs", () => {
+    expect(
+      evaluateTest({ id: "p", description: "p", check: "hole_pattern", diameter: [3.2, 3.5], points: [[0, 0], [31, 0], [31, 20]] }, ctx).pass,
+    ).toBe(true);
+    expect(evaluateTest({ id: "p", description: "p", check: "hole_positions", diameter: [11.9, 12.1], points: [[20, 25, 0]] }, ctx).pass).toBe(
+      true,
+    );
+    const census = evaluateTest({ id: "p", description: "p", check: "hole_pattern", diameter: [3.2, 3.5], points: [[0, 0], [1, 0]] }, ctx);
+    expect(census.message).toBe("found 3 circle(s) with a diameter in [3.2, 3.5], expected 2; circles present: Ø3.4 ×3, Ø12 ×1");
+  });
+
+  it("gives the same answers as the plate drawn with circle curves", () => {
+    const circles = { candidate: { report: ctx.candidate.report, ir: compileOk(PLATE) } };
+    const tests: Omit<HiddenTest, "id" | "description">[] = [
+      { check: "curve_count", kind: "circle", diameter: [3.2, 3.5], eq: 3 },
+      { check: "curve_count", kind: "circle", diameter: [11.9, 12.1], eq: 1 },
+    ];
+    for (const t of tests) {
+      expect(run(t, ctx).pass).toBe(run(t, circles).pass);
+    }
+  });
+
+  it("does not treat an open chain of co-circular arcs as a circle", () => {
+    // Half of h3 closed by a line: a D-shaped hole, not a circle.
+    const d = compileOk(ARC_PLATE.replace("h3_bottom: arc({ start: [37.7, 25], end: [34.3, 25], center: [36, 25], ccw: false })", "h3_flat: line([37.7, 25], [34.3, 25])"));
+    const dCtx = { candidate: { report: ctx.candidate.report, ir: d } };
+    expect(run({ check: "curve_count", kind: "circle", diameter: [3.2, 3.5], eq: 2 }, dCtx).pass).toBe(true);
+    expect(run({ check: "curve_count", kind: "arc", diameter: [3.2, 3.5], eq: 1 }, dCtx).pass).toBe(true);
   });
 });
 

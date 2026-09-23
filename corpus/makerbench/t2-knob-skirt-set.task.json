@@ -1,0 +1,77 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-knob-skirt-set",
+  "tier": "T2",
+  "title": "Pot knob with separate pointer skirt",
+  "prompt": "Knob for a guitar-pedal pot with a separate skirt, so I can print the skirt in a contrasting colour and glue it on. Knob: 20 mm diameter, 16 mm tall, with a 1 mm x 45° chamfer round the top edge and a 6 mm hole, 12 mm deep, in the bottom for the knurled shaft (tight fit). Skirt: a 32 mm diameter, 2 mm thick disc with a 20.2 mm hole in the middle so it slides over the knob, and a small V notch in its rim as a pointer, 2 mm wide at the edge and 2 mm deep. Print them side by side: knob centred on the origin, skirt centred at X = 30, both standing on Z = 0.",
+  "process": "fdm",
+  "tags": ["knob", "potentiometer", "multi-body", "revolve"],
+  "requires": ["ir/0", "feature/revolve"],
+  "reference": "t2-knob-skirt-set.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Two solids: knob and skirt",
+      "check": "body_count",
+      "eq": 2
+    },
+    {
+      "id": "layout",
+      "description": "Side by side: from X = −10 to 46, Y = ±16, 16 mm tall",
+      "check": "bbox_size",
+      "approx": [56, 32, 16],
+      "abs": 0.1
+    },
+    {
+      "id": "knob",
+      "description": "The knob: 20 mm x 16 mm on the origin; volume ±0.3% checks the 6 mm x 12 shaft hole and the chamfer",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_sorted", "approx": [16, 20, 20], "abs": 0.1},
+        {"check": "centroid", "axis": "x", "approx": 0, "abs": 0.05},
+        {"check": "volume", "approx": 4656.89, "rel": 0.003}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "skirt",
+      "description": "The skirt: 32 mm x 2 mm at X = 30, with a V notch (4 flat faces: top, bottom and the two notch sides)",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_sorted", "approx": [2, 32, 32], "abs": 0.1},
+        {"check": "centroid", "axis": "x", "approx": 30, "abs": 0.05},
+        {"check": "face_count", "type": "plane", "eq": 4}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "skirt_fit",
+      "description": "One 20.2 mm hole (20.1–20.4): the skirt slides over the 20 mm knob",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [20.1, 20.4],
+      "eq": 1
+    },
+    {
+      "id": "chamfer",
+      "description": "The top edge is chamfered: one conical face",
+      "check": "face_count",
+      "type": "cone",
+      "eq": 1
+    },
+    {
+      "id": "volume",
+      "description": "Knob π·(1500 + 271/3 − 108) + skirt (π·16² − notch − π·10.1²)·2 ≈ 5620.4 mm³ ±0.5%",
+      "check": "volume",
+      "approx": 5620.41,
+      "rel": 0.005
+    }
+  ],
+  "notes": "Notch area = triangle (base 2, height √255 − 14) + rim segment beyond the chord at y = √255 (R²·acos(d/R) − d·1). Skirt bbox is 31.97 mm in Y because the notch removes the top of the rim."
+}

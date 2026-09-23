@@ -1,0 +1,147 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t5-succulent-pot",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "2936af1b4cdf4a6f77898e54e22d266dc15fbd545732a4ada0b9be953f2b7297",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "succulent_pot",
+    "status": "ok",
+    "features": [
+     {
+      "part": "pot",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 250.48214285714283,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "drain",
+         "floor_top",
+         "inner",
+         "outer",
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "pot",
+      "feature": "pot",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 46822.39708743941,
+        "area": 37144.553192425476,
+        "centroid": [
+         -2.8944711864035416e-14,
+         3.5984618252345096e-15,
+         30.062877815814982
+        ],
+        "bbox_min": [
+         -40,
+         -40,
+         0
+        ],
+        "bbox_max": [
+         40,
+         40,
+         70
+        ],
+        "faces": 6,
+        "edges": 6,
+        "face_types": {
+         "cone": 2,
+         "cylinder": 1,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 6
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "1acec29e7fab66d73e503036673e9456f29335dadccca405c4caf9a525de4894",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "succulent_pot",
+    "status": "ok",
+    "features": [
+     {
+      "part": "pot",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 303.0833928571429,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "drain",
+         "floor_top",
+         "inner",
+         "outer",
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "pot",
+      "feature": "pot",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 62320.61052338187,
+        "area": 44944.90936283484,
+        "centroid": [
+         4.3330824806159274e-14,
+         7.13755130644475e-15,
+         33.069165597396484
+        ],
+        "bbox_min": [
+         -44,
+         -44,
+         0
+        ],
+        "bbox_max": [
+         44,
+         44,
+         77
+        ],
+        "faces": 6,
+        "edges": 6,
+        "face_types": {
+         "cone": 2,
+         "cylinder": 1,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 6
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

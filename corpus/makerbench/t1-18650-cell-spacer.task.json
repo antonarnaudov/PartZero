@@ -1,0 +1,69 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-18650-cell-spacer",
+  "tier": "T1",
+  "title": "18650 cell spacer for a 4S2P pack",
+  "prompt": "Cell spacer for a 4S2P battery pack made of 18650 cells: a 5 mm thick plate with eight holes in a 4 x 2 grid that the cells push through. The cells are 18.4 mm at most, so make the holes 18.6 mm, on a 21 mm pitch both ways. The plate is 88 x 46 mm with the grid centred on it. I'll print one for each end of the pack.",
+  "process": "fdm",
+  "tags": ["battery", "18650", "spacer", "hole-pattern"],
+  "requires": ["ir/0"],
+  "reference": "t1-18650-cell-spacer.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (print it twice for both ends)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "88 x 46 mm plate, 5 mm thick, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [5, 46, 88],
+      "abs": 0.1
+    },
+    {
+      "id": "cell_grid",
+      "description": "Eight 18.6 mm cell holes (18.5–18.9) in a 4 x 2 grid on a 21 mm pitch",
+      "check": "hole_pattern",
+      "diameter": [18.5, 18.9],
+      "points": [[0, 0], [21, 0], [42, 0], [63, 0], [0, 21], [21, 21], [42, 21], [63, 21]]
+    },
+    {
+      "id": "grid_centred",
+      "description": "The grid is centred: the outer cells are 12.5 mm from both edges, the inner ones 12.5 and 33.5 mm",
+      "check": "hole_positions",
+      "relative_to": "edges",
+      "diameter": [18.5, 18.9],
+      "points": [[12.5, 12.5], [12.5, 12.5], [12.5, 12.5], [12.5, 12.5], [12.5, 33.5], [12.5, 33.5], [12.5, 33.5], [12.5, 33.5]],
+      "tol": 0.1
+    },
+    {
+      "id": "only_holes",
+      "description": "Exactly eight holes, nothing else cut out",
+      "check": "inner_loops",
+      "eq": 8
+    },
+    {
+      "id": "cell_walls",
+      "description": "Eight cylindrical hole walls and no other round faces",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 8
+    },
+    {
+      "id": "volume",
+      "description": "Volume (88·46 − 8·Ø18.6)·5 ≈ 9371.3 mm³ ±0.5%",
+      "check": "volume",
+      "approx": 9371.35,
+      "rel": 0.005
+    }
+  ],
+  "notes": "18650 cells: 18.0–18.4 mm diameter; 18.6 holes leave 0.1 mm per side. 21 mm pitch leaves 2.4 mm between cells; plate margin 3.2 mm."
+}

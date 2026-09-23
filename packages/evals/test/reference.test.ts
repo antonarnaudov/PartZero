@@ -43,7 +43,7 @@ describe("ReferenceSolver", () => {
     expect(result.summary.tests_total).toBe(tasks.reduce((n, t) => n + t.hidden_tests.length, 0));
     for (const tier of ["T1", "T2", "T4", "T5"] as const) expect(result.summary.by_tier[tier]?.pass_at_1).toBe(1);
     expect(Object.values(result.summary.categories).every((n) => n === 0)).toBe(true);
-    expect(result.summary.cost_usd).toMatchObject({ n: 40, total: 0 });
+    expect(result.summary.cost_usd).toMatchObject({ n: 61, total: 0 });
   });
 
   it("produces deterministic, task-ordered results regardless of concurrency", async () => {
@@ -57,8 +57,8 @@ describe("ReferenceSolver", () => {
     const result = await runSuite(tasks, { solver: new ReferenceSolver(tasks), engine: fixtureEngine() });
     const md = renderReport(result);
     expect(md).toContain("# makerbench run: reference × fixture");
-    expect(md).toMatch(/\| T1 \| 25 \| 25 \| 100\.0% \| 100\.0% \|/);
-    expect(md).toMatch(/\| T4 \| 4 \| 4 \| 100\.0%/);
+    expect(md).toMatch(/\| T1 \| 34 \| 34 \| 100\.0% \| 100\.0% \|/);
+    expect(md).toMatch(/\| T4 \| 8 \| 8 \| 100\.0%/);
     expect(md).toContain("## Failures\n\nNone.");
   });
 });

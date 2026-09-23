@@ -1,0 +1,69 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-split-shaft-collar",
+  "tier": "T1",
+  "title": "Split clamp collar blank for an 8 mm shaft",
+  "prompt": "Split clamp collar blank for an 8 mm shaft, to be milled from aluminium: 22 mm OD, 8.1 mm bore, 10 mm thick, with a 1.5 mm wide slit cut all the way through one side so it can clamp. I'll drill and tap the M3 clamp screw across the slit myself afterwards.",
+  "process": "cnc",
+  "tags": ["shaft-collar", "clamp", "round", "profile-extrude"],
+  "requires": ["ir/0"],
+  "reference": "t1-split-shaft-collar.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "22 mm across (21.97 on the slit side), 10 mm thick",
+      "check": "bbox_sorted",
+      "approx": [10, 22, 22],
+      "abs": 0.1
+    },
+    {
+      "id": "bore",
+      "description": "The bore is an 8.1 mm (8.0–8.2) arc: a slip fit on the 8 mm shaft",
+      "check": "curve_count",
+      "kind": "arc",
+      "diameter": [8.0, 8.2],
+      "gte": 1
+    },
+    {
+      "id": "outside",
+      "description": "The outside is a 22 mm arc",
+      "check": "curve_count",
+      "kind": "arc",
+      "diameter": [21.9, 22.1],
+      "gte": 1
+    },
+    {
+      "id": "slit_through",
+      "description": "The slit goes all the way through: the bore opens to the outside, so there is no closed hole",
+      "check": "inner_loops",
+      "eq": 0
+    },
+    {
+      "id": "slit_faces",
+      "description": "Four flat faces: the two slit walls plus both ends",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 4
+    },
+    {
+      "id": "volume",
+      "description": "Volume (π·(11² − 4.05²) − slit strip)·10 ≈ 3181.6 mm³ ±0.5%",
+      "check": "volume",
+      "approx": 3181.56,
+      "rel": 0.005
+    }
+  ],
+  "notes": "Slit strip area within the ring (x > 0, |y| ≤ a): [a√(R²−a²) + R²·asin(a/R)] − [a√(r²−a²) + r²·asin(a/r)], a = 0.75, R = 11, r = 4.05."
+}

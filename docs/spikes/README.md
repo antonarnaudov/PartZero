@@ -21,7 +21,7 @@ Phase 0 (M1–M2) de-risks the plan through eight go/no-go spikes ([ROADMAP.md](
 | 5 | **`forge-render` in Electron** | wgpu renderer on WebGPU with a WebGL2 fallback | <ul><li>Exact edges and silhouettes.</li><li>Pixel-exact ID picking.</li><li>Section view.</li><li>WebGL2 fallback works on Linux.</li><li>A dimension edit shows up in 3D within ≤150 ms.</li></ul> | [`05-renderer.md`](05-renderer.md) — **GO** (Linux WebGL2 pending) |
 | 6 | **CadScript ⇄ IR round-trip** | Compiler + canonical printer; property tests on 50 models | <ul><li>Lossless on 50 models.</li><li>UI edits keep comments and formatting.</li></ul> | [`06-cadscript-roundtrip.md`](06-cadscript-roundtrip.md) — **GO** |
 | 7 | **Agent vertical slice + bake-off** | About 12 tools; Anthropic, OpenAI and Google flagships; CadScript vs build123d-MCP on 30 T1 tasks. Early runs may evaluate CadScript through the `oracle/` backend. | <ul><li>CadScript ≥ build123d's score minus 5 points.</li><li>≥50% of hidden tests passing.</li><li>Median cost ≤$1.</li></ul> On a loss, change the syntax, not the engine. | [`07-agent-vertical-slice.md`](07-agent-vertical-slice.md) — offline slice done; live bake-off needs API keys |
-| 8 | **Eval harness skeleton** | Headless harness (native Forge, offscreen render, agent) | Harness runs plus 60 MakerBench tasks | [`08-eval-harness.md`](08-eval-harness.md) — interim (40/60 tasks) |
+| 8 | **Eval harness skeleton** | Headless harness (native Forge, offscreen render, agent) | Harness runs plus 60 MakerBench tasks | [`08-eval-harness.md`](08-eval-harness.md) — **GO** (61 tasks, validated on Forge + OCCT) |
 
 The **Phase 0 deliverables** alongside the spikes:
 - ADRs ([../adr/](../adr/README.md));

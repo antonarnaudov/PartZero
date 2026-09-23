@@ -47,10 +47,9 @@ This list collects follow-ups from agent reports and reviews. Items are grouped 
 - **P1 Refusal fallbacks (decision pending):** Anthropic recommends server-side fallbacks for its newest models, while ADR 0009 says never retry around a refusal. They are currently off, and can be enabled per request.
 - **P1 Sonnet 5 and Haiku 4.5 prices** in the gateway profiles came from the brief and are not verified against docs. The Opus 5.5 cache-write prices are marked "confirm at launch".
 - **P2 Gateway features not implemented yet:** mid-conversation system messages, per-message effort, compaction, Gemini explicit caching, OpenAI `configuration_update`.
-- **P1 MakerBench needs 20 more tasks** to reach the Phase 0 target of 60. Also:
-  - detect holes drawn as two arcs;
-  - add hole-offset checks beyond the T4 tasks.
-
+- ~~**P1 MakerBench needs 20 more tasks.**~~ Done: 61 tasks, validated on Forge and OCCT, with arc-drawn holes and edge-offset checks.
+- **P1 The spec writer's check schema drops `relative_to`,** and the spec writer prompt doesn't document edge offsets or holes drawn as arcs. Fix in `packages/agent-tools/src/spec.ts` and `packages/agent/prompts/spec_writer.v1.md`.
+- **P2 MakerBench should record a rendered image per task** once the agent's L5 visual judge exists.
 ## Product / legal
 - **P0 Naming and trademark review** before any public launch. "Forge" and "aicad" are codenames.
 - **P1 CLA bot** before accepting outside contributions.

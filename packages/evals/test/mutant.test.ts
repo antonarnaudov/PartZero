@@ -80,7 +80,7 @@ describe.each(MUTATIONS)("MutantSolver %s", (kind) => {
   const applicable = tasks.filter((t) => solver.applicable(t));
 
   it("applies to the expected tasks", () => {
-    expect(applicable.length).toBe(kind === "scale" ? 40 : 18);
+    expect(applicable.length).toBe(kind === "scale" ? 61 : 32);
   });
 
   it("produces CadScript that compiles and differs from the reference", () => {

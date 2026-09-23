@@ -1,0 +1,511 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t2-knob-skirt-set",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "09dca23ed8c16064327ad1bf24b855a8549cfb7a4143c89fe11fbc4f45c61a50",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "knob_skirt_set",
+    "status": "ok",
+    "features": [
+     {
+      "part": "knob",
+      "feature": "knob_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 123.5,
+        "loops": 1,
+        "outer_curves": [
+         "axis_cap",
+         "bottom",
+         "chamfer",
+         "shaft_end",
+         "shaft_hole",
+         "side",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "knob",
+      "feature": "knob",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 4656.88751017127,
+        "area": 1821.7155132601645,
+        "centroid": [
+         1.812637235147546e-15,
+         1.4665073360466844e-16,
+         8.09573870024736
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         16
+        ],
+        "faces": 6,
+        "edges": 5,
+        "face_types": {
+         "cone": 1,
+         "cylinder": 2,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 5
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "skirt",
+      "feature": "skirt_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 481.76341770639056,
+        "loops": 2,
+        "outer_curves": [
+         "notch_l",
+         "notch_r",
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "skirt",
+      "feature": "skirt",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 963.5268354127813,
+        "area": 1296.3390360578169,
+        "centroid": [
+         30.000000000000004,
+         -0.06395803741366296,
+         0.9999999999999999
+        ],
+        "bbox_min": [
+         14,
+         -16,
+         0
+        ],
+        "bbox_max": [
+         46,
+         15.968719422671311,
+         2
+        ],
+        "faces": 6,
+        "edges": 11,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 4
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 7
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "fd06255a9dbeaa6548dd658108c9973bcbed633abe8ada6697a90ad9aa36d5f9",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "knob_skirt_set",
+    "status": "ok",
+    "features": [
+     {
+      "part": "knob",
+      "feature": "knob_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 149.435,
+        "loops": 1,
+        "outer_curves": [
+         "axis_cap",
+         "bottom",
+         "chamfer",
+         "shaft_end",
+         "shaft_hole",
+         "side",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "knob",
+      "feature": "knob",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 6198.317276037962,
+        "area": 2204.2757710447995,
+        "centroid": [
+         2.2009877712026902e-16,
+         3.0581870503402465e-16,
+         8.905312570272097
+        ],
+        "bbox_min": [
+         -11,
+         -11,
+         0
+        ],
+        "bbox_max": [
+         11,
+         11,
+         17.6
+        ],
+        "faces": 6,
+        "edges": 5,
+        "face_types": {
+         "cone": 1,
+         "cylinder": 2,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 5
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "skirt",
+      "feature": "skirt_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 582.9337354247325,
+        "loops": 2,
+        "outer_curves": [
+         "notch_l",
+         "notch_r",
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "skirt",
+      "feature": "skirt",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1282.4542179344123,
+        "area": 1568.57023362996,
+        "centroid": [
+         33.00000000000001,
+         -0.07035384115502734,
+         1.1000000000000003
+        ],
+        "bbox_min": [
+         15.399999999999999,
+         -17.6,
+         0
+        ],
+        "bbox_max": [
+         50.6,
+         17.565591364938445,
+         2.2
+        ],
+        "faces": 6,
+        "edges": 11,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 4
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 7
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "42cd5edeba9e254bb7f84a8a80297a3c3d1e40ac5aebe95526fb69e7c53e6fa5",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "knob_skirt_set",
+    "status": "ok",
+    "features": [
+     {
+      "part": "knob",
+      "feature": "knob_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 123.5,
+        "loops": 1,
+        "outer_curves": [
+         "axis_cap",
+         "bottom",
+         "chamfer",
+         "shaft_end",
+         "shaft_hole",
+         "side",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "knob",
+      "feature": "knob",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 4656.88751017127,
+        "area": 1821.7155132601645,
+        "centroid": [
+         1.812637235147546e-15,
+         1.4665073360466844e-16,
+         8.09573870024736
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         16
+        ],
+        "faces": 6,
+        "edges": 5,
+        "face_types": {
+         "cone": 1,
+         "cylinder": 2,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 5
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "skirt",
+      "feature": "skirt_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 802.2372842990853,
+        "loops": 1,
+        "outer_curves": [
+         "notch_l",
+         "notch_r",
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "skirt",
+      "feature": "skirt",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1604.4745685981702,
+        "area": 1810.366426038179,
+        "centroid": [
+         30,
+         -0.03840839025715639,
+         1.0000000000000002
+        ],
+        "bbox_min": [
+         14,
+         -16,
+         0
+        ],
+        "bbox_max": [
+         46,
+         15.968719422671311,
+         2
+        ],
+        "faces": 5,
+        "edges": 9,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 4
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 7
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "e1de7cafa4b6d6ec25d5e46fcc5003b943a8de521fc7118ce9bb3425341644fd",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "knob_skirt_set",
+    "status": "ok",
+    "features": [
+     {
+      "part": "knob",
+      "feature": "knob_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 123.5,
+        "loops": 1,
+        "outer_curves": [
+         "axis_cap",
+         "bottom",
+         "chamfer",
+         "shaft_end",
+         "shaft_hole",
+         "side",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "knob",
+      "feature": "knob",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 4656.88751017127,
+        "area": 1821.7155132601645,
+        "centroid": [
+         1.812637235147546e-15,
+         1.4665073360466844e-16,
+         8.09573870024736
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         16
+        ],
+        "faces": 6,
+        "edges": 5,
+        "face_types": {
+         "cone": 1,
+         "cylinder": 2,
+         "plane": 3
+        },
+        "edge_types": {
+         "circle": 5
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "skirt",
+      "feature": "skirt_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 414.4639057219245,
+        "loops": 2,
+        "outer_curves": [
+         "notch_l",
+         "notch_r",
+         "rim"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "skirt",
+      "feature": "skirt",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 828.9278114438494,
+        "area": 1174.4320464093882,
+        "centroid": [
+         30,
+         -0.07434336806851824,
+         1
+        ],
+        "bbox_min": [
+         14,
+         -16,
+         0
+        ],
+        "bbox_max": [
+         46,
+         15.968719422671311,
+         2
+        ],
+        "faces": 6,
+        "edges": 11,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 4
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 7
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

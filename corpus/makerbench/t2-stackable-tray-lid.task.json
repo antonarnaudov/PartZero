@@ -1,0 +1,99 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-stackable-tray-lid",
+  "tier": "T2",
+  "title": "Stackable parts tray with lid",
+  "prompt": "Stackable parts tray with a lid, printed as separate pieces. Tray: 100 x 60 mm outside, 1.6 mm walls, 2 mm floor, rim 28 mm above the very bottom. Under the floor there's a 3 mm tall stacking foot: a rectangular ring with 1.6 mm walls that fits inside the tray below with 0.3 mm clearance all round, so 96.2 x 56.2 mm outside, centred under the tray. Inside, one 1.6 mm divider across the width at the middle makes two equal compartments; it stops 3 mm below the rim so the foot of the tray above clears it. The lid is a 100 x 60 x 2 mm plate with the same ring as the foot on top, so it drops into a tray (flip it over to use it). Tray corner at the origin with the foot on Z = 0, and put the lid 10 mm to the right (+X) of the tray, also on Z = 0.",
+  "process": "fdm",
+  "tags": ["tray", "lid", "stackable", "multi-body"],
+  "requires": ["ir/0", "plane/frame"],
+  "reference": "t2-stackable-tray-lid.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Foot, floor, walls, divider, lid plate and lid ring are solids (touching bodies: IR v0 has no booleans)",
+      "check": "body_count",
+      "between": [6, 12]
+    },
+    {
+      "id": "layout",
+      "description": "Side-by-side layout: 210 x 60 mm footprint, 28 mm tall",
+      "check": "bbox_size",
+      "approx": [210, 60, 28],
+      "abs": 0.2
+    },
+    {
+      "id": "origin",
+      "description": "Tray corner at the origin, everything on Z = 0",
+      "check": "bbox_min",
+      "approx": [0, 0, 0],
+      "abs": 0.05
+    },
+    {
+      "id": "rim",
+      "description": "The tray walls: a 100 x 60 mm body reaching the 28 mm rim",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_max", "axis": "z", "approx": 28, "abs": 0.1},
+        {"check": "bbox_size", "axis": "x", "approx": 100, "abs": 0.1},
+        {"check": "bbox_size", "axis": "y", "approx": 60, "abs": 0.1}
+      ],
+      "gte": 1
+    },
+    {
+      "id": "stacking_rings",
+      "description": "Foot and lid ring are the same 96.2 x 56.2 x 3 mm ring with 1.6 mm walls (0.3 mm clearance in the 96.8 x 56.8 opening)",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_sorted", "approx": [3, 56.2, 96.2], "abs": 0.05},
+        {"check": "volume", "approx": 1432.32, "rel": 0.01}
+      ],
+      "eq": 2
+    },
+    {
+      "id": "foot_centred",
+      "description": "The foot is centred under the tray (1.9 mm in from the outside) and sits on Z = 0",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_min", "approx": [1.9, 1.9, 0], "abs": 0.05},
+        {"check": "bbox_max", "approx": [98.1, 58.1, 3], "abs": 0.05}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "divider",
+      "description": "One 1.6 mm divider across the width at X = 50, spanning the inside, its top 3 mm below the rim (Z = 25)",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_size", "approx": [1.6, 56.8, 20], "abs": 0.1},
+        {"check": "centroid", "axis": "x", "approx": 50, "abs": 0.05},
+        {"check": "bbox_max", "axis": "z", "approx": 25, "abs": 0.05}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "lid_plate",
+      "description": "The lid plate: 100 x 60 x 2 mm, 10 mm to the right of the tray",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_size", "approx": [100, 60, 2], "abs": 0.05},
+        {"check": "bbox_min", "approx": [110, 0, 0], "abs": 0.05}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "volume",
+      "description": "Total volume ≈ 40222.7 mm³ ±1% (checks wall, floor, divider and ring thickness)",
+      "check": "volume",
+      "approx": 40222.72,
+      "rel": 0.01
+    }
+  ],
+  "notes": "Foot/ring 477.44·3 = 1432.32 each, floor 12000, walls 501.76·23 = 11540.48, divider 1.6·56.8·20 = 1817.6, lid plate 12000. Walls may also be modelled from Z = 3 with the floor inside them: same volume."
+}

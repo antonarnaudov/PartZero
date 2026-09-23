@@ -22,10 +22,10 @@ describe("aicad-evals", () => {
     const r = await cli("run", "--tasks", CORPUS_DIR, "--engine", "fixture", "--fixtures", FIXTURES_DIR, "--tier", "T4,T5", "--out", dest);
     expect(r.stderr).not.toMatch(/FAIL/);
     expect(r.code).toBe(0);
-    expect(r.stdout).toMatch(/pass@1 100\.0% \(7\/7\)/);
+    expect(r.stdout).toMatch(/pass@1 100\.0% \(13\/13\)/);
     const results = JSON.parse(readFileSync(join(dest, "results.json"), "utf8")) as SuiteResult;
     expect(results.schema).toBe("aicad.evals.results/0");
-    expect(results.tasks.map((t) => t.tier)).toEqual(["T4", "T4", "T4", "T4", "T5", "T5", "T5"]);
+    expect(results.tasks.map((t) => t.tier)).toEqual([...Array<string>(8).fill("T4"), ...Array<string>(5).fill("T5")]);
     expect(readFileSync(join(dest, "report.md"), "utf8")).toContain("## By tier");
   });
 
@@ -66,9 +66,9 @@ describe("aicad-evals", () => {
     expect(results.tasks.some((t) => t.id === "t1-knob")).toBe(false);
   });
 
-  it("validate: reports 40 tasks and no problems", async () => {
+  it("validate: reports 61 tasks and no problems", async () => {
     const r = await cli("validate", "--tasks", CORPUS_DIR);
-    expect(r.stdout).toContain("40 tasks, 0 problems");
+    expect(r.stdout).toContain("61 tasks, 0 problems");
     expect(r.code).toBe(0);
   });
 

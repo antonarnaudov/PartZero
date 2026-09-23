@@ -1,0 +1,295 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-filament-clip",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "289da0e4808df25bd2be87a13d6a83dce68fb69d4844e313fff74159f2516a27",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "filament_clip",
+    "status": "ok",
+    "features": [
+     {
+      "part": "clip",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 240.3973457783127,
+        "loops": 3,
+        "outer_curves": [
+         "bottom_l",
+         "bottom_r",
+         "left",
+         "right",
+         "slot_end",
+         "slot_l",
+         "slot_r",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "clip",
+      "feature": "clip",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1442.3840746698759,
+        "area": 1091.7327376113956,
+        "centroid": [
+         10,
+         7.3294766345565865,
+         3
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         20,
+         14,
+         6
+        ],
+        "faces": 12,
+        "edges": 28,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "20a30106266dabb349fa74a1ed98d5230e19f592eaf263c587fa78f669aed9b3",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "filament_clip",
+    "status": "ok",
+    "features": [
+     {
+      "part": "clip",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 290.8807883917585,
+        "loops": 3,
+        "outer_curves": [
+         "bottom_l",
+         "bottom_r",
+         "left",
+         "right",
+         "slot_end",
+         "slot_l",
+         "slot_r",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "clip",
+      "feature": "clip",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1919.813203385606,
+        "area": 1320.9966125097892,
+        "centroid": [
+         10.999999999999998,
+         8.062424298012246,
+         3.3000000000000007
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         22,
+         15.400000000000002,
+         6.6000000000000005
+        ],
+        "faces": 12,
+        "edges": 28,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "1234539c991714bfe346411aae4c58f49c73e5b6a7f39cf6f813ff2b158bb068",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "filament_clip",
+    "status": "ok",
+    "features": [
+     {
+      "part": "clip",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 244.19867288915634,
+        "loops": 2,
+        "outer_curves": [
+         "bottom_l",
+         "bottom_r",
+         "left",
+         "right",
+         "slot_end",
+         "slot_l",
+         "slot_r",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "clip",
+      "feature": "clip",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1465.192037334938,
+        "area": 1057.8663688056977,
+        "centroid": [
+         9.909714098844017,
+         7.2932147557337,
+         3.0000000000000004
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         20,
+         14,
+         6
+        ],
+        "faces": 11,
+        "edges": 26,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "25c38ae72b8669eadf7fcfa8851f3b0421ddfed7eaecc734a0e29567f3ba081f",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "filament_clip",
+    "status": "ok",
+    "features": [
+     {
+      "part": "clip",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 238.80078839175837,
+        "loops": 3,
+        "outer_curves": [
+         "bottom_l",
+         "bottom_r",
+         "left",
+         "right",
+         "slot_end",
+         "slot_l",
+         "slot_r",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "clip",
+      "feature": "clip",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1432.80473035055,
+        "area": 1096.833427443764,
+        "centroid": [
+         10,
+         7.345050884343424,
+         3
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         20,
+         14,
+         6
+        ],
+        "faces": 12,
+        "edges": 28,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 10
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

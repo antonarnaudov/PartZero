@@ -1,8 +1,9 @@
 /**
  * Read-only geometry helpers over the Feature-Graph IR (`aicad.ir/0`): plane frames (SPEC §2),
- * sketch curves in model space, hole detection by loop containment, and IR diffs for edit tasks.
+ * sketch curves in model space, full circles (including circles drawn as several arcs), hole
+ * detection by loop containment, and IR diffs for edit tasks.
  */
-import type { CircleSketchCurve, Feature, IrDocument, PlaneSpec, SketchCurve, SketchFeature } from "@aicad/ir-types";
+import type { ArcSketchCurve, CircleSketchCurve, Feature, IrDocument, PlaneSpec, SketchCurve, SketchFeature } from "@aicad/ir-types";
 
 export type V2 = readonly [number, number];
 export type V3 = readonly [number, number, number];
@@ -66,9 +67,128 @@ export function curveDiameter(c: SketchCurve): number | undefined {
   return undefined;
 }
 
+/** Signed sweep of an arc in radians: positive counter-clockwise, in (−2π, 2π), never 0. */
+function arcSweep(c: ArcSketchCurve): number {
+  const a0 = Math.atan2(c.start[1] - c.center[1], c.start[0] - c.center[0]);
+  const a1 = Math.atan2(c.end[1] - c.center[1], c.end[0] - c.center[0]);
+  let sweep = a1 - a0;
+  if (c.ccw) {
+    while (sweep <= 0) sweep += 2 * Math.PI;
+  } else {
+    while (sweep >= 0) sweep -= 2 * Math.PI;
+  }
+  return sweep;
+}
+
+/** Endpoints closer than this are joined into loops (SPEC §1, LINEAR_TOLERANCE). */
+const JOIN_TOL = 1e-6;
+/** Arcs whose centres and radii agree within this many mm lie on one circle. */
+const COCIRCULAR_TOL = 1e-4;
+
+/**
+ * A full circle of a sketch: a `circle` curve, or a closed loop made only of arcs on one circle
+ * (a hole drawn as two semicircles, as DXF/SVG imports and many agents do).
+ */
+export interface SketchCircle {
+  /** The circle curve's id, or the ids of the arcs joined with `+` (e.g. `top+bottom`). */
+  id: string;
+  /** The ids of the sketch curves it is made of: one for a circle curve, ≥ 2 for arcs. */
+  curves: string[];
+  /** Centre in sketch coordinates. */
+  center: V2;
+  radius: number;
+}
+
+/**
+ * Closed loops made only of co-circular arcs: the arcs are joined end to end (endpoints within
+ * 1e-6 mm, each end meeting exactly one other end), share one centre and radius (±1e-4 mm), and
+ * their sweeps add up to a full turn. Loops that also contain lines, or arcs of different
+ * circles (an obround slot, a lens), are not circles.
+ */
+function arcLoopCircles(sketch: SketchFeature): SketchCircle[] {
+  const open = sketch.curves.filter((c): c is Exclude<SketchCurve, CircleSketchCurve> => c.kind !== "circle");
+  const ends = open.flatMap((c, i) => [
+    { i, p: c.start },
+    { i, p: c.end },
+  ]);
+  // Union-find over curves joined at coincident endpoints; count each end's partners.
+  const parent = open.map((_, i) => i);
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i]!)));
+  const partners = ends.map(() => 0);
+  for (let a = 0; a < ends.length; a++) {
+    for (let b = a + 1; b < ends.length; b++) {
+      const ea = ends[a]!;
+      const eb = ends[b]!;
+      if (ea.i === eb.i || Math.hypot(ea.p[0] - eb.p[0], ea.p[1] - eb.p[1]) > JOIN_TOL) continue;
+      partners[a]!++;
+      partners[b]!++;
+      parent[find(ea.i)] = find(eb.i);
+    }
+  }
+  const groups = new Map<number, number[]>();
+  open.forEach((_, i) => {
+    const root = find(i);
+    groups.set(root, [...(groups.get(root) ?? []), i]);
+  });
+  const out: SketchCircle[] = [];
+  for (const members of groups.values()) {
+    const arcs = members.map((i) => open[i]!);
+    if (arcs.length < 2 || !arcs.every((c): c is ArcSketchCurve => c.kind === "arc")) continue;
+    if (!members.every((i) => partners[2 * i] === 1 && partners[2 * i + 1] === 1)) continue;
+    const c0 = arcs[0]!.center;
+    const r0 = Math.hypot(arcs[0]!.start[0] - c0[0], arcs[0]!.start[1] - c0[1]);
+    const cocircular = arcs.every(
+      (a) =>
+        Math.hypot(a.center[0] - c0[0], a.center[1] - c0[1]) <= COCIRCULAR_TOL &&
+        Math.abs(Math.hypot(a.start[0] - a.center[0], a.start[1] - a.center[1]) - r0) <= COCIRCULAR_TOL,
+    );
+    const turn = arcs.reduce((s, a) => s + Math.abs(arcSweep(a)), 0);
+    if (!cocircular || Math.abs(turn - 2 * Math.PI) > 1e-6) continue;
+    const ids = arcs.map((a) => a.id);
+    out.push({ id: ids.join("+"), curves: ids, center: c0, radius: r0 });
+  }
+  return out;
+}
+
+/**
+ * Every full circle of a sketch, in curve order: circle curves and closed loops of co-circular
+ * arcs (see {@link arcLoopCircles}). This is what the hole checks and `curve_count` see as a circle.
+ */
+export function sketchCircles(sketch: SketchFeature): SketchCircle[] {
+  const arcLoops = arcLoopCircles(sketch);
+  const firstCurve = new Map(arcLoops.map((c) => [c.curves[0]!, c] as const));
+  const out: SketchCircle[] = [];
+  for (const c of sketch.curves) {
+    if (c.kind === "circle") out.push({ id: c.id, curves: [c.id], center: c.center, radius: c.radius });
+    const loop = firstCurve.get(c.id);
+    if (loop) out.push(loop);
+  }
+  return out;
+}
+
+/** A sketch curve as the checks count it: arcs that make up a full circle count as one circle. */
+export interface LogicalCurve {
+  kind: "line" | "arc" | "circle";
+  /** Diameter of an arc or circle; undefined for lines. */
+  diameter: number | undefined;
+}
+
+/** The sketch's curves with every full circle drawn as arcs merged into one `circle`. */
+export function logicalCurves(sketch: SketchFeature): LogicalCurve[] {
+  const arcLoops = arcLoopCircles(sketch);
+  const inArcCircle = new Set(arcLoops.flatMap((c) => c.curves));
+  const out: LogicalCurve[] = [];
+  for (const c of sketch.curves) {
+    if (!inArcCircle.has(c.id)) out.push({ kind: c.kind, diameter: curveDiameter(c) });
+  }
+  for (const c of arcLoops) out.push({ kind: "circle", diameter: 2 * c.radius });
+  return out;
+}
+
 export interface CircleInfo {
   part: string;
   sketch: string;
+  /** The circle curve's id, or the arc ids joined with `+` for a circle drawn as arcs. */
   id: string;
   diameter: number;
   /** Centre in sketch coordinates. */
@@ -79,12 +199,11 @@ export interface CircleInfo {
   axis: V3;
 }
 
-/** Every circle of every non-suppressed sketch. */
+/** Every full circle (circle curve or closed loop of co-circular arcs) of every non-suppressed sketch. */
 export function circlesOf(ir: IrDocument): CircleInfo[] {
   const out: CircleInfo[] = [];
   for (const s of sketchesOf(ir)) {
-    for (const c of s.sketch.curves) {
-      if (c.kind !== "circle") continue;
+    for (const c of sketchCircles(s.sketch)) {
       out.push({
         part: s.part,
         sketch: s.sketch.name,
@@ -105,13 +224,7 @@ function segmentsOf(c: SketchCurve): [V2, V2][] {
   if (c.kind === "circle") return [];
   const r = Math.hypot(c.start[0] - c.center[0], c.start[1] - c.center[1]);
   const a0 = Math.atan2(c.start[1] - c.center[1], c.start[0] - c.center[0]);
-  const a1 = Math.atan2(c.end[1] - c.center[1], c.end[0] - c.center[0]);
-  let sweep = a1 - a0;
-  if (c.ccw) {
-    while (sweep <= 0) sweep += 2 * Math.PI;
-  } else {
-    while (sweep >= 0) sweep -= 2 * Math.PI;
-  }
+  const sweep = arcSweep(c);
   const n = 32;
   const pts: V2[] = [];
   for (let i = 0; i <= n; i++) {

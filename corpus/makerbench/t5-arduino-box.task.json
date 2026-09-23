@@ -1,0 +1,58 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t5-arduino-box",
+  "tier": "T5",
+  "title": "Under-specified: Arduino project box",
+  "prompt": "Can you make me a box for my Arduino project?",
+  "process": "fdm",
+  "tags": ["enclosure", "arduino", "electronics", "underspecified"],
+  "requires": ["ir/0", "plane/frame"],
+  "reference": "t5-arduino-box.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "status_ok",
+      "description": "The model evaluates without feature errors",
+      "check": "status",
+      "eq": "ok"
+    },
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "A box (and lid, standoffs…): 1 to 30 bodies",
+      "check": "body_count",
+      "between": [1, 30]
+    },
+    {
+      "id": "fits_a_board",
+      "description": "Big enough for an Arduino Uno (68.6 x 53.3 mm) but still a small project box",
+      "check": "bbox_sorted",
+      "between": [[20, 150], [58, 300], [72, 450]]
+    },
+    {
+      "id": "hollow",
+      "description": "An enclosure, not a solid brick: at least 10 faces in total",
+      "check": "face_count",
+      "gte": 10
+    },
+    {
+      "id": "plausible_material",
+      "description": "A plausible amount of plastic (15 to 800 cm³)",
+      "check": "volume",
+      "between": [15000, 800000]
+    }
+  ],
+  "clarify": {
+    "questions": [
+      "Which board is it (Uno, Nano, Mega) and what else has to fit inside: shields, a breadboard, a battery?",
+      "Which openings do you need: USB, DC power jack, buttons, a display, cable glands?",
+      "How should it close (press-fit lid, screws, sliding lid) and how will you make it (3D print, laser cut)?"
+    ],
+    "assumptions": "An Arduino Uno and nothing else, 3D printed in PLA: an 84 x 69 x 35 mm open-top box with 2 mm walls and floor, four 6 mm standoffs on the Uno's hole pattern (2.5 mm pilots for M3 self-tappers), and a flat lid with a 3 mm locating lip (0.2 mm clearance). USB and power openings are left for after the layout is confirmed."
+  },
+  "notes": "Arduino Uno R3: 68.6 x 53.3 mm, holes at (0.55, 0.1), (0.6, 2.0), (2.6, 0.3), (2.6, 1.4) in. Plausibility ranges accept the reference scaled by 1.1 (T5 is judged on plausibility and on the clarifying questions, not exact numbers)."
+}

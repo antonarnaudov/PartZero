@@ -1,0 +1,279 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-pegboard-plate",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "ec54a16a4eebc123f9bab4bdeb91b655d6f49f25e2b050e6a66d5bf678b693c0",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "pegboard_plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5555.475688725957,
+        "loops": 11,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 22221.902754903833,
+        "area": 13104.93361431346,
+        "centroid": [
+         1.7803614732492602e-15,
+         -2.276611654011267e-16,
+         2
+        ],
+        "bbox_min": [
+         -45,
+         -32.5,
+         0
+        ],
+        "bbox_max": [
+         45,
+         32.5,
+         4
+        ],
+        "faces": 16,
+        "edges": 32,
+        "face_types": {
+         "cylinder": 10,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 20,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "5d6b16530e8b380e5fc96aa9ef92ea1781eb7d258d094c8f233cec012b282990",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "pegboard_plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 6722.125583358409,
+        "loops": 11,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 29577.352566777008,
+        "area": 15856.969673319296,
+        "centroid": [
+         3.736088482426747e-15,
+         1.1785155832367824e-16,
+         2.1999999999999984
+        ],
+        "bbox_min": [
+         -49.50000000000001,
+         -35.75,
+         0
+        ],
+        "bbox_max": [
+         49.50000000000001,
+         35.75,
+         4.4
+        ],
+        "faces": 16,
+        "edges": 32,
+        "face_types": {
+         "cylinder": 10,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 20,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "c75d01d33809c123e7f1fe827a401d74b47e11fc77332fda30657e2467704a70",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "pegboard_plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5571.380001534755,
+        "loops": 10,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 22285.520006139024,
+        "area": 13080.193572166441,
+        "centroid": [
+         0.11133116021026587,
+         0.07564809604030952,
+         2.0000000000000004
+        ],
+        "bbox_min": [
+         -45,
+         -32.5,
+         0
+        ],
+        "bbox_max": [
+         45,
+         32.5,
+         4
+        ],
+        "faces": 15,
+        "edges": 30,
+        "face_types": {
+         "cylinder": 9,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 18,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "67c979288ba5f97d9aef1302ed3f0378c6362534ad1b9d4dca5262ca0c998888",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "pegboard_plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5542.116065966567,
+        "loops": 11,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 22168.464263866274,
+        "area": 13100.833835900532,
+        "centroid": [
+         -2.2564580027785367e-16,
+         -1.1025874331758762e-16,
+         1.9999999999999998
+        ],
+        "bbox_min": [
+         -45,
+         -32.5,
+         0
+        ],
+        "bbox_max": [
+         45,
+         32.5,
+         4
+        ],
+        "faces": 16,
+        "edges": 32,
+        "face_types": {
+         "cylinder": 10,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 20,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

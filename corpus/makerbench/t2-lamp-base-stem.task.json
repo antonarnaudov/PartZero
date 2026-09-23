@@ -1,0 +1,95 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-lamp-base-stem",
+  "tier": "T2",
+  "title": "Table lamp base and stem",
+  "prompt": "Table lamp base and stem, printed separately and glued together. Base: 120 mm diameter; the bottom 15 mm is straight-sided, then it tapers conically up to a 32 mm diameter flat top at 30 mm height. In the top there's a 20.4 mm socket, 15 mm deep, for the stem, and an 8 mm cable hole straight down through the middle from the socket floor to the bottom. Stem: a 20 mm tube, 250 mm long, with an 8 mm bore for the cable. Model them assembled: base on Z = 0 centred on the Z axis, the stem standing in the socket on the socket floor.",
+  "process": "fdm",
+  "tags": ["lamp", "multi-body", "round", "revolve"],
+  "requires": ["ir/0", "feature/revolve"],
+  "reference": "t2-lamp-base-stem.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Two solids: base and stem",
+      "check": "body_count",
+      "eq": 2
+    },
+    {
+      "id": "size",
+      "description": "Assembled: 120 mm across, 265 mm tall (the stem stands 15 mm deep in the socket)",
+      "check": "bbox_size",
+      "approx": [120, 120, 265],
+      "abs": 0.2
+    },
+    {
+      "id": "base",
+      "description": "The base: 120 mm diameter x 30 mm, centred on the Z axis",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_sorted", "approx": [30, 120, 120], "abs": 0.1},
+        {"check": "centroid", "axis": "x", "approx": 0, "abs": 0.05},
+        {"check": "centroid", "axis": "y", "approx": 0, "abs": 0.05}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "socket_fit",
+      "description": "Base volume π·76279.4 ≈ 239639 mm³ ±0.05%: a 20.4 socket (a 20.0 one adds 190 mm³) and the 8 mm cable hole",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_sorted", "approx": [30, 120, 120], "abs": 0.1},
+        {"check": "volume", "approx": 239638.8, "rel": 0.0005}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "stem",
+      "description": "The stem: 20 mm x 250 mm, on the axis, standing on the socket floor at Z = 15",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_sorted", "approx": [20, 20, 250], "abs": 0.1},
+        {"check": "bbox_min", "approx": [-10, -10, 15], "abs": 0.05}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "stem_bore",
+      "description": "The stem is a tube with an 8 mm cable bore: π·(10² − 4²)·250 ≈ 65973 mm³ ±0.5%",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_sorted", "approx": [20, 20, 250], "abs": 0.1},
+        {"check": "volume", "approx": 65973.45, "rel": 0.005}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "taper",
+      "description": "The base tapers: one conical face",
+      "check": "face_count",
+      "type": "cone",
+      "eq": 1
+    },
+    {
+      "id": "round_faces",
+      "description": "Five cylindrical faces: base rim, socket, cable hole; stem outside and bore",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 5
+    },
+    {
+      "id": "volume",
+      "description": "Total volume π·(76279.4 + 21000) ≈ 305612 mm³ ±0.5%",
+      "check": "volume",
+      "approx": 305612.25,
+      "rel": 0.005
+    }
+  ],
+  "notes": "Base = π·60²·15 + frustum(60→16, h 15) − socket π·10.2²·15 − cable hole π·4²·15 = π·76279.4 (frustum π·h/3·(R1² + R1R2 + R2²)). The socket clearance is only visible in the base volume, hence the tight tolerance: every base dimension is given in the prompt."
+}

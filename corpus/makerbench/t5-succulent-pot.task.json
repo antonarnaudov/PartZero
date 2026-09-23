@@ -1,0 +1,58 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t5-succulent-pot",
+  "tier": "T5",
+  "title": "Under-specified: succulent pot",
+  "prompt": "I'd like a little pot for a succulent.",
+  "process": "fdm",
+  "tags": ["planter", "container", "revolve", "underspecified"],
+  "requires": ["ir/0", "feature/revolve"],
+  "reference": "t5-succulent-pot.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "status_ok",
+      "description": "The model evaluates without feature errors",
+      "check": "status",
+      "eq": "ok"
+    },
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "A pot, maybe with a saucer: 1 to 3 bodies",
+      "check": "body_count",
+      "between": [1, 3]
+    },
+    {
+      "id": "pot_sized",
+      "description": "Small-pot sized: 30–250 mm tall, 40–300 mm across",
+      "check": "bbox_sorted",
+      "between": [[30, 250], [40, 300], [40, 300]]
+    },
+    {
+      "id": "hollow",
+      "description": "A pot, not a solid plug: at least 5 faces (bottom, outside, rim, inside, floor)",
+      "check": "face_count",
+      "gte": 5
+    },
+    {
+      "id": "plausible_material",
+      "description": "A plausible amount of plastic (10 to 1000 cm³)",
+      "check": "volume",
+      "between": [10000, 1000000]
+    }
+  ],
+  "clarify": {
+    "questions": [
+      "How big is the plant, or which nursery pot is it in now (e.g. 5.5 cm or 8.5 cm)?",
+      "Do you want a drainage hole, and a saucer to catch the water?",
+      "Any style preference (tapered, straight, faceted) and will it live indoors or outdoors (PLA vs PETG)?"
+    ],
+    "assumptions": "A succulent from a 5.5 cm nursery pot, indoors, printed in PLA: a tapered pot 65 mm across the base and 80 mm across the top, 70 mm tall, 2.5 mm walls, a 3 mm floor with a 10 mm drainage hole, no saucer."
+  },
+  "notes": "Reference volume (frustum 32.5→40 over 70) − (frustum 30.32→37.5 over 67) − drain π·5²·3 ≈ 46822 mm³. A solid 80 x 70 cylinder would pass the size and volume ranges but has 3 faces."
+}

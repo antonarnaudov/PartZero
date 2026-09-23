@@ -1,0 +1,151 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-vacuum-hose-adapter",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "94b4ac389ea39ab5c2ad1d53d50faecc582cb71db456054fe2e100aa85502eab",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "vacuum_hose_adapter",
+    "status": "ok",
+    "features": [
+     {
+      "part": "adapter",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 140,
+        "loops": 1,
+        "outer_curves": [
+         "hose_end",
+         "port_end",
+         "sleeve_inner",
+         "sleeve_outer",
+         "spigot_inner",
+         "spigot_outer",
+         "taper_inner",
+         "taper_outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "adapter",
+      "feature": "adapter",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 14822.034139636638,
+        "area": 15250.702201864384,
+        "centroid": [
+         7.363318906471425e-15,
+         -1.345639387285335e-16,
+         34.63897131552917
+        ],
+        "bbox_min": [
+         -18.2,
+         -18.2,
+         0
+        ],
+        "bbox_max": [
+         18.2,
+         18.2,
+         70
+        ],
+        "faces": 8,
+        "edges": 8,
+        "face_types": {
+         "cone": 2,
+         "cylinder": 4,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 8
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "5a3e21edaac6e4d8093752926c86a8060447d820d9bc9b3f0133a419ea6ea507",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "vacuum_hose_adapter",
+    "status": "ok",
+    "features": [
+     {
+      "part": "adapter",
+      "feature": "profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 169.3999999999998,
+        "loops": 1,
+        "outer_curves": [
+         "hose_end",
+         "port_end",
+         "sleeve_inner",
+         "sleeve_outer",
+         "spigot_inner",
+         "spigot_outer",
+         "taper_inner",
+         "taper_outer"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "adapter",
+      "feature": "adapter",
+      "type": "revolve",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 19728.127439856376,
+        "area": 18453.349664255904,
+        "centroid": [
+         -1.1801963686806185e-14,
+         -3.244366651995486e-16,
+         38.102868447082066
+        ],
+        "bbox_min": [
+         -20.02,
+         -20.02,
+         0
+        ],
+        "bbox_max": [
+         20.02,
+         20.02,
+         77
+        ],
+        "faces": 8,
+        "edges": 8,
+        "face_types": {
+         "cone": 2,
+         "cylinder": 4,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 8
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

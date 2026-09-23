@@ -1,0 +1,93 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-bearing-block-pair",
+  "tier": "T2",
+  "title": "Pair of 608 bearing blocks",
+  "prompt": "Pair of bearing blocks to carry an 8 mm shaft on two 608 bearings (22 mm OD, 7 mm wide). Each block has a 60 x 20 x 5 mm foot plate with two M5 clearance holes (5.5 mm), 44 mm apart on the foot's centre line, and an upright standing on the foot: 40 mm wide, 8 mm thick along the shaft, with a rounded top whose edge is a half circle centred on the shaft. The bearing seat is a 22.1 mm hole through the upright, centred 25 mm above the bottom of the foot. The blocks are 100 mm apart centre to centre. Put the shaft axis along Y at X = 0, Z = 25, the first block centred on Y = 0 and the second on Y = 100, feet on Z = 0.",
+  "process": "fdm",
+  "tags": ["bearing", "608", "shaft", "multi-body", "hole-pattern"],
+  "requires": ["ir/0", "plane/frame"],
+  "reference": "t2-bearing-block-pair.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Four bodies: a foot and an upright per block",
+      "check": "body_count",
+      "eq": 4
+    },
+    {
+      "id": "extent_min",
+      "description": "Feet on Z = 0, first block's foot from Y = −10, centred on X",
+      "check": "bbox_min",
+      "approx": [-30, -10, 0],
+      "abs": 0.1
+    },
+    {
+      "id": "extent_max",
+      "description": "Second block's foot to Y = 110; the rounded tops reach Z = 45 (25 + 20)",
+      "check": "bbox_max",
+      "approx": [30, 110, 45],
+      "abs": 0.1
+    },
+    {
+      "id": "bearing_seats",
+      "description": "Two 22.1 mm bearing seats (22.0–22.3, press fit for a 22 mm 608) on the shaft axis X = 0, Z = 25",
+      "check": "hole_positions",
+      "diameter": [22.0, 22.3],
+      "points": [[0, 0, 25], [0, 100, 25]],
+      "tol": 0.05
+    },
+    {
+      "id": "uprights",
+      "description": "Two uprights, 40 wide x 8 thick, standing 40 mm tall from the top of the foot to the top of the arch",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_size", "approx": [40, 8, 40], "abs": 0.1},
+        {"check": "bbox_min", "axis": "z", "approx": 5, "abs": 0.05}
+      ],
+      "eq": 2
+    },
+    {
+      "id": "block_spacing",
+      "description": "The second upright is centred 100 mm along the shaft from the first (Y = 100)",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_size", "approx": [40, 8, 40], "abs": 0.1},
+        {"check": "centroid", "axis": "y", "approx": 100, "abs": 0.05}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "feet",
+      "description": "Two 60 x 20 x 5 mm feet on Z = 0",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "bbox_size", "approx": [60, 20, 5], "abs": 0.05},
+        {"check": "bbox_min", "axis": "z", "approx": 0, "abs": 0.05}
+      ],
+      "eq": 2
+    },
+    {
+      "id": "m5_holes",
+      "description": "Two M5 clearance holes (5.3–5.6 mm) per foot, 44 mm apart on its centre line",
+      "check": "hole_positions",
+      "diameter": [5.3, 5.6],
+      "points": [[-22, 0, 0], [22, 0, 0], [-22, 100, 0], [22, 100, 0]],
+      "tol": 0.05
+    },
+    {
+      "id": "volume",
+      "description": "Total 2·[(1200 − 2·Ø5.5)·5 + (800 + ½π·20² − Ø22.1)·8] ≈ 28240.4 mm³ ±0.5%",
+      "check": "volume",
+      "approx": 28240.39,
+      "rel": 0.005
+    }
+  ],
+  "notes": "608: 8 x 22 x 7. 22.1 mm seat = light press fit when printed. Upright arch radius 20 leaves 8.95 mm of material around the seat at the top and the bottom."
+}

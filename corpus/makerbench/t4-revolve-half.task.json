@@ -1,0 +1,81 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-revolve-half",
+  "tier": "T4",
+  "title": "Edit: revolve 180° instead of 360°",
+  "prompt": "Make this a half collar: revolve it 180° instead of all the way round, so I can print two halves and clamp them around the pipe. Don't change the profile.",
+  "context": "t4-revolve-half.context.cad.ts",
+  "process": "fdm",
+  "tags": ["edit", "revolve", "pipe", "split"],
+  "requires": ["ir/0", "feature/revolve"],
+  "reference": "t4-revolve-half.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Still one body (print it twice)",
+      "check": "body_count",
+      "eq": "$context"
+    },
+    {
+      "id": "half_volume",
+      "description": "Half the full collar: π·2882.4/2 ≈ 4527.7 mm³ ±0.1%",
+      "check": "volume",
+      "approx": 4527.66,
+      "rel": 0.001
+    },
+    {
+      "id": "half_box",
+      "description": "A half ring: 44 mm across the flange, 22 mm deep, 15 mm tall",
+      "check": "bbox_sorted",
+      "approx": [15, 22, 44],
+      "abs": 0.01
+    },
+    {
+      "id": "end_caps",
+      "description": "Two new flat faces where the ring is cut (3 + 2 planar faces)",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 5
+    },
+    {
+      "id": "curved_kept",
+      "description": "The same three cylindrical faces (bore, outside, flange rim), now half cylinders",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": "$context"
+    },
+    {
+      "id": "height_kept",
+      "description": "Height along the pipe unchanged",
+      "check": "bbox_size",
+      "axis": "z",
+      "approx": "$context",
+      "abs": 0.001
+    },
+    {
+      "id": "profile_kept",
+      "description": "The profile sketch is untouched",
+      "check": "changed_curves",
+      "eq": 0
+    },
+    {
+      "id": "only_revolve",
+      "description": "Exactly one feature changed: the revolve's angle",
+      "check": "changed_features",
+      "eq": 1
+    },
+    {
+      "id": "same_features",
+      "description": "Same features as before",
+      "check": "feature_names",
+      "eq": "$context"
+    }
+  ],
+  "notes": "Full collar π·[(22² − 12.8²)·3 + (18² − 12.8²)·12] = π·2882.4. A symmetric ±90° revolve is an equally good half: every check is orientation-independent."
+}

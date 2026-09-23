@@ -1,0 +1,87 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-laser-mdf-panel",
+  "tier": "T1",
+  "title": "Laser-cut MDF side panel with slots and cut-outs",
+  "prompt": "Side panel for a box I'm laser cutting from 3 mm MDF, 120 x 80 mm. Along the bottom it needs two 15 x 3.2 mm slots for the bottom panel's tabs, their centres 6 mm up from the bottom edge and 30 mm either side of the middle. Four M3 holes (3.4 mm) 5 mm in from the edges at each corner. Then, all 45 mm up from the bottom: an 8 mm hole for a DC barrel jack 30 mm from the left edge, a 12 mm hole for a toggle switch in the middle, and a 12 x 11 mm rectangular cut-out (12 wide) for a USB-B socket centred 30 mm from the right edge.",
+  "process": "laser",
+  "tags": ["panel", "laser-cut", "mdf", "enclosure", "slots"],
+  "requires": ["ir/0"],
+  "reference": "t1-laser-mdf-panel.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one part to cut",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "120 x 80 mm panel, 3 mm thick, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [3, 80, 120],
+      "abs": 0.1
+    },
+    {
+      "id": "openings",
+      "description": "Nine openings: 2 slots, 4 screw holes, jack, switch and USB cut-out",
+      "check": "inner_loops",
+      "eq": 9
+    },
+    {
+      "id": "switch_hole",
+      "description": "One 12 mm (11.9–12.3) toggle-switch hole",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [11.9, 12.3],
+      "eq": 1
+    },
+    {
+      "id": "jack_hole",
+      "description": "One 8 mm (7.9–8.3) DC jack hole",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [7.9, 8.3],
+      "eq": 1
+    },
+    {
+      "id": "panel_parts",
+      "description": "Jack 30 mm from the left edge and switch in the middle, both 45 mm up (35 mm from the top)",
+      "check": "hole_positions",
+      "relative_to": "edges",
+      "diameter": [7.9, 12.3],
+      "points": [[30, 35], [35, 60]],
+      "tol": 0.1
+    },
+    {
+      "id": "m3_corners",
+      "description": "Four M3 clearance holes (3.2–3.5 mm), each 5 mm in from both edges",
+      "check": "hole_positions",
+      "relative_to": "edges",
+      "diameter": [3.2, 3.5],
+      "points": [[5, 5], [5, 5], [5, 5], [5, 5]],
+      "tol": 0.1
+    },
+    {
+      "id": "flat_faces",
+      "description": "Eighteen flat faces: the outline, both rectangular slots, the USB cut-out, front and back",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 18
+    },
+    {
+      "id": "volume",
+      "description": "Volume (120·80 − 2·15·3.2 − 4·Ø3.4 − Ø12 − Ø8 − 12·11)·3 ≈ 27517 mm³ ±0.5%",
+      "check": "volume",
+      "approx": 27516.96,
+      "rel": 0.005
+    }
+  ],
+  "notes": "The reference draws the switch hole as two semicircular arcs, the way DXF exports often do; the IR checks count a closed loop of co-circular arcs as one circle. Tab slots are 3.2 wide for 3 mm MDF plus kerf slack."
+}

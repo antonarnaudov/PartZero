@@ -1,0 +1,91 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-multibody-m3-to-m4",
+  "tier": "T4",
+  "title": "Edit: M3 to M4 holes across two parts",
+  "prompt": "Switch every M3 screw hole to M4 clearance (4.5 mm), in both the base and the strap. Don't touch anything else.",
+  "context": "t4-multibody-m3-to-m4.context.cad.ts",
+  "process": "any",
+  "tags": ["edit", "holes", "multi-body", "clamp"],
+  "requires": ["ir/0"],
+  "reference": "t4-multibody-m3-to-m4.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "m4_all",
+      "description": "Six M4 clearance holes (4.4–4.6 mm): four in the base, two in the strap",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [4.4, 4.6],
+      "eq": 6
+    },
+    {
+      "id": "no_m3",
+      "description": "No M3-size holes left in either part",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [3.0, 3.7],
+      "eq": 0
+    },
+    {
+      "id": "positions_kept",
+      "description": "Every screw hole stays where it was, in both parts",
+      "check": "hole_positions",
+      "diameter": [4.4, 4.6],
+      "points": [[-33, -8, 0], [33, -8, 0], [-33, 8, 0], [33, 8, 0], [-33, 32.5, 0], [33, 32.5, 0]],
+      "tol": 0.01
+    },
+    {
+      "id": "cable_kept",
+      "description": "The 8 mm cable hole in the base is not a screw hole: unchanged",
+      "check": "hole_positions",
+      "diameter": [7.99, 8.01],
+      "points": [[0, 0, 0]],
+      "tol": 0.001
+    },
+    {
+      "id": "bodies_kept",
+      "description": "Still two parts: base and strap",
+      "check": "body_count",
+      "eq": "$context"
+    },
+    {
+      "id": "layout_kept",
+      "description": "Parts, sizes and layout unchanged (bounding box of both)",
+      "check": "bbox_size",
+      "approx": "$context",
+      "abs": 0.001
+    },
+    {
+      "id": "only_holes",
+      "description": "Only the six screw-hole circles changed",
+      "check": "changed_curves",
+      "eq": 6
+    },
+    {
+      "id": "extrudes_kept",
+      "description": "Both extrudes (5 mm base, 4 mm strap) are untouched",
+      "check": "changed_features",
+      "eq": 0
+    },
+    {
+      "id": "same_features",
+      "description": "Same features as before",
+      "check": "feature_names",
+      "eq": "$context"
+    },
+    {
+      "id": "volume",
+      "description": "Volume (80·30 − 4·Ø4.5 − Ø8)·5 + (80·15 − 2·Ø4.5)·4 ≈ 16103.4 mm³ ±0.2%",
+      "check": "volume",
+      "approx": 16103.35,
+      "rel": 0.002
+    }
+  ],
+  "notes": "M4 clearance 4.3 (fine) – 4.5 (medium) – 4.8 (coarse); the prompt asks for 4.5. The holes keep ≥ 4.75 mm to the edges."
+}

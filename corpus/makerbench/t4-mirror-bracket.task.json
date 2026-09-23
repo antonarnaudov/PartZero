@@ -1,0 +1,97 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-mirror-bracket",
+  "tier": "T4",
+  "title": "Edit: mirror a bracket to make the other hand",
+  "prompt": "This is the left-hand bracket. I need the right-hand one too: mirror it left-to-right about the YZ plane (X → −X), otherwise in the same place. There's no mirror feature, so do it by editing the sketch, and keep the same features.",
+  "context": "t4-mirror-bracket.context.cad.ts",
+  "process": "any",
+  "tags": ["edit", "mirror", "bracket", "arcs"],
+  "requires": ["ir/0"],
+  "reference": "t4-mirror-bracket.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid (flipping the arcs' direction matters)",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Still one bracket",
+      "check": "body_count",
+      "eq": "$context"
+    },
+    {
+      "id": "mirrored_min",
+      "description": "Now on the −X side: from X = −60",
+      "check": "bbox_min",
+      "approx": [-60, 0, 0],
+      "abs": 0.01
+    },
+    {
+      "id": "mirrored_max",
+      "description": "… to X = 0, same height (50) and thickness (4)",
+      "check": "bbox_max",
+      "approx": [0, 50, 4],
+      "abs": 0.01
+    },
+    {
+      "id": "m4_mirrored",
+      "description": "The M4 hole moved to X = −50 (mirror of +50), same Y",
+      "check": "hole_positions",
+      "diameter": [4.4, 4.6],
+      "points": [[-50, 7.5, 0]],
+      "tol": 0.01
+    },
+    {
+      "id": "centroid_x",
+      "description": "Centroid at X = −22.48, the mirror of +22.48: mirrored, not just shifted (a shift would put it at −37.5)",
+      "check": "centroid",
+      "axis": "x",
+      "approx": -22.4796,
+      "abs": 0.01
+    },
+    {
+      "id": "centroid_y_kept",
+      "description": "Centroid height unchanged: the slot and the rounded corner kept their Y positions",
+      "check": "centroid",
+      "axis": "y",
+      "approx": "$context",
+      "abs": 0.001
+    },
+    {
+      "id": "volume_kept",
+      "description": "A mirror image has the same volume (±0.0001%)",
+      "check": "volume",
+      "approx": "$context",
+      "rel": 0.000001
+    },
+    {
+      "id": "faces_kept",
+      "description": "Same faces as before (outline, R8 corner, hole, slot)",
+      "check": "face_count",
+      "eq": "$context"
+    },
+    {
+      "id": "round_faces_kept",
+      "description": "Same number of round faces: corner, hole and slot ends",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": "$context"
+    },
+    {
+      "id": "extrude_kept",
+      "description": "Only the sketch geometry changed; the sketch plane and the extrude are untouched",
+      "check": "changed_features",
+      "eq": 0
+    },
+    {
+      "id": "same_features",
+      "description": "Same features as before",
+      "check": "feature_names",
+      "eq": "$context"
+    }
+  ],
+  "notes": "Context centroid (22.4796, 15.9746): L = [0,60]x[0,15] ∪ [0,15]x[15,50], minus the R8 corner piece (square 8² minus a quarter disc, centroid 8 − 32/3π), the Ø4.5 hole and the obround slot (4.5 x 15 + Ø4.5). Negating x without flipping ccw turns each arc into its 270° complement: the sketch self-intersects or changes."
+}

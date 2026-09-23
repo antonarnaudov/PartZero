@@ -1,0 +1,1375 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t2-hinge-pair",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "9b6073e8602fc07ad116ba3f764caa9baaeaa1d673e20673a65135914fe7e051",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "hinge_pair",
+    "status": "ok",
+    "features": [
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_low_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 103.51383554843322,
+        "loops": 2,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "knuckle",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_low",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1035.138355484332,
+        "area": 1042.676613677071,
+        "centroid": [
+         10.787607866623667,
+         -1.508707669840832,
+         5
+        ],
+        "bbox_min": [
+         -3.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         30,
+         3.5,
+         10
+        ],
+        "faces": 7,
+        "edges": 14,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 10
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_plate_mid_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 65.5,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "inner",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_plate_mid",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 655,
+        "area": 704.9999999999999,
+        "centroid": [
+         16.9,
+         -2.25,
+         15
+        ],
+        "bbox_min": [
+         3.8,
+         -3.5,
+         10
+        ],
+        "bbox_max": [
+         30,
+         -1,
+         20
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_high_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 103.51383554843322,
+        "loops": 2,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "knuckle",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_high",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1035.138355484332,
+        "area": 1042.676613677071,
+        "centroid": [
+         10.787607866623667,
+         -1.508707669840832,
+         25.000000000000004
+        ],
+        "bbox_min": [
+         -3.5,
+         -3.5,
+         20
+        ],
+        "bbox_max": [
+         30,
+         3.5,
+         30
+        ],
+        "faces": 7,
+        "edges": 14,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 10
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_low_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 65.5,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "inner",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_low",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 674.6500000000001,
+        "area": 722.2199999999999,
+        "centroid": [
+         -16.9,
+         -2.25,
+         5.1499999999999995
+        ],
+        "bbox_min": [
+         -30,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         -3.8,
+         -1,
+         10.3
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_knuckle_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 103.51383554843322,
+        "loops": 2,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "knuckle",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_knuckle",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 973.0300541552723,
+        "area": 992.5376771222586,
+        "centroid": [
+         -10.78760786662367,
+         -1.5087076698408317,
+         15
+        ],
+        "bbox_min": [
+         -30,
+         -3.5,
+         10.3
+        ],
+        "bbox_max": [
+         3.5,
+         3.5,
+         19.700000000000003
+        ],
+        "faces": 7,
+        "edges": 14,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 10
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_high_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 65.5,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "inner",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_high",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 674.6500000000001,
+        "area": 722.2199999999999,
+        "centroid": [
+         -16.9,
+         -2.25,
+         24.849999999999994
+        ],
+        "bbox_min": [
+         -30,
+         -3.5,
+         19.7
+        ],
+        "bbox_max": [
+         -3.8,
+         -1,
+         30
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "2e08dd4a5ccf3d48aaf69633ab474f49f95bbac87892fb5a282f0d8d97f41f62",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "hinge_pair",
+    "status": "ok",
+    "features": [
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_low_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 125.2517410136042,
+        "loops": 2,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "knuckle",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_low",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1377.7691511496462,
+        "area": 1261.6387025492559,
+        "centroid": [
+         11.866368653286035,
+         -1.659578436824915,
+         5.500000000000001
+        ],
+        "bbox_min": [
+         -3.8500000000000005,
+         -3.8500000000000005,
+         0
+        ],
+        "bbox_max": [
+         33,
+         3.8500000000000005,
+         11
+        ],
+        "faces": 7,
+        "edges": 14,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 10
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_plate_mid_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 79.255,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "inner",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_plate_mid",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 871.8050000000001,
+        "area": 853.05,
+        "centroid": [
+         18.590000000000003,
+         -2.4750000000000005,
+         16.500000000000004
+        ],
+        "bbox_min": [
+         4.18,
+         -3.8500000000000005,
+         11
+        ],
+        "bbox_max": [
+         33,
+         -1.1,
+         22
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_high_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 125.2517410136042,
+        "loops": 2,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "knuckle",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_high",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1377.7691511496462,
+        "area": 1261.6387025492559,
+        "centroid": [
+         11.866368653286035,
+         -1.659578436824915,
+         27.5
+        ],
+        "bbox_min": [
+         -3.8500000000000005,
+         -3.8500000000000005,
+         22
+        ],
+        "bbox_max": [
+         33,
+         3.8500000000000005,
+         33
+        ],
+        "faces": 7,
+        "edges": 14,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 10
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_low_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 79.255,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "inner",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_low",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 897.9591500000002,
+        "area": 873.8862000000001,
+        "centroid": [
+         -18.59,
+         -2.475,
+         5.665000000000002
+        ],
+        "bbox_min": [
+         -33,
+         -3.8500000000000005,
+         0
+        ],
+        "bbox_max": [
+         -4.18,
+         -1.1,
+         11.330000000000002
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_knuckle_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 125.2517410136042,
+        "loops": 2,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "knuckle",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_knuckle",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1295.1030020806675,
+        "area": 1200.9705893179332,
+        "centroid": [
+         -11.866368653286033,
+         -1.6595784368249147,
+         16.500000000000004
+        ],
+        "bbox_min": [
+         -33,
+         -3.8500000000000005,
+         11.330000000000002
+        ],
+        "bbox_max": [
+         3.8500000000000005,
+         3.8500000000000005,
+         21.67
+        ],
+        "faces": 7,
+        "edges": 14,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 10
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_high_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 79.255,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "inner",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_high",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 897.9591500000002,
+        "area": 873.8862000000001,
+        "centroid": [
+         -18.59,
+         -2.475,
+         27.335000000000008
+        ],
+        "bbox_min": [
+         -33,
+         -3.8500000000000005,
+         21.67
+        ],
+        "bbox_max": [
+         -4.18,
+         -1.1,
+         33
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "f5c90037c1750258e996bbd08398f0921cd8b33bce3545af8f1f88244a80cb27",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "hinge_pair",
+    "status": "ok",
+    "features": [
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_low_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 107.31516265927687,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "knuckle",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_low",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1073.1516265927685,
+        "area": 981.1642295197828,
+        "centroid": [
+         10.405488273936248,
+         -1.4552660943394042,
+         4.999999999999999
+        ],
+        "bbox_min": [
+         -3.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         30,
+         3.5,
+         10
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 10
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_plate_mid_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 65.5,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "inner",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_plate_mid",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 655,
+        "area": 704.9999999999999,
+        "centroid": [
+         16.9,
+         -2.25,
+         15
+        ],
+        "bbox_min": [
+         3.8,
+         -3.5,
+         10
+        ],
+        "bbox_max": [
+         30,
+         -1,
+         20
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_high_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 103.51383554843322,
+        "loops": 2,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "knuckle",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_high",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1035.138355484332,
+        "area": 1042.676613677071,
+        "centroid": [
+         10.787607866623667,
+         -1.508707669840832,
+         25.000000000000004
+        ],
+        "bbox_min": [
+         -3.5,
+         -3.5,
+         20
+        ],
+        "bbox_max": [
+         30,
+         3.5,
+         30
+        ],
+        "faces": 7,
+        "edges": 14,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 10
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_low_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 65.5,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "inner",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_low",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 674.6500000000001,
+        "area": 722.2199999999999,
+        "centroid": [
+         -16.9,
+         -2.25,
+         5.1499999999999995
+        ],
+        "bbox_min": [
+         -30,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         -3.8,
+         -1,
+         10.3
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_knuckle_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 103.51383554843322,
+        "loops": 2,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "knuckle",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_knuckle",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 973.0300541552723,
+        "area": 992.5376771222586,
+        "centroid": [
+         -10.78760786662367,
+         -1.5087076698408317,
+         15
+        ],
+        "bbox_min": [
+         -30,
+         -3.5,
+         10.3
+        ],
+        "bbox_max": [
+         3.5,
+         3.5,
+         19.700000000000003
+        ],
+        "faces": 7,
+        "edges": 14,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 10
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_high_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 65.5,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "inner",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_high",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 674.6500000000001,
+        "area": 722.2199999999999,
+        "centroid": [
+         -16.9,
+         -2.25,
+         24.849999999999994
+        ],
+        "bbox_min": [
+         -30,
+         -3.5,
+         19.7
+        ],
+        "bbox_max": [
+         -3.8,
+         -1,
+         30
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "44ebc94989c0af85e6169650d45abe0e04f4ea2293ef35b2ca3005390816b570",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "hinge_pair",
+    "status": "ok",
+    "features": [
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_low_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 102.71555685515605,
+        "loops": 2,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "knuckle",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_low",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1027.1555685515605,
+        "area": 1047.9915601284142,
+        "centroid": [
+         10.871446359788807,
+         -1.520432954929984,
+         4.999999999999999
+        ],
+        "bbox_min": [
+         -3.5,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         30,
+         3.5,
+         10
+        ],
+        "faces": 7,
+        "edges": 14,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 10
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_plate_mid_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 65.5,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "inner",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_plate_mid",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 655,
+        "area": 704.9999999999999,
+        "centroid": [
+         16.9,
+         -2.25,
+         15
+        ],
+        "bbox_min": [
+         3.8,
+         -3.5,
+         10
+        ],
+        "bbox_max": [
+         30,
+         -1,
+         20
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_high_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 102.71555685515605,
+        "loops": 2,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "knuckle",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_a",
+      "feature": "a_knuckle_high",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1027.1555685515605,
+        "area": 1047.9915601284142,
+        "centroid": [
+         10.871446359788807,
+         -1.520432954929984,
+         24.999999999999996
+        ],
+        "bbox_min": [
+         -3.5,
+         -3.5,
+         20
+        ],
+        "bbox_max": [
+         30,
+         3.5,
+         30
+        ],
+        "faces": 7,
+        "edges": 14,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 10
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_low_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 65.5,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "inner",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_low",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 674.6500000000001,
+        "area": 722.2199999999999,
+        "centroid": [
+         -16.9,
+         -2.25,
+         5.1499999999999995
+        ],
+        "bbox_min": [
+         -30,
+         -3.5,
+         0
+        ],
+        "bbox_max": [
+         -3.8,
+         -1,
+         10.3
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_knuckle_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 102.71555685515605,
+        "loops": 2,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "knuckle",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_knuckle",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 965.5262344384669,
+        "area": 997.4379333433279,
+        "centroid": [
+         -10.871446359788811,
+         -1.520432954929984,
+         15
+        ],
+        "bbox_min": [
+         -30,
+         -3.5,
+         10.3
+        ],
+        "bbox_max": [
+         3.5,
+         3.5,
+         19.700000000000003
+        ],
+        "faces": 7,
+        "edges": 14,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 5
+        },
+        "edge_types": {
+         "circle": 4,
+         "line": 10
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_high_profile",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 65.5,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "edge",
+         "inner",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "leaf_b",
+      "feature": "b_plate_high",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 674.6500000000001,
+        "area": 722.2199999999999,
+        "centroid": [
+         -16.9,
+         -2.25,
+         24.849999999999994
+        ],
+        "bbox_min": [
+         -30,
+         -3.5,
+         19.7
+        ],
+        "bbox_max": [
+         -3.8,
+         -1,
+         30
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

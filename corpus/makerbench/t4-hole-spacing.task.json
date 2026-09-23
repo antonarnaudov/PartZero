@@ -1,0 +1,91 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-hole-spacing",
+  "tier": "T4",
+  "title": "Edit: change a hole pattern's spacing",
+  "prompt": "The board I'm actually mounting has its holes 38 x 24 mm apart, not 30 x 20. Move the four screw holes to match, still centred on the plate. Leave the cable hole and everything else as it is.",
+  "context": "t4-hole-spacing.context.cad.ts",
+  "process": "any",
+  "tags": ["edit", "holes", "hole-pattern", "mounting-plate"],
+  "requires": ["ir/0"],
+  "reference": "t4-hole-spacing.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "new_pattern",
+      "description": "The four M3 holes are now on a 38 x 24 mm rectangle",
+      "check": "hole_pattern",
+      "diameter": [3.2, 3.5],
+      "points": [[0, 0], [38, 0], [38, 24], [0, 24]]
+    },
+    {
+      "id": "centred",
+      "description": "… still centred on the plate: holes at X = ±19, Y = ±12",
+      "check": "hole_positions",
+      "diameter": [3.2, 3.5],
+      "points": [[19, 12, 0], [-19, 12, 0], [-19, -12, 0], [19, -12, 0]],
+      "tol": 0.01
+    },
+    {
+      "id": "hole_size_kept",
+      "description": "The screw holes are still 3.4 mm (moved, not resized)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [3.39, 3.41],
+      "eq": 4
+    },
+    {
+      "id": "cable_kept",
+      "description": "The 8 mm cable hole is untouched at X = −22, Y = 0",
+      "check": "hole_positions",
+      "diameter": [7.99, 8.01],
+      "points": [[-22, 0, 0]],
+      "tol": 0.001
+    },
+    {
+      "id": "plate_min_kept",
+      "description": "The plate has not moved or grown (bounding box min unchanged)",
+      "check": "bbox_min",
+      "approx": "$context",
+      "abs": 0.001
+    },
+    {
+      "id": "plate_max_kept",
+      "description": "The plate has not moved or grown (bounding box max unchanged)",
+      "check": "bbox_max",
+      "approx": "$context",
+      "abs": 0.001
+    },
+    {
+      "id": "volume_kept",
+      "description": "Moving holes does not change the volume (same as before ±0.0001%)",
+      "check": "volume",
+      "approx": "$context",
+      "rel": 0.000001
+    },
+    {
+      "id": "only_holes_moved",
+      "description": "Only the four screw-hole circles changed",
+      "check": "changed_curves",
+      "eq": 4
+    },
+    {
+      "id": "extrude_kept",
+      "description": "The extrude itself is untouched",
+      "check": "changed_features",
+      "eq": 0
+    },
+    {
+      "id": "same_features",
+      "description": "Same features as before: edited in place, not rebuilt",
+      "check": "feature_names",
+      "eq": "$context"
+    }
+  ],
+  "notes": "Volume (60·45 − 4·Ø3.4 − Ø8)·3 = 7840.25 mm³ before and after. New holes clear the cable hole by 6.7 mm and the edges by ≥ 8.8 mm."
+}

@@ -1,0 +1,279 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t1-screw-size-gauge",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "06d34b7604bd652c0622001ebf70300e8fe4a429c97cd5b941298c3dc969e0de",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "screw_size_gauge",
+    "status": "ok",
+    "features": [
+     {
+      "part": "gauge",
+      "feature": "strip",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2842.2999027714263,
+        "loops": 8,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "gauge",
+      "feature": "gauge",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 8526.89970831428,
+        "area": 6877.869689597243,
+        "centroid": [
+         58.862016796608046,
+         12.5,
+         1.4999999999999998
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         120,
+         25,
+         3
+        ],
+        "faces": 13,
+        "edges": 26,
+        "face_types": {
+         "cylinder": 7,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 14,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "13d68e53bad6977db0c8da8b8a0ab569014c73353bcd5a5c4e5b5c49bc64cfba",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "screw_size_gauge",
+    "status": "ok",
+    "features": [
+     {
+      "part": "gauge",
+      "feature": "strip",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3439.1828823534265,
+        "loops": 8,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "gauge",
+      "feature": "gauge",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11349.303511766306,
+        "area": 8322.222324412665,
+        "centroid": [
+         64.74821847626886,
+         13.750000000000004,
+         1.65
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         132,
+         27.500000000000004,
+         3.3000000000000003
+        ],
+        "faces": 13,
+        "edges": 26,
+        "face_types": {
+         "cylinder": 7,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 14,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "dfa69b111d0debe2c037386dea9916f52340a2abb1b9482c7363d9fd50a0eca3",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "screw_size_gauge",
+    "status": "ok",
+    "features": [
+     {
+      "part": "gauge",
+      "feature": "strip",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2846.8237961925956,
+        "loops": 7,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "gauge",
+      "feature": "gauge",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 8540.471388577787,
+        "area": 6864.2980093337355,
+        "centroid": [
+         58.78754827144945,
+         12.500000000000002,
+         1.5
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         120,
+         25,
+         3
+        ],
+        "faces": 12,
+        "edges": 24,
+        "face_types": {
+         "cylinder": 6,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 12,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "35ed7ba08974daeebe1cab33a591fdd6f5399ab878376b36b3192cce1453301c",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "screw_size_gauge",
+    "status": "ok",
+    "features": [
+     {
+      "part": "gauge",
+      "feature": "strip",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2841.3498851529807,
+        "loops": 8,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "gauge",
+      "feature": "gauge",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 8524.049655458943,
+        "area": 6878.231601070936,
+        "centroid": [
+         58.87768531452813,
+         12.500000000000002,
+         1.5
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         120,
+         25,
+         3
+        ],
+        "faces": 13,
+        "edges": 26,
+        "face_types": {
+         "cylinder": 7,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 14,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

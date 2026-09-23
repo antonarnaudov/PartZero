@@ -1,0 +1,1559 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "t5-arduino-box",
+ "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+ "entries": [
+  {
+   "label": "reference",
+   "ir_sha256": "263879946c8a9981b632f09638c83faa6c2aee7ce4bd5a8315afca04a701443a",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "arduino_box",
+    "status": "ok",
+    "features": [
+     {
+      "part": "box",
+      "feature": "floor_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5796,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "floor",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11592,
+        "area": 12203.999999999998,
+        "centroid": [
+         42,
+         34.5,
+         1
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         84,
+         69,
+         2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "wall_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 596,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "walls",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 19667.99999999998,
+        "area": 20860,
+        "centroid": [
+         42,
+         34.49999999999997,
+         18.5
+        ],
+        "bbox_min": [
+         0,
+         0,
+         2
+        ],
+        "bbox_max": [
+         84,
+         69,
+         35
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "standoff_rings",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 23.365595361074085,
+        "loops": 2,
+        "outer_curves": [
+         "s1"
+        ]
+       },
+       {
+        "area": 23.365595361074085,
+        "loops": 2,
+        "outer_curves": [
+         "s2"
+        ]
+       },
+       {
+        "area": 23.365595361074085,
+        "loops": 2,
+        "outer_curves": [
+         "s3"
+        ]
+       },
+       {
+        "area": 23.365595361074085,
+        "loops": 2,
+        "outer_curves": [
+         "s4"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "standoffs",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 140.19357216644454,
+        "area": 206.95241605522764,
+        "centroid": [
+         21.67,
+         10.39,
+         5
+        ],
+        "bbox_min": [
+         18.67,
+         7.390000000000001,
+         2
+        ],
+        "bbox_max": [
+         24.67,
+         13.39,
+         8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 140.1935721664445,
+        "area": 206.95241605522764,
+        "centroid": [
+         22.94,
+         58.650000000000006,
+         5.000000000000001
+        ],
+        "bbox_min": [
+         19.94,
+         55.65,
+         2
+        ],
+        "bbox_max": [
+         25.94,
+         61.65,
+         8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 140.19357216644454,
+        "area": 206.95241605522764,
+        "centroid": [
+         73.73999999999998,
+         15.469999999999997,
+         5
+        ],
+        "bbox_min": [
+         70.74,
+         12.47,
+         2
+        ],
+        "bbox_max": [
+         76.74,
+         18.47,
+         8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 140.1935721664445,
+        "area": 206.95241605522764,
+        "centroid": [
+         73.74,
+         43.40999999999999,
+         4.999999999999999
+        ],
+        "bbox_min": [
+         70.74,
+         40.41,
+         2
+        ],
+        "bbox_max": [
+         76.74,
+         46.41,
+         8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5796,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11592,
+        "area": 12203.999999999998,
+        "centroid": [
+         136,
+         34.5,
+         1
+        ],
+        "bbox_min": [
+         94,
+         0,
+         0
+        ],
+        "bbox_max": [
+         178,
+         69,
+         2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lip_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 340.3199999999997,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lip",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1020.9600000000046,
+        "area": 2382.2400000000025,
+        "centroid": [
+         135.99999999999986,
+         34.500000000000085,
+         3.4999999999999964
+        ],
+        "bbox_min": [
+         96.2,
+         2.2,
+         2
+        ],
+        "bbox_max": [
+         175.8,
+         66.8,
+         5
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:scale",
+   "ir_sha256": "27580f11b2d99ff5a0c497e095a3be3d3f50ccfe2d5815c2ea5cc42dff7aa163",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "arduino_box",
+    "status": "ok",
+    "features": [
+     {
+      "part": "box",
+      "feature": "floor_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 7013.160000000001,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "floor",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 15428.952000000003,
+        "area": 14766.840000000002,
+        "centroid": [
+         46.199999999999996,
+         37.95000000000001,
+         1.1
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         92.4,
+         75.9,
+         2.2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "wall_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 721.1599999999999,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "walls",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 26178.108000000066,
+        "area": 25240.600000000013,
+        "centroid": [
+         46.19999999999997,
+         37.950000000000045,
+         20.35000000000002
+        ],
+        "bbox_min": [
+         0,
+         0,
+         2.2
+        ],
+        "bbox_max": [
+         92.4,
+         75.9,
+         38.50000000000001
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "standoff_rings",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 28.272370386899645,
+        "loops": 2,
+        "outer_curves": [
+         "s1"
+        ]
+       },
+       {
+        "area": 28.272370386899645,
+        "loops": 2,
+        "outer_curves": [
+         "s2"
+        ]
+       },
+       {
+        "area": 28.272370386899645,
+        "loops": 2,
+        "outer_curves": [
+         "s3"
+        ]
+       },
+       {
+        "area": 28.272370386899645,
+        "loops": 2,
+        "outer_curves": [
+         "s4"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "standoffs",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 186.59764455353775,
+        "area": 250.41242342682548,
+        "centroid": [
+         23.837000000000007,
+         11.429000000000002,
+         5.500000000000001
+        ],
+        "bbox_min": [
+         20.537000000000003,
+         8.129000000000001,
+         2.2
+        ],
+        "bbox_max": [
+         27.137000000000004,
+         14.729000000000003,
+         8.8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 186.59764455353775,
+        "area": 250.41242342682548,
+        "centroid": [
+         25.233999999999998,
+         64.515,
+         5.499999999999999
+        ],
+        "bbox_min": [
+         21.934,
+         61.215,
+         2.2
+        ],
+        "bbox_max": [
+         28.534000000000002,
+         67.815,
+         8.8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 186.59764455353752,
+        "area": 250.41242342682526,
+        "centroid": [
+         81.114,
+         17.017000000000003,
+         5.5
+        ],
+        "bbox_min": [
+         77.81400000000001,
+         13.717000000000002,
+         2.2
+        ],
+        "bbox_max": [
+         84.414,
+         20.317000000000004,
+         8.8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 186.59764455353746,
+        "area": 250.41242342682526,
+        "centroid": [
+         81.114,
+         47.751,
+         5.500000000000001
+        ],
+        "bbox_min": [
+         77.81400000000001,
+         44.451,
+         2.2
+        ],
+        "bbox_max": [
+         84.414,
+         51.050999999999995,
+         8.8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 7013.16,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 15428.952000000003,
+        "area": 14766.840000000002,
+        "centroid": [
+         149.60000000000002,
+         37.95,
+         1.1
+        ],
+        "bbox_min": [
+         103.4,
+         0,
+         0
+        ],
+        "bbox_max": [
+         195.8,
+         75.9,
+         2.2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lip_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 411.7872000000025,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lip",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1358.8977600000094,
+        "area": 2882.5104000000033,
+        "centroid": [
+         149.60000000000014,
+         37.94999999999997,
+         3.8499999999999996
+        ],
+        "bbox_min": [
+         105.82000000000001,
+         2.4200000000000004,
+         2.2
+        ],
+        "bbox_max": [
+         193.38000000000002,
+         73.48,
+         5.5
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:drop_hole",
+   "ir_sha256": "29c731bc54224aa51d0f1a4d9f20e3f470637485569da23f0ad586b6a0b17089",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "arduino_box",
+    "status": "ok",
+    "features": [
+     {
+      "part": "box",
+      "feature": "floor_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5796,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "floor",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11592,
+        "area": 12203.999999999998,
+        "centroid": [
+         42,
+         34.5,
+         1
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         84,
+         69,
+         2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "wall_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 596,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "walls",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 19667.99999999998,
+        "area": 20860,
+        "centroid": [
+         42,
+         34.49999999999997,
+         18.5
+        ],
+        "bbox_min": [
+         0,
+         0,
+         2
+        ],
+        "bbox_max": [
+         84,
+         69,
+         35
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "standoff_rings",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 28.274333882308138,
+        "loops": 1,
+        "outer_curves": [
+         "s1"
+        ]
+       },
+       {
+        "area": 23.365595361074085,
+        "loops": 2,
+        "outer_curves": [
+         "s2"
+        ]
+       },
+       {
+        "area": 23.365595361074085,
+        "loops": 2,
+        "outer_curves": [
+         "s3"
+        ]
+       },
+       {
+        "area": 23.365595361074085,
+        "loops": 2,
+        "outer_curves": [
+         "s4"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "standoffs",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 169.64600329384885,
+        "area": 169.64600329384885,
+        "centroid": [
+         21.669999999999998,
+         10.39,
+         5
+        ],
+        "bbox_min": [
+         18.67,
+         7.390000000000001,
+         2
+        ],
+        "bbox_max": [
+         24.67,
+         13.39,
+         8
+        ],
+        "faces": 3,
+        "edges": 2,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 2
+        },
+        "valid": true
+       },
+       {
+        "volume": 140.1935721664445,
+        "area": 206.95241605522764,
+        "centroid": [
+         22.94,
+         58.650000000000006,
+         5.000000000000001
+        ],
+        "bbox_min": [
+         19.94,
+         55.65,
+         2
+        ],
+        "bbox_max": [
+         25.94,
+         61.65,
+         8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 140.19357216644454,
+        "area": 206.95241605522764,
+        "centroid": [
+         73.73999999999998,
+         15.469999999999997,
+         5
+        ],
+        "bbox_min": [
+         70.74,
+         12.47,
+         2
+        ],
+        "bbox_max": [
+         76.74,
+         18.47,
+         8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 140.1935721664445,
+        "area": 206.95241605522764,
+        "centroid": [
+         73.74,
+         43.40999999999999,
+         4.999999999999999
+        ],
+        "bbox_min": [
+         70.74,
+         40.41,
+         2
+        ],
+        "bbox_max": [
+         76.74,
+         46.41,
+         8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5796,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11592,
+        "area": 12203.999999999998,
+        "centroid": [
+         136,
+         34.5,
+         1
+        ],
+        "bbox_min": [
+         94,
+         0,
+         0
+        ],
+        "bbox_max": [
+         178,
+         69,
+         2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lip_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 340.3199999999997,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lip",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1020.9600000000046,
+        "area": 2382.2400000000025,
+        "centroid": [
+         135.99999999999986,
+         34.500000000000085,
+         3.4999999999999964
+        ],
+        "bbox_min": [
+         96.2,
+         2.2,
+         2
+        ],
+        "bbox_max": [
+         175.8,
+         66.8,
+         5
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "mutant:hole_size",
+   "ir_sha256": "5f211518c256dee84104eb99f332e99a78ba4f31b529706e06bf456eff8e5fbe",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "occt 7.9.3 (OCP 7.9.3.1.1) / build123d 0.12.0",
+    "document": "arduino_box",
+    "status": "ok",
+    "features": [
+     {
+      "part": "box",
+      "feature": "floor_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5796,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "floor",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11592,
+        "area": 12203.999999999998,
+        "centroid": [
+         42,
+         34.5,
+         1
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         84,
+         69,
+         2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "wall_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 596,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "walls",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 19667.99999999998,
+        "area": 20860,
+        "centroid": [
+         42,
+         34.49999999999997,
+         18.5
+        ],
+        "bbox_min": [
+         0,
+         0,
+         2
+        ],
+        "bbox_max": [
+         84,
+         69,
+         35
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "standoff_rings",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 22.334760271614936,
+        "loops": 2,
+        "outer_curves": [
+         "s1"
+        ]
+       },
+       {
+        "area": 22.334760271614936,
+        "loops": 2,
+        "outer_curves": [
+         "s2"
+        ]
+       },
+       {
+        "area": 22.334760271614936,
+        "loops": 2,
+        "outer_curves": [
+         "s3"
+        ]
+       },
+       {
+        "area": 22.334760271614936,
+        "loops": 2,
+        "outer_curves": [
+         "s4"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "box",
+      "feature": "standoffs",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 134.00856162968964,
+        "area": 209.60313485669406,
+        "centroid": [
+         21.67,
+         10.39,
+         5
+        ],
+        "bbox_min": [
+         18.67,
+         7.390000000000001,
+         2
+        ],
+        "bbox_max": [
+         24.67,
+         13.39,
+         8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 134.0085616296896,
+        "area": 209.603134856694,
+        "centroid": [
+         22.94,
+         58.65,
+         5
+        ],
+        "bbox_min": [
+         19.94,
+         55.65,
+         2
+        ],
+        "bbox_max": [
+         25.94,
+         61.65,
+         8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 134.00856162968958,
+        "area": 209.603134856694,
+        "centroid": [
+         73.74,
+         15.47,
+         5.000000000000001
+        ],
+        "bbox_min": [
+         70.74,
+         12.47,
+         2
+        ],
+        "bbox_max": [
+         76.74,
+         18.47,
+         8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       },
+       {
+        "volume": 134.00856162968958,
+        "area": 209.603134856694,
+        "centroid": [
+         73.74000000000001,
+         43.41,
+         5
+        ],
+        "bbox_min": [
+         70.74,
+         40.41,
+         2
+        ],
+        "bbox_max": [
+         76.74,
+         46.41,
+         8
+        ],
+        "faces": 4,
+        "edges": 4,
+        "face_types": {
+         "cylinder": 2,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 4
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid_outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5796,
+        "loops": 1,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lid",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 11592,
+        "area": 12203.999999999998,
+        "centroid": [
+         136,
+         34.5,
+         1
+        ],
+        "bbox_min": [
+         94,
+         0,
+         0
+        ],
+        "bbox_max": [
+         178,
+         69,
+         2
+        ],
+        "faces": 6,
+        "edges": 12,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lip_ring",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 340.3199999999997,
+        "loops": 2,
+        "outer_curves": [
+         "o_bottom",
+         "o_left",
+         "o_right",
+         "o_top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "lid",
+      "feature": "lip",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 1020.9600000000046,
+        "area": 2382.2400000000025,
+        "centroid": [
+         135.99999999999986,
+         34.500000000000085,
+         3.4999999999999964
+        ],
+        "bbox_min": [
+         96.2,
+         2.2,
+         2
+        ],
+        "bbox_max": [
+         175.8,
+         66.8,
+         5
+        ],
+        "faces": 10,
+        "edges": 24,
+        "face_types": {
+         "plane": 10
+        },
+        "edge_types": {
+         "line": 24
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

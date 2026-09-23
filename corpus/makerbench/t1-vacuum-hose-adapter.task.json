@@ -1,0 +1,61 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-vacuum-hose-adapter",
+  "tier": "T1",
+  "title": "Shop-vac hose adapter (32 mm port to 35 mm cuff)",
+  "prompt": "Adapter so my shop-vac hose fits the dust port on my sander. One end is a sleeve that slides over the sander's 32 mm port: 32.4 mm inside, 2 mm wall, 30 mm long. The other end is a 35 mm OD spigot that pushes into the hose cuff: 2 mm wall, 30 mm long. Join them with a 10 mm long conical transition, keeping the 2 mm wall, so it's 70 mm long overall.",
+  "process": "fdm",
+  "tags": ["adapter", "dust-collection", "round", "revolve"],
+  "requires": ["ir/0", "feature/revolve"],
+  "reference": "t1-vacuum-hose-adapter.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one solid body (one printable part)",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "36.4 mm across the sleeve, 70 mm long, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [36.4, 36.4, 70],
+      "abs": 0.1
+    },
+    {
+      "id": "straight_walls",
+      "description": "Four cylindrical faces: sleeve and spigot, inside and outside",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 4
+    },
+    {
+      "id": "taper",
+      "description": "The transition is conical inside and outside (two cone faces)",
+      "check": "face_count",
+      "type": "cone",
+      "eq": 2
+    },
+    {
+      "id": "open_ends",
+      "description": "Two flat annular end faces: it's a tube, open at both ends",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 2
+    },
+    {
+      "id": "volume",
+      "description": "Volume π·(68.8·30 + 202.2·10/3 + 66·30) ≈ 14822 mm³ ±1% (a 32.0 sleeve or a 34 mm spigot is off by >3%)",
+      "check": "volume",
+      "approx": 14822.03,
+      "rel": 0.01
+    }
+  ],
+  "notes": "Sleeve: r 16.2–18.2; spigot: r 15.5–17.5; frustum shells for the taper: π·h/3·(R1²+R1R2+R2²) outer minus inner."
+}

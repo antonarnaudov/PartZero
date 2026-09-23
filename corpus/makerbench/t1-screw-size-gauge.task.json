@@ -1,0 +1,125 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-screw-size-gauge",
+  "tier": "T1",
+  "title": "Laser-cut metric screw size gauge",
+  "prompt": "Screw size gauge I'll laser cut from 3 mm acrylic: a 120 x 25 mm strip with one clearance hole per metric size so I can check screws at a glance. Sizes and holes: M2 2.4, M2.5 2.9, M3 3.4, M4 4.5, M5 5.5, M6 6.6 and M8 9 mm. Put them in one row along the middle of the strip, smallest to largest, 15 mm apart, with the M2 hole 12 mm from the left end.",
+  "process": "laser",
+  "tags": ["gauge", "laser-cut", "acrylic", "hole-pattern"],
+  "requires": ["ir/0"],
+  "reference": "t1-screw-size-gauge.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "Exactly one part to cut",
+      "check": "body_count",
+      "eq": 1
+    },
+    {
+      "id": "size",
+      "description": "120 x 25 mm strip, 3 mm thick, ±0.1 mm",
+      "check": "bbox_sorted",
+      "approx": [3, 25, 120],
+      "abs": 0.1
+    },
+    {
+      "id": "seven_holes",
+      "description": "Exactly seven holes, one per size",
+      "check": "inner_loops",
+      "eq": 7
+    },
+    {
+      "id": "m2",
+      "description": "One M2 clearance hole, 2.4 mm (±0.1)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [2.3, 2.5],
+      "eq": 1
+    },
+    {
+      "id": "m2_5",
+      "description": "One M2.5 clearance hole, 2.9 mm (±0.1)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [2.8, 3.0],
+      "eq": 1
+    },
+    {
+      "id": "m3",
+      "description": "One M3 clearance hole, 3.4 mm (±0.1)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [3.3, 3.5],
+      "eq": 1
+    },
+    {
+      "id": "m4",
+      "description": "One M4 clearance hole, 4.5 mm (±0.1)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [4.4, 4.6],
+      "eq": 1
+    },
+    {
+      "id": "m5",
+      "description": "One M5 clearance hole, 5.5 mm (±0.1)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [5.4, 5.6],
+      "eq": 1
+    },
+    {
+      "id": "m6",
+      "description": "One M6 clearance hole, 6.6 mm (±0.1)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [6.5, 6.7],
+      "eq": 1
+    },
+    {
+      "id": "m8",
+      "description": "One M8 clearance hole, 9 mm (±0.1)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [8.9, 9.1],
+      "eq": 1
+    },
+    {
+      "id": "row",
+      "description": "All seven holes in one straight row, 15 mm apart",
+      "check": "hole_pattern",
+      "diameter": [2.3, 9.1],
+      "points": [[0, 0], [15, 0], [30, 0], [45, 0], [60, 0], [75, 0], [90, 0]]
+    },
+    {
+      "id": "small_end",
+      "description": "M2, M2.5 and M3 are the first three holes of the row (smallest to largest)",
+      "check": "hole_pattern",
+      "diameter": [2.3, 3.5],
+      "points": [[0, 0], [15, 0], [30, 0]]
+    },
+    {
+      "id": "m2_inset",
+      "description": "The M2 hole is 12 mm from the end and on the centre line (12.5 mm from both long edges)",
+      "check": "hole_positions",
+      "relative_to": "edges",
+      "diameter": [2.3, 2.5],
+      "points": [[12, 12.5]],
+      "tol": 0.1
+    },
+    {
+      "id": "volume",
+      "description": "Volume (120·25 − the seven holes)·3 ≈ 8526.9 mm³ ±0.5%",
+      "check": "volume",
+      "approx": 8526.9,
+      "rel": 0.005
+    }
+  ],
+  "notes": "Clearance holes per ISO 273 medium (M2.5 and M8 as the maker specified). Hole centres x = 12, 27, …, 102 on y = 12.5; the M8 hole ends 13.5 mm from the right end."
+}

@@ -12,10 +12,10 @@ function raw(id: string): TaskFile {
 }
 
 describe("MakerBench corpus", () => {
-  it("has 40 tasks: 25 T1, 8 T2, 4 T4, 3 T5", () => {
-    expect(taskFiles(CORPUS_DIR)).toHaveLength(40);
+  it("has 61 tasks: 34 T1, 14 T2, 8 T4, 5 T5", () => {
+    expect(taskFiles(CORPUS_DIR)).toHaveLength(61);
     const byTier = Object.fromEntries(["T1", "T2", "T4", "T5"].map((t) => [t, tasks.filter((x) => x.tier === t).length]));
-    expect(byTier).toEqual({ T1: 25, T2: 8, T4: 4, T5: 3 });
+    expect(byTier).toEqual({ T1: 34, T2: 14, T4: 8, T5: 5 });
   });
 
   it("is loaded in id order with unique ids", () => {
@@ -120,6 +120,23 @@ describe("semantic task checks", () => {
     expect(semanticProblems(withTest({ check: "face_count", type: "cylindre", eq: 1 }), file).join()).toMatch(/type "cylindre"/);
     expect(semanticProblems(withTest({ check: "hole_pattern", diameter: [3, 4], points: [[0, 0], [1, 1]], eq: 1 }), file).join()).toMatch(
       /predicate/,
+    );
+  });
+
+  it("hole_positions takes 3D points, or [a, b] offset pairs with relative_to edges (and body only then)", () => {
+    const edges = { check: "hole_positions", diameter: [3.2, 3.5], relative_to: "edges" };
+    expect(semanticProblems(withTest({ ...edges, points: [[5, 5], [5, 14]] }), file)).toEqual([]);
+    expect(semanticProblems(withTest({ ...edges, points: [[5, 5], [5, 14]], body: 0 }), file)).toEqual([]);
+    expect(semanticProblems(withTest({ ...edges, points: [[5, 5, 0]] }), file).join()).toMatch(/offset pairs/);
+    expect(semanticProblems(withTest({ ...edges, points: [[-1, 5]] }), file).join()).toMatch(/cannot be negative/);
+    const model = { check: "hole_positions", diameter: [3.2, 3.5], points: [[5, 5, 0]] };
+    expect(semanticProblems(withTest({ ...model, relative_to: "model" }), file)).toEqual([]);
+    expect(semanticProblems(withTest({ ...model, body: 0 }), file).join()).toMatch(/"body" is only used by hole_positions with relative_to "edges"/);
+    expect(semanticProblems(withTest({ check: "hole_pattern", diameter: [3, 4], points: [[0, 0], [1, 1]], relative_to: "edges" }), file).join()).toMatch(
+      /"relative_to" is not a parameter of hole_pattern/,
+    );
+    expect(schemaProblems({ ...good, hidden_tests: [...good.hidden_tests, { id: "x", description: "an extra test", ...model, relative_to: "corner" }] }).join()).toMatch(
+      /relative_to/,
     );
   });
 

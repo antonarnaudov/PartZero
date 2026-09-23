@@ -1,0 +1,84 @@
+{
+  "$schema": "../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-hinge-pair",
+  "tier": "T2",
+  "title": "Two-leaf butt hinge blank",
+  "prompt": "Butt hinge blank that I'll print assembled, standing on end, then pin with a length of 1.75 mm filament. Two leaves, each reaching 30 mm out from the pin axis, 2.5 mm thick and 30 mm tall along the pin. The knuckles are 7 mm diameter with a 2.2 mm pin hole. Leaf A has the knuckles at the bottom and top (0–10 mm and 20–30 mm); leaf B has the middle knuckle, with a 0.3 mm gap above and below it, so it's 9.4 mm long. Next to the other leaf's knuckle, each leaf's plate stops 0.3 mm short of it, i.e. 3.8 mm from the axis. No screw holes yet, I'll drill them. Put the pin axis on the Z axis starting at Z = 0, with the hinge open flat: leaf A toward +X, leaf B toward −X, the leaves between Y = −3.5 and Y = −1 so their outer faces are flush with the knuckles.",
+  "process": "fdm",
+  "tags": ["hinge", "print-in-place", "multi-body", "clearance"],
+  "requires": ["ir/0", "plane/frame"],
+  "reference": "t2-hinge-pair.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Knuckle sections and plain plate sections are separate touching solids (no booleans in IR v0): 6 or a few more",
+      "check": "body_count",
+      "between": [6, 10]
+    },
+    {
+      "id": "size",
+      "description": "60 mm across both leaves, 7 mm deep (the knuckle), 30 mm tall",
+      "check": "bbox_size",
+      "approx": [60, 7, 30],
+      "abs": 0.1
+    },
+    {
+      "id": "placement",
+      "description": "Pin axis on Z from Z = 0; leaves flush with the knuckles at Y = −3.5",
+      "check": "bbox_min",
+      "approx": [-30, -3.5, 0],
+      "abs": 0.05
+    },
+    {
+      "id": "pin_axis",
+      "description": "Three 2.2 mm pin holes (2.1–2.3), one per knuckle, all on the Z axis",
+      "check": "hole_positions",
+      "diameter": [2.1, 2.3],
+      "points": [[0, 0, 0], [0, 0, 10], [0, 0, 20]],
+      "tol": 0.05
+    },
+    {
+      "id": "knuckles",
+      "description": "Three knuckle bodies (a round knuckle face and a pin bore each)",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "face_count", "type": "cylinder", "eq": 2}
+      ],
+      "eq": 3
+    },
+    {
+      "id": "axial_gaps",
+      "description": "Leaf B's middle knuckle is 9.4 mm long: 0.3 mm gap to each of leaf A's knuckles",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "face_count", "type": "cylinder", "eq": 2},
+        {"check": "bbox_size", "axis": "z", "approx": 9.4, "abs": 0.05}
+      ],
+      "eq": 1
+    },
+    {
+      "id": "radial_gaps",
+      "description": "The three plain plate sections stop 3.8 mm from the axis (26.2 mm long): 0.3 mm clear of the other leaf's knuckle",
+      "check": "bodies_matching",
+      "where": [
+        {"check": "face_count", "type": "cylinder", "eq": 0},
+        {"check": "bbox_size", "axis": "x", "approx": 26.2, "abs": 0.05}
+      ],
+      "eq": 3
+    },
+    {
+      "id": "volume",
+      "description": "Total ≈ 5047.6 mm³ ±0.5%: knuckle profile 103.51 mm² × 29.4 + plate 65.5 mm² × 30.6",
+      "check": "volume",
+      "approx": 5047.61,
+      "rel": 0.005
+    }
+  ],
+  "notes": "Knuckle profile = disc r 3.5 ∪ plate [0, 30] x [−3.5, −1] − pin Ø2.2: πR² + 75 − ∫_{−3.5}^{−1} √(R² − y²) dy − π·1.1² = 103.514 mm². 0.3 mm gaps are a common print-in-place clearance."
+}

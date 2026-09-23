@@ -5,9 +5,12 @@
  * Measurements are taken on the candidate's `aicad.metrics/0` report (model and body checks) or
  * on its compiled IR (IR checks). `"$context"` as the expected value means "the same measurement
  * on the T4 context model". `hole_pattern` / `hole_positions` are predicates without a comparator.
+ *
+ * The IR checks see **full circles**: a `circle` curve, or a closed loop of arcs on one circle (a
+ * hole drawn as two semicircles counts as one circle, not as two arcs).
  */
 import type { BodyMetrics, EvalReport, IrDocument } from "@aicad/ir-types";
-import { circlesOf, curveChanges, curveDiameter, featureChanges, featureNames, sketchesOf, type V3 } from "./ir-geom.js";
+import { circlesOf, curveChanges, featureChanges, featureNames, logicalCurves, sketchesOf, type CircleInfo, type V3 } from "./ir-geom.js";
 import { CONTEXT_REF, type Axis, type BodyCondition, type CheckName, type HiddenTest, type Range } from "./task.js";
 
 /** What a check can look at: an engine report and (for IR checks) the compiled IR. */
@@ -168,14 +171,12 @@ export function measure(t: HiddenTest | BodyCondition, s: Subject, ctx?: CheckCo
     }
     case "curve_count": {
       if (!s.ir) return { ok: false, reason: NO_IR };
+      // Logical curves: a full circle drawn as arcs counts once, as a circle.
       let n = 0;
       for (const sk of sketchesOf(s.ir)) {
-        for (const c of sk.sketch.curves) {
+        for (const c of logicalCurves(sk.sketch)) {
           if (t.kind !== undefined && c.kind !== t.kind) continue;
-          if (t.diameter !== undefined) {
-            const d = curveDiameter(c);
-            if (d === undefined || !inRange(d, t.diameter)) continue;
-          }
+          if (t.diameter !== undefined && (c.diameter === undefined || !inRange(c.diameter, t.diameter))) continue;
           n++;
         }
       }
@@ -305,9 +306,68 @@ function predicateExpectation(t: HiddenTest): string {
   const tol = t.tol ?? DEFAULT_TOL;
   const range = t.diameter ?? [0, 0];
   const points = t.points ?? [];
-  return t.check === "hole_pattern"
-    ? `${points.length} holes Ø${fmtValue(range)} with pairwise spacing ${fmtValue(pairwise(points))} ±${fmtNum(tol)}`
-    : `${points.length} holes Ø${fmtValue(range)} with axes through ${fmtValue(points)} ±${fmtNum(tol)}`;
+  if (t.check === "hole_pattern") return `${points.length} holes Ø${fmtValue(range)} with pairwise spacing ${fmtValue(pairwise(points))} ±${fmtNum(tol)}`;
+  if (t.relative_to === "edges") return `${points.length} holes Ø${fmtValue(range)} at ${fmtValue(points)} mm from the nearest edges ±${fmtNum(tol)}`;
+  return `${points.length} holes Ø${fmtValue(range)} with axes through ${fmtValue(points)} ±${fmtNum(tol)}`;
+}
+
+const AXIS_NAMES = ["X", "Y", "Z"] as const;
+
+/**
+ * Where a hole sits on the part, independent of placement and orientation: the distances from
+ * its axis to the nearest side of the bounding box along each of the two directions across the
+ * hole, smallest first. The hole axis must be parallel to X, Y or Z (the box sides are then the
+ * part's edges for a rectangular outline).
+ */
+function edgeOffsets(c: CircleInfo, box: { min: number[]; max: number[] }): [number, number] | string {
+  const k = [0, 1, 2].find((i) => Math.abs(c.axis[i]!) >= 1 - 1e-9);
+  if (k === undefined) return `hole ${c.id} has an axis that is not parallel to X, Y or Z`;
+  const [a, b] = [0, 1, 2]
+    .filter((i) => i !== k)
+    .map((i) => Math.min(c.center3[i]! - box.min[i]!, box.max[i]! - c.center3[i]!)) as [number, number];
+  return a <= b ? [a, b] : [b, a];
+}
+
+/** `hole_positions` with `relative_to: "edges"`: each expected [a, b] offset pair matches a distinct hole. */
+function holeEdgePredicate(t: HiddenTest, s: Subject, found: CircleInfo[], base: Pick<TestResult, "id" | "description" | "check">): TestResult {
+  const tol = t.tol ?? DEFAULT_TOL;
+  const expectedText = predicateExpectation(t);
+  const sel = selectBodies(s.report, t.body);
+  if (!sel.ok) return { ...base, pass: false, expected: expectedText, message: sel.reason };
+  if (sel.bodies.length === 0) return { ...base, pass: false, expected: expectedText, message: "the model has no bodies" };
+  const box = unionBox(sel.bodies);
+  const offsets: [number, number][] = [];
+  for (const c of found) {
+    const o = edgeOffsets(c, box);
+    if (typeof o === "string") return { ...base, pass: false, expected: expectedText, message: o };
+    offsets.push(o);
+  }
+  const rounded = offsets.map((o) => o.map((x) => Number(x.toFixed(4))));
+  const unused = new Set(offsets.map((_, i) => i));
+  for (const p of t.points!) {
+    const want = p[0]! <= p[1]! ? [p[0]!, p[1]!] : [p[1]!, p[0]!];
+    let best = -1;
+    let bestD = Infinity;
+    for (const i of unused) {
+      const d = Math.max(Math.abs(offsets[i]![0] - want[0]!), Math.abs(offsets[i]![1] - want[1]!));
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    if (best < 0 || bestD > tol) {
+      const along = AXIS_NAMES.filter((_, i) => Math.abs(found[0]?.axis[i] ?? 0) < 1 - 1e-9).join("/");
+      return {
+        ...base,
+        pass: false,
+        expected: expectedText,
+        actual: rounded.flat(),
+        message: `no hole ${fmtValue(want)} mm from the nearest edges (±${fmtNum(tol)}, measured along ${along}); found ${fmtValue(rounded)}`,
+      };
+    }
+    unused.delete(best);
+  }
+  return { ...base, pass: true, expected: expectedText, actual: rounded.flat() };
 }
 
 /** The expectation of a test as text, without measuring anything (`"$context"` stays symbolic). */
@@ -349,6 +409,7 @@ function holePredicate(t: HiddenTest, s: Subject): TestResult {
       message: `found ${found.length} circle(s) with a diameter in ${fmtValue(range)}, expected ${points.length}${diameterCensus(all)}`,
     };
   }
+  if (t.check === "hole_positions" && t.relative_to === "edges") return holeEdgePredicate(t, s, found, base);
   if (t.check === "hole_pattern") {
     const want = pairwise(points);
     const got = pairwise(centers);

@@ -129,18 +129,22 @@
         },
         "axis": { "description": "Pick one component of a vector measure.", "enum": ["x", "y", "z"] },
         "body": {
-          "description": "Measure a single body: 0 = largest by volume, 1 = second largest, -1 = smallest. Omitted: all bodies together (sums, union box, mass-weighted centroid).",
+          "description": "Measure a single body: 0 = largest by volume, 1 = second largest, -1 = smallest. Omitted: all bodies together (sums, union box, mass-weighted centroid). hole_positions with relative_to \"edges\": the body whose bounding box gives the edges.",
           "type": "integer"
         },
-        "kind": { "description": "curve_count: line|arc|circle.", "enum": ["line", "arc", "circle"] },
+        "kind": { "description": "curve_count: line|arc|circle. A closed loop of arcs on one circle (a hole drawn as two semicircles) counts as one circle, not as arcs.", "enum": ["line", "arc", "circle"] },
         "diameter": { "description": "curve_count / hole_pattern / hole_positions: inclusive diameter range, mm.", "$ref": "#/$defs/range" },
         "points": {
-          "description": "hole_pattern: 2D or 3D hole centres in any placement (compared by pairwise distances, so translation, rotation and mirroring do not matter). hole_positions: absolute 3D model points, each of which must lie on the axis of a distinct hole.",
+          "description": "hole_pattern: 2D or 3D hole centres in any placement (compared by pairwise distances, so translation, rotation and mirroring do not matter). hole_positions: absolute 3D model points, each of which must lie on the axis of a distinct hole; with relative_to \"edges\", [a, b] pairs instead: a hole's distances to the nearest edge along each of the two directions across it (order-free).",
           "type": "array",
           "minItems": 1,
           "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 3 }
         },
-        "tol": { "description": "hole_pattern / hole_positions: distance tolerance, mm (default 0.05).", "type": "number", "exclusiveMinimum": 0 }
+        "tol": { "description": "hole_pattern / hole_positions: distance tolerance, mm (default 0.05).", "type": "number", "exclusiveMinimum": 0 },
+        "relative_to": {
+          "description": "hole_positions: \"model\" (default) = points are absolute 3D model points on the hole axes; \"edges\" = points are [a, b] offsets of each hole from the nearest sides of the part's bounding box (all bodies, or the one chosen with body), measured across the hole. Edge offsets do not depend on placement or orientation; the hole axes must be parallel to X, Y or Z.",
+          "enum": ["model", "edges"]
+        }
       }
     },
     "bodyCheck": {
@@ -179,7 +183,7 @@
           "minLength": 8
         },
         "check": {
-          "description": "What to measure. Model: status, valid, body_count, feature_count, region_count, inner_loops. Body (aggregate or with body): volume, area, centroid, bbox_size, bbox_sorted, bbox_min, bbox_max, face_count, edge_count. Quantifier: bodies_matching. IR: curve_count, hole_pattern, hole_positions, feature_names, changed_curves, changed_features.",
+          "description": "What to measure. Model: status, valid, body_count, feature_count, region_count, inner_loops. Body (aggregate or with body): volume, area, centroid, bbox_size, bbox_sorted, bbox_min, bbox_max, face_count, edge_count. Quantifier: bodies_matching. IR: curve_count, hole_pattern, hole_positions, feature_names, changed_curves, changed_features. IR hole checks see full circles: circle curves and closed loops of co-circular arcs.",
           "enum": [
             "status",
             "valid",
