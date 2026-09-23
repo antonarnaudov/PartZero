@@ -63,7 +63,18 @@ Small generic crates and packages (serde, thiserror, smallvec, proptest, …) ar
 
 **Follow-ups:**
 - Agent, app and eval work proceeds in parallel against the `oracle/` backend, so it isn't blocked by Forge.
-- CI enforces the boundaries: `cargo deny` and a JS licence check, and oracle libraries may appear only under `oracle/` and CI tooling.
+- CI enforces the boundaries: `cargo deny` and a JS licence check, and oracle libraries may appear only under `oracle/` and CI tooling (see the amendment below for `*/oracle/` directories).
+
+## Amendment (2026-09-23): oracle directories next to the code they test
+
+Some oracle harnesses belong next to the crate they check, for example `forge/crates/forge-solve/oracle/` (PlaneGCS, SolveSpace) and `forge/crates/forge-ssi/oracle/` (OCCT). Oracle libraries may therefore appear in **`oracle/` or any `*/oracle/` directory**, on these conditions:
+
+- the directory is **CI and dev tooling only**: it is never a Cargo workspace member or a pnpm workspace package, and nothing that ships imports it;
+- it is the repository's `oracle/`, a `<crate>/oracle/` right beside a crate's `Cargo.toml` (Cargo never compiles it), or another `*/oracle/` outside every pnpm workspace package and Rust crate. A directory named `oracle` *inside* a workspace package (e.g. `packages/x/src/oracle/`, which `files` or the bundler can ship) or inside a crate's sources (e.g. `src/oracle/`, which `mod oracle;` compiles) is not an oracle directory;
+- it declares its own dependencies in its own manifest or script metadata (`package.json`, `pyproject.toml`, a PEP 723 `# /// script` block), never in a shipped package's manifest or lockfile;
+- its files carry the MPL-2.0 licence of our oracle tooling ([LICENSING.md](../../LICENSING.md)).
+
+CI checks this on every push: `scripts/license-check/oracle-boundary.mjs` fails when OCP, build123d, PlaneGCS, SolveSpace or an OCCT build for JavaScript is imported or declared outside an oracle directory, when a directory named `oracle` sits inside a workspace package or a crate's sources, when code outside an oracle directory reaches into one (a relative import, an import of a package the oracle directory defines, a `file:` link, a Cargo `path`, a Rust `#[path]` or `include!`), or when an oracle directory becomes a workspace member; `forge/deny.toml` bans crates that wrap another kernel or solver from the Forge dependency graph; `scripts/license-check/js-licenses.mjs` and `cargo deny` reject any LGPL/GPL dependency of a shipped package, and `js-licenses.mjs` also rejects an oracle library, or any package from an oracle directory, anywhere in a shipped package's dependency closure, whatever its license.
 
 ## Alternatives considered
 

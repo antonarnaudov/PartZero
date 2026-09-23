@@ -19,6 +19,8 @@ __pycache__/
 
 # Corpus / artifacts (large generated data lives outside git)
 /corpus/generated/
+# Downloaded third-party datasets. Their license record is the tracked
+# corpus/EXTERNAL_SOURCES.md (LICENSING.md), which must list a dataset before its first use.
 /corpus/external/
 /artifacts/
 *.stl

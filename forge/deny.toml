@@ -1,0 +1,65 @@
+# cargo-deny policy for the Forge workspace: CLAUDE.md principle 5 ("no runtime LGPL/GPL"),
+# LICENSING.md and ADRs 0000/0001. CI runs it on every push (.github/workflows/ci.yml, job
+# `licenses`):
+#
+#   (cd forge && cargo deny --locked check licenses bans)
+#
+# Verified with cargo-deny 0.20.2 (the version CI pins): "bans ok, licenses ok" with 0 errors
+# and 0 warnings; as negative controls, dropping MIT from `allow` rejects 17 crates and a
+# `deny` entry for serde fails `bans`.
+#
+# Scope: the normal and build dependency graph of every workspace crate, on every target.
+# That covers everything that can reach a shipped artifact: forge-wasm (the web engine and
+# viewport), forge-cli (the desktop `aicad` binary) and forge-render (both). Dev-dependencies
+# (proptest, num-bigint, …) never ship and are excluded.
+
+[graph]
+all-features = true
+exclude-dev = true
+
+[licenses]
+# Every license not listed here is denied. In particular GPL-*, LGPL-* and AGPL-* (any
+# version, with or without "-or-later") are never allowed for a shipped crate; a crate that
+# offers them only as one side of an OR expression is fine, because we take another side.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "0BSD",
+    "Unlicense",
+    "Unicode-3.0",
+    # Our own crates (forge/ is MPL-2.0; forge-ir is Apache-2.0, see LICENSING.md), and
+    # file-level copyleft that ADR 0001 accepts for dependencies.
+    "MPL-2.0",
+]
+confidence-threshold = 0.93
+# Keep the list stable across dependency updates instead of warning about unused entries.
+unused-allowed-license = "allow"
+
+[licenses.private]
+# Our workspace crates are `publish = false`; check them too, so a crate without a `license`
+# field (or with an unexpected one) fails.
+ignore = false
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+allow-wildcard-paths = true
+# CLAUDE.md principle 1 / ADR 0000: no runtime dependency on another CAD kernel, constraint
+# solver or mesher. These wrap OCCT, SolveSpace, PlaneGCS, Manifold and other kernels; they
+# may appear only in oracle/ tooling, never in the Forge dependency graph.
+deny = [
+    { crate = "opencascade", reason = "OCCT is an oracle only (ADR 0000)" },
+    { crate = "opencascade-sys", reason = "OCCT is an oracle only (ADR 0000)" },
+    { crate = "occt-sys", reason = "OCCT is an oracle only (ADR 0000)" },
+    { crate = "slvs", reason = "SolveSpace is an oracle only (ADR 0000)" },
+    { crate = "manifold3d", reason = "Manifold is an oracle only (ADR 0000)" },
+    { crate = "manifold-rs", reason = "Manifold is an oracle only (ADR 0000)" },
+    { crate = "truck-modeling", reason = "own the core: no third-party B-rep kernel (ADR 0000)" },
+    { crate = "truck-shapeops", reason = "own the core: no third-party B-rep kernel (ADR 0000)" },
+    { crate = "fj-core", reason = "own the core: no third-party B-rep kernel (ADR 0000)" },
+]

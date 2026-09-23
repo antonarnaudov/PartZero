@@ -3,10 +3,25 @@ on:
   push: { branches: [main] }
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
+  # Forge on the three desktop OSes: format, lints, every test (the determinism goldens
+  # compare against constants recorded on aarch64-apple-darwin, so each leg checks
+  # bit-identity on its own target), and the wasm32 build.
   forge:
+    name: forge (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     defaults: { run: { working-directory: forge } }
@@ -14,19 +29,223 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with: { toolchain: "1.92", components: "rustfmt, clippy", targets: wasm32-unknown-unknown }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: forge }
+      - name: Install lavapipe (Mesa's Vulkan driver on the CPU) for forge-render
+        if: runner.os == 'Linux'
+        working-directory: .
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo test --workspace
-      - run: cargo build --workspace --target wasm32-unknown-unknown --exclude forge-cli
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: cargo test
+        run: cargo test --workspace --locked
+        env:
+          # Linux: forge-render's offscreen picking/section/silhouette tests must run on
+          # lavapipe instead of skipping for lack of an adapter (audit M7).
+          FORGE_RENDER_REQUIRE_GPU: ${{ runner.os == 'Linux' && '1' || '' }}
+      - run: cargo build --workspace --target wasm32-unknown-unknown --exclude forge-cli --locked
 
-  oracle-diff:
+  # Native vs wasm32 bit-identity (audit M4): the golden-hash tests, compiled for
+  # wasm32-wasip1 and run under wasmtime, must reproduce the constants recorded natively.
+  # Plus clippy for the wasm32-only code paths of the renderer and the bindings.
+  forge-wasm:
+    name: forge (wasm32)
     runs-on: ubuntu-latest
-    needs: forge
+    defaults: { run: { working-directory: forge } }
+    env:
+      CARGO_TARGET_WASM32_WASIP1_RUNNER: wasmtime
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with: { toolchain: "1.92", components: clippy, targets: "wasm32-unknown-unknown, wasm32-wasip1" }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: forge }
+      - uses: taiki-e/install-action@v2
+        with: { tool: wasmtime }
+      - name: clippy (wasm32-unknown-unknown) for forge-render and forge-wasm
+        run: cargo clippy --target wasm32-unknown-unknown -p forge-render -p forge-wasm --locked -- -D warnings
+      # OPEN (audit M4): the forge-core and forge-mesh/forge-io steps do not compile on the
+      # current tree: proptest's default `fork`/`timeout` features pull in rusty-fork →
+      # wait-timeout, which has no WASI implementation. They pass once forge/Cargo.toml sets
+      #   proptest = { version = "1", default-features = false, features = ["std", "bit-set"] }
+      # and Cargo.lock is regenerated (it drops rusty-fork, wait-timeout, tempfile and their
+      # dependencies). No test uses `fork` or `timeout`. Gating proptest on
+      # `cfg(not(target_family = "wasm"))`, as forge-solve does, is not enough here:
+      # forge-mesh/tests/cdt_props.rs and forge-io/tests/roundtrip.rs use it.
+      # Each step runs even when an earlier one failed, so the working ones still report.
+      - name: forge-core golden on wasm32-wasip1
+        if: success() || failure()
+        run: cargo test --target wasm32-wasip1 --locked -p forge-core --test determinism_golden
+      - name: forge-mesh and forge-io tests (incl. their goldens) on wasm32-wasip1
+        if: success() || failure()
+        run: cargo test --target wasm32-wasip1 --locked -p forge-mesh -p forge-io
+      - name: forge-solve goldens on wasm32-wasip1
+        if: success() || failure()
+        run: cargo test --target wasm32-wasip1 --locked -p forge-solve --test determinism_golden
+
+  # TypeScript: every package's build and tests (audit M3), property tests at a pinned
+  # number of runs.
+  ts:
+    name: typescript
+    runs-on: ubuntu-latest
+    env:
+      CADSCRIPT_FC_RUNS: "300"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # version from package.json "packageManager"
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: dtolnay/rust-toolchain@master # forge-web builds the wasm engine
+        with: { toolchain: "1.92", targets: wasm32-unknown-unknown }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: forge }
+      - uses: taiki-e/install-action@v2
+        with: { tool: wasm-bindgen@0.2.128 } # must equal the wasm-bindgen crate (forge-wasm)
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+      - run: pnpm -r test
+
+  # Forge vs the OCCT oracle (audit H3). The job builds the engine under test and fails on
+  # a missing binary, on every difference class (ROBUSTNESS included) and on a program
+  # without a reference. The oracle's own unit tests run first.
+  oracle-diff:
+    name: oracle (pytest, Forge vs OCCT)
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with: { toolchain: "1.92" }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: forge }
+      - name: Build the Forge CLI (the engine under test)
+        working-directory: forge
+        run: cargo build -p forge-cli --locked
       - uses: astral-sh/setup-uv@v6
-      - name: Forge vs OCCT differential run over the corpus
+      - name: Oracle unit tests
         working-directory: oracle
-        run: uv run oracle diff ../corpus/programs --forge-bin ../forge/target/debug/aicad
+        run: uv run --locked pytest
+      - name: Forge vs OCCT over corpus/programs
+        working-directory: oracle
+        run: >-
+          uv run --locked oracle diff ../corpus/programs
+          --forge-bin ../forge/target/debug/aicad --fail-on-robustness --fail-on-no-reference
+          --report "$RUNNER_TEMP/oracle-diff/programs.md"
+      - name: Generate programs and the error corpus (fixed seed)
+        if: success() || failure()
+        working-directory: oracle
+        run: uv run --locked oracle gen --count 200 --seed 1 --invalid-per-kind 2 --out "$RUNNER_TEMP/gen"
+      - name: Forge vs OCCT over the generated programs
+        if: success() || failure()
+        working-directory: oracle
+        run: >-
+          uv run --locked oracle diff "$RUNNER_TEMP/gen"
+          --forge-bin ../forge/target/debug/aicad --fail-on-robustness --fail-on-no-reference
+          --report "$RUNNER_TEMP/oracle-diff/generated.md"
+      # OPEN (audit M8): fails today with ROBUSTNESS=1 on inv_s1_degenerate_loop_001, the
+      # just-above-tol² control (area (1 + 1e-9)·tol² on a plane far from the origin): the
+      # sketch accepts the loop, then body validation (forge-core topo/validate.rs, LoopDegenerate)
+      # re-decides |area| ≤ tol² on plane coordinates recovered from 3D and rejects it
+      # (INVALID_RESULT). Forge must decide [R-5] once; the generator's margin stays.
+      - name: Forge vs OCCT over the error corpus
+        if: success() || failure()
+        working-directory: oracle
+        run: >-
+          uv run --locked oracle diff "$RUNNER_TEMP/gen/invalid"
+          --forge-bin ../forge/target/debug/aicad --fail-on-robustness --fail-on-no-reference
+          --report "$RUNNER_TEMP/oracle-diff/invalid.md"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-diff
+          path: ${{ runner.temp }}/oracle-diff
+          if-no-files-found: ignore
+
+  # License gates (CLAUDE.md principle 5, LICENSING.md, ADRs 0000/0001; audit M10, L16).
+  licenses:
+    name: licenses
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with: { toolchain: "1.92" }
+      - uses: taiki-e/install-action@v2
+        with: { tool: cargo-deny@0.20.2 } # the version forge/deny.toml was verified with
+      - name: cargo deny (Rust dependencies of every shipped crate)
+        working-directory: forge
+        run: cargo deny --locked check licenses bans
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: License-gate self-tests
+        run: node --test scripts/license-check/test/*.test.mjs
+      - name: Our manifests declare the licenses LICENSING.md assigns
+        run: node scripts/license-check/own-licenses.mjs
+      - name: Oracle libraries only in oracle directories, and nothing that ships reaches into one
+        run: node scripts/license-check/oracle-boundary.mjs
+      - name: External datasets are recorded in the tracked corpus/EXTERNAL_SOURCES.md
+        run: node scripts/license-check/dataset-record.mjs
+      - name: JS production dependencies of every shipped package
+        run: node scripts/license-check/js-licenses.mjs --json "$RUNNER_TEMP/js-licenses.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: js-licenses
+          path: ${{ runner.temp }}/js-licenses.json
+          if-no-files-found: ignore
+
+  # forge-render's WebGL2 path in headless Chromium on Linux, through the forge-web demo
+  # (spike 05; audit M7): Mesa llvmpipe via ANGLE/EGL, and `?backend=auto` falling back to
+  # WebGL2 when no WebGPU adapter exists.
+  webgl2:
+    name: forge-render WebGL2 (headless Chromium, llvmpipe)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: dtolnay/rust-toolchain@master
+        with: { toolchain: "1.92", targets: wasm32-unknown-unknown }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: forge }
+      - uses: taiki-e/install-action@v2
+        with: { tool: wasm-bindgen@0.2.128 }
+      - run: pnpm install --frozen-lockfile
+      - name: Build forge-web and its demo
+        run: |
+          pnpm --filter @aicad/ir-types --filter @aicad/cadscript --filter @aicad/forge-web run build
+          pnpm --filter @aicad/forge-web run demo:build
+      - name: Install Chromium and Mesa (EGL + llvmpipe)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libegl1 libegl-mesa0 libgl1-mesa-dri libgles2
+          pnpm --filter @aicad/desktop exec playwright install --with-deps chromium
+      # `auto-fallback` fails unless navigator.gpu.requestAdapter() resolves null *and*
+      # `backend: "auto"` then picks WebGL2: if this runner's Chromium ever offers a WebGPU
+      # adapter, the job goes red instead of quietly testing WebGPU in place of the fallback.
+      - name: WebGL2 checks (llvmpipe; auto → WebGL2 fallback)
+        env:
+          OUT_DIR: ${{ runner.temp }}/webgl2
+        run: |
+          node scripts/ci/webgl2/serve.mjs packages/forge-web/demo/dist 8080 &
+          for i in $(seq 1 100); do curl -sf -o /dev/null http://127.0.0.1:8080/ && break; sleep 0.1; done
+          rc=0
+          node scripts/ci/webgl2/test.mjs llvmpipe 1 || rc=1
+          node scripts/ci/webgl2/test.mjs auto-fallback 1 || rc=1
+          exit $rc
+      # forge-web's WebGPU error paths (audit V3/V4): the self-test and WebGL2 fallback,
+      # creation error codes, faults after creation. Chromium's WebGPU runs on SwiftShader's
+      # Vulkan here (flags in the script); a scenario that needs a working WebGPU device
+      # fails, rather than skips, when the runner cannot give one.
+      - name: WebGPU error paths (headless Chromium, SwiftShader Vulkan)
+        if: ${{ !cancelled() }}
+        env:
+          OUT_DIR: ${{ runner.temp }}/webgl2
+        run: node packages/forge-web/test/browser/webgpu-errors.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: webgl2
+          path: ${{ runner.temp }}/webgl2
+          if-no-files-found: ignore

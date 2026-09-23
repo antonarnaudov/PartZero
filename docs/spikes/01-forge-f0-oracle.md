@@ -34,11 +34,25 @@ GO criteria, verbatim:
 ## Results
 | Criterion | Target | Measured | Pass? |
 |---|---|---|---|
-| Oracle agreement, extrude/revolve | 1k programs match | 6,008/6,008 generated and corpus programs MATCH; 210/210 error-corpus MATCH; 2 remaining are OCCT defects where Forge equals the closed form | **Yes** |
+| Oracle agreement, extrude/revolve | 1k programs match | 6,008/6,008 generated and corpus programs MATCH; 210/210 error-corpus MATCH; 2 remaining are OCCT defects where Forge equals the closed form. The later `degenerate_loop` kind is 8/120 ROBUSTNESS on the current tree (open regression, see "Automation" below) | **Yes** (before that regression) |
 | Silent-wrong results | 0 | 0 | **Yes** |
-| Bit-identical on macOS + wasm32 | identical | forge-core golden hash identical on aarch64-darwin and wasm32 (debug and release); mesh and file-format bytes identical native vs wasm32 | **Yes** (these two targets) |
-| Bit-identical on Windows + Linux | identical | not yet run (needs the CI matrix) | Pending |
+| Bit-identical on macOS + wasm32 | identical | forge-core golden hash identical on aarch64-darwin and wasm32 (debug and release); mesh and file-format bytes identical native vs wasm32. Re-checked 2026-09-23 on wasm32-wasip1 (debug, Node WASI): the forge-solve goldens pass on the current tree; the forge-core, forge-mesh and forge-io golden tests reproduce the native constants only on a snapshot with proptest's `fork`/`timeout` features switched off in `forge/Cargo.toml`, a change that is **not in the tree** (on the tree those three crates' tests do not compile for WASI; see below) | **Yes** (these two targets, measured locally) |
+| Bit-identical on Linux | identical | **linux/arm64 (native) and linux/amd64 (Docker, emulated): 828/828 output files byte-identical to aarch64-darwin** over 208 programs (see below) | **Yes** (amd64 emulated, not real x86_64 hardware) |
+| Bit-identical on Windows | identical | not yet run (needs the CI matrix) | Pending |
 | napi + WASM builds in CLI and Electron | both work | CLI is native; the WASM build is in progress (spike 05); napi not started | Pending |
+
+**Linux verification (2026-09-23 audit, `docs/audits/2026-09-23-phase0-audit.md` §1.1).**
+- **Scope.** 208 programs: the 8 in `corpus/programs` plus `gen_s23_00000`–`00199`, all built from one frozen source snapshot with rustc 1.92.0 (LLVM 21.1.3), release, `codegen-units=1`.
+- **Compared outputs.** `aicad eval --format json` reports, 3MF exports, stderr and exit codes: 828/828 files identical for macOS vs linux/arm64 and for macOS vs linux/amd64 (whole-tree SHA-256 `e5bc7eff…228d` on all three). They cover 367 bodies, 4,390 report floats and 590,824 triangles, all printed as shortest round-trip f64, so a 1-ulp difference would show.
+- **Golden test.** `determinism_golden` (forge-core) passes in debug and release on all three: `0x8dc3_44c3_aa7e_8748`.
+- **Only normalization:** the absolute path in the export's `wrote …` stderr line.
+- **Caveats.** linux/amd64 ran under emulation, not on x86_64 hardware. Five s23 revolve programs evaluate fine but fail to export (`cannot tessellate … estimated deviation inf`, exit 3), identically on every platform.
+
+**Still open for the determinism criterion:** Windows; real x86_64 hardware; and wasm32 inside CI. `.github/workflows/ci.yml` has jobs for all three (the `forge` matrix on ubuntu/macos/windows-latest, and the `forge-wasm` job running the golden tests on wasm32-wasip1 under wasmtime), but the repository has no remote yet, so CI has never run. The `forge-wasm` job also cannot pass yet: its forge-core and forge-mesh/forge-io steps fail to compile until `forge/Cargo.toml` sets `proptest = { version = "1", default-features = false, features = ["std", "bit-set"] }` (or those crates gate their proptest dev-dependency on `cfg(not(target_family = "wasm"))`, as forge-solve does). The default `fork` feature pulls in `rusty-fork` → `wait-timeout`, which does not build for WASI. Only its forge-solve step works on the current tree (audit M4, open).
+
+**Automation of the headline numbers.** The oracle-agreement numbers above were local runs. `ci.yml` (job `oracle-diff`) now builds `aicad` and diffs it against the oracle on every push: `corpus/programs`, 200 generated programs (seed 1) and the error corpus, failing on any class other than MATCH. `.github/workflows/nightly.yml` runs 1000 fresh programs (seed = run number) plus the error corpus, and MakerBench on the real Forge engine. The error corpus now also covers `SKETCH_DEGENERATE_LOOP` [R-5] (kind `degenerate_loop`: a loop of area exactly tol², and just above); the "210/210" above predates it and did not exercise R-5. The 120 `degenerate_loop` cases of seeds 0–9 (debug `aicad`, 2026-09-23):
+- **120/120 MATCH** with a binary built before the uncommitted audit-L1 change to `forge-core/src/topo/validate.rs`.
+- **112/120 MATCH, 8 ROBUSTNESS with the current tree** (`inv_s1_…_001`, `s3_005`, `s3_009`, `s5_003`, `s5_011`, `s7_001`, `s8_009`, `s9_009`). All eight are the just-above control (area 1.000000001·tol²): Forge's sketch accepts the triangle, then body validation re-checks `|area| ≤ tol²` on plane coordinates that went through the 3D round trip and rejects the extruded face (`INVALID_RESULT` / `LOOP_DEGENERATE`, "loop encloses area 9.999999988366896e-13, at most tolerance² = 1e-12"), while the oracle returns ok. This is an **open Forge regression** in `validate.rs`. Until it is fixed, the per-push error-corpus diff of `oracle-diff` fails (seed 1: `inv_s1_degenerate_loop_001`; MATCH=71, ROBUSTNESS=1).
 
 **OCCT defects the oracle caught.** All three are pinned as tests:
 1. A partial revolve of a small circle tangent to the axis produced an invalid solid.

@@ -1,0 +1,248 @@
+name: nightly
+# The long-running verification that per-push CI cannot afford (audit M9, L7):
+#   * the Forge vs OCCT differential over 1000 freshly generated programs (a new seed every
+#     night) plus the error corpus;
+#   * MakerBench scored on the real Forge engine instead of recorded fixtures;
+#   * forge-solve's oracle comparison against PlaneGCS (Linux) and SolveSpace (macOS, where
+#     python-solvespace has wheels), and its WASM drag budget.
+# Every gate fails the run; the reports (and the generated corpus, for reproduction) are
+# uploaded as artifacts. A failing generated program becomes a regression case in
+# corpus/programs or oracle/tests before the fix lands.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Generator seed (default: the run number)"
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  differential:
+    name: Forge vs OCCT (1000 generated programs + error corpus)
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      SEED: ${{ inputs.seed || github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with: { toolchain: "1.92" }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: forge }
+      - name: Build the Forge CLI
+        working-directory: forge
+        run: cargo build -p forge-cli --release --locked
+      - uses: astral-sh/setup-uv@v6
+      - name: Generate programs and the error corpus (seed = run number)
+        working-directory: oracle
+        run: |
+          echo "seed $SEED"
+          uv run --locked oracle gen --count 1000 --seed "$SEED" --invalid-per-kind 4 --out "$RUNNER_TEMP/nightly/gen"
+      - name: Diff the generated programs
+        working-directory: oracle
+        run: >-
+          uv run --locked oracle diff "$RUNNER_TEMP/nightly/gen"
+          --forge-bin ../forge/target/release/aicad --fail-on-robustness --fail-on-no-reference
+          --report "$RUNNER_TEMP/nightly/reports/generated.md"
+      # OPEN (audit M8): red until body validation agrees with the sketch's [R-5] decision on
+      # the just-above-tol² degenerate_loop controls (see ci.yml, job oracle-diff).
+      - name: Diff the error corpus
+        if: success() || failure()
+        working-directory: oracle
+        run: >-
+          uv run --locked oracle diff "$RUNNER_TEMP/nightly/gen/invalid"
+          --forge-bin ../forge/target/release/aicad --fail-on-robustness --fail-on-no-reference
+          --report "$RUNNER_TEMP/nightly/reports/invalid.md"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: differential-seed-${{ env.SEED }}
+          path: ${{ runner.temp }}/nightly
+          if-no-files-found: ignore
+
+  makerbench-forge:
+    name: MakerBench on the real Forge engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with: { toolchain: "1.92" }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: forge }
+      - name: Build the Forge CLI (ForgeCliEngine runs forge/target/debug/aicad)
+        working-directory: forge
+        run: cargo build -p forge-cli --locked
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter "@aicad/evals..." run build
+      - name: Every reference passes and every applicable mutant fails, on Forge
+        env:
+          AICAD_EVALS_REAL_ENGINE: forge
+        run: pnpm --filter @aicad/evals test real-engine
+
+  # forge-solve against PlaneGCS, and its WASM drag budget. The three gates are independent:
+  # each runs even when an earlier step failed, so one broken oracle cannot hide the others.
+  solver-oracles:
+    name: forge-solve vs PlaneGCS, WASM drag budget
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with: { toolchain: "1.92", targets: wasm32-wasip1 }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: forge }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Oracle corpus (1000 sketches, seed 2026) and forge-solve's answers
+        working-directory: forge
+        run: cargo run -p forge-solve --release --locked --example oracle_corpus -- "$RUNNER_TEMP/solve" 1000 2026
+      - name: PlaneGCS comparison
+        working-directory: forge/crates/forge-solve/oracle
+        run: npm ci && node planegcs_oracle.mjs "$RUNNER_TEMP/solve"
+      - name: PlaneGCS agreement must not fall below the rates reported in docs/spikes/04-sketch-solver.md
+        if: success() || failure()
+        run: |
+          python3 - "$RUNNER_TEMP/solve/summary.json" <<'EOF'
+          import json, sys
+          from pathlib import Path
+          # (check, minimum ok, of n) as reported for the seed-2026 corpus.
+          FLOORS = [
+              ("dof_pgcs_no_conflict", 799, 800),
+              ("class_adj", 999, 1000),
+              ("redundant_detected", 259, 259),
+              ("redundancy_verified", 459, 459),
+              ("conflict_detected", 184, 185),
+              ("mcs_inconsistent", 212, 212),
+              ("mcs_minimal_when_verified", 202, 202),
+              ("expected_mcs", 95, 95),
+          ]
+          f = Path(sys.argv[1])
+          if not f.is_file():
+              sys.exit(f"{f} is missing: the PlaneGCS comparison did not run")
+          rates = json.loads(f.read_text())["rates"]
+          bad = []
+          for k, ok_min, n_ref in FLOORS:
+              r = rates.get(k)
+              if not r or not r["n"]:
+                  bad.append(f"{k}: no data")
+                  continue
+              got = r["ok"] / r["n"]
+              line = f"{k}: {r['ok']}/{r['n']} ({got:.4f}), floor {ok_min}/{n_ref} ({ok_min / n_ref:.4f})"
+              print(line)
+              if got < ok_min / n_ref:
+                  bad.append(line)
+          if bad:
+              sys.exit("below the reported agreement:\n  " + "\n  ".join(bad))
+          EOF
+      - name: WASM drag budget (200 entities, max frame ≤ 4 ms) and native == wasm32 hash
+        if: success() || failure()
+        working-directory: forge
+        run: |
+          mkdir -p "$RUNNER_TEMP/wasm-bench"
+          cargo build -p forge-solve --release --locked --example bench --target wasm32-wasip1
+          for i in 1 2 3; do
+            node crates/forge-solve/oracle/wasm_bench.mjs target/wasm32-wasip1/release/examples/bench.wasm | tee "$RUNNER_TEMP/wasm-bench/wasm_bench_$i.txt"
+          done
+          python3 - "$RUNNER_TEMP/wasm-bench" <<'EOF'
+          import re, sys
+          from pathlib import Path
+          d = Path(sys.argv[1])
+          BUDGET_MS = 4.0
+          GOLDEN = "39ec20a99e9b8750"  # forge-solve/tests/determinism_golden.rs, GOLDEN_BENCH
+          runs = sorted(d.glob("wasm_bench_*.txt"))
+          if len(runs) != 3:
+              sys.exit(f"expected 3 benchmark runs, got {len(runs)}")
+          worst = []
+          for f in runs:
+              text = f.read_text()
+              h = re.search(r"determinism hash: ([0-9a-f]{16})", text)
+              if not h or h.group(1) != GOLDEN:
+                  sys.exit(f"{f.name}: wasm32 determinism hash {h and h.group(1)} != native {GOLDEN}")
+              rows = [r.split("|")[1:-1] for r in text.splitlines() if re.match(r"\| (fully|under) \|", r)]
+              if len(rows) != 4:
+                  sys.exit(f"{f.name}: expected 4 benchmark rows, got {len(rows)}")
+              worst.append(max(float(r[9]) for r in rows))  # "drag max ms"
+          # Shared runners are noisy (GC, neighbours): the budget must hold in at least one of
+          # three runs, i.e. a slow frame must be reproducible to fail the gate.
+          print(f"worst drag frame per run (ms): {worst}; budget {BUDGET_MS} ms")
+          if min(worst) > BUDGET_MS:
+              sys.exit(f"every run exceeded the {BUDGET_MS} ms drag budget: {worst}")
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: solver-oracles-planegcs-wasm
+          path: |
+            ${{ runner.temp }}/solve/summary.json
+            ${{ runner.temp }}/wasm-bench/*.txt
+          if-no-files-found: ignore
+
+  # forge-solve against SolveSpace, on macOS: python-solvespace 3.0.8 (pinned in the script's
+  # PEP 723 block) publishes wheels for macOS and Windows only, and its sdist cannot build on
+  # Linux (it ships slvs.pyx without the generated slvs.cpp and does not declare Cython as a
+  # build requirement). `--no-build` makes a missing wheel fail at once with uv's own message
+  # instead of attempting that build. The corpus is regenerated here; forge-solve's answers are
+  # bit-identical across platforms (tests/determinism_golden.rs).
+  solver-oracle-solvespace:
+    name: forge-solve vs SolveSpace (macOS)
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with: { toolchain: "1.92" }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: forge }
+      - uses: astral-sh/setup-uv@v6
+      - name: Oracle corpus (1000 sketches, seed 2026) and forge-solve's answers
+        working-directory: forge
+        run: cargo run -p forge-solve --release --locked --example oracle_corpus -- "$RUNNER_TEMP/solve" 1000 2026
+      - name: SolveSpace comparison
+        run: uv run --no-build forge/crates/forge-solve/oracle/solvespace_oracle.py "$RUNNER_TEMP/solve"
+      - name: SolveSpace agreement must not fall below the rates reported in docs/spikes/04-sketch-solver.md
+        if: success() || failure()
+        run: |
+          python3 - "$RUNNER_TEMP/solve/summary_solvespace.json" <<'EOF'
+          import json, sys
+          from pathlib import Path
+          # (check, minimum ok, of n) as reported for the seed-2026 corpus.
+          FLOORS = [
+              ("dof_both_solved", 748, 748),
+              ("dependency_detected", 994, 1000),
+              ("class_adj", 994, 1000),
+          ]
+          f = Path(sys.argv[1])
+          if not f.is_file():
+              sys.exit(f"{f} is missing: the SolveSpace comparison did not run")
+          rates = json.loads(f.read_text())["rates"]
+          bad = []
+          for k, ok_min, n_ref in FLOORS:
+              r = rates.get(k)
+              if not r or not r["n"]:
+                  bad.append(f"{k}: no data")
+                  continue
+              got = r["ok"] / r["n"]
+              line = f"{k}: {r['ok']}/{r['n']} ({got:.4f}), floor {ok_min}/{n_ref} ({ok_min / n_ref:.4f})"
+              print(line)
+              if got < ok_min / n_ref:
+                  bad.append(line)
+          if bad:
+              sys.exit("below the reported agreement:\n  " + "\n  ".join(bad))
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: solver-oracle-solvespace
+          path: ${{ runner.temp }}/solve/summary_solvespace.json
+          if-no-files-found: ignore

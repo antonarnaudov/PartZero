@@ -17,9 +17,9 @@
 
 | Component | Licence |
 |---|---|
-| Forge, the app and the engine packages | **MPL-2.0**, with a contributor CLA |
-| CadScript language, file format, SDK, MCP schemas, skills, corpus | **Apache-2.0** |
-| Oracle and ML tooling (`oracle/`, `ml/`) | MPL-2.0 |
+| Forge, the app and the engine packages (including `@aicad/llm-gateway`) | **MPL-2.0**, with a contributor CLA |
+| CadScript language, file format (including `forge/crates/forge-ir`), SDK, MCP schemas, skills, corpus | **Apache-2.0** |
+| Oracle and ML tooling (`oracle/`, `*/oracle/`, `ml/`) | MPL-2.0 |
 | Documentation (`docs/`) | CC-BY-4.0 |
 
 **Paid:**
@@ -48,7 +48,14 @@ Per-component details are in [LICENSING.md](../../LICENSING.md).
 - **A CLA adds contributor friction,** and some contributors refuse CLAs.
 - **The CLA bot must exist before the public launch.**
 - **Licence hygiene becomes a CI concern.** Every package and crate states its licence in its manifest. CI runs `cargo deny` and a JS licence check.
-- **Test datasets** (DeepCAD, Fusion 360 Gallery, ABC) are downloaded at test time under their own licences. They are never committed, and each one is recorded in `corpus/external/SOURCES.md`.
+- **Test datasets** (DeepCAD, Fusion 360 Gallery, ABC) are downloaded at test time under their own licences. They are never committed, and each one is recorded in `corpus/EXTERNAL_SOURCES.md` before first use.
+
+## Amendment (2026-09-23): the exception list and the gates
+
+- **`forge-ir` is Apache-2.0.** It sits in the MPL-2.0 `forge/` tree but it *is* the file-format contract: the IR types, the JSON Schemas and the normative `SPEC.md` that `packages/ir-types`, the oracle and third-party tools implement. It joins the Apache-2.0 exceptions with CadScript, `ir-types`, the SDK and the MCP schemas.
+- **`@aicad/llm-gateway` is MPL-2.0**, like the other application packages; it is not part of the language, format or SDK contract. Its manifest declares MPL-2.0.
+- **The gates exist.** CI's `licenses` job runs `cargo deny` with `forge/deny.toml` and the JS checks in `scripts/license-check/`: shipped dependencies (Rust and JS, transitively), the licence each of our manifests declares against the path map in [LICENSING.md](../../LICENSING.md), and the oracle-directory boundary of [ADR 0000](0000-own-the-core.md).
+- **The dataset record is tracked.** It moved from the git-ignored `corpus/external/SOURCES.md` to [`corpus/EXTERNAL_SOURCES.md`](../../corpus/EXTERNAL_SOURCES.md); the downloads stay in the ignored `corpus/external/`.
 
 ## Alternatives considered
 

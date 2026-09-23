@@ -15,6 +15,9 @@ handling can be diffed (§6: both rejected = MATCH, different semantic codes = C
   dependency       a broken sketch consumed by several features → DEPENDENCY_FAILED [R-1];
                    later, independent features still evaluate ok
   suppressed       a suppressed sketch consumed by a live feature → SKETCH_SUPPRESSED
+  degenerate_loop  a triangle (0,0), (2·tol,0), (tol, h) of area h·tol² [R-5]: h = 1 is exactly
+                   tol² → SKETCH_DEGENERATE_LOOP (inclusive bound); h = 1 + 1e-9, just above, must
+                   evaluate ok — alone, next to a valid region, or as a hole in one
   rejected         structurally invalid documents (RESERVED_NAME, DUPLICATE_NAME across parts,
                    unknown curve field, INCONSISTENT_ARC, DEGENERATE_CURVE, INVALID_ANGLE,
                    INVALID_PLANE, UNRESOLVED_SKETCH) → rejected, exit 2 [R-10]
@@ -250,6 +253,63 @@ def crosses_axis(rng: random.Random, name: str, k: int) -> Case:
     return Case("crosses_axis", _doc(name, feats, ""), {"features": exp}, what)
 
 
+# --- degenerate loops [R-5] ------------------------------------------------------------------
+
+#: Apex heights h (× tol) of the triangle (0,0), (2·tol,0), (tol, h·tol), whose area is h·tol².
+#: h = 1 is exactly tol², the inclusive [R-5] bound: every shoelace product of these points is a
+#: power-of-two multiple of tol·tol, so any engine computes the area exactly, in any vertex
+#: order and after the exact symmetries below. h = 1 + 1e-9 is just above the bound (a margin of
+#: ~4.5e6 ulp) and must evaluate ok. Apexes below tol are avoided: the apex would then lie within
+#: tol of the base line, where the [R-4] overlap rule, not [R-5], decides.
+DEGENERATE_APEX = [1.0, 1.0 + 1e-9]
+DEGENERATE_LAYOUTS = ["alone", "next to a valid region", "as a hole in a valid region"]
+
+
+def _square_symmetry(i: int):
+    """One of the 8 symmetries of the square (exact in floating point: swaps and negations)."""
+
+    def f(p: tuple[float, float]) -> list[float]:
+        x, y = p
+        if i & 4:
+            x, y = y, x
+        if i & 1:
+            x = -x
+        if i & 2:
+            y = -y
+        return [x + 0.0, y + 0.0]  # + 0.0 turns -0.0 into 0.0
+
+    return f
+
+
+def degenerate_loop(rng: random.Random, name: str, k: int) -> Case:
+    h = DEGENERATE_APEX[k % len(DEGENERATE_APEX)]
+    layout = (k // len(DEGENERATE_APEX)) % len(DEGENERATE_LAYOUTS)
+    sym = rng.randrange(8)
+    f = _square_symmetry(sym)
+    pts = [f((0.0, 0.0)), f((2 * TOL, 0.0)), f((TOL, h * TOL))]
+    tri = [{"kind": "line", "id": f"t{i}", "start": pts[i], "end": pts[(i + 1) % 3]} for i in range(3)]
+    if rng.random() < 0.5:  # traverse the loop the other way round
+        tri = [{"kind": "line", "id": c["id"], "start": c["end"], "end": c["start"]} for c in reversed(tri)]
+    r = rng.randrange(3)
+    tri = tri[r:] + tri[:r]
+    W, H = rng.uniform(5, 30), rng.uniform(5, 30)
+    if layout == 1:  # a separate, valid region away from the triangle
+        x0, y0 = rng.uniform(5, 20), rng.uniform(-20, 5)
+        curves = tri + _rect(x0, y0, x0 + W, y0 + H)
+    elif layout == 2:  # the triangle is a hole of a valid region
+        curves = _rect(-W / 2, -H / 2, W / 2, H / 2) + tri
+    else:
+        curves = tri
+    degenerate = h <= 1.0  # [R-5]: |area| ≤ tol² (inclusive)
+    feats = [{"type": "sketch", "id": "s1", "name": "sketch_1", "plane": random_plane(rng), "curves": curves},
+             {"type": "extrude", "id": "e1", "name": "extrude_1", "sketch": "sketch_1", "distance": rng.uniform(1, 10)}]
+    exp = ({"sketch_1": "SKETCH_DEGENERATE_LOOP", "extrude_1": "DEPENDENCY_FAILED"} if degenerate
+           else {"sketch_1": "ok", "extrude_1": "ok"})
+    area = "exactly tol²" if h == 1.0 else f"{h:.10g}·tol² (just above)"
+    return Case("degenerate_loop", _doc(name, feats, ""), {"features": exp},
+                f"triangle of area {area} {DEGENERATE_LAYOUTS[layout]}, symmetry {sym}")
+
+
 # --- rejected documents ----------------------------------------------------------------------
 
 def rejected(rng: random.Random, name: str, k: int) -> Case:
@@ -295,11 +355,13 @@ KINDS = {
     "crosses_axis": crosses_axis,
     "dependency": dependency,
     "suppressed": suppressed,
+    "degenerate_loop": degenerate_loop,
     "rejected": rejected,
 }
-#: near_touch / crosses_axis / rejected cycle through fixed variant tables; give them enough
-#: cases to cover every variant once per `per_kind` round.
-MIN_PER_KIND = {"near_touch": 30, "crosses_axis": 12, "rejected": 8}
+#: near_touch / crosses_axis / degenerate_loop / rejected cycle through fixed variant tables;
+#: give them enough cases to cover every variant once per `per_kind` round (degenerate_loop:
+#: twice, with different symmetries, orientations and planes).
+MIN_PER_KIND = {"near_touch": 30, "crosses_axis": 12, "degenerate_loop": 12, "rejected": 8}
 
 
 def generate_invalid(seed: int, per_kind: int) -> list[Case]:

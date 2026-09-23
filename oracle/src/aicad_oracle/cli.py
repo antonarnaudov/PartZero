@@ -69,6 +69,7 @@ def _cmd_eval(args) -> int:
 def _cmd_diff(args) -> int:
     from .compare import CODE_MISMATCH, ROBUSTNESS, SILENT_WRONG, compare_reports
     from .diffrun import (
+        NO_REFERENCE,
         default_golden_dir,
         diff_one,
         golden_path,
@@ -110,14 +111,21 @@ def _cmd_diff(args) -> int:
         print(f"oracle diff: no such file or directory: {target}", file=sys.stderr)
         return 2
     programs = list_programs(target)
+    if not programs:
+        # A diff over zero programs compares nothing; never let it pass as a green gate.
+        print(f"oracle diff: no IR programs in {target}", file=sys.stderr)
+        return 2
     forge = resolve_forge_bin(args.forge_bin)
     golden_dir = Path(args.golden_dir) if args.golden_dir else default_golden_dir(target)
     notes: list[str] = []
     if args.forge_bin and forge is None:
-        msg = f"forge binary not found at {args.forge_bin!r}; comparing the oracle against golden reports in {golden_dir}"
-        print(f"oracle diff: WARNING: {msg}", file=sys.stderr)
-        notes.append(msg)
-    elif forge is None:
+        # An explicitly requested engine that cannot be found is a usage error, never a silent
+        # fallback: comparing the oracle with oracle-written goldens says nothing about Forge.
+        print(f"oracle diff: forge binary not found: {args.forge_bin!r} (build it with "
+              f"`cargo build -p forge-cli` in forge/, or omit --forge-bin to compare the oracle "
+              f"against the golden reports in {golden_dir})", file=sys.stderr)
+        return 2
+    if forge is None:
         notes.append(f"no --forge-bin given; comparing the oracle against golden reports in {golden_dir}")
     else:
         notes.append(f"forge = `{forge}`")
@@ -144,7 +152,8 @@ def _cmd_diff(args) -> int:
         _write(Path(args.report), render_markdown(rows, "Forge vs OCCT oracle diff", notes))
         print(f"report written to {args.report}")
     failed = (counts.get(SILENT_WRONG, 0) + counts.get(CODE_MISMATCH, 0) > 0
-              or (args.fail_on_robustness and counts.get(ROBUSTNESS, 0) > 0))
+              or (args.fail_on_robustness and counts.get(ROBUSTNESS, 0) > 0)
+              or (args.fail_on_no_reference and counts.get(NO_REFERENCE, 0) > 0))
     return 1 if failed else 0
 
 
@@ -356,13 +365,17 @@ def build_parser() -> argparse.ArgumentParser:
     pe.set_defaults(func=_cmd_eval)
 
     pd = sub.add_parser("diff", help="compare Forge (or golden reports) against the oracle, per SPEC §6; "
-                        "exit 1 on POTENTIAL_SILENT_WRONG or CODE_MISMATCH")
+                        "exit 1 on POTENTIAL_SILENT_WRONG or CODE_MISMATCH, 2 on a usage error "
+                        "(including a --forge-bin that does not exist, or no programs)")
     pd.add_argument("target", nargs="?", help="IR program file or directory of programs")
-    pd.add_argument("--forge-bin", help="Forge CLI; run as `<bin> eval <file> --format json`")
+    pd.add_argument("--forge-bin", help="Forge CLI; run as `<bin> eval <file> --format json`. Without it the "
+                    "oracle is compared against the golden reports; if it is given but missing, exit 2")
     pd.add_argument("--golden-dir", help="golden reports directory (default: <programs>/../golden)")
     pd.add_argument("--report", help="write a Markdown report here")
     pd.add_argument("--timeout", type=float, default=300.0, help="per-program Forge timeout, seconds")
     pd.add_argument("--fail-on-robustness", action="store_true", help="also exit 1 on ROBUSTNESS differences")
+    pd.add_argument("--fail-on-no-reference", action="store_true",
+                    help="also exit 1 when a program has no reference report (a missing golden file)")
     pd.add_argument("--a", help="compare two report files directly: first report")
     pd.add_argument("--b", help="second report")
     pd.set_defaults(func=_cmd_diff)
