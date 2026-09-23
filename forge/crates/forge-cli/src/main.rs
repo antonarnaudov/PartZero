@@ -2,6 +2,7 @@
 //!
 //! ```text
 //! aicad eval <file.json> [--format json|text] [--out <path>]
+//! aicad export <file.json> --out <model.3mf|.stl|.obj> [--deflection 0.05] [--angular 0.35]
 //! ```
 //!
 //! Exit codes:
@@ -41,6 +42,43 @@ enum Command {
         #[arg(long)]
         out: Option<PathBuf>,
     },
+    /// Evaluate an IR document, tessellate every body and write a mesh file.
+    ///
+    /// The format follows the extension of `--out` (`.3mf`, `.stl`, `.obj`) unless
+    /// `--mesh-format` is given. Exit codes: 0 written; 1 the document has failed features
+    /// (nothing written unless `--allow-partial`); 2 rejected document; 3 I/O or mesh error.
+    Export {
+        /// IR document (`aicad.ir/0` JSON).
+        file: PathBuf,
+        /// Output mesh file.
+        #[arg(long)]
+        out: PathBuf,
+        /// Mesh format (default: from the `--out` extension).
+        #[arg(long, value_enum)]
+        mesh_format: Option<MeshFormat>,
+        /// Maximum chordal deviation from the exact surface, mm.
+        #[arg(long, default_value_t = 0.05)]
+        deflection: f64,
+        /// Maximum normal deviation along a mesh edge, radians.
+        #[arg(long, default_value_t = 0.35)]
+        angular: f64,
+        /// Export the bodies that did evaluate even if some features failed.
+        #[arg(long)]
+        allow_partial: bool,
+    },
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum MeshFormat {
+    /// 3MF (millimetres, one object per body). Preferred for 3D printing.
+    #[value(name = "3mf")]
+    ThreeMf,
+    /// Binary STL.
+    Stl,
+    /// ASCII STL.
+    StlAscii,
+    /// Wavefront OBJ.
+    Obj,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -55,6 +93,124 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
         Command::Eval { file, format, out } => eval(&file, format, out.as_deref()),
+        Command::Export {
+            file,
+            out,
+            mesh_format,
+            deflection,
+            angular,
+            allow_partial,
+        } => export(&file, &out, mesh_format, deflection, angular, allow_partial),
+    }
+}
+
+fn export(
+    file: &Path,
+    out: &Path,
+    mesh_format: Option<MeshFormat>,
+    deflection: f64,
+    angular: f64,
+    allow_partial: bool,
+) -> ExitCode {
+    let format = match mesh_format.or_else(|| format_from_extension(out)) {
+        Some(f) => f,
+        None => {
+            eprintln!(
+                "aicad: cannot infer the mesh format from {}; use .3mf, .stl or .obj, or pass --mesh-format",
+                out.display()
+            );
+            return ExitCode::from(3);
+        }
+    };
+    let text = match std::fs::read_to_string(file) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("aicad: cannot read {}: {e}", file.display());
+            return ExitCode::from(2);
+        }
+    };
+    let doc = match forge_ir::from_json(&text) {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("aicad: {}: {e}", file.display());
+            return ExitCode::from(2);
+        }
+    };
+    let evaluation = forge_regen::evaluate(&doc);
+    let mut failed = false;
+    for f in &evaluation.features {
+        if let Err(e) = &f.outcome {
+            failed = true;
+            eprintln!("aicad: {}/{}: {} {e}", f.part, f.feature, e.code());
+        }
+    }
+    if failed && !allow_partial {
+        eprintln!(
+            "aicad: nothing written because features failed (pass --allow-partial to export the rest)"
+        );
+        return ExitCode::from(1);
+    }
+    let params = forge_mesh::TessParams::new(deflection, angular);
+    let mut meshes: Vec<(String, forge_mesh::BodyMesh)> = Vec::new();
+    for f in &evaluation.features {
+        let Ok(forge_regen::FeatureOutput::Bodies(bodies)) = &f.outcome else {
+            continue;
+        };
+        for (i, body) in bodies.iter().enumerate() {
+            let name = if bodies.len() == 1 {
+                format!("{}/{}", f.part, f.feature)
+            } else {
+                format!("{}/{}#{i}", f.part, f.feature)
+            };
+            match forge_mesh::tessellate(body, &params) {
+                Ok(m) => meshes.push((name, m)),
+                Err(e) => {
+                    eprintln!("aicad: cannot tessellate {name}: {e}");
+                    return ExitCode::from(3);
+                }
+            }
+        }
+    }
+    if meshes.is_empty() {
+        eprintln!("aicad: the document produced no bodies; nothing to export");
+        return ExitCode::from(1);
+    }
+    let named: Vec<(&str, &forge_mesh::BodyMesh)> =
+        meshes.iter().map(|(n, m)| (n.as_str(), m)).collect();
+    let only: Vec<&forge_mesh::BodyMesh> = meshes.iter().map(|(_, m)| m).collect();
+    let bytes = match format {
+        MeshFormat::ThreeMf => forge_io::try_write_3mf(&named),
+        MeshFormat::Obj => forge_io::try_write_obj(&named),
+        MeshFormat::Stl => forge_io::try_write_stl(&only, true),
+        MeshFormat::StlAscii => forge_io::try_write_stl(&only, false),
+    };
+    let bytes = match bytes {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("aicad: cannot encode the mesh file: {e}");
+            return ExitCode::from(3);
+        }
+    };
+    if let Err(e) = std::fs::write(out, &bytes) {
+        eprintln!("aicad: cannot write {}: {e}", out.display());
+        return ExitCode::from(3);
+    }
+    let triangles: usize = meshes.iter().map(|(_, m)| m.triangles.len()).sum();
+    eprintln!(
+        "aicad: wrote {} ({} bodies, {triangles} triangles, {} bytes)",
+        out.display(),
+        meshes.len(),
+        bytes.len()
+    );
+    ExitCode::SUCCESS
+}
+
+fn format_from_extension(path: &Path) -> Option<MeshFormat> {
+    match path.extension()?.to_str()?.to_ascii_lowercase().as_str() {
+        "3mf" => Some(MeshFormat::ThreeMf),
+        "stl" => Some(MeshFormat::Stl),
+        "obj" => Some(MeshFormat::Obj),
+        _ => None,
     }
 }
 

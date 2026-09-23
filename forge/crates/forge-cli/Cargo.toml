@@ -14,8 +14,13 @@ path = "src/main.rs"
 [dependencies]
 forge-ir.workspace = true
 forge-regen.workspace = true
+forge-mesh.workspace = true
+forge-io.workspace = true
 serde_json.workspace = true
 clap.workspace = true
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+forge-io.workspace = true

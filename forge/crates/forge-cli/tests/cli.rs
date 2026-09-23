@@ -116,3 +116,67 @@ fn out_flag_and_text_format() {
         "{text}"
     );
 }
+
+#[test]
+fn export_writes_a_watertight_3mf_per_body() {
+    let path = scratch("two_regions.3mf");
+    let out = aicad()
+        .args(["export"])
+        .arg(program("extrude_two_regions"))
+        .arg("--out")
+        .arg(&path)
+        .output()
+        .expect("run aicad");
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let bytes = std::fs::read(&path).expect("3MF written");
+    let model = forge_io::read_3mf(&bytes).expect("valid 3MF");
+    assert_eq!(model.unit, "millimeter");
+    let names: Vec<_> = model
+        .objects
+        .iter()
+        .filter_map(|o| o.name.clone())
+        .collect();
+    assert_eq!(names, ["part/pucks#0", "part/pucks#1"]);
+}
+
+#[test]
+fn export_refuses_partial_results_and_infers_format() {
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
+    let broken = dir.join("broken_open_loop.json");
+    std::fs::write(
+        &broken,
+        r#"{ "schema": "aicad.ir/0", "parts": [{ "id": "p", "name": "part", "features": [
+            { "type": "sketch", "id": "s", "name": "base", "plane": "XY", "curves": [
+              { "kind": "line", "id": "a", "start": [0, 0], "end": [10, 0] },
+              { "kind": "line", "id": "b", "start": [10, 0], "end": [10, 10] } ] },
+            { "type": "extrude", "id": "e", "name": "plate", "sketch": "base", "distance": 2 } ] }] }"#,
+    )
+    .unwrap();
+    let out = aicad()
+        .args(["export"])
+        .arg(&broken)
+        .arg("--out")
+        .arg(scratch("broken.stl"))
+        .output()
+        .expect("run aicad");
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(String::from_utf8_lossy(&out.stderr).contains("SKETCH_OPEN_LOOP"));
+
+    let out = aicad()
+        .args(["export"])
+        .arg(program("extrude_box"))
+        .arg("--out")
+        .arg(scratch("box.unknown"))
+        .output()
+        .expect("run aicad");
+    assert_eq!(out.status.code(), Some(3));
+}
