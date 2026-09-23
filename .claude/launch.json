@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "forge-web-demo",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@aicad/forge-web", "exec", "vite", "--config", "demo/vite.config.ts", "--port", "5178", "--strictPort"],
+      "port": 5178
+    }
+  ]
+}

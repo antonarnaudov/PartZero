@@ -329,7 +329,8 @@ pub fn tessellate(body: &Body, params: &TessParams) -> Result<BodyMesh, MeshErro
 
 /// Tessellate a body into a render mesh: the same triangles as [`tessellate`], with
 /// vertices split per face and each carrying its face's exact outward normal (limit
-/// normals at singular points, per fan triangle at a cone apex).
+/// normals at singular points, per fan triangle at a cone apex), plus the same edge
+/// polylines as [`tessellate`] (one run; the edges are sampled once).
 pub fn tessellate_render(body: &Body, params: &TessParams) -> Result<RenderMesh, MeshError> {
     let r = run(body, params)?;
     let mut out = RenderMesh::default();
@@ -379,5 +380,16 @@ pub fn tessellate_render(body: &Body, params: &TessParams) -> Result<RenderMesh,
             tri_count: (out.triangles.len() - start) as u32,
         });
     }
+    out.edge_polylines = r
+        .edges
+        .into_iter()
+        .map(|(edge_name, gids)| EdgePolyline {
+            edge_name,
+            points: gids
+                .iter()
+                .map(|&g| r.global.pos[g as usize].to_array())
+                .collect(),
+        })
+        .collect();
     Ok(out)
 }

@@ -1,0 +1,32 @@
+:root {
+  color-scheme: light;
+  --panel: rgba(255, 255, 255, 0.9);
+  --ink: #1d2126;
+  --muted: #5b6470;
+  --line: #d5dbe3;
+  --accent: #2f6fdb;
+  font: 12px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+html, body { margin: 0; height: 100%; overflow: hidden; background: #dfe4ea; color: var(--ink); }
+#stage { position: fixed; inset: 0; }
+#stage canvas { width: 100%; height: 100%; display: block; outline: none; }
+#panel {
+  position: fixed; top: 12px; left: 12px; width: 280px; max-height: calc(100% - 24px); overflow: auto;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+  box-shadow: 0 4px 18px rgba(20, 30, 45, 0.12); backdrop-filter: blur(6px);
+}
+header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+h1 { font-size: 13px; margin: 0; letter-spacing: 0.02em; }
+.badge { font: 600 11px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 2px 6px; border-radius: 4px; background: #e7eefb; color: var(--accent); }
+section { margin: 8px 0; display: grid; gap: 6px; }
+section.row { display: flex; flex-wrap: wrap; gap: 6px; }
+label { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+select, button { font: inherit; }
+select { max-width: 100%; }
+button { border: 1px solid var(--line); background: #fff; border-radius: 5px; padding: 3px 8px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+input[type="range"] { width: 100%; }
+dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 8px 0; font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
+dt { color: var(--muted); }
+dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+pre#pick { margin: 0; padding: 6px; background: #f3f5f8; border-radius: 5px; font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-all; }

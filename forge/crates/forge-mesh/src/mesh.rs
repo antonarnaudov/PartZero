@@ -170,4 +170,8 @@ pub struct RenderMesh {
     pub triangles: Vec<[u32; 3]>,
     /// Per-face triangle ranges, in face order.
     pub face_ranges: Vec<FaceRange>,
+    /// Per-edge polylines, in edge order — the same discretization as
+    /// [`BodyMesh::edge_polylines`], so every polyline point coincides (after conversion to
+    /// `f32`) with a boundary vertex of each adjacent face.
+    pub edge_polylines: Vec<EdgePolyline>,
 }

@@ -354,6 +354,8 @@ fn render_mesh_matches_body_mesh() {
         let r = tessellate_render(&body, &params(0.05)).expect("render");
         assert_eq!(r.triangles.len(), m.triangles.len());
         assert_eq!(r.face_ranges, m.face_ranges);
+        // The same edge discretization, from the same run.
+        assert_eq!(r.edge_polylines, m.edge_polylines);
         // Same triangles geometrically.
         for (a, b) in m.triangles.iter().zip(&r.triangles) {
             for k in 0..3 {

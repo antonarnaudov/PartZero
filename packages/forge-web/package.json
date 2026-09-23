@@ -1,0 +1,51 @@
+{
+  "name": "@aicad/forge-web",
+  "version": "0.0.1",
+  "description": "Forge for the web: IR evaluation + tessellation and the forge-render CAD viewport (WebGPU, WebGL2 fallback), compiled from Rust to WebAssembly.",
+  "license": "MPL-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./worker": {
+      "types": "./dist/worker.d.ts",
+      "import": "./dist/worker.js"
+    },
+    "./forge_wasm_bg.wasm": "./pkg/forge_wasm_bg.wasm",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "pkg/forge_wasm.js",
+    "pkg/forge_wasm.d.ts",
+    "pkg/forge_wasm_bg.wasm",
+    "pkg/forge_wasm_bg.wasm.d.ts"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs && tsc -p tsconfig.build.json",
+    "build:wasm": "node scripts/build.mjs",
+    "build:ts": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test test/*.test.mjs",
+    "bench": "node scripts/bench.mjs",
+    "dev": "node scripts/build.mjs --allow-stale && tsc -p tsconfig.build.json && vite --config demo/vite.config.ts",
+    "demo:build": "vite build --config demo/vite.config.ts"
+  },
+  "dependencies": {
+    "@aicad/ir-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@aicad/cadscript": "workspace:*",
+    "@types/node": "^22.15.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

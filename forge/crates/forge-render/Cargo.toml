@@ -1,0 +1,31 @@
+[package]
+name = "forge-render"
+description = "Forge's own CAD renderer on wgpu: shaded B-rep meshes, exact edges and silhouettes, GPU ID picking, section views (WebGPU, WebGL2 fallback, native)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MPL-2.0"
+publish.workspace = true
+
+[dependencies]
+forge-core.workspace = true
+forge-mesh.workspace = true
+thiserror.workspace = true
+# GPU abstraction (MIT OR Apache-2.0). Native: Metal/Vulkan/DX12/GL; web: WebGPU + WebGL2.
+wgpu = "30"
+# Math for the camera (MIT OR Apache-2.0).
+glam = "0.33"
+# Safe casts of primitive slices to bytes for GPU uploads (MIT OR Apache-2.0 OR Zlib).
+bytemuck = "1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wgpu = { version = "30", features = ["webgl"] }
+
+[dev-dependencies]
+forge-ir.workspace = true
+forge-regen.workspace = true
+# PNG screenshots in the offscreen render test (raw DEFLATE only).
+miniz_oxide.workspace = true
+
+[lints]
+workspace = true
