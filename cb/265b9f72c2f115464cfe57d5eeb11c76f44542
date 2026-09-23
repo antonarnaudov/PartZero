@@ -1,0 +1,203 @@
+corpus/makerbench/t1-laser-mdf-panel.cad.ts
+  s_59c0dd2af30db2::t_fbc161a27934c1 1-33
+packages/evals/fixtures/makerbench/t2-stackable-tray-lid.json
+  s_59c0dd2af30db2::t_e26cc4ea2ffe59 1-679
+packages/evals/fixtures/makerbench/t4-multibody-m3-to-m4.json
+  s_59c0dd2af30db2::t_e26cc4ea2ffe59 1-627
+packages/evals/fixtures/makerbench/t5-arduino-box.json
+  s_59c0dd2af30db2::t_12422a6418b71e 1-1559
+corpus/makerbench/t4-multibody-m3-to-m4.cad.ts
+  s_59c0dd2af30db2::t_db7131baa41653 1-29
+packages/evals/fixtures/makerbench/t1-18650-cell-spacer.json
+  s_59c0dd2af30db2::t_e26cc4ea2ffe59 1-279
+docs/spikes/08-eval-harness.md
+  s_59c0dd2af30db2::t_e974d2c81123a0 4,6,18-20,28,54-89,93,95,100,102,108,113,116-117,119,121,123,128,155,158-161,163-168,173-183,189-223,227-229,233-240,243,245,247-252,254-262,264,268-273,275-278,280-282,284
+packages/evals/src/ir-geom.ts
+  s_59c0dd2af30db2::t_d49a326039a02b 178-179,184
+  s_59c0dd2af30db2::t_bd4413e28f7b50 3-4,6
+  s_59c0dd2af30db2::t_6dc930c8a06d41 70-177,180-183,185-187,191,202,206,227
+corpus/makerbench/t4-mirror-bracket.task.json
+  s_59c0dd2af30db2::t_58a92d2f525e38 1-97
+corpus/makerbench/t5-succulent-pot.task.json
+  s_59c0dd2af30db2::t_11c1e047859650 1-58
+packages/evals/fixtures/makerbench/t1-split-shaft-collar.json
+  s_59c0dd2af30db2::t_2d6e2e117f9d7e 1-143
+corpus/makerbench/t1-filament-clip.task.json
+  s_59c0dd2af30db2::t_736c8923e23aac 1-69
+corpus/makerbench/t1-vacuum-hose-adapter.task.json
+  s_59c0dd2af30db2::t_e775b8075707ea 1-61
+corpus/makerbench/t4-revolve-half.cad.ts
+  s_59c0dd2af30db2::t_db7131baa41653 1-15
+corpus/makerbench/t4-revolve-half.context.cad.ts
+  s_59c0dd2af30db2::t_db7131baa41653 1-15
+packages/evals/fixtures/makerbench/t1-vacuum-hose-adapter.json
+  s_59c0dd2af30db2::t_2d6e2e117f9d7e 1-151
+packages/evals/src/checks.ts
+  s_59c0dd2af30db2::t_bd94b78af2c2a3 8-10,13
+  s_59c0dd2af30db2::t_55f9d31453bc9e 412
+  s_59c0dd2af30db2::t_ab4078fdcf8590 174,177,179
+  s_59c0dd2af30db2::t_0cef721d83c3b2 309-370
+corpus/makerbench/t5-arduino-box.task.json
+  s_59c0dd2af30db2::t_11c1e047859650 1-58
+packages/evals/fixtures/makerbench/t2-bearing-block-pair.json
+  s_59c0dd2af30db2::t_2d6e2e117f9d7e 1-951
+packages/evals/fixtures/makerbench/t4-revolve-half.json
+  s_59c0dd2af30db2::t_12422a6418b71e 1-216
+packages/evals/test/mutant.test.ts
+  s_59c0dd2af30db2::t_bece6320af9cc4 83
+corpus/makerbench/t1-rpi4-plate.task.json
+  s_59c0dd2af30db2::t_806fb16840cb14 39-46,61
+  s_59c0dd2af30db2::t_aca6192e689178 38
+corpus/makerbench/t1-18650-cell-spacer.task.json
+  s_59c0dd2af30db2::t_e775b8075707ea 1-69
+corpus/makerbench/t4-hole-spacing.context.cad.ts
+  s_59c0dd2af30db2::t_db7131baa41653 1-17
+corpus/makerbench/t5-arduino-box.cad.ts
+  s_59c0dd2af30db2::t_11c1e047859650 1-60
+corpus/makerbench/t4-hole-spacing.cad.ts
+  s_59c0dd2af30db2::t_db7131baa41653 1-17
+corpus/makerbench/t5-succulent-pot.cad.ts
+  s_59c0dd2af30db2::t_11c1e047859650 1-17
+corpus/makerbench/t1-laser-mdf-panel.task.json
+  s_59c0dd2af30db2::t_736c8923e23aac 1-87
+corpus/makerbench/t2-stackable-tray-lid.cad.ts
+  s_59c0dd2af30db2::t_be5e8f65b9caea 1-64
+packages/evals/fixtures/makerbench/t1-esp32-devkit-plate.json
+  s_59c0dd2af30db2::t_e26cc4ea2ffe59 1-279
+corpus/makerbench/t1-esp32-devkit-plate.cad.ts
+  s_59c0dd2af30db2::t_fbc161a27934c1 1-22
+corpus/makerbench/t1-filament-clip.cad.ts
+  s_59c0dd2af30db2::t_fbc161a27934c1 1-19
+corpus/makerbench/t1-vacuum-hose-adapter.cad.ts
+  s_59c0dd2af30db2::t_fbc161a27934c1 1-17
+packages/evals/fixtures/makerbench/t4-hole-spacing.json
+  s_59c0dd2af30db2::t_e26cc4ea2ffe59 1-347
+corpus/makerbench/t1-screw-size-gauge.task.json
+  s_59c0dd2af30db2::t_736c8923e23aac 1-125
+packages/evals/src/task.ts
+  s_59c0dd2af30db2::t_9d1852cf6e8f31 73-74
+  s_59c0dd2af30db2::t_c9a2a33f5b7d22 262,267,285-291
+packages/evals/test/reference.test.ts
+  s_59c0dd2af30db2::t_bece6320af9cc4 46
+  s_59c0dd2af30db2::t_c5be52343c75a7 60-61
+corpus/makerbench/t2-cable-organizer.task.json
+  s_59c0dd2af30db2::t_f5b8a1101f8f15 68
+  s_59c0dd2af30db2::t_baed37c2744ba7 1-67,69-93
+packages/evals/fixtures/makerbench/t5-succulent-pot.json
+  s_59c0dd2af30db2::t_12422a6418b71e 1-147
+packages/evals/fixtures/makerbench/t2-cable-organizer.json
+  s_59c0dd2af30db2::t_2d6e2e117f9d7e 1-1183
+packages/evals/fixtures/makerbench/t2-hinge-pair.json
+  s_59c0dd2af30db2::t_e26cc4ea2ffe59 1-1375
+corpus/makerbench/t4-multibody-m3-to-m4.task.json
+  s_59c0dd2af30db2::t_58a92d2f525e38 1-91
+corpus/makerbench/t2-lamp-base-stem.cad.ts
+  s_59c0dd2af30db2::t_be5e8f65b9caea 1-26
+packages/evals/fixtures/makerbench/t1-filament-clip.json
+  s_59c0dd2af30db2::t_e26cc4ea2ffe59 1-295
+corpus/makerbench/t1-m8-rod-end-cap.task.json
+  s_59c0dd2af30db2::t_e775b8075707ea 1-61
+corpus/makerbench/t4-revolve-half.task.json
+  s_59c0dd2af30db2::t_58a92d2f525e38 1-81
+corpus/makerbench/t4-hole-spacing.task.json
+  s_59c0dd2af30db2::t_58a92d2f525e38 1-91
+packages/evals/src/index.ts
+  s_59c0dd2af30db2::t_79a4751b0cb00b 40-54
+packages/evals/fixtures/makerbench/t1-laser-mdf-panel.json
+  s_59c0dd2af30db2::t_e26cc4ea2ffe59 1-279
+corpus/makerbench/t2-lamp-base-stem.task.json
+  s_59c0dd2af30db2::t_f9d207a198c0af 37-38,94
+  s_59c0dd2af30db2::t_3e70d96bc217a3 1-36,39-93,95
+packages/evals/fixtures/makerbench/t5-shelf-bracket.json
+  s_59c0dd2af30db2::t_12422a6418b71e 47,112
+corpus/makerbench/t2-bearing-block-pair.cad.ts
+  s_59c0dd2af30db2::t_be5e8f65b9caea 1-44
+corpus/makerbench/t2-knob-skirt-set.task.json
+  s_59c0dd2af30db2::t_f5b8a1101f8f15 1-77
+packages/evals/fixtures/makerbench/t2-knob-skirt-set.json
+  s_59c0dd2af30db2::t_e26cc4ea2ffe59 1-511
+corpus/makerbench/t1-18650-cell-spacer.cad.ts
+  s_59c0dd2af30db2::t_fbc161a27934c1 1-21
+packages/evals/fixtures/makerbench/t1-m8-rod-end-cap.json
+  s_59c0dd2af30db2::t_e26cc4ea2ffe59 1-147
+corpus/makerbench/t2-bearing-block-pair.task.json
+  s_59c0dd2af30db2::t_baed37c2744ba7 1-93
+corpus/makerbench/t4-mirror-bracket.context.cad.ts
+  s_59c0dd2af30db2::t_db7131baa41653 1-20
+corpus/makerbench/t2-hinge-pair.cad.ts
+  s_59c0dd2af30db2::t_e1d24d8d1f96bd 1-57
+packages/evals/fixtures/makerbench/t2-lamp-base-stem.json
+  s_59c0dd2af30db2::t_2d6e2e117f9d7e 1-259
+corpus/makerbench/t1-esp32-devkit-plate.task.json
+  s_59c0dd2af30db2::t_e775b8075707ea 1-78
+packages/evals/test/cli.test.ts
+  s_59c0dd2af30db2::t_bece6320af9cc4 69,71
+  s_59c0dd2af30db2::t_c5be52343c75a7 25,28
+corpus/makerbench/t1-m8-rod-end-cap.cad.ts
+  s_59c0dd2af30db2::t_fbc161a27934c1 1-15
+corpus/makerbench/t2-knob-skirt-set.cad.ts
+  s_59c0dd2af30db2::t_e1d24d8d1f96bd 1-27
+packages/evals/schema/makerbench-task.schema.json
+  s_59c0dd2af30db2::t_0481422e15ce4d 132,135,138,143-147,186
+packages/evals/test/checks.test.ts
+  s_59c0dd2af30db2::t_1f23794eee2316 2,4
+  s_59c0dd2af30db2::t_29e5a4b2204799 206-260
+  s_59c0dd2af30db2::t_66cc80c12cb320 332,335-336
+  s_59c0dd2af30db2::t_460fa5fc406604 270-331,333-334,337-349
+corpus/makerbench/t1-split-shaft-collar.cad.ts
+  s_59c0dd2af30db2::t_fbc161a27934c1 1-14
+packages/evals/fixtures/makerbench/t2-wall-hook.json
+  s_59c0dd2af30db2::t_e26cc4ea2ffe59 235
+corpus/makerbench/t1-pegboard-plate.cad.ts
+  s_59c0dd2af30db2::t_fbc161a27934c1 1-24
+corpus/makerbench/t1-pegboard-plate.task.json
+  s_59c0dd2af30db2::t_736c8923e23aac 1-71
+packages/evals/fixtures/makerbench/t1-shelf-bracket.json
+  s_59c0dd2af30db2::t_2d6e2e117f9d7e 47,112
+corpus/makerbench/t2-stackable-tray-lid.task.json
+  s_59c0dd2af30db2::t_3e70d96bc217a3 1-99
+packages/evals/fixtures/makerbench/t1-tube-end-plug.json
+  s_59c0dd2af30db2::t_2d6e2e117f9d7e 125
+  s_59c0dd2af30db2::t_f3eca9f96f1548 55
+packages/evals/test/tasks.test.ts
+  s_59c0dd2af30db2::t_bece6320af9cc4 15-16,18
+  s_59c0dd2af30db2::t_d8cec3afdd3c2f 126-142
+corpus/makerbench/t4-mirror-bracket.cad.ts
+  s_59c0dd2af30db2::t_db7131baa41653 1-22
+corpus/makerbench/t4-multibody-m3-to-m4.context.cad.ts
+  s_59c0dd2af30db2::t_db7131baa41653 1-29
+corpus/makerbench/t2-cable-organizer.cad.ts
+  s_59c0dd2af30db2::t_8cc7b7e196a120 1-50
+packages/evals/fixtures/makerbench/t1-screw-size-gauge.json
+  s_59c0dd2af30db2::t_2d6e2e117f9d7e 1-279
+corpus/makerbench/t1-split-shaft-collar.task.json
+  s_59c0dd2af30db2::t_736c8923e23aac 1-69
+corpus/makerbench/t2-hinge-pair.task.json
+  s_59c0dd2af30db2::t_f5b8a1101f8f15 1-84
+packages/evals/fixtures/makerbench/t4-mirror-bracket.json
+  s_59c0dd2af30db2::t_e26cc4ea2ffe59 1-362
+packages/evals/fixtures/makerbench/t1-pegboard-plate.json
+  s_59c0dd2af30db2::t_e26cc4ea2ffe59 1-279
+corpus/makerbench/t1-screw-size-gauge.cad.ts
+  s_59c0dd2af30db2::t_fbc161a27934c1 1-19
+docs/BACKLOG.md
+  s_59c0dd2af30db2::t_27eb19eed29ff9 50-52
+docs/spikes/README.md
+  s_59c0dd2af30db2::t_6cc7da08acb2e9 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "cb265b9f72c2f115464cfe57d5eeb11c76f44542",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
