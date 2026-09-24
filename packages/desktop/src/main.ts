@@ -294,10 +294,10 @@ function start(): void {
   } else {
     app.setPath("userData", profile);
   }
-  if (!selfTest) {
-    // ~/Library/Logs/<productName> (an isolated test profile: <profile>/logs).
+  if (!selfTest && buildInfo.edition !== "dev") {
+    // ~/Library/Logs/<productName> (an isolated test profile: <profile>/logs). Development logs to the console only.
     app.setAppLogsPath(overrides.userDataDir ? join(overrides.userDataDir, "logs") : undefined);
-    if (buildInfo.edition !== "dev") installLogFiles(app.getPath("logs"));
+    installLogFiles(app.getPath("logs"));
   }
   registerAppScheme();
 
