@@ -1,0 +1,27 @@
+packages/desktop/src/agent/host.ts
+  s_59c0dd2af30db2::t_504c8940102204 117-126,159,170-187,325-328
+packages/desktop/src/agent/protocol.ts
+  s_59c0dd2af30db2::t_504c8940102204 369-373
+packages/desktop/src/main.ts
+  s_59c0dd2af30db2::t_a5a057e18d7cde 29,265-268,280
+packages/desktop/src/profiles.ts
+  s_59c0dd2af30db2::t_9092bca189b233 222
+packages/desktop/test/agent.test.ts
+  s_59c0dd2af30db2::t_c9bc2a2f1f8126 297-324
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "86c8d46d01defdc8e96bd467718bb03de8b51862",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
