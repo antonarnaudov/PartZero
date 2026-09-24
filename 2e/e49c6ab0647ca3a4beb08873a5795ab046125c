@@ -1,0 +1,27 @@
+packages/desktop/electron-builder.alpha-local.cjs
+  s_59c0dd2af30db2::t_7ae7e7005566ba 1-48
+scripts/alpha0-mac.sh
+  s_59c0dd2af30db2::t_4fb60eb6ea701c 101-102
+  s_59c0dd2af30db2::t_f30d93d9233ef4 1-100,103-189
+packages/desktop/test/packaging.test.ts
+  s_59c0dd2af30db2::t_1df0bfa024ba51 1-343
+packages/desktop/scripts/check-fuses.mjs
+  s_59c0dd2af30db2::t_7a54d27593a079 1-15,19-62
+  s_59c0dd2af30db2::t_9ecfaa28c5f88e 16-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2ee49c6ab0647ca3a4beb08873a5795ab046125c",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
