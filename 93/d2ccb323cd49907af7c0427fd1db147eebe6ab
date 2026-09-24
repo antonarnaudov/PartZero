@@ -1,0 +1,55 @@
+packages/desktop/src/forge-cli.ts
+  s_59c0dd2af30db2::t_59d04a16c6e4a1 150-222
+packages/desktop/test/ipc.test.ts
+  s_59c0dd2af30db2::t_387dc622785acb 4,6,11-12
+  s_59c0dd2af30db2::t_adcdff2663439a 92-139
+packages/desktop/src/ipc.ts
+  s_59c0dd2af30db2::t_f190ffd7b81aad 189-210
+  s_59c0dd2af30db2::t_0b7b754e803197 17
+  s_59c0dd2af30db2::t_f59ae5aed9e7b8 24-32
+  s_59c0dd2af30db2::t_47561ef11bbc0d 45-46
+packages/desktop/test/print.test.ts
+  s_59c0dd2af30db2::t_5cf4835b16f9e3 1-348,353-422
+  s_59c0dd2af30db2::t_b131d669806252 349-352
+packages/desktop/src/env.ts
+  s_59c0dd2af30db2::t_10b415c1a59cae 159-170
+  s_59c0dd2af30db2::t_ab0e0993471c42 231-237
+  s_59c0dd2af30db2::t_e9bdfe426d4ef9 183-185
+  s_59c0dd2af30db2::t_a338362261aedc 203-205
+packages/desktop/test/hardening.test.ts
+  s_59c0dd2af30db2::t_42f67b630e9e87 90-98
+  s_59c0dd2af30db2::t_f578eb6996ebfe 72
+packages/desktop/src/slicer.ts
+  s_59c0dd2af30db2::t_768b7f9c0f144f 1-214
+packages/app/src/bridge.ts
+  s_59c0dd2af30db2::t_a205cc5491c084 12-13
+  s_59c0dd2af30db2::t_25e8a735fdb2c5 269-273
+  s_59c0dd2af30db2::t_7ad89e48fcb516 113-206
+  s_59c0dd2af30db2::t_5856518e4a36e1 245-246
+packages/desktop/src/print-handoff.ts
+  s_59c0dd2af30db2::t_63ba95f583ae3b 1-245
+packages/desktop/src/preload.cts
+  s_59c0dd2af30db2::t_802f7b7d13a59a 70-76
+packages/desktop/src/main.ts
+  s_59c0dd2af30db2::t_9a2e7c26f6a218 271-279
+  s_59c0dd2af30db2::t_6c229dc34833f7 29,32
+packages/desktop/src/profiles.ts
+  s_59c0dd2af30db2::t_103820b83b739a 17,140,143,148
+  s_59c0dd2af30db2::t_3194108d943944 1-16,18-139,141-142,144-147,149-255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "93d2ccb323cd49907af7c0427fd1db147eebe6ab",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
