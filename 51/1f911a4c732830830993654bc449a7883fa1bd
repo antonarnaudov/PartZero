@@ -1,0 +1,21 @@
+scripts/alpha0-mac.sh
+  s_59c0dd2af30db2::t_42044e228e9c13 9,12-18,37-39,107-109,114-121,190-192,194,196-205,210-219,221-231,243,246,250,254-255,257,262,272,275-276
+  s_59c0dd2af30db2::t_eff6041a4e4526 239,242,244-245,247,261,264-271,273
+  s_59c0dd2af30db2::t_c008bef655ce14 220
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "511f911a4c732830830993654bc449a7883fa1bd",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
