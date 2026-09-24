@@ -208,7 +208,7 @@ Others measure themselves against us:
 
 Only the gates in §8 group A bind a phase or milestone; the rest gate their own feature. Every existing gate stays, including T1 ≥85% pass@1 and ≥60% of proposals accepted with at most 2 manual edits.
 
-**How we measure the AI numbers.** Today, NHL runs use the owner's Claude Code plan, shared with development, weekly, on the public subset. A full run can take hours of plan time, since a struggling task burns about 10 minutes (BACKLOG). The model-agnostic leaderboard (ADR 0009) also needs non-Claude runs: Codex or Gemini CLI plans, or a local model. Fallback: if plan runs cannot keep a weekly cadence by open alpha, fund API keys from ARCHITECTURE §8's existing eval budget (about $1–2k a month). That needs ADR 0020, superseding ADR 0014's "no paid keys for now". The BACKLOG wall-time cap comes first either way.
+**How we measure the AI numbers.** Today, NHL runs use the maintainer's Claude Code plan, shared with development, weekly, on the public subset. A full run can take hours of plan time, since a struggling task burns about 10 minutes (BACKLOG). The model-agnostic leaderboard (ADR 0009) also needs non-Claude runs: Codex or Gemini CLI plans, or a local model. Fallback: if plan runs cannot keep a weekly cadence by open alpha, fund API keys from ARCHITECTURE §8's existing eval budget (about $1–2k a month). That needs ADR 0020, superseding ADR 0014's "no paid keys for now". The BACKLOG wall-time cap comes first either way.
 
 ## 8. Proposed roadmap changes
 

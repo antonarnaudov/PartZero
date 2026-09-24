@@ -478,7 +478,7 @@ A **cross-provider leaderboard** decides routing and tuning.
   - This capacity can delay open alpha (ROADMAP, "Top risks").
   - Gates count prints, not task types: ≥100 prints per gate, about ±9 points of 95% uncertainty at 70%.
   - Strength badges also need break tests: at least 10 printed brackets per material, loaded to failure on a scale. Until then, printed-part load checks return "can't verify".
-- **How the AI runs are paid for.** Today NHL runs use the owner's Claude Code plan, shared with development ([ADR 0014](adr/0014-cli-agents-as-providers.md)). The reader and the non-Claude leaderboard rows need other CLI plans, a local model or API keys. If plan runs cannot keep a weekly cadence by open alpha, funded API keys cover the missing rows ([ADR 0020](adr/0020-funded-eval-keys-fallback.md)). BACKLOG's per-task wall-time cap comes first either way.
+- **How the AI runs are paid for.** Today NHL runs use the maintainer's Claude Code plan, shared with development ([ADR 0014](adr/0014-cli-agents-as-providers.md)). The reader and the non-Claude leaderboard rows need other CLI plans, a local model or API keys. If plan runs cannot keep a weekly cadence by open alpha, funded API keys cover the missing rows ([ADR 0020](adr/0020-funded-eval-keys-fallback.md)). BACKLOG's per-task wall-time cap comes first either way.
 
 ### Public benchmarks
 

@@ -1,6 +1,6 @@
 /**
  * Live smoke: headless Claude Code drives the `cad` MCP server in runtime mode (CLI-PROVIDERS.md §4.2,
- * §13.2). Opt-in only, because it spends the owner's plan:
+ * §13.2). Opt-in only, because it spends the maintainer's plan:
  *
  *   AICAD_LIVE_CLI=claude pnpm --filter @aicad/mcp-server test:live:cli
  *

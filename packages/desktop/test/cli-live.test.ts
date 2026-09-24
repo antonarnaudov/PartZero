@@ -1,6 +1,6 @@
 /**
  * Live checks against the REAL Claude Code on this machine (docs/CLI-PROVIDERS.md §13.2). Never in CI: they use the
- * owner's login and, for the run step, the owner's plan.
+ * maintainer's login and, for the run step, the maintainer's plan.
  *
  *   AICAD_LIVE_CLI=claude pnpm --filter @aicad/desktop exec vitest run test/cli-live.test.ts
  *     S0: the desktop detector finds Claude Code, the lockdown is verified or static, and it is logged in.

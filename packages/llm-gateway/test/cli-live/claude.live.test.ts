@@ -1,5 +1,5 @@
 /**
- * Live Claude Code smoke (docs/CLI-PROVIDERS.md §13.2-§13.3). NEVER runs by default: it spends the owner's plan.
+ * Live Claude Code smoke (docs/CLI-PROVIDERS.md §13.2-§13.3). NEVER runs by default: it spends the maintainer's plan.
  *
  *   AICAD_LIVE_CLI=claude pnpm --filter @aicad/llm-gateway test:live:cli
  *

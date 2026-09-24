@@ -1,6 +1,6 @@
 /**
  * Live Claude Code smoke for agent-runtime mode (docs/CLI-PROVIDERS.md §13.3, profile `cli-smoke-claude`).
- * NEVER runs by default or in CI: it spends the owner's Claude plan.
+ * NEVER runs by default or in CI: it spends the maintainer's Claude plan.
  *
  *   AICAD_LIVE_CLI=claude pnpm --filter @aicad/agent test:live:cli
  *

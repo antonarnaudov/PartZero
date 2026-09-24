@@ -50,7 +50,7 @@ Full definitions are in [NORTH-STAR.md](NORTH-STAR.md) §7.
 - **Companion: first-try physical success (FTPS),** the share of parts that fit and work on the first attempt. The Fit Lab measures it.
 - **Sample sizes.** MakerBench has 61 tasks today (34 T1, 14 T2, all IR v0). With 14 tasks, a 65% result carries about ±25 points. A benchmark gate is evaluated only on a tier with ≥100 tasks (ARCHITECTURE plans 300 by beta). Until a tier reaches 100 tasks, its gate is not met, so a phase exit waits for the tasks. Every result is published with its 95% interval.
 - **NHL vs pass@1.** NHL allows 5 points below the pass@1 gates for its stricter checks. The pass@1 gates (T1 ≥85%, T2 ≥65%) still bind.
-- **How we run the AI numbers.** Weekly, on the public MakerBench subset, on the owner's Claude Code plan (shared with development). Non-Claude rows need Codex or Gemini CLI plans or a local model. BACKLOG's per-task wall-time cap comes first. If plan runs cannot keep a weekly cadence by open alpha, funded eval keys take over the rows plans cannot run ([ADR 0020](adr/0020-funded-eval-keys-fallback.md), B18).
+- **How we run the AI numbers.** Weekly, on the public MakerBench subset, on the maintainer's Claude Code plan (shared with development). Non-Claude rows need Codex or Gemini CLI plans or a local model. BACKLOG's per-task wall-time cap comes first. If plan runs cannot keep a weekly cadence by open alpha, funded eval keys take over the rows plans cannot run ([ADR 0020](adr/0020-funded-eval-keys-fallback.md), B18).
 
 ### The Fit Lab
 

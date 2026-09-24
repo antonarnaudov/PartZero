@@ -11,9 +11,9 @@
   - every provider stays first-class: vendor APIs, OpenAI-compatible endpoints and local models;
   - every major **CLI coding agent** becomes a first-class provider: headless Claude Code (`claude -p`), Gemini CLI, OpenAI Codex CLI, opencode and Cursor Agent;
   - users run the CLI they have already installed and logged into, on their own subscription;
-  - live testing uses Claude Code only, because the owner pays only for Claude. That plan's limits are shared with development work.
+  - live testing uses Claude Code only for now. That plan's limits are shared with development work.
 
-  The owner has already used a CLI as an API in three other apps.
+  Using a CLI agent as an API is already proven in other apps.
 - **ADR 0009 assumes stateless request/response APIs** reached with keys through official SDKs. Our orchestrator runs the tool loop itself and resends the whole history on every call. A CLI agent is different: it has its own agent loop, its own session store and its own powerful **built-in tools** (shell, file edit, web search and fetch, sub-agents).
 - **Research (2026-09-24; evidence in [CLI-PROVIDERS.md §2](../CLI-PROVIDERS.md#2-evidence)):**
   - Every one of these CLIs has a headless mode that emits JSON or JSONL events.
@@ -111,7 +111,7 @@
      - recorded JSONL fixtures;
      - a fake CLI binary that makes real MCP calls through the real shim and broker;
      - Gemini's hidden `--fake-responses` replay against the real binary when it is installed.
-   - The live suite is a **small, opt-in Claude Code smoke profile** (`AICAD_LIVE_CLI=claude`) of at most three CLI invocations. It never runs in CI, because it spends the owner's plan limits.
+   - The live suite is a **small, opt-in Claude Code smoke profile** (`AICAD_LIVE_CLI=claude`) of at most three CLI invocations. It never runs in CI, because it spends the maintainer's plan limits.
 
 ## Consequences
 

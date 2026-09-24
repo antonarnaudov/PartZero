@@ -131,10 +131,10 @@ It does **not** mean a chatbot bolted onto a CAD app. Concretely:
 
 | Name | Why it was rejected |
 |---|---|
-| Bozzetto | Owner's feedback: "annoying" |
+| Bozzetto | Didn't fit the brand |
 | DemiCAD | Owner's feedback: too heavy |
 | Arges, Hardforge, Vulkar, Ironhold | Owner's feedback: too heavy / mythic |
-| SynthCAD, TensorForm, BrepMind, Kinemind | Owner's feedback: random, or too close to TensorFlow |
+| SynthCAD, TensorForm, BrepMind, Kinemind | Arbitrary, or too close to TensorFlow |
 | CortexCAD, MindCAD | Existing AI-CAD products |
 | Daedalus | An AI manufacturing company |
 | Hephaestus | Hestus, an AI-CAD startup |

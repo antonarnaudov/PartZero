@@ -8,7 +8,7 @@
 
 ## Context
 
-- **Evals run on the owner's plan today.** ADR 0014 records the owner's rule: no paid per-token API keys for now. The owner pays only for Claude. NHL runs use his Claude Code plan, weekly, on the public MakerBench subset, and that plan is shared with development work (NORTH-STAR §7).
+- **Evals run on the maintainer's plan today.** ADR 0014 records the owner's rule: no paid per-token API keys for now. NHL runs use his Claude Code plan, weekly, on the public MakerBench subset, and that plan is shared with development work (NORTH-STAR §7).
 - **A full run is slow on a plan.** It can take hours of plan time, because a struggling task burns about 10 minutes (BACKLOG P1). BACKLOG's per-task wall-time cap is not built yet.
 - **The metrics need other model families.**
   - Benchmark NHL requires an independent reader: a model from a different family that reads the exported file against the prompt (NORTH-STAR §7).
