@@ -43,7 +43,7 @@ Mature open-source libraries (OCCT, PlaneGCS, SolveSpace, OpenSubdiv, Manifold, 
 | D6 | Native persistent naming | <ul><li>Every entity carries provenance.</li><li>Semantic queries and tags sit on top.</li><li>The fingerprint fallback always warns.</li></ul> | [0006](adr/0006-native-persistent-naming.md) |
 | D7 | Own renderer on wgpu | <ul><li>`forge-render`: WebGPU with a WebGL2 fallback, and native wgpu on iPad.</li><li>The shell is Electron + React.</li></ul> | [0007](adr/0007-own-renderer-wgpu.md) |
 | D8 | Own solvers | <ul><li>`forge-solve`: sketch (DR-planning + Newton/LM + SVD) and assembly solvers.</li><li>Both explain DOF and conflicts.</li></ul> | [0008](adr/0008-own-solvers.md) |
-| D9 | Model-agnostic LLM gateway | <ul><li>Official SDKs, with a profile per model.</li><li>The leaderboard routes each role.</li><li>The judge comes from a different family than the builder.</li></ul> | [0009](adr/0009-model-agnostic-llm-gateway.md) |
+| D9 | Model-agnostic LLM gateway | <ul><li>Official SDKs, with a profile per model.</li><li>CLI agents (Claude Code, Gemini CLI, Codex CLI, opencode, Cursor Agent) and local models (Ollama) are first-class providers, so API keys are optional.</li><li>The leaderboard routes each role.</li><li>The judge comes from a different family than the builder.</li></ul> | [0009](adr/0009-model-agnostic-llm-gateway.md), [0014](adr/0014-cli-agents-as-providers.md) |
 | D10 | Local-first | <ul><li>Forge runs on the device; cloud workers run the same Forge.</li><li>DocStore uses Immer now and a Loro CRDT later.</li></ul> | [0010](adr/0010-local-first.md) |
 | D11 | Native freeform | SubD, mesh and SDF bodies live alongside B-rep in one convergent kernel. | [0011](adr/0011-native-freeform.md) |
 | — | No seam edges | <ul><li>Periodic surfaces are handled natively in the parameter domain.</li><li>Ring edges are allowed.</li><li>Apexes and poles are surface singularities.</li></ul> | [0012](adr/0012-no-seam-edges.md) |
@@ -238,6 +238,11 @@ It is our own TypeScript state machine on top of the gateway, not the Claude Age
 - the server.
 
 The Agent SDK is still used in the "external agent" eval track, where it drives our MCP server.
+
+**CLI agents as providers** ([ADR 0014](adr/0014-cli-agents-as-providers.md), [CLI-PROVIDERS.md](CLI-PROVIDERS.md)):
+- In **completion mode**, a CLI is a model endpoint of the gateway (triage, CLARIFY, judge).
+- In **agent-runtime mode**, the CLI's own loop drives SPEC, BUILD and ASK. It sees only our CAD tools, through `packages/mcp-server`, and every call runs through this state machine's tool execution, so the ladder, stop rules and PROPOSE gate still apply.
+- The phases stay ours in both modes.
 
 ### Loop
 
@@ -466,7 +471,7 @@ Both ship in Phase 1.
 | Source | Generated from the same tool registry as the in-app agent |
 | Resources | `cad://doc/{id}/code \| ir-summary \| spec \| tests`; renders returned as images |
 | Prompts | `design-part`, `review-design` |
-| Transports | A stdio shim; Streamable HTTP on localhost with a token per client; a headless mode |
+| Transports | <ul><li>A stdio shim. In-app CLI agent runs use it in bridge mode: a private socket plus a per-run ticket to a host-side tool broker ([CLI-PROVIDERS.md §6](CLI-PROVIDERS.md#6-mcp-server-packagesmcp-server)).</li><li>Streamable HTTP on localhost with a token per client.</li><li>A headless mode.</li></ul> |
 | Safety | <ul><li>External agents write only to a `mcp/<client>` branch, reviewed in the same diff UI.</li><li>Scopes: read, edit-on-branch, export.</li><li>Rate limits; no file access beyond the export directory.</li></ul> |
 | Long operations | Run as **MCP Tasks** (2026-07-28 spec) |
 | Delegation | `design_task(prompt, budget)` lets Claude Code delegate CAD work to our harness |

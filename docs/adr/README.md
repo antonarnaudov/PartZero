@@ -26,6 +26,7 @@ ADRs are immutable once accepted. To change a decision, write a new ADR that sup
 | [0011](0011-native-freeform.md) | Freeform is native to Forge | Accepted | 2026-09-23 | §2 D11 |
 | [0012](0012-no-seam-edges.md) | No seam edges; ring edges and surface singularities | Accepted | 2026-09-23 | [FORGE.md](../FORGE.md#topology-model) |
 | [0013](0013-ir-v1-references-and-parameters.md) | IR v1: references (typed queries, fail-on-uncertain), parameters, constrained sketches | Accepted | 2026-09-23 | [SPEC-v1-DRAFT](../../forge/crates/forge-ir/SPEC-v1-DRAFT.md), [plan](../IR-V1-IMPLEMENTATION-PLAN.md) |
+| [0014](0014-cli-agents-as-providers.md) | CLI agents as providers (completion and agent-runtime modes, mandatory lockdown, MCP broker) | Accepted | 2026-09-24 | §2 D9, [design](../CLI-PROVIDERS.md) |
 
 Plan refs point to [PLAN-2026-09-23.md](../PLAN-2026-09-23.md).
 

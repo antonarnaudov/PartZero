@@ -1,6 +1,6 @@
 # ADR 0009: Model-agnostic LLM gateway
 
-- **Status:** Accepted
+- **Status:** Accepted. Extended by [ADR 0014](0014-cli-agents-as-providers.md), which adds CLI agents and local models as providers and makes API keys optional.
 - **Date:** 2026-09-23
 - **Plan reference:** PLAN-2026-09-23 §2 D9, §4
 
