@@ -25,6 +25,7 @@ let root: string;
 let userData: string;
 let fakeApp: string;
 let openLog: string;
+let launchEnv: Record<string, string>;
 
 interface PrintApi {
   profile(): Promise<PrintProfileView>;
@@ -48,9 +49,10 @@ test.beforeAll(async () => {
   chmodSync(openBin, 0o755);
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined && !/_API_KEY$/.test(k)) env[k] = v;
+  launchEnv = { ...env, AICAD_SKIP_CLOSE_PROMPT: "1", AICAD_AGENT_DOTENV: "off", AICAD_SLICER_DIRS: apps, AICAD_OPEN_BIN: openBin };
   app = await electron.launch({
     args: [desktopRoot, "--use-mock-keychain"],
-    env: { ...env, AICAD_USER_DATA_DIR: userData, AICAD_SKIP_CLOSE_PROMPT: "1", AICAD_AGENT_DOTENV: "off", AICAD_SLICER_DIRS: apps, AICAD_OPEN_BIN: openBin },
+    env: { ...launchEnv, AICAD_USER_DATA_DIR: userData },
   });
   page = await app.firstWindow();
   await expect(page.getByTestId("app-shell")).toBeVisible();
@@ -79,7 +81,7 @@ test("Open in Bambu Studio saves the checked, centred 3MF with its receipt and o
 
   await page.getByTestId("open-in-slicer").click();
   const toast = page.getByTestId("toasts").locator(".toast").last();
-  await expect(toast).toContainText(/Opened t1-nema17-plate-[0-9a-f]{8}\.3mf in Bambu Studio/);
+  await expect(toast).toContainText(/Sent t1-nema17-plate-[0-9a-f]{8}\.3mf to Bambu Studio\./);
   await expect(toast.getByRole("button", { name: "Show in Finder" })).toBeVisible();
 
   const prints = join(userData, "Prints");
@@ -136,3 +138,32 @@ test("Settings → Printing shows the profile and the Bambu Studio in use, and t
   await expect(row).toHaveAttribute("data-found", "true");
   await page.keyboard.press("Escape");
 });
+
+test("Settings → Printing stays reachable when the agent settings fail to load", async () => {
+  // A fresh app whose agent settings call fails (e.g. provider detection broke on first launch):
+  // the Bambu Studio path that the a8 toast points to must still be there.
+  const other = await electron.launch({
+    args: [desktopRoot, "--use-mock-keychain"],
+    env: { ...launchEnv, AICAD_USER_DATA_DIR: join(root, "profile-no-agent") },
+  });
+  try {
+    const p = await other.firstWindow();
+    await expect(p.getByTestId("app-shell")).toBeVisible();
+    await other.evaluate(({ ipcMain }) => {
+      ipcMain.removeHandler("settings:get");
+      ipcMain.handle("settings:get", () => {
+        throw new Error("Provider detection failed (e2e)");
+      });
+    });
+    await p.getByTestId("toolbar").getByRole("button", { name: "Settings" }).click();
+    const dialog = p.getByTestId("settings-dialog");
+    await expect(dialog).toContainText("Provider detection failed (e2e)");
+    const row = p.getByTestId("settings-slicer");
+    await expect(row).toHaveAttribute("data-found", "true");
+    await expect(row).toContainText(fakeApp);
+    await expect(row.getByRole("button", { name: "Change…" })).toBeEnabled();
+  } finally {
+    await other.close();
+  }
+});
+
