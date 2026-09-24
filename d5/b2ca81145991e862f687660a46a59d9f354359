@@ -1,0 +1,113 @@
+packages/desktop/src/main.ts
+  s_59c0dd2af30db2::t_c8acc9d4b676f7 375-378
+  s_59c0dd2af30db2::t_b7120a0a1cbd8f 387,390
+  s_59c0dd2af30db2::t_2ba7a75fa33106 39,59,388-389,391-395
+packages/app/src/ui/PrintingSettings.tsx
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-140
+packages/app/src/ui/icons.tsx
+  s_59c0dd2af30db2::t_2ba7a75fa33106 132-140
+.github/workflows/ci.yml
+  s_59c0dd2af30db2::t_2ba7a75fa33106 220-221
+packages/app/src/bridge.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 12-13,118-238,277-278,301-305
+packages/app/src/ui/Toolbar.tsx
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1,4,8-40,96
+packages/desktop/src/slicer.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-242
+packages/app/test/print.test.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-171
+LICENSING.md
+  s_59c0dd2af30db2::t_2ba7a75fa33106 33
+packages/desktop/src/env.ts
+  s_59c0dd2af30db2::t_08029c8ee1c6ef 188
+  s_59c0dd2af30db2::t_2ba7a75fa33106 189-199,213-215,234-236,263-269
+scripts/license-check/slicer-boundary.mjs
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-169
+packages/app/src/ui/Dialogs.tsx
+  s_59c0dd2af30db2::t_2ba7a75fa33106 124-135
+packages/desktop/src/profiles.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-255
+forge/crates/forge-cli/src/print.rs
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-320
+packages/app/src/host/host.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 12,35-36
+packages/desktop/scripts/slicer-gate-after-pack.cjs
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-30
+packages/app/src/ui/SettingsDialog.tsx
+  s_59c0dd2af30db2::t_2ba7a75fa33106 17,491-492,494-495,580-603
+packages/app/src/host/browser-host.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 14
+forge/crates/forge-cli/tests/cli_print.rs
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-341
+forge/crates/forge-io/src/threemf.rs
+  s_59c0dd2af30db2::t_2ba7a75fa33106 12-15,33,76,84-94,120-123,125,131-146,150-158,162-166,169,177-220,258-293,307-339,579
+packages/desktop/e2e/print.e2e.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-53,55-145,147-169
+  s_59c0dd2af30db2::t_4521d8289a956d 54,146
+packages/desktop/src/preload.cts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 70-76
+packages/desktop/test/agent.test.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 337-364
+packages/app/src/host/electron-host.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1,18,28
+docs/SLICER-HANDOFF.md
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-92
+packages/desktop/src/agent/protocol.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 375-379
+packages/desktop/src/ipc.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 17,24-32,45-46,189-209
+  s_59c0dd2af30db2::t_92c6341c9abed5 210
+packages/desktop/test/ipc.test.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 4,6,11-12,92-137
+  s_59c0dd2af30db2::t_d94d44b081c113 138-139
+packages/desktop/test/print.test.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-634
+scripts/license-check/test/slicer-boundary.test.mjs
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-98
+packages/desktop/electron-builder.config.cjs
+  s_59c0dd2af30db2::t_2ba7a75fa33106 45-47
+packages/desktop/test/slicer-gate.test.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-50
+forge/crates/forge-io/src/bed.rs
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-589
+packages/app/src/ui/styles.css
+  s_59c0dd2af30db2::t_2ba7a75fa33106 311-331,1402-1416
+packages/desktop/src/forge-cli.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 150-262
+forge/crates/forge-io/tests/bed_placement.rs
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-587
+packages/desktop/src/agent/host.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 119-128,161,172-189,328-331
+packages/desktop/test/hardening.test.ts
+  s_59c0dd2af30db2::t_6f66bc3902f500 72
+  s_59c0dd2af30db2::t_2ba7a75fa33106 93-101
+forge/crates/forge-io/src/lib.rs
+  s_59c0dd2af30db2::t_2ba7a75fa33106 10,13-19,52,64-67,71-74
+docs/ALPHA-0-PLAN.md
+  s_59c0dd2af30db2::t_2ba7a75fa33106 525-526,540
+packages/desktop/src/print-handoff.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-28,31-263,265-310
+  s_59c0dd2af30db2::t_4521d8289a956d 29-30,264
+packages/app/src/print/open-in-slicer.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 1-105
+forge/crates/forge-cli/src/main.rs
+  s_59c0dd2af30db2::t_2ba7a75fa33106 58-59,94-102,122-141,191-202,235-253,271,273,284-289,302,346,354,363-374,376-398,421-443
+packages/app/src/ui-store.ts
+  s_59c0dd2af30db2::t_2ba7a75fa33106 37-38,181,183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d5b2ca81145991e862f687660a46a59d9f354359",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
