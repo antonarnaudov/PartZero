@@ -1,0 +1,24 @@
+scripts/ci/webgpu/canvas-probe.mjs
+  s_59c0dd2af30db2::t_a475070fa0f0c3 122-136,147
+  s_59c0dd2af30db2::t_379019cac0c0c8 1-121,137-146,148-226
+.github/workflows/ci.yml
+  s_59c0dd2af30db2::t_ab7cfb1cdfd40b 254-262,267-284
+docs/BACKLOG.md
+  s_59c0dd2af30db2::t_d2a3b9db96f8b5 75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "390b2c33b9460c2038e34ae17c57cd6a2819bde7",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
