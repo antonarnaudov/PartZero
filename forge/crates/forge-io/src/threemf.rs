@@ -9,9 +9,10 @@
 //!   `http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel` targeting
 //!   `/3D/3dmodel.model`;
 //! - `3D/3dmodel.model`: `<model unit="millimeter">` in the core namespace with an
-//!   `Application` metadata entry, one `<object type="model" name="…">` per body (ids
-//!   1, 2, … in input order) holding its shared-vertex mesh, and one build `<item>` per
-//!   object.
+//!   `Application` metadata entry (and `Title` when given, see [`ThreeMfOptions`]), one
+//!   `<object type="model" name="…">` per body (ids 1, 2, … in input order) holding its
+//!   shared-vertex mesh, and one build `<item>` per object, with a `transform` when a
+//!   translation is given (centring on a printer bed, [`crate::place_on_bed`]).
 //!
 //! Coordinates are written in shortest round-trip decimal form, so a written file reads
 //! back to the exact same `f64` positions.
@@ -29,6 +30,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use forge_mesh::BodyMesh;
 
 use crate::IoError;
+use crate::bed::{Aabb, transform_attr};
 use crate::num::push_f64;
 use crate::stl::check_mesh;
 use crate::xml::{self, Element, escape};
@@ -71,7 +73,7 @@ fn root_rels() -> String {
     )
 }
 
-fn model_xml(bodies: &[(&str, &BodyMesh)]) -> String {
+fn model_xml(bodies: &[(&str, &BodyMesh)], opts: &ThreeMfOptions) -> String {
     let tris: usize = bodies.iter().map(|b| b.1.triangles.len()).sum();
     let verts: usize = bodies.iter().map(|b| b.1.positions.len()).sum();
     let mut s = String::with_capacity(256 + 64 * verts + 48 * tris);
@@ -79,7 +81,17 @@ fn model_xml(bodies: &[(&str, &BodyMesh)]) -> String {
     s.push_str(&format!(
         "<model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"{CORE_NS}\">\n"
     ));
-    s.push_str(" <metadata name=\"Application\">forge-io</metadata>\n <resources>\n");
+    s.push_str(&format!(
+        " <metadata name=\"Application\">{}</metadata>\n",
+        escape(opts.application.as_deref().unwrap_or(DEFAULT_APPLICATION))
+    ));
+    if let Some(title) = &opts.title {
+        s.push_str(&format!(
+            " <metadata name=\"Title\">{}</metadata>\n",
+            escape(title)
+        ));
+    }
+    s.push_str(" <resources>\n");
     for (i, (name, m)) in bodies.iter().enumerate() {
         s.push_str(&format!(
             "  <object id=\"{}\" type=\"model\" name=\"{}\">\n   <mesh>\n    <vertices>\n",
@@ -105,22 +117,56 @@ fn model_xml(bodies: &[(&str, &BodyMesh)]) -> String {
         s.push_str("    </triangles>\n   </mesh>\n  </object>\n");
     }
     s.push_str(" </resources>\n <build>\n");
+    let transform = opts
+        .translation
+        .map(|t| format!(" transform=\"{}\"", transform_attr(t)))
+        .unwrap_or_default();
     for i in 0..bodies.len() {
-        s.push_str(&format!("  <item objectid=\"{}\"/>\n", i + 1));
+        s.push_str(&format!("  <item objectid=\"{}\"{transform}/>\n", i + 1));
     }
     s.push_str(" </build>\n</model>\n");
     s
 }
 
+/// The `Application` metadata written when [`ThreeMfOptions::application`] is `None`.
+pub const DEFAULT_APPLICATION: &str = "forge-io";
+
+/// Options of [`try_write_3mf_with`]. The default writes exactly what [`write_3mf`] writes.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ThreeMfOptions {
+    /// Model-level `Title` metadata (e.g. the document name); omitted when `None`.
+    pub title: Option<String>,
+    /// Model-level `Application` metadata (e.g. `PartZero 0.0.1`); [`DEFAULT_APPLICATION`]
+    /// when `None`.
+    pub application: Option<String>,
+    /// A translation stored as the `transform` of every build item (the vertices are written
+    /// unchanged), e.g. [`crate::BedPlacement::translation`]; no `transform` when `None`.
+    pub translation: Option<[f64; 3]>,
+}
+
 /// Write a 3MF package with one object per named body; fails on invalid meshes or a
 /// part larger than 4 GiB (no ZIP64).
 pub fn try_write_3mf(bodies: &[(&str, &BodyMesh)]) -> Result<Vec<u8>, IoError> {
+    try_write_3mf_with(bodies, &ThreeMfOptions::default())
+}
+
+/// [`try_write_3mf`] with metadata and a build-item translation (see [`ThreeMfOptions`]);
+/// also fails on a non-finite translation.
+pub fn try_write_3mf_with(
+    bodies: &[(&str, &BodyMesh)],
+    opts: &ThreeMfOptions,
+) -> Result<Vec<u8>, IoError> {
     for (i, (_, m)) in bodies.iter().enumerate() {
         check_mesh(m, i)?;
     }
+    if let Some(t) = opts.translation
+        && t.iter().any(|v| !v.is_finite())
+    {
+        return Err(tmf("the build translation is not finite"));
+    }
     let ct = content_types();
     let rels = root_rels();
-    let model = model_xml(bodies);
+    let model = model_xml(bodies, opts);
     zip::write_zip(&[
         ("[Content_Types].xml", ct.as_bytes()),
         ("_rels/.rels", rels.as_bytes()),
@@ -165,6 +211,42 @@ pub struct BuildItem3mf {
     pub transform: Option<String>,
 }
 
+impl BuildItem3mf {
+    /// The item's `transform` as 12 numbers ([`parse_3mf_transform`]; the identity when the
+    /// attribute is absent).
+    pub fn matrix(&self) -> Result<[f64; 12], IoError> {
+        parse_3mf_transform(self.transform.as_deref())
+    }
+}
+
+/// The identity `ST_Matrix3D`.
+pub const IDENTITY_3MF_TRANSFORM: [f64; 12] =
+    [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0];
+
+/// Parse a 3MF `transform` attribute (`ST_Matrix3D`: 12 finite numbers
+/// `m00 m01 m02 m10 m11 m12 m20 m21 m22 m30 m31 m32`); `None` is the identity.
+pub fn parse_3mf_transform(attr: Option<&str>) -> Result<[f64; 12], IoError> {
+    let Some(text) = attr else {
+        return Ok(IDENTITY_3MF_TRANSFORM);
+    };
+    let values: Vec<f64> = text
+        .split_ascii_whitespace()
+        .map(|t| t.parse::<f64>().ok().filter(|v| v.is_finite()))
+        .collect::<Option<Vec<f64>>>()
+        .ok_or_else(|| tmf(format!("invalid transform {text:?}")))?;
+    <[f64; 12]>::try_from(values).map_err(|_| tmf(format!("a transform has 12 numbers: {text:?}")))
+}
+
+/// Apply a 3MF matrix to a point (row vector convention of 3MF core §3.3: `p' = p · M`,
+/// `m30 m31 m32` being the translation).
+pub fn apply_3mf_transform(m: &[f64; 12], p: [f64; 3]) -> [f64; 3] {
+    [
+        p[0] * m[0] + p[1] * m[3] + p[2] * m[6] + m[9],
+        p[0] * m[1] + p[1] * m[4] + p[2] * m[7] + m[10],
+        p[0] * m[2] + p[1] * m[5] + p[2] * m[8] + m[11],
+    ]
+}
+
 /// A parsed 3MF model.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Model3mf {
@@ -176,6 +258,39 @@ pub struct Model3mf {
     pub objects: Vec<Object3mf>,
     /// Build items in document order.
     pub items: Vec<BuildItem3mf>,
+}
+
+impl Model3mf {
+    /// Bounding box of the build as a slicer places it: every vertex of every build item's
+    /// object after the item's transform. `Ok(None)` when no build item has a vertex; an error
+    /// for an item that references a missing object or carries an invalid transform.
+    pub fn build_bounds(&self) -> Result<Option<Aabb>, IoError> {
+        let mut b: Option<Aabb> = None;
+        for it in &self.items {
+            let m = it.matrix()?;
+            let o = self
+                .objects
+                .iter()
+                .find(|o| o.id == it.object_id)
+                .ok_or_else(|| {
+                    tmf(format!(
+                        "build item references missing object {}",
+                        it.object_id
+                    ))
+                })?;
+            for &v in &o.vertices {
+                let p = apply_3mf_transform(&m, v);
+                b = Some(match b {
+                    None => Aabb { min: p, max: p },
+                    Some(a) => Aabb {
+                        min: [a.min[0].min(p[0]), a.min[1].min(p[1]), a.min[2].min(p[2])],
+                        max: [a.max[0].max(p[0]), a.max[1].max(p[1]), a.max[2].max(p[2])],
+                    },
+                });
+            }
+        }
+        Ok(b)
+    }
 }
 
 /// Summary returned by [`validate_3mf`].
@@ -417,6 +532,7 @@ pub fn validate_3mf(bytes: &[u8]) -> Result<ThreeMfReport, IoError> {
                 it.object_id
             )));
         }
+        it.matrix()?;
     }
     Ok(ThreeMfReport {
         parts: parts.keys().cloned().collect(),

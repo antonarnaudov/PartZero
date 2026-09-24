@@ -7,8 +7,13 @@
 //! |---|---|---|---|
 //! | STL binary / ASCII | [`write_stl`] | [`read_stl`] | `f32` coordinates, facet normals from `f64` positions |
 //! | OBJ | [`write_obj`] | — | one `o` per body, one `g` per B-rep face, `v`/`vn` shared indices, full `f64` precision |
-//! | 3MF | [`write_3mf`] | [`read_3mf`], [`validate_3mf`] | core spec, millimetres, one object per body with its name, exact `f64` round trip |
+//! | 3MF | [`write_3mf`], [`try_write_3mf_with`] | [`read_3mf`], [`validate_3mf`] | core spec, millimetres, one object per body with its name, exact `f64` round trip; optional `Title`/`Application` metadata and a build-item translation |
 //! | STEP | — | — | planned (F1), see [`step`] |
+//!
+//! [`place_on_bed`] ([`bed`]) checks that the bodies fit a printer's bed (less a margin per
+//! side, `EXPORT_BED_FIT` otherwise) and computes the translation that centres them on it
+//! with their lowest point at z = 0; the 3MF writer stores it as the build items' `transform`
+//! and leaves the vertices unchanged.
 //!
 //! ```
 //! use forge_core::topo::samples;
@@ -42,6 +47,7 @@
 //! The plain writers take meshes produced by `forge_mesh::tessellate` (always valid)
 //! and panic on invalid input, as documented on each.
 
+pub mod bed;
 mod num;
 mod obj;
 pub mod step;
@@ -53,11 +59,17 @@ pub mod zip;
 use forge_mesh::BodyMesh;
 use thiserror::Error;
 
+pub use bed::{
+    Aabb, Axis, BedPlacement, BedRect, BuildVolume, Overflow, PlacementError, mesh_bounds,
+    place_on_bed,
+};
 pub use obj::{try_write_obj, write_obj};
 pub use stl::{StlFile, StlSolid, StlTriangle, read_stl, try_write_stl, write_stl};
 pub use threemf::{
-    BuildItem3mf, CORE_NS, MODEL_CONTENT_TYPE, MODEL_REL_TYPE, Model3mf, Object3mf,
-    RELS_CONTENT_TYPE, ThreeMfReport, read_3mf, try_write_3mf, validate_3mf, write_3mf,
+    BuildItem3mf, CORE_NS, DEFAULT_APPLICATION, IDENTITY_3MF_TRANSFORM, MODEL_CONTENT_TYPE,
+    MODEL_REL_TYPE, Model3mf, Object3mf, RELS_CONTENT_TYPE, ThreeMfOptions, ThreeMfReport,
+    apply_3mf_transform, parse_3mf_transform, read_3mf, try_write_3mf, try_write_3mf_with,
+    validate_3mf, write_3mf,
 };
 
 /// An I/O failure. Every variant has a stable [`IoError::code`].
