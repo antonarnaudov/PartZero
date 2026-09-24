@@ -6,6 +6,20 @@
 
 We are building the first AI-native, cross-platform 3D CAD application. It offers Fusion-, SolidWorks- and Shapr3D-class parametric modeling and Blender-style freeform modeling at CAD precision. An in-app agent builds sketches, parts, assemblies and drawings through the app's own tools and gives professional engineering guidance. People can model everything by hand and edit anything the agent made. The app runs on **Forge**, our own geometry kernel. Forge is written in Rust, compiles to native code and WebAssembly, and is designed for agents from its first line.
 
+## North star: Cursor for CAD, from intent to the machine
+
+Cursor put agents inside the code editor: developers describe and review, and the agent writes. PartZero aims to do the same for 3D CAD.
+- **You say what the part must do.** The agent drafts the sketches, features, dimensions and engineering numbers.
+- **Forge checks every step.** Forge builds and checks every proposal before you can accept it.
+- **Your hands and the agent share one model.** You shape the result by hand whenever you want. Your moves and the agent's land in one parametric model, one timeline and one undo stack.
+- **It ends at the machine.** You export a file your printer, laser or CNC accepts, tuned to your machine, with the evidence attached. Today the chain ends at a checked handoff: a file plus its receipt. It reaches the machine's work origin only for CNC, once our own CAM ships in Phase 3 ([ADR 0016](adr/0016-manufacturing-output-own-vs-hand-off.md)).
+
+**Built never to lie.** Every result is checked by the kernel, every number cites its source, and every case where we got it wrong is published in the failure zoo. This is a design rule we measure, not a fact yet. Today: 0 silent-wrong results on the named generator corpus (6,008 extrude and revolve programs). The Phase 0 audit found 2 outside it, now pinned by regression tests.
+
+**How we measure it.** The north-star metric is the **no-heavy-lifting rate (NHL)**: the share of parts that reach a checked export with no manual sketch, feature or code edits. Its companion is **first-try physical success (FTPS)**: the share of parts that fit and work on the first attempt, measured in a Fit Lab of real prints. Neither is measured yet.
+
+The promise per persona, the metrics and gates, the roadmap changes and the honest caveats are in [NORTH-STAR.md](NORTH-STAR.md), approved by the owner on 2026-09-24.
+
 ## Why now
 
 - **AI for CAD has converged on one method.** The approach that works is code-as-CAD on a real kernel inside a verify loop. Frontier models with a strong harness beat fine-tuned CAD models. See [RESEARCH.md](RESEARCH.md).
@@ -33,12 +47,12 @@ Details are in [ROADMAP.md](ROADMAP.md).
 It does **not** mean a chatbot bolted onto a CAD app. Concretely:
 
 1. **The agent uses the app like any other client.** One typed command API serves the UI, the in-app agent, CLI/CadScript and MCP. The agent has no special privileges.
-2. **The kernel is built for agents.**
+2. **The kernel is built for agents.** These are design goals; where one is not met yet, its milestone is named.
    - Persistent naming is built in.
-   - Every failure explains itself and gives the feasible parameter range.
-   - Results are bit-identical on every platform.
+   - Every failure explains itself with a structured error. Feasible parameter ranges arrive with F2.
+   - Results are designed to be bit-identical on every platform. So far that is measured on macOS and Linux (amd64 emulated); wasm32 matches only locally and fails in CI, and Windows has not run yet.
    - Selectors are evaluated inside the kernel.
-   - Evaluation is differentiable.
+   - Evaluation will be differentiable (F4). Analytic sensitivities for a few parameters come first, by M10.
 
    See [FORGE.md](FORGE.md).
 3. **The output is real, editable CAD.** The agent writes CadScript, which compiles into a parametric feature timeline with sketches, constraints and parameters. It never produces a dead mesh.
@@ -52,8 +66,9 @@ It does **not** mean a chatbot bolted onto a CAD app. Concretely:
 
    Failures return as structured repair hints.
 6. **Humans stay in charge.**
-   - Agent work lands on a draft branch as a per-feature diff that you accept, reject or edit.
-   - A whole agent task is one undo step.
+   - Agent work lands on a draft branch. By default you accept, reject or edit it per feature.
+   - The autonomy dial ([ADR 0015](adr/0015-autonomy-dial.md)) lets you review each step instead, or let checked quick edits to the agent's own features apply without a click. Nothing is auto-applied to your features.
+   - A whole agent task is one undo step, with a checkpoint before it lands.
    - Assumptions appear as editable chips.
 7. **External agents are first-class.** Claude Code, Cursor and others get the same tools through MCP and the CLI.
 
@@ -62,7 +77,7 @@ It does **not** mean a chatbot bolted onto a CAD app. Concretely:
 | Principle | In practice | Record |
 |---|---|---|
 | **Own the core; borrow only as oracles** | Every component that decides quality is ours, including the kernel, solvers, tessellation, renderer, naming, DSL and checks. Mature libraries (OCCT, PlaneGCS, SolveSpace, …) run only in CI as references for differential testing and are never shipped. | [ADR 0000](adr/0000-own-the-core.md) |
-| **Verification first** | We build the verification machine before the features: oracle diffs, fuzzing, invariants, formal proofs and a failure zoo. Forge fails loudly and never returns silently wrong geometry. | [ADR 0003](adr/0003-forge-kernel-with-occt-oracle.md), [FORGE.md](FORGE.md) |
+| **Verification first** | We build the verification machine before the features: oracle diffs, fuzzing, invariants, formal proofs and a failure zoo. Forge is designed to fail loudly and never return silently wrong geometry, and we report how often that holds on each named corpus. | [ADR 0003](adr/0003-forge-kernel-with-occt-oracle.md), [FORGE.md](FORGE.md) |
 | **Agent-first design** | One command API; a typed IR as the single source of truth; CadScript as the editable surface; native provenance naming and semantic queries; no coordinate placement by the LLM | [ADR 0004](adr/0004-feature-graph-ir.md), [0005](adr/0005-cadscript.md), [0006](adr/0006-native-persistent-naming.md) |
 | **Model-agnostic AI** | Anthropic, OpenAI, Google and OpenAI-compatible open/local models are all first-class. Each model has its own profile, and an eval leaderboard decides routing. The judge comes from a different model family than the builder. | [ADR 0009](adr/0009-model-agnostic-llm-gateway.md) |
 | **Local-first** | Forge runs on the device and works offline. Cloud workers run the *same* Forge for heavy jobs. Collaboration comes later through a CRDT. | [ADR 0010](adr/0010-local-first.md) |
@@ -82,7 +97,8 @@ It does **not** mean a chatbot bolted onto a CAD app. Concretely:
   Safety-critical parts require an explicit acknowledgment.
 - **No general plugin API early.** Phase 1 ships part-family skills only.
 - **No LGPL/GPL runtime dependencies** in anything we ship.
-- **Not in the first year:** PDM/PLM, CAM toolpaths, iPad and real-time collaboration (Phase 6+).
+- **Not a slicer or machine sender.** We hand files to the user's own slicer, laser software, sender or fab service, and never bundle a slicer ([ADR 0016](adr/0016-manufacturing-output-own-vs-hand-off.md)).
+- **Not in the first year:** PDM/PLM, CAM toolpaths (Phase 3, from M14), iPad and real-time collaboration (Phase 6+).
 
 ## Platforms and business model
 

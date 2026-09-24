@@ -1,6 +1,6 @@
 # ADR 0010: Local-first
 
-- **Status:** Accepted
+- **Status:** Accepted. Amended by [ADR 0017](0017-opt-in-product-counts-and-failure-reports.md) (Consequences: data handling; see the addendum below).
 - **Date:** 2026-09-23
 - **Plan reference:** PLAN-2026-09-23 §2 D10
 
@@ -38,6 +38,14 @@ IR transactions ([ADR 0004](0004-feature-graph-ir.md)) are the unit of change in
 - **WASM memory limits apply on the web.** Data-oriented memory layouts and native paths mitigate them.
 - **Sync, sharing and collaboration need a CRDT and relay.** Sharing, fork and branch/merge arrive in Phase 4; real-time collaboration in Phase 6+.
 - **The data flywheel is opt-in only,** with separate switches.
+
+## Addendum (2026-09-24): opt-in counts and failure reports, per ADR 0017
+
+[ADR 0017](0017-opt-in-product-counts-and-failure-reports.md) amends the Consequences. The text above stays as written, and "The data flywheel is opt-in only, with separate switches" still holds.
+
+- **Two new content-free streams:** usage counts and kernel failure signatures. Each has its own switch, off by default.
+- **Minimized failure cases** are sent only when the user reviews one and presses Send, one case at a time.
+- **Local-first is unchanged.** No feature depends on these streams, offline use works the same, and with both switches off the app makes no request to our ingest. Design content, including design context ([ADR 0018](0018-design-context-in-the-ir.md)), is never sent, except a minimized case the user reviewed and sent.
 
 ## Alternatives considered
 

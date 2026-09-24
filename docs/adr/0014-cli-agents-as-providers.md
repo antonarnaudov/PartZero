@@ -1,6 +1,6 @@
 # ADR 0014: CLI agents as providers
 
-- **Status:** Accepted
+- **Status:** Accepted. Amended by [ADR 0015](0015-autonomy-dial.md) (what follows the PROPOSE gate) and [ADR 0020](0020-funded-eval-keys-fallback.md) (eval runs only: funded API keys as a fallback). See the addendum below.
 - **Date:** 2026-09-24
 - **Plan reference:** PLAN-2026-09-23 §2 D9. Extends [ADR 0009](0009-model-agnostic-llm-gateway.md) and does not replace it.
 - **Design:** [CLI-PROVIDERS.md](../CLI-PROVIDERS.md) freezes the interfaces for the build waves.
@@ -136,6 +136,17 @@
   - Re-verify each CLI's lockdown on every new version range.
   - Verify Cursor with a logged-in build before enabling it.
   - Revisit ACP (Agent Client Protocol) as a common runtime transport once more CLIs support it.
+
+## Addendum (2026-09-24): funded eval keys and the autonomy dial
+
+The text above stays as written; read it with these changes.
+
+- **[ADR 0020](0020-funded-eval-keys-fallback.md), funded eval keys (eval runs only).**
+  - "We will not pay for per-token API keys for now" still holds for the app and for development.
+  - For eval runs, owner-funded API keys are a fallback. They pay only for rows that plans and local models cannot run weekly (2 missed weeks in any 4). Funded runs start no earlier than open alpha (~M8, May 2027), for every eval run including the spike 07 bake-off, after BACKLOG's wall-time cap, under a hard cap of $2k a month from ARCHITECTURE §8's existing eval budget.
+  - The owner creates and holds the keys. Agents never receive them, and funded runs never run in CI. Decisions 4 and 8 are unchanged, and an app user's cost per task to us stays zero.
+  - Consequences, Negative / costs, gains: "Evals may spend up to $2k a month on metered API keys when ADR 0020's trigger fires."
+- **[ADR 0015](0015-autonomy-dial.md), the autonomy dial.** The PROPOSE gate in Decision 2 is unchanged. What follows a passing gate is set by the dial and decided by our orchestrator and the host's commit check, never by the CLI. Runtime and completion modes behave the same. A CLI's own permission or approval mode never counts as the user's approval. At "Ask at each step", a CLI that cannot wait for the user's answer inside a tool call runs BUILD in completion mode.
 
 ## Alternatives considered
 

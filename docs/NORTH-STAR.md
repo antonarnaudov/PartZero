@@ -1,15 +1,15 @@
 # PartZero North Star
 
-*Status: proposal for owner review, 2026-09-24. It changes nothing in [ROADMAP.md](ROADMAP.md), [FORGE.md](FORGE.md) or any ADR. Labels: **Built**; **Planned** (already in ROADMAP or FORGE.md); **PROPOSED** (needs your approval). **Bet** tags a hypothesis with a stated proof. Terms are in the glossary at the end of this preamble.*
+*Status: Approved by the owner on 2026-09-24; integrated into [ROADMAP.md](ROADMAP.md) and ADRs [0015](adr/0015-autonomy-dial.md)–[0020](adr/0020-funded-eval-keys-fallback.md) (the changes to [FORGE.md](FORGE.md), BACKLOG.md, CLAUDE.md, the IR v1 plan, ADR 0013 and the SPEC wait for Phase C, and one to CLI-PROVIDERS.md waits too; all are recorded in [NORTH-STAR-DEFERRED.md](NORTH-STAR-DEFERRED.md)). The text below is the proposal as approved: where it says "PROPOSED", "needs approval" or "changes nothing", read "approved on 2026-09-24". Labels: **Built**; **Planned** (already in ROADMAP or FORGE.md before this document); **PROPOSED** (added by this document; approved, not built). **Bet** tags a hypothesis with a stated proof; approval makes no bet a fact. Terms are in the glossary at the end of this preamble.*
 
 **Cursor for CAD, from intent to the machine.** Cursor put agents inside the code editor: developers describe and review, and the agent writes. PartZero aims to do the same for 3D CAD. You say what the part must do. The agent drafts the sketches, features, dimensions and engineering numbers. Forge, our own kernel, builds and checks every step before you can accept it. You shape the result by hand whenever you want, and your moves and the agent's land in one parametric model, one timeline and one undo stack. Then you export a file your printer, laser or CNC accepts, tuned to your machine, with the evidence attached.
 
 **PartZero is built never to lie.** Every result is checked by the kernel, every number cites its source, and every case where we got it wrong is published in the failure zoo. This is a design rule we measure, not a fact yet. Today: 0 silent-wrong results on the named generator corpus (6,008 extrude and revolve programs). The Phase 0 audit found 2 outside it (H1: a near-360° revolve reported +13.4% volume as ok; H2: bounding boxes up to 9× too large), now pinned by regression tests. The sourced handbook is not built yet.
 
-> **Decisions for the owner, in the order to approve them** (§8 has the detail; about 15–25 hours of review, notional)
+> **Decisions the owner approved on 2026-09-24** (§8 has the detail)
 > 1. **Keep the F2 gate exactly as FORGE.md defines it.** Phase C is working toward it now. New checks join the Phase 1 exit (beta) gate instead, and each can delay beta (§8 group A).
 > 2. **Telemetry (ADR 0017).** Opt-in, anonymous product counts for BYO and CLI users, plus minimized kernel failure reports. Without it, or a consented alpha study, the north-star metric cannot be measured (§7).
-> 3. **Money and time.** Fit Lab: about $4–6k hardware and 3–5 h/week of human printing. A compute line for the verification machine. An eval fallback: funded API keys at open alpha (ADR 0020) if CLI-plan runs cannot keep a weekly cadence.
+> 3. **Money and time.** Fit Lab: the owner's own 3D printer(s) for now, with the owner printing the test parts (3–5 h/week); the ~$4–6k hardware purchase for §7's full setup is deferred. A compute line for the verification machine. An eval fallback: funded API keys at open alpha (ADR 0020) if CLI-plan runs cannot keep a weekly cadence.
 > 4. **Dataset licences before first use:** ABC, DeepCAD, Fusion 360 Gallery. Check whether Onshape's terms allow competitive benchmarking.
 > 5. **The new gates in §7,** including a head-to-head against Zoo, Adam and others.
 > 6. **ADR 0015** autonomy dial. **ADR 0016** manufacturing output (slicer rule, CAM to Phase 3). **ADRs 0018–0019** design context and local face operations in the IR. Numbers are provisional.
@@ -218,7 +218,7 @@ Only the gates in §8 group A bind a phase or milestone; the rest gate their own
 
 | # | Change | From | To | Cost / risk |
 |---|---|---|---|---|
-| A1 | Fit Lab; NHL, FTPS and head-to-head gates; hands-on bench (§7) | None | Run and published at open alpha, which can delay it by the time the runs take; gating at Phase 1 exit | ~$4–6k hardware; 3–5 h/week human printing; plan time or ADR 0020 |
+| A1 | Fit Lab; NHL, FTPS and head-to-head gates; hands-on bench (§7) | None | Run and published at open alpha, which can delay it by the time the runs take; gating at Phase 1 exit | The owner's own printer(s) for now; ~$4–6k hardware purchase deferred; 3–5 h/week human printing (the owner); plan time or ADR 0020 |
 | A2 | Per-process manufacturability checks in `forge-check`, with per-process MakerBench tests | FORGE.md F0 DFM analyses; ROADMAP Phase 1 FDM checks [not built] | Laser and CNC checks added; per-process tests gate beta | 6–10 AW / wall thickness on exact B-rep is hard |
 | A3 | Definition-based fillet oracle: 0 silent-wrong on its corpus | None | Phase 1 exit | M / a new oracle to trust |
 | A4 | F3 gate defined now (§7) | FORGE.md: "to be set before F3" | Set now; gates F3, not beta | S / may fail |

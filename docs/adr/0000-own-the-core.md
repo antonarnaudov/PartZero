@@ -1,6 +1,6 @@
 # ADR 0000: Own the core; borrow only as oracles
 
-- **Status:** Accepted
+- **Status:** Accepted. Amended by [ADR 0016](0016-manufacturing-output-own-vs-hand-off.md) (scope: manufacturing output; see the addendum below).
 - **Date:** 2026-09-23
 - **Plan reference:** PLAN-2026-09-23 §2 P0
 
@@ -75,6 +75,15 @@ Some oracle harnesses belong next to the crate they check, for example `forge/cr
 - its files carry the MPL-2.0 licence of our oracle tooling ([LICENSING.md](../../LICENSING.md)).
 
 CI checks this on every push: `scripts/license-check/oracle-boundary.mjs` fails when OCP, build123d, PlaneGCS, SolveSpace or an OCCT build for JavaScript is imported or declared outside an oracle directory, when a directory named `oracle` sits inside a workspace package or a crate's sources, when code outside an oracle directory reaches into one (a relative import, an import of a package the oracle directory defines, a `file:` link, a Cargo `path`, a Rust `#[path]` or `include!`), or when an oracle directory becomes a workspace member; `forge/deny.toml` bans crates that wrap another kernel or solver from the Forge dependency graph; `scripts/license-check/js-licenses.mjs` and `cargo deny` reject any LGPL/GPL dependency of a shipped package, and `js-licenses.mjs` also rejects an oracle library, or any package from an oracle directory, anywhere in a shipped package's dependency closure, whatever its license.
+
+## Addendum (2026-09-24): manufacturing output, per ADR 0016
+
+[ADR 0016](0016-manufacturing-output-own-vs-hand-off.md) draws the line at the machine. The text above stays as written; read it with these changes.
+
+- **CAM is ours, and it comes earlier.** Our own 2.5D CAM for hobby routers (toolpaths, GRBL and LinuxCNC posts, stock-removal simulation, setup sheet) moves from Phase 6+ (FORGE.md F5) to Phase 3 (M14–M19). Turning and CAM beyond 2.5D stay Phase 6+. No G-code leaves the app without simulation and the user's acknowledgment.
+- **What we own also includes** per-process checks before export, engineering calculations and the sourced handbook, machine profiles (with measured clearance and kerf) and export receipts.
+- **Oracle table, new row:** Kiri:Moto (MIT) checks 2.5D CAM toolpaths, in CI only. Its licence would allow shipping it; this ADR keeps it an oracle.
+- **Slicers are hand-offs, not dependencies.** Slicers, laser software, machine senders and fab services are tools the user already has, and they receive our files. We launch the slicer the user installed as a separate process and never bundle, link or embed one. Their output is advisory: never a PartZero check, never in a receipt.
 
 ## Alternatives considered
 

@@ -2,6 +2,8 @@
 
 This doc covers how the Assistant panel runs `@aicad/agent` on the open document and hands back a reviewable **draft** (ARCHITECTURE §6–§7). It explains where the models come from (CLI agents on your own subscription, local models, or optional API keys; [ADR 0014](adr/0014-cli-agents-as-providers.md)), where keys are stored, and how to run the agent offline with the scripted transport or a fake CLI.
 
+Everything up to [Planned: approved North Star changes](#planned-approved-north-star-changes) describes what runs today. That section lists the agent and hands-on UX changes the owner approved on 2026-09-24 ([NORTH-STAR.md](NORTH-STAR.md)). None of them is built yet.
+
 ![A proposal under review: the per-feature change list, the CadScript diff and the proposal preview in the viewport](spikes/assets/agent-proposal.png)
 
 ## Quick start
@@ -14,7 +16,7 @@ This doc covers how the Assistant panel runs `@aicad/agent` on the open document
    Otherwise open **Settings** (⌘, or the gear icon) and paste an API key for Anthropic, OpenAI or Google Gemini, or point the app at an OpenAI-compatible endpoint. Settings shows what was found, e.g. "Using Claude Code (detected)".
 3. Optionally select a face or feature, then type a request in the Assistant, e.g. "make the plate 2 mm thicker".
 4. Follow the progress checklist, the cost meter and any questions. Then review the **Proposal** tab: the diff, the per-feature checkboxes and the viewport preview.
-5. Click **Accept** (or **Accept n of m**). The change lands as **one undo step**, and ⌘Z reverts it.
+5. Click **Accept** (or **Accept n of m**). The change lands as **one undo step**, and ⌘Z reverts it. Today every agent change lands this way. The planned [autonomy dial](#the-autonomy-dial) adds two more settings at Phase 1 beta.
 
 ## Process layout
 
@@ -100,7 +102,7 @@ Everything the UI does goes through the command layer, the same one the agent an
 
 **Selection chips.** Selection chips are sent as semantic context, for example ``face `plate/cap:end` — the end cap (the face at the far end of the extrusion) of extrude `plate` of sketch `outline`, 5 mm``. The designer receives them in a `<selection>` block after the request.
 
-**Review.** The proposal is diffed per feature (by part and feature name): added, modified or removed.
+**Review.** The proposal is diffed per feature (by part and feature name): added, modified or removed. This is the only way agent work lands today. It becomes the default setting, **Propose per feature**, of the planned [autonomy dial](#the-autonomy-dial).
 - **Dependency-aware rejection.** Rejecting a sketch that an accepted extrude uses is an **error** that names the fix. So is accepting the removal of a sketch that a kept feature still uses. Accepting a change without the sketch change it was made with is a **warning**.
 - **Building the result.** The accepted subset is built on the IR and spliced into the CadScript with `applyIrEdit`, so untouched code and comments survive.
 - **Edits during a run.** If you edited the document during the run, the accepted changes are rebased onto your edits, and any conflicts are reported.
@@ -241,13 +243,132 @@ The desktop and app workstream does not own docs/CLI-PROVIDERS.md. These are the
 - **§5.5 Re-check:** a block is persisted (`agent-settings.json` `cliBlocks`) and keyed by real path + size + mtime; a passing forced Re-check or a changed binary lifts it.
 - **§11.2 test profiles:** `AICAD_CLI_DIRS` restricts detection to those folders (no PATH, install dirs or login shell), and a Settings path outside them is not used; an isolated profile (`AICAD_USER_DATA_DIR`) without it detects no CLI; with an isolated profile, `auto` means completion unless `AICAD_CLI_AUTO=runtime`. All ignored in packaged builds.
 
+## Planned: approved North Star changes
+
+The owner approved [NORTH-STAR.md](NORTH-STAR.md) on 2026-09-24. The items below change how you work with the agent and by hand. **None of them is built.** Each names its phase and its NORTH-STAR §8 row. Phase 1 alpha means the alpha builds (closed ~M7, Apr 2027; open ~M8, May 2027). Phase 1 beta is ~M10 (Jul 2027), the Phase 1 exit. Numbers are provisional. Each item gates only itself; none joins the F2 gate.
+
+| Item | In one line | Status | Source |
+|---|---|---|---|
+| [Autonomy dial](#the-autonomy-dial) | You choose how agent work lands: per step, per feature, or auto-apply for checked quick edits to the agent's own features | Planned, Phase 1 beta | B5; [ADR 0015](adr/0015-autonomy-dial.md) |
+| [Checkpoints](#checkpoints-and-the-ghost-overlay) | A named, restorable snapshot before every commit of agent work | Planned, Phase 1 alpha | B4; ADR 0015 §7 |
+| [Ghost overlay](#checkpoints-and-the-ghost-overlay) | The proposal drawn translucent over your model | Planned, Phase 1 alpha | B4 |
+| [⌘K on the canvas](#k-on-the-canvas) | A quick edit at the selection, shown in place as a checked ghost | Planned, Phase 1 alpha | B3 |
+| [Tab](#tab) | A checked ghost of the likely next feature, from 5 deterministic proposers | Planned, Phase 1 beta; off by default until its gate is met | B3 |
+| [Push/pull and dimension drag](#pushpull-and-dimension-drag) | Dragging a face or a dimension edits the parameter behind it, with a feasible clamp and a provisional preview | Planned, Phase 1 alpha | B1 |
+| [Engineering copilot tools](#engineering-copilot-tools) | A sourced handbook and 8 calculation tools, each returning formula, inputs and source | Planned, Phase 1, M3–M5 (Dec 2026–Feb 2027) | B6 |
+| [Design context](#design-context-in-the-model) | Material, process, machine, loads and requirements stored in the model | Planned, IR v1.1, after Phase C | B7; [ADR 0018](adr/0018-design-context-in-the-ir.md) |
+
+### Rules every surface keeps
+
+- **Nothing unchecked is committed.** Forge builds and checks every proposal, ghost and drag result before you can accept it. Nothing is committed, accepted or exported that Forge has not built and checked. The one exception is on screen during a drag: live frames come from a fast preview path and are drawn in a provisional style.
+- **One model.** A hand move becomes a parametric feature or a parameter edit. An agent move arrives as a diff. Both share one IR, one CadScript file and one undo stack, and both go through the command layer above.
+- **The agent never silently touches your features.** This VISION non-goal holds at every dial setting and on every surface. ADR 0015 adds a check at commit that enforces it.
+- **Every engineering number shows its formula, inputs and source,** and lives in the model as an editable value, not as chat text.
+
+### The autonomy dial
+
+**Planned, Phase 1 beta** (NORTH-STAR B5; [ADR 0015](adr/0015-autonomy-dial.md)). Today there is one setting: the per-feature review described above. "Autonomy" means this dial only.
+
+| Setting | What happens |
+|---|---|
+| **Ask at each step** | The agent stops after every plan step. You accept or reject that step before it goes on. The whole task is still one undo step |
+| **Propose per feature** (default) | Today's behavior. The agent builds the whole task on its draft, then you accept or reject each feature |
+| **Auto-apply checked quick edits** | A checked quick edit that touches only agent-authored features lands without a click. A notice names what changed and offers **Undo**, **Review** and **Keep**, and the timeline shows an "agent" badge. Anything else is proposed per feature |
+
+- **Only you set it.** The control sits in the Assistant panel header, which always shows the current value, and in Settings. It is stored per project in app settings, not in the IR. No agent tool, MCP scope, skill, file or CLI flag can set or raise it. A CLI's own permission or approval mode is part of ADR 0014's lockdown and never counts as your approval.
+- **The app never raises it by itself.** After a clean record it may *offer* the next setting up, once, after a commit. Clean record (provisional): the last 20 agent tasks in the project committed with no rejected feature or step, no undo within 60 s and no known issues.
+- **Authorship.** A feature counts as agent-authored until you accept it or edit it. From then on it is yours. The host's command layer records this in the feature's existing `author` field, and agents cannot write it. A file with no marks, which is every file today, reads as all yours. **Keep all** makes every agent-authored feature yours in one undoable op.
+- **Auto-apply is narrow on purpose.** Every condition in ADR 0015 §5 must hold. Among them: triage routed the task to a quick edit (the `quick_edit` route exists today); it changes at most 3 features; the PROPOSE gate is clean; it changes only agent-authored features and no existing parameter; no user-authored feature depends on the change; the part is not marked safety-critical; you made no edit during the run. Exports are never auto-applied.
+- **The commit check.** Every commit of agent work carries an approval record in the decision log. A change to a user-authored feature or parameter without your approval refuses the whole commit with `unapproved_user_change`, and the draft stays as a proposal. The check runs in the command layer, so the UI, the agent, the CLI and MCP all pass through it. It makes NORTH-STAR §7's gate measurable: 0 silent changes to user features.
+- **What it does not change:** the verification ladder, the ask and stop rules, the budget and which model runs.
+- **Runtime mode.** At Ask at each step, the per-step pause uses the broker's user-wait path, as `ask_user` does. A CLI that cannot hold a tool call open that long runs BUILD in completion mode for that task.
+- **When Auto-apply appears.** Only in builds where the commit check and checkpoints are in place, the silent-change gate holds on MakerBench T4 and on the commit check's own tests, and checkpoint restore is 100% correct.
+
+| Surface | How the dial applies |
+|---|---|
+| Always-on checks (no LLM) | They never edit. A check's Fix is always a proposal |
+| Tab, ⌘K | Always a checked ghost that you accept. An accepted ghost is yours |
+| Agent (this panel, any provider, completion or runtime mode) | Follows the dial |
+| Background jobs (variants, part families, drawings) | Always land on their own branch. Merging is a per-feature review at every setting |
+| External agents (MCP, CLI) | Never auto-apply. Always the `mcp/<client>` branch, reviewed in the same diff UI |
+
+### Checkpoints and the ghost overlay
+
+**Planned, Phase 1 alpha** (NORTH-STAR B4; checkpoints in [ADR 0015](adr/0015-autonomy-dial.md) §7). Today there is undo only, and the preview is a tinted toggle (see [Open issues](#open-issues)).
+
+- **A checkpoint** is a named, restorable snapshot of the committed document: its IR, CadScript and authorship marks. Checkpoints are local and stay out of the IR.
+  - The app takes one before every commit of agent work, from any surface and at any dial setting, and before every branch merge. You can take one by hand at any time.
+  - Restore is one undoable transaction. It checkpoints the current state first, so restoring never loses work.
+  - Gate: restore is 100% correct, meaning canonical IR equal to the snapshot and an identical regenerated report.
+  - Retention of automatic checkpoints is a setting. Manual checkpoints are never pruned automatically.
+  - They are separate from the agent's `checkpoint` and `rollback` tools, which act on the agent's draft only and never touch the document.
+- **The ghost overlay** draws the proposal translucent over your model, instead of replacing its bodies, with badges in the timeline (ARCHITECTURE §7). It needs alpha blending for bodies in forge-render. ⌘K and Tab show their ghosts the same way.
+
+### ⌘K on the canvas
+
+**Planned, Phase 1 alpha** (NORTH-STAR B3).
+
+- Select something in the viewport, press ⌘K and type a quick edit, for example "make this 2 mm thicker". The edit appears in place as a ghost, and only after Forge has built and checked it. You accept it, and it is then yours, or you dismiss it.
+- It always proposes, whatever the dial says.
+- It runs the same agent and the same verification ladder as the Assistant. The selection travels as the same semantic selection chips.
+- **Today** the same request goes through the Assistant panel with selection chips, and triage routes it `quick_edit`. ⌘K (and ⌘⇧P) opens the command palette. How the two share the key is settled when on-canvas ⌘K is built.
+
+### Tab
+
+**Planned, Phase 1 beta, off by default until its gate is met** (NORTH-STAR B3).
+
+- Tab shows a checked ghost of the likely next feature. **Tab** accepts it and **Esc** dismisses it. An accepted ghost is yours.
+- **Five deterministic proposers:** no LLM, 300 ms or less. Tab calls no model, so it spends no plan usage. NORTH-STAR §2 names four examples; the fifth is chosen in Tab's design:
+  - an extrude after a closed profile;
+  - a pattern after a second identical hole;
+  - "fillet 2 mm (max 3.41)" on picked edges, which needs F2's feasible ranges;
+  - an M3 chip, "clearance 3.4 / insert 4.0 / tap 2.5", with sources from the `fastener` tool ([below](#engineering-copilot-tools)).
+- **Gate:** ≤300 ms, ≥30% of offers accepted and ≤5% undone within 60 s, on ≥2,000 offers in the alpha study group. Tab stays off by default until all three are met.
+- **Counts.** Tab offer, accept and undo counts join the opt-in allowlist of [ADR 0017](adr/0017-opt-in-product-counts-and-failure-reports.md) when Tab ships. They are counts, never design content.
+- **A learned next-feature model is a bet.** Proof: a measurable lift over the deterministic proposers' accept rate. It needs licensed CAD sequences and consented accept logs. ADR 0017's counts are not training data; that needs a separate content consent. ARCHITECTURE §8 rules out fine-tuning before M13.
+
+### Push/pull and dimension drag
+
+**Planned, Phase 1 alpha** (NORTH-STAR B1). Today there is no sketcher UI and no on-canvas handle.
+
+- **Drags drive parameters.** Pull a plate's top face and its `thickness` parameter changes. Drag a dimension and its value changes. When a parameter drives the face, no new feature is added. Typed dimensions also become parameters (Planned, Phase 1).
+- **Feasible clamp.** A drag stops at the feasible limit and says why. For example, a fillet drag stops at "max 3.41 mm: the wall would vanish". Feasible ranges arrive with F2 (Phase C step W6). The F2 target: ≥90% of single-parameter out-of-range errors return a feasible interval.
+- **Provisional preview.** Live frames come from a fast preview path and are drawn in a distinct provisional style. They are never committed. On release, Forge builds and checks the value. If that fails, the preview snaps back to the feasible limit.
+- **Targets (NORTH-STAR §7):** a provisional frame in ≤16 ms p95; the checked result ≤150 ms after release; a sketch drag in ≤4 ms. Today an edit reaches the screen in 46.9 ms median on 25 features, about 20 fps ([spike 05](spikes/05-renderer.md)), and a 200-entity sketch drag takes 1.75 ms worst case ([spike 04](spikes/04-sketch-solver.md)).
+- **A drag is your edit.** It is one undo step, and dragging an agent-authored feature makes it yours (ADR 0015). A drag during an agent run is an edit during the run (see [Open issues](#open-issues)).
+- **Faces no parameter drives** fall back to local face operations ([ADR 0019](adr/0019-local-face-operations.md)), Planned at F3 (M8–M14). Faces of imported STEP parts follow once the IR `import` revision gives them stable keys (ADR 0019 §5).
+
+### Engineering copilot tools
+
+**Planned, Phase 1, M3–M5 (Dec 2026–Feb 2027)** (NORTH-STAR B6 and §3). ARCHITECTURE §6 names these tools; none is built. The agent's tools today are `get_code`, `apply_cadscript`, `ir_summary`, `measure`, `set_spec_tests`, `submit_spec`, `run_tests`, `checkpoint`, `rollback`, `ask_user` and `propose`.
+
+- **A sourced handbook**, `reference(topic)`, and **8 calculation tools**: `fit` (ISO 286), `fastener`, `print_clearance`, `snap_fit`, `gear`, `bearing_select`, `beam_plate` and `material`.
+- **Deterministic, no LLM.** Each returns its formula, inputs and source. The in-app agent, Tab's proposers, the UI and external agents (MCP) use the same tools.
+- **Numbers land in the model** as editable parameters or chips on the feature, not as chat text. For example, "M3 heat-set insert?" gives "Ø4.0 × 6.7 mm deep (ruthex, CNC Kitchen; insert length + 1 mm)" as a chip on the boss.
+- **Data rules.** Values are computed from formulas or cited facts, never copied tables (ISO tables are copyrighted). Each value has two sources, as the IR v1 hole table does (with its noted exceptions). Each source is recorded with its terms.
+- **Gate:** 100% of ≥150 golden cases within 1% before the tools ship, and ≥300 by beta. These check the arithmetic, not whether a part holds.
+- **Closed-form structural checks.** "Will this hold 5 kg?" gets a margin range plus its simplifications and assumptions. If no formula fits, or the part is printed and outside validated cases, the answer is "can't verify", never a guess. Printed-part safety-factor badges ship only after Fit Lab break tests. FEA and the Phase 5 advisor gate stay.
+- **Wording.** The advisor explains; a human signs off. We never say "certified" or "safe", and safety-critical parts still need an explicit acknowledgment (ARCHITECTURE §6 stop rules).
+
+### Design context in the model
+
+**Planned, IR v1.1, after Phase C** (NORTH-STAR B7; [ADR 0018](adr/0018-design-context-in-the-ir.md)). Today these values have no home in the model: they live in chat, in display-only assumption chips and in the agent's run.
+
+- **A typed `context` block**, per document and per part: a material (a handbook id, with sourced overrides), a process, a machine-profile snapshot, requirements (text, plus an optional check), loads, decisions and assumptions.
+- **Geometry-free.** Nothing in evaluation reads it, and the oracle ignores it. Removing it leaves the metrics report bit-identical.
+- **Checks read it, with no LLM call.** Editing a wall or a load reruns the checks locally. For example, a load badge "5 kg: SF 1.8–3.4 (PLA, printed flat, 20% infill)" turns red when you thin a wall. Each requirement shows met, unmet, can't verify (with the reason) or not checkable. Printed-part load checks say "can't verify" until the Fit Lab break tests for that material exist.
+- **In the Assistant.** The SPEC step writes requirements, loads and assumptions into the context, and `log_decision` writes decisions. The spec card and assumption chips read it, so editing a chip needs no LLM call. "Why?" on a value resolves to a stored decision with its sources.
+- **Edits follow the feature rules.** Context edits are domain ops with inverses through the command layer, so they undo, diff and merge. The agent proposes context entries on its draft. They follow the dial and stay agent-authored until you accept or edit them. External agents land on their `mcp/<client>` branch.
+- **Machine profiles** live in the app's settings. Attaching one copies a snapshot into the design, so its checks reproduce on another computer. When the library profile changes, for example after a new fit coupon, the app offers an update. It never applies one silently.
+- **Privacy.** Context is design content. It stays in your local file and is never part of ADR 0017's counts. During a run it goes to the model provider with the rest of the design, under that provider's terms (see **Data** under [Providers](#providers-cli-agents-local-models-and-optional-api-keys)). Every free-text context field is marked untrusted when a tool shows it to a model.
+
 ## Open issues
 
 - **Packaging.** The agent worker resolves `@aicad/agent`, the gateway, forge-web (and its `.wasm`) and the agent's `prompts/` from the pnpm workspace. `electron-builder` needs a bundling step for `dist/agent/worker.js` and its assets, or `node-linker=hoisted`, before a packaged build can run the agent.
-- **The document during a run.** The document stays editable during a run. The proposal rebases onto your edits at accept time, and it refuses on conflicts. The agent itself is not paused or rebased mid-run ("a user edit in the agent's scope pauses it").
-- **Parameter chips.** Assumption chips display the agent's assumptions but are not editable yet. Editing a chip with no LLM call needs IR v1 parameters.
+- **The document during a run.** The document stays editable during a run. The proposal rebases onto your edits at accept time, and it refuses on conflicts. The agent itself is not paused or rebased mid-run ("a user edit in the agent's scope pauses it"); that pause is Planned. At the dial's Auto-apply setting (Planned, Phase 1 beta), any edit of yours during a run turns that task into a proposal (ADR 0015).
+- **Parameter chips.** Assumption chips display the agent's assumptions but are not editable yet. Editing a chip with no LLM call needs IR v1 parameters. Chips for material, process and machine also need the [design context](#design-context-in-the-model) of IR v1.1 (ADR 0018, Planned after Phase C).
 - **L5 visual judge.** The judge is not called yet. The judge model setting is stored and validated (family rule).
-- **The ghost preview.** The preview is a toggle: tinted proposal bodies replace the document's bodies. It is not a translucent overlay, because forge-render has no alpha blending for bodies yet.
+- **The ghost preview.** The preview is a toggle: tinted proposal bodies replace the document's bodies. It is not a translucent overlay, because forge-render has no alpha blending for bodies yet. The [overlay](#checkpoints-and-the-ghost-overlay) is Planned for Phase 1 alpha (B4).
 - **Continuing a budget checkpoint.** At the 80 % budget checkpoint, the run asks whether to continue up to the cap. Raising the cap mid-run is not supported.
 - **Scripted mode and model settings.** The scripted and replay transports speak the Anthropic format only, so model settings are ignored in those modes.
 - **CLI agents in packaged builds.** The desktop package does not depend on `@aicad/mcp-server` yet (the worker loads it from the workspace in development), and packaged builds turn Electron's `runAsNode` fuse off, so the MCP shim cannot run there. Claude Code single calls need neither; Gemini CLI and opencode then use the strict JSON reply, and runtime mode stays off (Automatic means single calls there), which resends the transcript on every designer turn: slower and costlier on the plan than the CLI's own loop. A packaged shim (a small bundled Node binary, or a helper executable) is the fix.

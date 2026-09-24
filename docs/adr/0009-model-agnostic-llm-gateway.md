@@ -1,6 +1,6 @@
 # ADR 0009: Model-agnostic LLM gateway
 
-- **Status:** Accepted. Extended by [ADR 0014](0014-cli-agents-as-providers.md), which adds CLI agents and local models as providers and makes API keys optional.
+- **Status:** Accepted. Extended by [ADR 0014](0014-cli-agents-as-providers.md), which adds CLI agents and local models as providers and makes API keys optional. Amended by [ADR 0017](0017-opt-in-product-counts-and-failure-reports.md) (Consequences: data handling; see the addendum below).
 - **Date:** 2026-09-23
 - **Plan reference:** PLAN-2026-09-23 §2 D9, §4
 
@@ -49,6 +49,14 @@
 - **Evals cost money:** about $1–2k per month.
 - **More surface to test.** Refusal, caching and tool-use differences multiply the test surface.
 - **Data handling depends on the key.** The data flywheel is off for BYO-key users, so learning comes only from opted-in hosted usage.
+
+## Addendum (2026-09-24): opt-in counts and failure reports, per ADR 0017
+
+[ADR 0017](0017-opt-in-product-counts-and-failure-reports.md) amends "Data handling depends on the key". The text above stays as written.
+
+- **The content flywheel is unchanged.** It stays off for BYO-key and CLI users. Their prompts, chats and designs are never collected.
+- **Counts are new, and opt-in.** Users of any provider may turn on content-free usage counts and kernel failure signatures, each behind its own switch, off by default. They may also send a minimized failure case after reviewing it, one press per case.
+- **The leaderboard gains a source.** Usage counts record the provider kind, and the profile name only for profiles we ship, so product NHL can be reported by provider.
 
 ## Alternatives considered
 

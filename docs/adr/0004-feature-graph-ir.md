@@ -1,6 +1,6 @@
 # ADR 0004: A typed Feature-Graph IR is the source of truth
 
-- **Status:** Accepted
+- **Status:** Accepted. Amended by [ADR 0015](0015-autonomy-dial.md) (agent commits); extended by [ADR 0018](0018-design-context-in-the-ir.md) (design context) and [ADR 0019](0019-local-face-operations.md) (local face operations). See the addendum below.
 - **Date:** 2026-09-23
 - **Plan reference:** PLAN-2026-09-23 §2 D4, §3 "IR essentials"
 
@@ -50,6 +50,14 @@
 - **Behavior versions must be maintained.** Changing a feature's semantics means bumping `v` and keeping the old behavior evaluable.
 - **Schema evolution needs migrations** between IR versions.
 - **Both engines must track every IR change,** since the oracle implements the same spec.
+
+## Addendum (2026-09-24): agent commits, design context, local face operations
+
+Three later ADRs build on this one. The text above stays as written.
+
+- **[ADR 0015](0015-autonomy-dial.md), the autonomy dial.** Agent edits are still ordinary transactions on a draft branch. They reach the document only through a commit the dial allows. The host records agent authorship in the existing `author` field. The IR does not change.
+- **[ADR 0018](0018-design-context-in-the-ir.md), design context.** IR v1.1 adds an optional, geometry-free `context` block to `Document` and to each `PartStudio`: material, process, a machine snapshot, requirements, loads, decisions and assumptions. Evaluation never reads it, and removing it leaves the `aicad.metrics/1` report bit-identical. The oracle passes it through. Features' `decision_ids` now resolve to `context.decisions`. It is an additive revision of `aicad.ir/1` and lands after Phase C.
+- **[ADR 0019](0019-local-face-operations.md), local face operations.** Four new feature types at F3: `move_face`, `offset_face`, `replace_face` and `delete_face`. They are ordinary timeline features with expressions, so direct edits keep parametric intent, and this ADR's rejection of history-free direct modeling stands. They are an additive revision of `aicad.ir/1`, and the oracle computes them.
 
 ## Alternatives considered
 
