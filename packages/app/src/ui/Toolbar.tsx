@@ -1,8 +1,42 @@
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import type { AppInvocation } from "../commands/commands";
 import { formatKey } from "../commands/registry";
+import { openInSlicer } from "../print/open-in-slicer";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
+
+/**
+ * The primary handoff button (ALPHA-0-PLAN W3/W5): check, export for the printer and open in the
+ * user's Bambu Studio. Desktop only. It calls `openInSlicer` directly until `file.openInSlicer`
+ * (with ⌘P) is registered in the command layer; failures surface as toasts like other commands.
+ */
+function OpenInSlicerButton(): ReactElement | null {
+  const { services } = useApp();
+  const [busy, setBusy] = useState(false);
+  if (!services.host.print) return null;
+  const run = (): void => {
+    setBusy(true);
+    openInSlicer(services)
+      .catch((e: unknown) => services.ui.toast("error", e instanceof Error ? e.message : String(e)))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <div className="tb-group">
+      <button
+        type="button"
+        className="tb-primary"
+        title="Check the part, save it to ~/PartZero/Prints centred on the printer bed, and open it in Bambu Studio"
+        disabled={busy}
+        aria-busy={busy}
+        onClick={run}
+        data-testid="open-in-slicer"
+      >
+        {busy ? <Icon.Spinner size={14} /> : <Icon.Printer size={14} />}
+        <span>Open in Bambu Studio</span>
+      </button>
+    </div>
+  );
+}
 
 function ToolButton({ cmd, title, keyHint, children, disabled }: { cmd: AppInvocation; title: string; keyHint?: string; children: ReactElement; disabled?: boolean }): ReactElement {
   const { run, isMac } = useApp();
@@ -59,6 +93,7 @@ export function Toolbar(): ReactElement {
           <Icon.Export />
         </ToolButton>
       </div>
+      <OpenInSlicerButton />
       <div className="doc-title" data-testid="doc-title" title={format === "ir-json" ? "IR JSON document (edited as CadScript)" : "CadScript document"}>
         <span className="doc-name">{name}</span>
         <span className="doc-ext">{format === "ir-json" ? ".json" : ".cad.ts"}</span>
