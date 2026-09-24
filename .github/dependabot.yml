@@ -1,0 +1,13 @@
+# Keeps the SHA-pinned actions in .github/workflows current: Dependabot rewrites both the
+# commit SHA and the "# vX.Y.Z" comment. dtolnay/rust-toolchain is pinned to a commit of its
+# master branch, which Dependabot does not track; bump it by hand. Review each update's
+# release notes before merging. Workflows on Dependabot PRs get a read-only token, no secrets.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]

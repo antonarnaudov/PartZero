@@ -1,9 +1,19 @@
 name: ci
-# Cost note (private repository): GitHub bills macOS minutes at 10x and Windows at 2x against
-# the plan's included Actions minutes. Pushes and pull requests therefore run the Linux legs
-# only; the full three-OS matrix (cross-OS bit-identity) runs on demand via "Run workflow"
-# (workflow_dispatch). When the repository goes public (free minutes), restore the matrix on
-# every push by changing FULL_MATRIX below.
+# Public repository: standard GitHub-hosted runners (Linux, Windows, macOS, and the arm64
+# Linux/Windows images) are free, so every push and pull request runs the full three-OS
+# matrix (cross-OS bit-identity). Limits that still apply: 20 concurrent jobs (5 of them
+# macOS) on the Free plan, 6 h per job, 10 GB of Actions cache per repository. Larger
+# runners (more cores or a GPU) are billed per minute even for public repositories and need
+# an organization on the Team/Enterprise plan; use a shard matrix of standard runners first.
+#
+# Security (public repository, pull requests from forks):
+#   * Only `pull_request` runs fork code, with a read-only GITHUB_TOKEN and no secrets.
+#     Never add `pull_request_target` or `workflow_run` jobs that check out or build PR code,
+#     and never reference `secrets.*` in this workflow.
+#   * Every action is pinned to a full commit SHA (the comment names the release);
+#     .github/dependabot.yml proposes the updates.
+#   * The token grants `contents: read` only (narrower than `read-all`). A job that needs
+#     more declares it itself.
 on:
   push: { branches: [main] }
   pull_request:
@@ -12,9 +22,12 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request cancels its superseded run. Pushes to main are grouped by
+# commit, so none is cancelled or dropped from the queue: every commit on main gets a
+# complete cross-OS result.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CARGO_TERM_COLOR: always
@@ -26,18 +39,27 @@ jobs:
   forge:
     name: forge (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 120 # generous; tighten once the Windows and macOS legs have run times
     strategy:
       fail-fast: false
       matrix:
-        # FULL_MATRIX: all three desktop OSes on manual runs; Linux only otherwise.
-        os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+        # All three desktop OSes on every push and pull request. Free on a public
+        # repository: ubuntu-24.04-arm and windows-11-arm would add aarch64 Linux/Windows.
+        os: [ubuntu-latest, macos-latest, windows-latest]
     defaults: { run: { working-directory: forge } }
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      # The Windows image sets core.autocrlf=true: without this, checked-out corpus and
+      # golden text files get CRLF line endings on the Windows leg only.
+      - name: Keep LF line endings on Windows
+        if: runner.os == 'Windows'
+        working-directory: .
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { persist-credentials: false }
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master as of 2026-09-24
         with: { toolchain: "1.92", components: "rustfmt, clippy", targets: wasm32-unknown-unknown }
-      - uses: Swatinem/rust-cache@v2
-        with: { workspaces: forge }
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with: { workspaces: forge, save-if: "${{ github.ref == 'refs/heads/main' }}" }
       - name: Install lavapipe (Mesa's Vulkan driver on the CPU) for forge-render
         if: runner.os == 'Linux'
         working-directory: .
@@ -62,12 +84,13 @@ jobs:
     env:
       CARGO_TARGET_WASM32_WASIP1_RUNNER: wasmtime
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { persist-credentials: false }
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master as of 2026-09-24
         with: { toolchain: "1.92", components: clippy, targets: "wasm32-unknown-unknown, wasm32-wasip1" }
-      - uses: Swatinem/rust-cache@v2
-        with: { workspaces: forge }
-      - uses: taiki-e/install-action@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with: { workspaces: forge, save-if: "${{ github.ref == 'refs/heads/main' }}" }
+      - uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
         with: { tool: wasmtime }
       - name: clippy (wasm32-unknown-unknown) for forge-render and forge-wasm
         run: cargo clippy --target wasm32-unknown-unknown -p forge-render -p forge-wasm --locked -- -D warnings
@@ -98,15 +121,16 @@ jobs:
     env:
       CADSCRIPT_FC_RUNS: "300"
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4 # version from package.json "packageManager"
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0 (version from package.json "packageManager")
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with: { node-version: 22, cache: pnpm }
-      - uses: dtolnay/rust-toolchain@master # forge-web builds the wasm engine
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master as of 2026-09-24 (forge-web builds the wasm engine)
         with: { toolchain: "1.92", targets: wasm32-unknown-unknown }
-      - uses: Swatinem/rust-cache@v2
-        with: { workspaces: forge }
-      - uses: taiki-e/install-action@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with: { workspaces: forge, save-if: "${{ github.ref == 'refs/heads/main' }}" }
+      - uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
         with: { tool: wasm-bindgen@0.2.128 } # must equal the wasm-bindgen crate (forge-wasm)
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r build
@@ -119,15 +143,16 @@ jobs:
     name: oracle (pytest, Forge vs OCCT)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { persist-credentials: false }
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master as of 2026-09-24
         with: { toolchain: "1.92" }
-      - uses: Swatinem/rust-cache@v2
-        with: { workspaces: forge }
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with: { workspaces: forge, save-if: "${{ github.ref == 'refs/heads/main' }}" }
       - name: Build the Forge CLI (the engine under test)
         working-directory: forge
         run: cargo build -p forge-cli --locked
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
       - name: Oracle unit tests
         working-directory: oracle
         run: uv run --locked pytest
@@ -160,13 +185,10 @@ jobs:
           uv run --locked oracle diff "$RUNNER_TEMP/gen/invalid"
           --forge-bin ../forge/target/debug/aicad --fail-on-robustness --fail-on-no-reference
           --report "$RUNNER_TEMP/oracle-diff/invalid.md"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
-        # Private-repo artifact storage is an account-wide quota; when it is full the
-        # upload fails, which must not fail the job whose tests passed.
-        continue-on-error: true
         with:
-          retention-days: 7
+          retention-days: 14
           name: oracle-diff
           path: ${{ runner.temp }}/oracle-diff
           if-no-files-found: ignore
@@ -176,16 +198,17 @@ jobs:
     name: licenses
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { persist-credentials: false }
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master as of 2026-09-24
         with: { toolchain: "1.92" }
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
         with: { tool: cargo-deny@0.20.2 } # the version forge/deny.toml was verified with
       - name: cargo deny (Rust dependencies of every shipped crate)
         working-directory: forge
         run: cargo deny --locked check licenses bans
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: License-gate self-tests
@@ -198,13 +221,10 @@ jobs:
         run: node scripts/license-check/dataset-record.mjs
       - name: JS production dependencies of every shipped package
         run: node scripts/license-check/js-licenses.mjs --json "$RUNNER_TEMP/js-licenses.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
-        # Private-repo artifact storage is an account-wide quota; when it is full the
-        # upload fails, which must not fail the job whose tests passed.
-        continue-on-error: true
         with:
-          retention-days: 7
+          retention-days: 14
           name: js-licenses
           path: ${{ runner.temp }}/js-licenses.json
           if-no-files-found: ignore
@@ -216,15 +236,16 @@ jobs:
     name: forge-render WebGL2 (headless Chromium, llvmpipe)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with: { node-version: 22, cache: pnpm }
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master as of 2026-09-24
         with: { toolchain: "1.92", targets: wasm32-unknown-unknown }
-      - uses: Swatinem/rust-cache@v2
-        with: { workspaces: forge }
-      - uses: taiki-e/install-action@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with: { workspaces: forge, save-if: "${{ github.ref == 'refs/heads/main' }}" }
+      - uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
         with: { tool: wasm-bindgen@0.2.128 }
       - run: pnpm install --frozen-lockfile
       - name: Build forge-web and its demo
@@ -282,13 +303,10 @@ jobs:
               exit $rc ;;
             *) exit 1 ;;
           esac
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
-        # Private-repo artifact storage is an account-wide quota; when it is full the
-        # upload fails, which must not fail the job whose tests passed.
-        continue-on-error: true
         with:
-          retention-days: 7
+          retention-days: 14
           name: webgl2
           path: ${{ runner.temp }}/webgl2
           if-no-files-found: ignore
