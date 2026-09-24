@@ -251,13 +251,37 @@ jobs:
           exit $rc
       # forge-web's WebGPU error paths (audit V3/V4): the self-test and WebGL2 fallback,
       # creation error codes, faults after creation. Chromium's WebGPU runs on SwiftShader's
-      # Vulkan here (flags in the script); a scenario that needs a working WebGPU device
-      # fails, rather than skips, when the runner cannot give one.
+      # Vulkan here. Most scenarios need a WebGPU viewport, i.e. a WebGPU *canvas*. On
+      # ubuntu-latest's headless Chromium 153 every such viewport lost its device
+      # ("Destroyed") at canvas setup, while forge-wasm's offscreen self-test passed on the
+      # same device. So canvas-probe.mjs first checks the same browser and flags with plain
+      # WebGPU and no Forge code:
+      # - 0 (a plain WebGPU canvas works): every scenario runs and must pass.
+      # - 3 (a plain WebGPU canvas fails the same way): only the scenarios that need no
+      #   WebGPU canvas run, with a warning.
+      # - anything else (no working WebGPU device at all): the step fails.
       - name: WebGPU error paths (headless Chromium, SwiftShader Vulkan)
         if: ${{ !cancelled() }}
         env:
           OUT_DIR: ${{ runner.temp }}/webgl2
-        run: node packages/forge-web/test/browser/webgpu-errors.mjs
+          # One flag list for the probe and the checks (webgpu-errors.mjs's Linux default).
+          WEBGPU_ARGS: --enable-unsafe-webgpu --enable-features=Vulkan --use-vulkan=swiftshader --use-webgpu-adapter=swiftshader --disable-vulkan-surface
+        run: |
+          probe=0
+          node scripts/ci/webgpu/canvas-probe.mjs || probe=$?
+          case "$probe" in
+            0) node packages/forge-web/test/browser/webgpu-errors.mjs ;;
+            3)
+              echo "::warning title=WebGPU viewport scenarios not run::No WebGPU canvas in this browser (see the probe above): only auto-self-test-fails, webgpu-self-test-fails and canvas-configure-fault ran."
+              # canvas-configure-fault still checks that a device fault during canvas setup
+              # rejects with RENDER_GPU and does not trap (here the fault is the loss itself).
+              rc=0
+              for s in auto-self-test-fails webgpu-self-test-fails canvas-configure-fault; do
+                OUT_DIR="$OUT_DIR/$s" node packages/forge-web/test/browser/webgpu-errors.mjs "$s" || rc=1
+              done
+              exit $rc ;;
+            *) exit 1 ;;
+          esac
       - uses: actions/upload-artifact@v4
         if: always()
         # Private-repo artifact storage is an account-wide quota; when it is full the

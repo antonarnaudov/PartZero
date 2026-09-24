@@ -72,6 +72,7 @@ This list collects follow-ups from agent reports and reviews. Items are grouped 
 - **P1 The spec writer can pass its own tests while missing requested features.** In the knob task it never checked for the blind bore. Require one spec test per requested feature.
 - **P1 A struggling task burns about 10 minutes on a CLI plan.** Add a per-task wall-time cap and stop after N failed applies in bench/runtime mode.
 - **P2 Cursor Agent is blocked.** Headless mode offers no documented `--trust` option and no web-search off switch. Unblock it once the CLI supports a full lockdown.
+- **P1 WebGPU canvas coverage on Linux CI.** Headless Chromium 153 on ubuntu-latest can't present WebGPU to a canvas (the device is "Destroyed" at canvas setup; the offscreen self-test passes). `scripts/ci/webgpu/canvas-probe.mjs` detects this, and the step then runs only the canvas-free scenarios, with a warning. Restore full coverage by running `webgpu-errors.mjs` headed under `xvfb-run -a` (add a `HEADLESS` override at `packages/forge-web/test/browser/webgpu-errors.mjs:320`), or via chrome-headless-shell if the probe shows that works.
 - **P2 Desktop e2e tests fail confusingly when `forge/target/debug/aicad` is missing** (for example after `cargo clean`). Add a global-setup check with a clear message, or build it automatically.
 
 ## App
