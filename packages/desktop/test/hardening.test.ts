@@ -69,7 +69,7 @@ describe("L10: packaged builds ignore dev and test overrides", () => {
 
   it("reads no AICAD_* override when packaged, and says so", () => {
     const warnings: string[] = [];
-    expect(readDevOverrides({ ...env, AICAD_ALLOW_DEBUGGER: "1" }, true, (m) => warnings.push(m))).toEqual({ devServer: null, userDataDir: null, appDist: null, skipClosePrompt: false, simulatePackaged: false, allowDebugger: false, cliDirs: null, detectLocalModels: true, cliAutoMode: "runtime" });
+    expect(readDevOverrides({ ...env, AICAD_ALLOW_DEBUGGER: "1" }, true, (m) => warnings.push(m))).toEqual({ devServer: null, userDataDir: null, appDist: null, skipClosePrompt: false, simulatePackaged: false, allowDebugger: false, cliDirs: null, detectLocalModels: true, cliAutoMode: "runtime", selfTestTimeoutMs: null });
     expect(warnings).toEqual(
       expect.arrayContaining(["AICAD_DEV_URL is ignored in packaged builds", "AICAD_BIN is ignored in packaged builds", "AICAD_APP_DIST is ignored in packaged builds", "AICAD_ALLOW_DEBUGGER is ignored in packaged builds", "AICAD_CLI_DIRS is ignored in packaged builds"]),
     );
@@ -87,6 +87,9 @@ describe("L10: packaged builds ignore dev and test overrides", () => {
     expect(readDevOverrides({ AICAD_USER_DATA_DIR: "/tmp/profile", AICAD_CLI_AUTO: "runtime" }, false)).toMatchObject({ cliAutoMode: "runtime" });
     expect(readDevOverrides({}, false)).toMatchObject({ cliDirs: null, detectLocalModels: true, cliAutoMode: "runtime" });
     expect(readDevOverrides({ AICAD_CLI_AUTO: "completion" }, true).cliAutoMode).toBe("runtime"); // packaged: ignored
+    expect(readDevOverrides({ AICAD_SELF_TEST_TIMEOUT_MS: "1500" }, false).selfTestTimeoutMs).toBe(1500);
+    for (const bad of ["0", "-1", "1e3", "abc", "99999999"]) expect(readDevOverrides({ AICAD_SELF_TEST_TIMEOUT_MS: bad }, false).selfTestTimeoutMs, bad).toBeNull();
+    expect(readDevOverrides({ AICAD_SELF_TEST_TIMEOUT_MS: "1500" }, true).selfTestTimeoutMs).toBeNull(); // packaged: ignored
     expect(locateForgeBinary({ env, isPackaged: false, resourcesPath: "", appPath: "/" })).toBe(resolve("/tmp/aicad"));
     expect(transportFromEnv(env, () => undefined, false)).toEqual({ kind: "scripted", scriptPath: thisFile });
     expect(resolveWebRoot({ isPackaged: false, appPath: "/x", appDistOverride: null, workspaceWebRoot: () => "/ws" })).toBe("/ws");

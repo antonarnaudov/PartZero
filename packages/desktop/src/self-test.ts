@@ -20,6 +20,15 @@ import { userFolders } from "./user-folders.js";
 
 export const SELF_TEST_SWITCH = "--self-test";
 export const SELF_TEST_SCHEMA = "partzero.self-test/1";
+/**
+ * The whole self-test's limit (main.ts starts it with the app). Every probe has its own shorter timeout (120 s), so
+ * this only fires when something hangs outside them; the app then prints {@link abortedSelfTestReport} and exits.
+ * It cannot fire while the main thread is blocked (a synchronous system prompt): the build script's own timeout
+ * covers that.
+ */
+export const SELF_TEST_TIMEOUT_MS = 180_000;
+/** Exit codes: every required check passed; a check failed (or the self-test threw); the self-test did not finish. */
+export const SELF_TEST_EXIT = { ok: 0, failed: 1, timedOut: 2 } as const;
 
 /** The v0 IR of `agent/self-test.ts` `SELF_TEST_SOURCE` (80 × 50 × 8 mm, 32 000 mm³), for the Forge CLI checks. */
 export const SELF_TEST_IR = {
@@ -226,6 +235,28 @@ export function selfTestVerdict(r: Omit<SelfTestReport, "ok" | "failures" | "war
   if (r.app.packaged && r.app.commit === null) warnings.push("the build has no commit (it was not bundled from a git checkout)");
   if (r.app.dirty) warnings.push("the build was bundled from a working tree with uncommitted changes");
   return { ok: failures.length === 0, failures, warnings };
+}
+
+/**
+ * The report of a self-test that could not finish (the watchdog fired, or the self-test threw): `ok: false`, the
+ * reason as the only failure, and every check marked as not finished. Same shape as a finished report, so every
+ * reader (the build script, the e2e suite) handles it.
+ */
+export function abortedSelfTestReport(reason: string, app: SelfTestReport["app"], paths: SelfTestReport["paths"]): SelfTestReport {
+  const notFinished = `not finished: ${reason}`;
+  return {
+    schema: SELF_TEST_SCHEMA,
+    ok: false,
+    failures: [reason],
+    warnings: [],
+    app,
+    paths,
+    forgeCli: { ok: false, path: "", version: null, detail: notFinished, v0: null, v1: null },
+    worker: { ok: false, detail: notFinished, readyMs: null, report: null },
+    renderer: { ok: false, detail: notFinished, ms: null, snapshot: null },
+    claudeCode: claudeCodeCheck(null, notFinished),
+    slicer: { found: false, name: "Bambu Studio", path: null, bundleId: null, version: null },
+  };
 }
 
 type Exec = (file: string, args: readonly string[], timeoutMs: number) => Promise<{ code: number | null; stdout: string }>;

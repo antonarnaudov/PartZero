@@ -21,6 +21,7 @@
 # Environment:
 #   PARTZERO_INSTALL_DIR   where --install/--rollback put the app (default /Applications; the tests use a scratch folder)
 #   PARTZERO_SKIP_SELF_TEST=1  skip --self-test after --build (not recommended)
+#   PARTZERO_SELF_TEST_TIMEOUT  seconds before a hung --self-test is stopped (default 240; the app gives up at 180)
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -31,12 +32,15 @@ BUNDLE_ID="ai.partzero.desktop"
 BUILT_APP="$DESKTOP/release/alpha-local/mac-arm64/$APP_NAME.app"
 INSTALL_DIR="${PARTZERO_INSTALL_DIR:-/Applications}"
 REPORT_DIR="$DESKTOP/release/alpha-local"
+SELF_TEST_TIMEOUT="${PARTZERO_SELF_TEST_TIMEOUT:-240}"
+case "$SELF_TEST_TIMEOUT" in ''|*[!0-9]*) printf 'PARTZERO_SELF_TEST_TIMEOUT must be a number of seconds\n' >&2; exit 2 ;; esac
 
 say() { printf '\033[1m[alpha0]\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[alpha0] %s\033[0m\n' "$*" >&2; exit 1; }
 
 usage() {
-  sed -n '2,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  # The header comment, up to the first line that is not a comment.
+  awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "${BASH_SOURCE[0]}"
   exit "${1:-0}"
 }
 
@@ -110,12 +114,35 @@ check_app() {
 # The app's own --self-test, in an environment no richer than a Finder launch gets: launchd's minimal PATH and no
 # shell rc files, so Claude Code must be found the way the installed app will find it; and no USER, LOGNAME or SHELL
 # either (launchd sets them, but the app fills them from the account when they are missing, and this proves it).
+#
+# The app stops itself after 180 s with a failing report (exit 2). The script's own limit is longer and covers what the
+# app cannot: a main thread blocked by a system dialog (a keychain or privacy prompt), which a hidden app never shows.
 run_self_test() {
-  local app="$1" exe="$1/Contents/MacOS/$APP_NAME" out="$REPORT_DIR/self-test.json" code=0
+  local app="$1" exe="$1/Contents/MacOS/$APP_NAME" out="$REPORT_DIR/self-test.json" errlog="$REPORT_DIR/self-test.stderr.log"
+  local code=0 pid ticks=0 tmp="${TMPDIR:-/tmp}" marker
   [ -x "$exe" ] || die "no executable at $exe"
-  say "--self-test (Finder-like environment: PATH=/usr/bin:/bin:/usr/sbin:/sbin, no USER, LOGNAME or SHELL)"
-  env -i HOME="$HOME" TMPDIR="${TMPDIR:-/tmp}" PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG="${LANG:-en_US.UTF-8}" \
-    "$exe" --self-test > "$out" 2> "$REPORT_DIR/self-test.stderr.log" || code=$?
+  say "--self-test (Finder-like environment: PATH=/usr/bin:/bin:/usr/sbin:/sbin, no USER, LOGNAME or SHELL; limit ${SELF_TEST_TIMEOUT} s)"
+  rm -f "$out"
+  marker="$(mktemp "$REPORT_DIR/.self-test-started.XXXXXX")"
+  env -i HOME="$HOME" TMPDIR="$tmp" PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG="${LANG:-en_US.UTF-8}" \
+    "$exe" --self-test > "$out" 2> "$errlog" &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    if [ "$ticks" -ge $((SELF_TEST_TIMEOUT * 2)) ]; then
+      kill -TERM "$pid" 2>/dev/null || true
+      sleep 2
+      kill -KILL "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+      # The throwaway profile it made (the app removes it itself only when it finishes).
+      find "$tmp" -maxdepth 1 -type d -name 'partzero-self-test-*' -newer "$marker" -exec rm -rf {} + 2>/dev/null || true
+      rm -f "$marker"
+      die "--self-test did not finish within ${SELF_TEST_TIMEOUT} s, so it was stopped. The app runs hidden: a keychain or privacy prompt it was waiting for would not show. See $errlog"
+    fi
+    sleep 0.5
+    ticks=$((ticks + 1))
+  done
+  wait "$pid" || code=$?
+  rm -f "$marker"
   node -e '
     const r = require(process.argv[1]);
     const line = (k, v) => console.log(`    ${k.padEnd(12)} ${v}`);
@@ -128,7 +155,8 @@ run_self_test() {
     line("slicer", r.slicer.found ? `${r.slicer.name} ${r.slicer.version} (${r.slicer.bundleId}) at ${r.slicer.path}` : "Bambu Studio not found");
     for (const w of r.warnings) console.log(`    warning: ${w}`);
     for (const f of r.failures) console.log(`    FAILED: ${f}`);
-  ' "$out" || die "--self-test printed no report (see $REPORT_DIR/self-test.stderr.log)"
+  ' "$out" || die "--self-test printed no report (exit $code; see $errlog)"
+  [ "$code" != 2 ] || die "--self-test did not finish (exit 2): see the reason above; the full report is $out"
   [ "$code" = 0 ] || die "--self-test failed (exit $code); the full report is $out"
   say "self-test passed ($out)"
 }

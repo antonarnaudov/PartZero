@@ -39,15 +39,18 @@ import { buildMenuTemplate } from "./menu.js";
 import { APP_ENTRY_URL, isTrustedFrameUrl } from "./protocol-core.js";
 import { registerAppScheme, serveApp } from "./protocol.js";
 import {
+  abortedSelfTestReport,
   claudeCodeCheck,
   describeRenderer,
   detectBambuStudio,
   RENDERER_PROBE,
   rendererReady,
   reportPaths,
+  SELF_TEST_EXIT,
   SELF_TEST_IR,
   SELF_TEST_SCHEMA,
   SELF_TEST_SWITCH,
+  SELF_TEST_TIMEOUT_MS,
   selfTestVerdict,
   type RendererSnapshot,
   type SelfTestReport,
@@ -103,6 +106,12 @@ let recent: RecentFiles;
 let agent: AgentSetup | null = null;
 /** The throwaway profile of a `--self-test` run (removed before it exits). */
 let selfTestProfile: string | null = null;
+/** The real profile a `--self-test` run reports (it only reads its `agent-settings.json`). */
+let selfTestRealProfile = "";
+/** A `--self-test` run printed its report (exactly one is printed). */
+let selfTestFinished = false;
+/** Fires {@link SELF_TEST_TIMEOUT_MS} after a `--self-test` run started. */
+let selfTestWatchdog: NodeJS.Timeout | null = null;
 
 /** Electron `safeStorage` (OS keychain) as the key store's cipher. */
 const safeStorageCipher: Cipher = {
@@ -289,6 +298,7 @@ function start(): void {
   if (selfTest) {
     // A throwaway profile: the real one may be in use by a running instance, and a self-test must not change it. Its
     // Settings file (a Claude Code path set there, lockdown blocks) is copied, so detection sees what the app sees.
+    selfTestRealProfile = profile;
     selfTestProfile = mkdtempSync(join(tmpdir(), "partzero-self-test-"));
     const settings = join(profile, "agent-settings.json");
     if (existsSync(settings)) copyFileSync(settings, join(selfTestProfile, "agent-settings.json"));
@@ -316,6 +326,8 @@ function start(): void {
 
   void app.whenReady().then(() => {
     if (selfTest) app.dock?.hide();
+    // The self-test's watchdog fired before the app got ready: its report is out and the app is exiting.
+    if (selfTestFinished) return;
     // Deny every permission request (camera, notifications, …): the app needs none.
     session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
     session.defaultSession.setPermissionCheckHandler(() => false);
@@ -385,7 +397,9 @@ function start(): void {
     rebuildMenu();
     mainWindow = createWindow({ hidden: selfTest });
     if (selfTest) {
-      void runSelfTest(mainWindow, forgeBin, { mcpShimPath, mcpServerDir: mcpShimPath ? null : workspaceMcpServerDir(repoRoot), exePath: shimExe, workspaceRoot: agent.workspaceRoot }, profile);
+      runSelfTest(mainWindow, forgeBin, { mcpShimPath, mcpServerDir: mcpShimPath ? null : workspaceMcpServerDir(repoRoot), exePath: shimExe, workspaceRoot: agent.workspaceRoot }).catch((e: unknown) =>
+        abortSelfTest(`the self-test failed: ${message(e)}`, SELF_TEST_EXIT.failed),
+      );
       return;
     }
 
@@ -473,7 +487,31 @@ function probeWorker(o: WorkerProbeOptions, timeoutMs: number): Promise<SelfTest
   });
 }
 
-async function runSelfTest(win: BrowserWindow, forgeBin: string, worker: WorkerProbeOptions, profile: string): Promise<void> {
+/** The app half of the report (the same in a finished and an aborted report). */
+function selfTestAppInfo(): SelfTestReport["app"] {
+  return {
+    name: app.getName(),
+    version: app.getVersion(),
+    edition: buildInfo.edition,
+    commit: buildInfo.commit,
+    dirty: buildInfo.dirty,
+    builtAt: buildInfo.builtAt,
+    packaged: app.isPackaged,
+    flags: buildInfo.flags,
+    electron: process.versions.electron ?? "",
+    chrome: process.versions.chrome ?? "",
+    node: process.versions.node,
+    platform: process.platform,
+    arch: process.arch,
+  };
+}
+
+function selfTestPaths(): SelfTestReport["paths"] {
+  const logs = overrides.userDataDir ? join(overrides.userDataDir, "logs") : join(app.getPath("home"), "Library", "Logs", productName);
+  return reportPaths({ profile: selfTestRealProfile, logs });
+}
+
+async function runSelfTest(win: BrowserWindow, forgeBin: string, worker: WorkerProbeOptions): Promise<void> {
   const setup = agent!;
   const [renderer, workerCheck, forgeCli, claudeCode, slicer] = await Promise.all([
     probeRenderer(win, 120_000),
@@ -486,22 +524,8 @@ async function runSelfTest(win: BrowserWindow, forgeBin: string, worker: WorkerP
     detectBambuStudio().catch(() => ({ found: false, name: "Bambu Studio" as const, path: null, bundleId: null, version: null })),
   ]);
   const body: Omit<SelfTestReport, "ok" | "failures" | "warnings" | "schema"> = {
-    app: {
-      name: app.getName(),
-      version: app.getVersion(),
-      edition: buildInfo.edition,
-      commit: buildInfo.commit,
-      dirty: buildInfo.dirty,
-      builtAt: buildInfo.builtAt,
-      packaged: app.isPackaged,
-      flags: buildInfo.flags,
-      electron: process.versions.electron ?? "",
-      chrome: process.versions.chrome ?? "",
-      node: process.versions.node,
-      platform: process.platform,
-      arch: process.arch,
-    },
-    paths: reportPaths({ profile, logs: overrides.userDataDir ? join(overrides.userDataDir, "logs") : join(app.getPath("home"), "Library", "Logs", productName) }),
+    app: selfTestAppInfo(),
+    paths: selfTestPaths(),
     forgeCli,
     worker: workerCheck,
     renderer,
@@ -509,25 +533,57 @@ async function runSelfTest(win: BrowserWindow, forgeBin: string, worker: WorkerP
     slicer,
   };
   const verdict = selfTestVerdict(body);
-  const report: SelfTestReport = { schema: SELF_TEST_SCHEMA, ...verdict, ...body };
-  setup.host.dispose();
-  if (!win.isDestroyed()) win.destroy();
-  process.stdout.write(`${JSON.stringify(report, null, 2)}\n`, () => {
+  finishSelfTest({ schema: SELF_TEST_SCHEMA, ...verdict, ...body }, verdict.ok ? SELF_TEST_EXIT.ok : SELF_TEST_EXIT.failed);
+}
+
+/** The self-test could not finish (it threw, or the watchdog fired): a failing report instead of a hidden app that never exits. */
+function abortSelfTest(reason: string, code: number): void {
+  let paths: SelfTestReport["paths"];
+  try {
+    paths = selfTestPaths();
+  } catch {
+    paths = { profile: selfTestRealProfile, logs: "", prints: "", reports: "" };
+  }
+  finishSelfTest(abortedSelfTestReport(reason, selfTestAppInfo(), paths), code);
+}
+
+/**
+ * Print the report (stdout carries nothing else) and exit, exactly once. Stops the agent host, closes the hidden
+ * window and removes the throwaway profile. If stdout cannot be flushed (a reader that stopped reading), it exits
+ * anyway after 5 s.
+ */
+function finishSelfTest(report: SelfTestReport, code: number): void {
+  if (selfTestFinished) return;
+  selfTestFinished = true;
+  if (selfTestWatchdog !== null) clearTimeout(selfTestWatchdog);
+  try {
+    agent?.host.dispose();
+  } catch {
+    // exiting anyway
+  }
+  for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.destroy();
+  let exited = false;
+  const exit = (): void => {
+    if (exited) return;
+    exited = true;
     if (selfTestProfile !== null) removeAfterExit(selfTestProfile);
-    app.exit(verdict.ok ? 0 : 1);
-  });
+    app.exit(code);
+  };
+  setTimeout(exit, 5_000);
+  process.stdout.write(`${JSON.stringify(report, null, 2)}\n`, exit);
 }
 
 /**
  * Remove the throwaway profile once this process is gone: Chromium writes into its profile while it shuts down
- * (`Local State`, session storage), after any code of ours could delete it. A detached `/bin/sh` waits for this pid to
- * exit, then removes the folder; the path travels as an argument, never inside the script text.
+ * (`Local State`, session storage), after any code of ours could delete it, and a helper process that was still
+ * starting (an early watchdog exit) can create it again just after. A detached `/bin/sh` waits for this pid to exit,
+ * removes the folder, and removes it once more 2 s later; the path travels as an argument, never inside the script text.
  */
 function removeAfterExit(dir: string): void {
   rmSync(dir, { recursive: true, force: true });
   if (process.platform === "win32") return;
   try {
-    const script = 'while kill -0 "$1" 2>/dev/null; do sleep 0.2; done; rm -rf -- "$2"';
+    const script = 'while kill -0 "$1" 2>/dev/null; do sleep 0.2; done; rm -rf -- "$2"; sleep 2; rm -rf -- "$2"';
     spawn("/bin/sh", ["-c", script, "partzero-self-test-cleanup", String(process.pid), dir], { detached: true, stdio: "ignore" }).unref();
   } catch {
     // best effort: the folder is in the per-user temp dir, which macOS cleans up
@@ -546,6 +602,9 @@ if (buildInfoError !== null) {
     // stdout carries the report only.
     console.log = (...args: unknown[]): void => console.error(...args);
     console.info = console.log;
+    // Whatever hangs (the app never gets ready, a probe that ignores its timeout), the run ends with a report.
+    const limit = overrides.selfTestTimeoutMs ?? SELF_TEST_TIMEOUT_MS;
+    selfTestWatchdog = setTimeout(() => abortSelfTest(`the self-test did not finish within ${limit / 1000} s`, SELF_TEST_EXIT.timedOut), limit);
   }
   start();
 }

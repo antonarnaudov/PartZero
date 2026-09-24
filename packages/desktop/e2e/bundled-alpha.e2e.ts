@@ -137,3 +137,15 @@ test("--self-test on the bundle passes: aicad, worker (CadScript, forge-web v0/v
   expect(report.renderer).toMatchObject({ ok: true, snapshot: { url: "app://aicad/index.html", crossOriginIsolated: true, engine: "forge-web · wasm", problems: "0", status: expect.stringMatching(/^Up to date/) } });
   expect(report.claudeCode).toMatchObject({ ok: true, version: "2.1.260", auth: "logged_in", autoDefault: "Claude Code" });
 });
+
+test("--self-test that cannot finish in time still prints a failing report and exits (watchdog)", () => {
+  const r = spawnSync(electronBinary, [bundleDir, "--self-test"], {
+    encoding: "utf8",
+    timeout: 60_000,
+    env: keylessEnv({ AICAD_USER_DATA_DIR: profile(root, "self-test-watchdog"), AICAD_CLI_DIRS: fake.binDir, AICAD_SIMULATE_PACKAGED: "1", AICAD_SELF_TEST_TIMEOUT_MS: "1" }),
+  });
+  expect(r.status, r.stderr).toBe(2);
+  const report = JSON.parse(r.stdout) as SelfTestReport;
+  expect(report).toMatchObject({ ok: false, failures: ["the self-test did not finish within 0.001 s"], app: { name: "PartZero", edition: "alpha-local" } });
+  expect(report.worker.detail).toBe("not finished: the self-test did not finish within 0.001 s");
+});

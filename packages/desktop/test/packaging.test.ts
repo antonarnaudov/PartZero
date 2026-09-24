@@ -15,7 +15,7 @@ import { parseWorkerMessage } from "../src/agent/protocol.js";
 import { DEV_BUILD_INFO, mcpShimExecutable, parseBuildInfo, readBuildInfo, type BuildInfo } from "../src/build-info.js";
 import { bundledMcpShimPath, bundledPromptsDir, bundledWasmPath, unpackedPath } from "../src/bundle-paths.js";
 import { formatConsoleArgs, logFor, RotatingLog } from "../src/log-file.js";
-import { claudeCodeCheck, describeRenderer, detectBambuStudio, rendererReady, selfTestVerdict, type RendererSnapshot, type SelfTestReport } from "../src/self-test.js";
+import { abortedSelfTestReport, claudeCodeCheck, describeRenderer, detectBambuStudio, rendererReady, SELF_TEST_EXIT, selfTestVerdict, type RendererSnapshot, type SelfTestReport } from "../src/self-test.js";
 import { ensureUserFolder, userFolders } from "../src/user-folders.js";
 import { tempDirs } from "./temp-dirs.js";
 
@@ -304,6 +304,15 @@ describe("--self-test (electron-free parts)", () => {
     // The renderer fell back from its WASM engine to the Forge CLI: it still works, but the page's WASM did not load.
     const cli = selfTestVerdict({ ...body, renderer: { ...body.renderer, snapshot: { ...snapshot, engine: "Forge CLI · native" } } });
     expect(cli.warnings).toContain("the renderer evaluates with Forge CLI · native, not forge-web · wasm: the WASM engine did not start in the page");
+  });
+
+  it("a self-test that could not finish still reports: not ok, the reason as its only failure, every check not finished", () => {
+    const appInfo: SelfTestReport["app"] = { name: "PartZero", version: "0.0.1", edition: "alpha-local", commit: "abcdef1", dirty: false, builtAt: null, packaged: true, flags: { apiKeys: false, mcpShim: true }, electron: "", chrome: "", node: "", platform: "darwin", arch: "arm64" };
+    const r = abortedSelfTestReport("the self-test did not finish within 180 s", appInfo, { profile: "/p", logs: "/l", prints: "/pr", reports: "/r" });
+    expect(r).toMatchObject({ schema: "partzero.self-test/1", ok: false, failures: ["the self-test did not finish within 180 s"], warnings: [], app: appInfo });
+    for (const c of [r.forgeCli, r.worker, r.renderer, r.claudeCode]) expect(c).toMatchObject({ ok: false, detail: "not finished: the self-test did not finish within 180 s" });
+    expect(r.slicer.found).toBe(false);
+    expect(SELF_TEST_EXIT).toEqual({ ok: 0, failed: 1, timedOut: 2 });
   });
 
   it("finds Bambu Studio where the user installed it and reads its version and bundle id", async () => {

@@ -180,6 +180,11 @@ export interface DevOverrides {
    * so a fake CLI that only answers single calls is never driven through the MCP runtime by accident.
    */
   cliAutoMode: "runtime" | "completion";
+  /**
+   * `AICAD_SELF_TEST_TIMEOUT_MS`: the `--self-test` watchdog's limit (self-test.ts `SELF_TEST_TIMEOUT_MS` otherwise), so
+   * the e2e suite can check that a self-test that does not finish still prints a report and exits.
+   */
+  selfTestTimeoutMs: number | null;
 }
 
 const NO_OVERRIDES: DevOverrides = {
@@ -192,6 +197,7 @@ const NO_OVERRIDES: DevOverrides = {
   cliDirs: null,
   detectLocalModels: true,
   cliAutoMode: "runtime",
+  selfTestTimeoutMs: null,
 };
 
 /** Every `AICAD_*` variable read by the main process for development and tests. */
@@ -209,6 +215,7 @@ export const DEV_OVERRIDE_VARIABLES = [
   "AICAD_AGENT_DOTENV",
   "AICAD_CLI_DIRS",
   "AICAD_CLI_AUTO",
+  "AICAD_SELF_TEST_TIMEOUT_MS",
 ] as const;
 
 /**
@@ -234,6 +241,7 @@ export function readDevOverrides(env: NodeJS.ProcessEnv, isPackaged: boolean, wa
     cliDirs: env["AICAD_CLI_DIRS"] ? env["AICAD_CLI_DIRS"].split(delimiter).filter((d) => d.length > 0).map((d) => resolve(d)) : env["AICAD_USER_DATA_DIR"] ? [] : null,
     detectLocalModels: !env["AICAD_USER_DATA_DIR"],
     cliAutoMode: cliAutoMode(env, warn),
+    selfTestTimeoutMs: /^[1-9]\d{0,6}$/.test(env["AICAD_SELF_TEST_TIMEOUT_MS"] ?? "") ? Number(env["AICAD_SELF_TEST_TIMEOUT_MS"]) : null,
   };
 }
 
