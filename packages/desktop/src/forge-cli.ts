@@ -147,6 +147,79 @@ export async function forgeEval(bin: string, req: ForgeEvalRequest, timeoutMs = 
   });
 }
 
+/** A 3MF for a printer: centred on its bed, fit-checked, print tessellation (`aicad export --bed`). */
+export interface ForgePrintExportRequest {
+  irJson: string;
+  /** Bed width, depth and height, mm. */
+  bed: readonly [number, number, number];
+  /** Room kept free on each side, mm. */
+  margin: number;
+  /** Areas of the bed no part may cover, `[x0, y0, x1, y1]`, mm. */
+  exclusions: ReadonlyArray<readonly [number, number, number, number]>;
+  deflection: number;
+  angular: number;
+  /** 3MF `Title` metadata. */
+  title: string;
+  /** 3MF `Application` metadata, e.g. `PartZero 0.0.1`. */
+  application: string;
+}
+
+export interface ForgePrintExportResponse {
+  /** The 3MF bytes (exit 0 only). */
+  data: Uint8Array | null;
+  /** The `aicad.export/1` summary, written on success and on `EXPORT_BED_FIT` (exit 4). */
+  summary: unknown;
+  exitCode: number | null;
+  stderr: string;
+  error?: string;
+}
+
+/** Metadata text for the command line: no control characters, bounded. */
+function metaArg(s: string): string {
+  // eslint-disable-next-line no-control-regex
+  return s.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 200);
+}
+
+function finite(v: number, what: string): string {
+  if (!Number.isFinite(v)) throw new Error(`invalid ${what}`);
+  return String(v);
+}
+
+export async function forgePrintExport(bin: string, req: ForgePrintExportRequest, timeoutMs = 300_000): Promise<ForgePrintExportResponse> {
+  const args = (dir: string, docPath: string): string[] => [
+    "export",
+    docPath,
+    "--out",
+    join(dir, "print.3mf"),
+    `--deflection=${finite(req.deflection, "deflection")}`,
+    `--angular=${finite(req.angular, "angular")}`,
+    `--bed=${req.bed.map((v) => finite(v, "bed size")).join(",")}`,
+    `--bed-margin=${finite(req.margin, "bed margin")}`,
+    ...req.exclusions.map((r) => `--bed-exclude=${r.map((v) => finite(v, "exclusion zone")).join(",")}`),
+    `--title=${metaArg(req.title)}`,
+    `--application=${metaArg(req.application)}`,
+    `--summary=${join(dir, "summary.json")}`,
+  ];
+  return withTempDoc(req.irJson, async (dir, docPath) => {
+    const r = await run(bin, args(dir, docPath), timeoutMs);
+    let data: Uint8Array | null = null;
+    if (r.code === 0) {
+      try {
+        data = new Uint8Array(await readFile(join(dir, "print.3mf")));
+      } catch {
+        data = null;
+      }
+    }
+    let summary: unknown = null;
+    try {
+      summary = JSON.parse(await readFile(join(dir, "summary.json"), "utf8"));
+    } catch {
+      summary = null;
+    }
+    return { data, summary, exitCode: r.code, stderr: r.stderr.trim(), ...(r.error ? { error: r.error } : {}) };
+  });
+}
+
 export async function forgeExport(bin: string, req: ForgeExportRequest, timeoutMs = 300_000): Promise<ForgeExportResponse> {
   if (!MESH_FORMATS.includes(req.format)) throw new Error(`unsupported mesh format: ${String(req.format)}`);
   return withTempDoc(req.irJson, async (dir, docPath) => {

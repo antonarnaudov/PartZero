@@ -69,7 +69,7 @@ describe("L10: packaged builds ignore dev and test overrides", () => {
 
   it("reads no AICAD_* override when packaged, and says so", () => {
     const warnings: string[] = [];
-    expect(readDevOverrides({ ...env, AICAD_ALLOW_DEBUGGER: "1" }, true, (m) => warnings.push(m))).toEqual({ devServer: null, userDataDir: null, appDist: null, skipClosePrompt: false, simulatePackaged: false, allowDebugger: false, cliDirs: null, detectLocalModels: true, cliAutoMode: "runtime" });
+    expect(readDevOverrides({ ...env, AICAD_ALLOW_DEBUGGER: "1" }, true, (m) => warnings.push(m))).toEqual({ devServer: null, userDataDir: null, appDist: null, skipClosePrompt: false, simulatePackaged: false, allowDebugger: false, cliDirs: null, detectLocalModels: true, cliAutoMode: "runtime", printsDir: null, slicerDirs: null, openBin: null });
     expect(warnings).toEqual(
       expect.arrayContaining(["AICAD_DEV_URL is ignored in packaged builds", "AICAD_BIN is ignored in packaged builds", "AICAD_APP_DIST is ignored in packaged builds", "AICAD_ALLOW_DEBUGGER is ignored in packaged builds", "AICAD_CLI_DIRS is ignored in packaged builds"]),
     );
@@ -87,6 +87,15 @@ describe("L10: packaged builds ignore dev and test overrides", () => {
     expect(readDevOverrides({ AICAD_USER_DATA_DIR: "/tmp/profile", AICAD_CLI_AUTO: "runtime" }, false)).toMatchObject({ cliAutoMode: "runtime" });
     expect(readDevOverrides({}, false)).toMatchObject({ cliDirs: null, detectLocalModels: true, cliAutoMode: "runtime" });
     expect(readDevOverrides({ AICAD_CLI_AUTO: "completion" }, true).cliAutoMode).toBe("runtime"); // packaged: ignored
+    // A test profile never writes into the user's prints folder or launches their real slicer unless it opts in.
+    expect(readDevOverrides({ AICAD_USER_DATA_DIR: "/tmp/profile" }, false)).toMatchObject({ printsDir: join(resolve("/tmp/profile"), "Prints"), slicerDirs: [], openBin: null });
+    expect(readDevOverrides({ AICAD_USER_DATA_DIR: "/tmp/profile", AICAD_PRINTS_DIR: "/tmp/prints", AICAD_SLICER_DIRS: "/tmp/apps", AICAD_OPEN_BIN: "/tmp/fake-open" }, false)).toMatchObject({
+      printsDir: resolve("/tmp/prints"),
+      slicerDirs: [resolve("/tmp/apps")],
+      openBin: resolve("/tmp/fake-open"),
+    });
+    expect(readDevOverrides({}, false)).toMatchObject({ printsDir: null, slicerDirs: null, openBin: null });
+    expect(readDevOverrides({ AICAD_OPEN_BIN: "/tmp/fake-open", AICAD_SLICER_DIRS: "/tmp/apps" }, true)).toMatchObject({ slicerDirs: null, openBin: null }); // packaged: ignored
     expect(locateForgeBinary({ env, isPackaged: false, resourcesPath: "", appPath: "/" })).toBe(resolve("/tmp/aicad"));
     expect(transportFromEnv(env, () => undefined, false)).toEqual({ kind: "scripted", scriptPath: thisFile });
     expect(resolveWebRoot({ isPackaged: false, appPath: "/x", appDistOverride: null, workspaceWebRoot: () => "/ws" })).toBe("/ws");

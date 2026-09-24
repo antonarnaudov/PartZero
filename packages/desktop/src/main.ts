@@ -26,8 +26,10 @@ import { documentStatePath, PathGrants, RecentFiles } from "./files.js";
 import { findRepoRoot, forgeInfo, locateForgeBinary } from "./forge-cli.js";
 import { registerIpc } from "./ipc.js";
 import { buildMenuTemplate } from "./menu.js";
+import { ProfileStore } from "./profiles.js";
 import { APP_ENTRY_URL, isTrustedFrameUrl } from "./protocol-core.js";
 import { registerAppScheme, serveApp } from "./protocol.js";
+import { defaultSlicerSystem } from "./slicer.js";
 import { mainWindowWebPreferences } from "./web-preferences.js";
 import { loadWindowState, MIN_SIZE, saveWindowState, type WindowState } from "./window-state.js";
 
@@ -266,6 +268,15 @@ function start(): void {
     warm.unref();
     registerIpc({
       agent,
+      // "Open in Bambu Studio" (print-handoff.ts): prints go to ~/PartZero/Prints (ALPHA-0-PLAN D4).
+      print: {
+        forgeBin,
+        printsDir: overrides.printsDir ?? join(app.getPath("home"), "PartZero", "Prints"),
+        appVersion: app.getVersion(),
+        profiles: new ProfileStore(join(app.getPath("userData"), "machine-profiles.json"), (m) => console.warn(`[aicad] ${m}`)),
+        slicer: defaultSlicerSystem({ searchDirs: overrides.slicerDirs, openBin: overrides.openBin }),
+        revealInFolder: (path) => shell.showItemInFolder(path),
+      },
       window: () => mainWindow,
       isTrustedSender,
       grants,

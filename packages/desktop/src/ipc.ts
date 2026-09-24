@@ -14,12 +14,22 @@ import type {
   IpcChannel,
   IpcContract,
   OpenDialogOptions,
+  OpenInSlicerRequest,
   SaveDialogOptions,
 } from "@aicad/app/bridge";
 import type { AgentSetup } from "./agent/setup.js";
 import { parseClearApiKey, parseSetApiKey } from "./agent/protocol.js";
 import { documentStatePath, isDocumentPath, type PathGrants, type RecentFiles } from "./files.js";
 import { forgeEval, forgeExport, forgeInfo, MESH_FORMATS } from "./forge-cli.js";
+import { currentSlicer, openPrintInSlicer, type PrintHandoffDeps } from "./print-handoff.js";
+import { checkSlicerPath, profileView } from "./profiles.js";
+import { isInside } from "./slicer.js";
+
+/** Printing: the profile library, the prints folder and the slicer handoff (print-handoff.ts). */
+export interface PrintIpcDeps extends PrintHandoffDeps {
+  /** Show a file in the OS file manager (`shell.showItemInFolder`). */
+  revealInFolder: (path: string) => void;
+}
 
 export interface IpcDeps {
   window: () => BrowserWindow | null;
@@ -32,6 +42,8 @@ export interface IpcDeps {
   onDocState: (state: DocumentStateMessage) => void;
   /** The in-app design agent (host, keys, settings). */
   agent: AgentSetup;
+  /** Printer profile and "Open in Bambu Studio" (absent: the channels are not registered). */
+  print?: PrintIpcDeps;
 }
 
 type Handler<C extends IpcChannel> = (
@@ -173,6 +185,28 @@ export function registerIpc(deps: IpcDeps): void {
     return host.settingsView();
   });
   handle("settings:probeProviders", (_e, req) => host.probeProviders(req));
+
+  // ─── Printing (ALPHA-0-PLAN W5, ADR 0016) ─────────────────────────────────────────────────
+  // The renderer sends the compiled IR and the document name; the main process picks the file
+  // name, writes only into the prints folder and launches only Bambu Studio (slicer.ts).
+  const print = deps.print;
+  if (print) {
+    handle("print:profile", () => profileView(print.profiles.printer(), print.profiles.material(), print.printsDir));
+    handle("slicer:detect", () => currentSlicer(print));
+    handle("slicer:setPath", (_e, path) => {
+      print.profiles.update({ slicerPath: checkSlicerPath(path) });
+      return currentSlicer(print);
+    });
+    handle("slicer:open", (_e, req) => {
+      const r = (typeof req === "object" && req !== null ? req : {}) as Partial<OpenInSlicerRequest>;
+      return openPrintInSlicer(print, { irJson: str(r.irJson, "IR", 32 * 1024 * 1024), docName: str(r.docName ?? "", "document name", 200) });
+    });
+    handle("print:reveal", (_e, path) => {
+      const p = str(path, "path");
+      if (!isInside(print.printsDir, p)) throw new Error(`only files in ${print.printsDir} can be shown`);
+      print.revealInFolder(p);
+    });
+  }
 
   ipcMain.on("doc:state", (event: IpcMainEvent, state: unknown) => {
     if (!deps.isTrustedSender(event.senderFrame?.url)) return;

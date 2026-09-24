@@ -9,6 +9,8 @@
  * Security model: the renderer never gets general file-system access. Paths become readable or
  * writable only after the user picked them in a native dialog (or earlier did so: recent files),
  * and the Forge CLI is exposed as two fixed operations whose temp files the main process owns.
+ * The print handoff (`slicer:open`) writes only into `~/PartZero/Prints`, a name the main process
+ * chooses, and launches only an app whose bundle id is Bambu Studio's (ADR 0016).
  * The design agent runs in a utility process behind the main process; API keys stay there (see
  * `agent-protocol.ts`).
  */
@@ -108,6 +110,100 @@ export interface ForgeExportRequest {
   allowPartial?: boolean;
 }
 
+// ─── Printing: machine profile and the slicer handoff (ALPHA-0-PLAN W5, ADR 0016) ──────────
+
+/** A printer as the export sees it (a built-in profile in Alpha 0). */
+export interface PrinterProfileView {
+  /** e.g. `builtin:bambu-p2s-0.4`. */
+  id: string;
+  version: number;
+  /** e.g. `Bambu Lab P2S`. */
+  name: string;
+  /** Bed width (X), depth (Y) and maximum print height (Z), mm. */
+  bed: { x: number; y: number; z: number };
+  /** Room kept free on each side of the bed in X and Y, mm. */
+  bedMargin: number;
+  /** Nozzle diameter, mm. */
+  nozzle: number;
+  /** Fields not yet checked on the owner's machine (they come from the public spec sheet). */
+  unverified: string[];
+}
+
+/** A material's design defaults (diametral clearances for vertical holes, mm). */
+export interface MaterialProfileView {
+  /** e.g. `builtin:pla`. */
+  id: string;
+  version: number;
+  /** e.g. `PLA`. */
+  name: string;
+  clearances: { press: number; slip: number; running: number; pressMetal: number };
+  /** Where the clearances come from: `default` until the Fit Lab measures them. */
+  clearanceSource: "default" | "fitlab";
+  /** Thinnest wall worth printing, mm. */
+  minWall: number;
+  /** Steepest overhang that prints without supports, degrees from vertical. */
+  maxOverhangDeg: number;
+}
+
+/** `print:profile`: the active printer and material, and where prints go. */
+export interface PrintProfileView {
+  printer: PrinterProfileView;
+  material: MaterialProfileView;
+  /** e.g. `Bambu Lab P2S · 0.4 mm · PLA` (the welcome card's line). */
+  summary: string;
+  /** `~/PartZero/Prints`, absolute. */
+  printsDir: string;
+  /** One line for the design agent's conventions: machine, material, clearances, limits. */
+  agentConventions: string;
+}
+
+/** The user's installed slicer, as `slicer:detect` finds it (Bambu Studio only in Alpha 0). */
+export interface SlicerInfo {
+  found: boolean;
+  /** `Bambu Studio`. */
+  name: string;
+  bundleId: string;
+  /** The `.app` bundle when found (or the path set in Settings when that is missing). */
+  path: string | null;
+  /** `CFBundleShortVersionString`, e.g. `02.06.00.51`. */
+  version: string | null;
+  /** How it was found. */
+  source: "settings" | "applications" | "user-applications" | "launch-services" | null;
+  /** The path set in Settings, if any (it overrides the search). */
+  customPath: string | null;
+  /** Why it was not found, in plain words. */
+  reason?: string;
+  /** What to do about it. */
+  fix?: string;
+}
+
+/** `slicer:open`: export the current design for the active printer and open it in the slicer. */
+export interface OpenInSlicerRequest {
+  /** The compiled IR of the document (JSON). */
+  irJson: string;
+  /** The document name (the file is `<name>-<hash8>.3mf`). */
+  docName: string;
+}
+
+export type OpenInSlicerResult =
+  /** Written to `~/PartZero/Prints` and handed to the slicer. */
+  | { status: "opened"; file: string; receipt: string; slicer: SlicerInfo; bodies: number; bytes: number }
+  /** Written, but not opened: no slicer, or its launch failed. `message` says why, `fix` what to do. */
+  | { status: "exported"; file: string; receipt: string; slicer: SlicerInfo; bodies: number; bytes: number; message: string; fix?: string }
+  /** Nothing written: the design is not checked or does not fit the printer. */
+  | { status: "refused"; code: "EXPORT_BED_FIT" | "EXPORT_NOT_VALID" | "EXPORT_FAILED" | "FORGE_UNAVAILABLE"; message: string; details?: unknown };
+
+/** `window.aicad.print`: printer profile, slicer detection and the handoff. */
+export interface PrintBridge {
+  profile(): Promise<PrintProfileView>;
+  detectSlicer(): Promise<SlicerInfo>;
+  /** Point at a Bambu Studio `.app` elsewhere, or `null` to search the usual places again. */
+  setSlicerPath(path: string | null): Promise<SlicerInfo>;
+  openInSlicer(request: OpenInSlicerRequest): Promise<OpenInSlicerResult>;
+  /** Show a file in `~/PartZero/Prints` in Finder (other paths are refused). */
+  reveal(path: string): Promise<void>;
+}
+
 /** A command request sent by the native menu. `id` is a command-layer id, e.g. `file.open`. */
 export interface MenuCommandMessage {
   id: string;
@@ -146,6 +242,8 @@ export interface AicadBridge {
   agent: AgentBridge;
   /** Agent settings: models, budget and API keys (keys are write-only from here). */
   settings: SettingsBridge;
+  /** Printer profile and the slicer handoff (optional: an older shell has none). */
+  print?: PrintBridge;
 }
 
 /** Every `ipcRenderer.invoke` channel with its argument tuple and result. */
@@ -168,6 +266,11 @@ export interface IpcContract {
   "settings:setApiKey": { args: [SetApiKeyRequest]; result: AgentSettingsView };
   "settings:clearApiKey": { args: [ClearApiKeyRequest]; result: AgentSettingsView };
   "settings:probeProviders": { args: [ProbeProvidersRequest]; result: AgentSettingsView };
+  "print:profile": { args: []; result: PrintProfileView };
+  "print:reveal": { args: [path: string]; result: void };
+  "slicer:detect": { args: []; result: SlicerInfo };
+  "slicer:setPath": { args: [path: string | null]; result: SlicerInfo };
+  "slicer:open": { args: [OpenInSlicerRequest]; result: OpenInSlicerResult };
 }
 
 export type IpcChannel = keyof IpcContract;
