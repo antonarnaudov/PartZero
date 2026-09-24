@@ -1,0 +1,20 @@
+packages/desktop/e2e/print.e2e.ts
+  s_59c0dd2af30db2::t_47e41330a54d06 1-65,67-113
+  s_59c0dd2af30db2::t_46af5118778946 66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "791fd1e7739bb55ac123a8027306ddc43d5ddd48",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
