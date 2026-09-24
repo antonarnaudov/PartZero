@@ -68,6 +68,12 @@ This list collects follow-ups from agent reports and reviews. Items are grouped 
 - ~~**P1 MakerBench needs 20 more tasks.**~~ Done: 61 tasks, validated on Forge and OCCT, with arc-drawn holes and edge-offset checks.
 - ~~**P1 The spec writer's check schema drops `relative_to`.**~~ Fixed: the schema and the spec writer prompt now cover edge offsets and holes drawn as arcs.
 - **P2 MakerBench should record a rendered image per task** once the agent's L5 visual judge exists.
+## CLI providers (from the live smoke test, 2026-09-24)
+- **P1 The spec writer can pass its own tests while missing requested features.** In the knob task it never checked for the blind bore. Require one spec test per requested feature.
+- **P1 A struggling task burns about 10 minutes on a CLI plan.** Add a per-task wall-time cap and stop after N failed applies in bench/runtime mode.
+- **P2 Cursor Agent is blocked.** Headless mode offers no documented `--trust` option and no web-search off switch. Unblock it once the CLI supports a full lockdown.
+- **P2 Desktop e2e tests fail confusingly when `forge/target/debug/aicad` is missing** (for example after `cargo clean`). Add a global-setup check with a clear message, or build it automatically.
+
 ## App
 - **P1 Packaged builds can't run the agent yet.** electron-builder needs a bundling step for the agent worker, gateway, forge-web WASM and prompts.
 - **P1 The agent doesn't pause when the user edits mid-run.** Conflicts are only detected at accept time.
