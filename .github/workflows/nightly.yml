@@ -65,7 +65,11 @@ jobs:
           --report "$RUNNER_TEMP/nightly/reports/invalid.md"
       - uses: actions/upload-artifact@v4
         if: always()
+        # Private-repo artifact storage is an account-wide quota; when it is full the
+        # upload fails, which must not fail the job whose tests passed.
+        continue-on-error: true
         with:
+          retention-days: 7
           name: differential-seed-${{ env.SEED }}
           path: ${{ runner.temp }}/nightly
           if-no-files-found: ignore
@@ -184,7 +188,11 @@ jobs:
           EOF
       - uses: actions/upload-artifact@v4
         if: always()
+        # Private-repo artifact storage is an account-wide quota; when it is full the
+        # upload fails, which must not fail the job whose tests passed.
+        continue-on-error: true
         with:
+          retention-days: 7
           name: solver-oracles-planegcs-wasm
           path: |
             ${{ runner.temp }}/solve/summary.json
@@ -246,7 +254,11 @@ jobs:
           EOF
       - uses: actions/upload-artifact@v4
         if: always()
+        # Private-repo artifact storage is an account-wide quota; when it is full the
+        # upload fails, which must not fail the job whose tests passed.
+        continue-on-error: true
         with:
+          retention-days: 7
           name: solver-oracle-solvespace
           path: ${{ runner.temp }}/solve/summary_solvespace.json
           if-no-files-found: ignore

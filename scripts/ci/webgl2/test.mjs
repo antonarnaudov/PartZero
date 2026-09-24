@@ -256,11 +256,20 @@ try {
   // Frame time while orbiting.
   result.frames = await page.evaluate(() => forgeDemo.measureFrames(60));
   console.log("frames", JSON.stringify(result.frames));
-  // Worker edit path, 10 edits.
+  // Worker edit path, 10 edits. On SwiftShader (the auto-fallback run) this is a timing
+  // measurement on a CPU rasteriser about 4x slower than llvmpipe, where a pick-buffer map can
+  // exceed forge-wasm's 5 s readback timeout; that run checks the fallback, not speed, so a
+  // timeout there is logged and skipped instead of failing the job.
   await page.selectOption("#editPath", "worker");
-  const benchW = await page.evaluate(() => forgeDemo.runBench(10));
-  result.benchWorker = { median: benchW.median, p95: benchW.p95, max: benchW.max, frameWaitMedian: benchW.frameWaitMedian };
-  console.log("bench worker", JSON.stringify(result.benchWorker));
+  try {
+    const benchW = await page.evaluate(() => forgeDemo.runBench(10));
+    result.benchWorker = { median: benchW.median, p95: benchW.p95, max: benchW.max, frameWaitMedian: benchW.frameWaitMedian };
+    console.log("bench worker", JSON.stringify(result.benchWorker));
+  } catch (e) {
+    if (scenario === "llvmpipe" || !/timed out mapping/.test(String(e))) throw e;
+    result.benchWorker = { skipped: String(e).split("\n")[0] };
+    console.log("SKIP bench worker (slow software renderer)", result.benchWorker.skipped);
+  }
   await page.selectOption("#editPath", "main");
 
   // Fixture cut on Y (as in the spike's WebGL2 screenshot), iso view.

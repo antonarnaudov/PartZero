@@ -162,7 +162,11 @@ jobs:
           --report "$RUNNER_TEMP/oracle-diff/invalid.md"
       - uses: actions/upload-artifact@v4
         if: always()
+        # Private-repo artifact storage is an account-wide quota; when it is full the
+        # upload fails, which must not fail the job whose tests passed.
+        continue-on-error: true
         with:
+          retention-days: 7
           name: oracle-diff
           path: ${{ runner.temp }}/oracle-diff
           if-no-files-found: ignore
@@ -196,7 +200,11 @@ jobs:
         run: node scripts/license-check/js-licenses.mjs --json "$RUNNER_TEMP/js-licenses.json"
       - uses: actions/upload-artifact@v4
         if: always()
+        # Private-repo artifact storage is an account-wide quota; when it is full the
+        # upload fails, which must not fail the job whose tests passed.
+        continue-on-error: true
         with:
+          retention-days: 7
           name: js-licenses
           path: ${{ runner.temp }}/js-licenses.json
           if-no-files-found: ignore
@@ -252,7 +260,11 @@ jobs:
         run: node packages/forge-web/test/browser/webgpu-errors.mjs
       - uses: actions/upload-artifact@v4
         if: always()
+        # Private-repo artifact storage is an account-wide quota; when it is full the
+        # upload fails, which must not fail the job whose tests passed.
+        continue-on-error: true
         with:
+          retention-days: 7
           name: webgl2
           path: ${{ runner.temp }}/webgl2
           if-no-files-found: ignore
