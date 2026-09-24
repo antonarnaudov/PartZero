@@ -253,7 +253,7 @@ do_install() {
   fi
   mkdir -p "$REPORT_DIR"
   check_signature_and_fuses "$target" "$REPORT_DIR/fuses-installed.json"
-  say "installed $target. Open it from Applications (the first launch shows the welcome card)."
+  say "installed $target. Open it from Applications. Settings (⌘,) shows the detected Claude Code and printer."
   g2b_reminder
 }
 
