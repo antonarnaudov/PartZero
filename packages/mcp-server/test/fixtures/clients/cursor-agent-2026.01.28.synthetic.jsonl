@@ -1,0 +1,8 @@
+{"_fixture":{"client":"cursor-agent","cliVersion":"2026.01.28","evidence":"synthetic: generic client probing resources, prompts and ping before calling tools; Cursor is blocked (C1) and was logged out, so nothing was captured","mode":"none (blocked)"}}
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{"roots":{"listChanged":false}},"clientInfo":{"name":"cursor-vscode","version":"1.0.0"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":1,"method":"tools/list"}
+{"jsonrpc":"2.0","id":2,"method":"resources/list"}
+{"jsonrpc":"2.0","id":3,"method":"prompts/list"}
+{"jsonrpc":"2.0","id":"s-4","method":"ping"}
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"get_code","arguments":{"feature":"e"}}}

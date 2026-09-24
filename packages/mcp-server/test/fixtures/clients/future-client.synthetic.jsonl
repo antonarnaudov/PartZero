@@ -1,0 +1,6 @@
+{"_fixture":{"client":"future-client","evidence":"synthetic: a client on an MCP version we do not know yet, with logging and a batch; we answer our newest version","mode":"any"}}
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2026-07-28","capabilities":{"tasks":{}},"clientInfo":{"name":"future","version":"9"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":1,"method":"logging/setLevel","params":{"level":"info"}}
+{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{"cursor":"abc"}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_code","arguments":{},"_meta":{"progressToken":"p1"}}}

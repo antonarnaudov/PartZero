@@ -1,0 +1,7 @@
+{"_fixture":{"client":"codex","cliVersion":"0.156.1","evidence":"synthetic: shapes from the Codex source (rmcp client, clientInfo with title, elicitation capability); Codex is not installed here","mode":"runtime"}}
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{"elicitation":{}},"clientInfo":{"name":"codex-mcp-client","title":"Codex","version":"0.156.1"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_code","arguments":{}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"apply_cadscript","arguments":{"source":"part(\"p\");\n"}}}
+{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":3,"reason":"tool call timed out"}}

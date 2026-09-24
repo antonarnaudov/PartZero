@@ -1,0 +1,6 @@
+{"_fixture":{"client":"claude-code","cliVersion":"2.1.260","evidence":"recorded 2026-09-24 from a live `claude -p` runtime-mode run (Haiku) through aicad-mcp (test/live/claude-cli.live.test.ts); scrubbed","mode":"runtime, read scope"}}
+{"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"roots":{"listChanged":true},"elicitation":{}},"clientInfo":{"name":"claude-code","title":"Claude Code","version":"2.1.260","description":"Anthropic's agentic coding tool","websiteUrl":"https://claude.com/claude-code"}},"jsonrpc":"2.0","id":0}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"method":"tools/list","jsonrpc":"2.0","id":1}
+{"method":"tools/call","params":{"name":"get_code","arguments":{},"_meta":{"claudecode/toolUseId":"toolu_0001","progressToken":2}},"jsonrpc":"2.0","id":2}
+{"method":"tools/call","params":{"name":"ir_summary","arguments":{},"_meta":{"claudecode/toolUseId":"toolu_0002","progressToken":3}},"jsonrpc":"2.0","id":3}

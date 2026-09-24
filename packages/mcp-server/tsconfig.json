@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // "..": test/tools.test.ts type-checks createMcpHost() against the gateway's frozen
+    // src/cli/mcp.ts (CLI-PROVIDERS.md §7.6). This config never emits (the build uses tsconfig.build.json).
+    "rootDir": "..",
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "types": ["node"]
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

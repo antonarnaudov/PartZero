@@ -1,0 +1,5 @@
+{"_fixture":{"client":"gemini-cli","cliVersion":"0.49.0","evidence":"synthetic: request shapes of the MCP TypeScript SDK client, which Gemini CLI uses (clientInfo name from its mcp-client); not captured from a run","mode":"completion, mcp-submit"}}
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"gemini-cli-mcp-client","version":"0.0.1"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":1,"method":"tools/list"}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"submit_turn","arguments":{"text":"","tool_calls":[{"name":"apply_cadscript","arguments":{"patches":[{"feature":"e","code":"const e = extrude(s, { distance: 7 });"}]}}]}}}

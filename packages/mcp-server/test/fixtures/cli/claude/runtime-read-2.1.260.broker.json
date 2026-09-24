@@ -1,0 +1,23 @@
+{
+ "scope": "read",
+ "tools": [
+  "get_code",
+  "ir_summary",
+  "measure",
+  "run_tests"
+ ],
+ "calls": [
+  {
+   "seq": 1,
+   "name": "get_code",
+   "isError": false,
+   "text": "5 lines:\nimport { part, sketch, circle, extrude, XY } from \"@aicad/std\";\npart(\"p\");\nconst s = sketch(XY, { c: circle({ center: [0, 0], radius: 5 }) });\nconst e = extrude(s, { distance: 5 });\n"
+  },
+  {
+   "seq": 2,
+   "name": "ir_summary",
+   "isError": false,
+   "text": "doc (unnamed): 1 part, 2 features, status ok\npart \"p\"\n  s: sketch on XY, 1 curve (circle 1) → 1 region\n    c: circle c[0, 0] r5\n  e: extrude s 5 mm → 1 body: V 392.7 mm³, bbox 10×10×5 @[-5, -5, 0], faces 3 (cylinder 1, plane 2)\nmodel: 1 body, total V 392.7 mm³, overall bbox 10×10×5 from [-5, -5, 0] to [5, 5, 5]"
+  }
+ ]
+}
