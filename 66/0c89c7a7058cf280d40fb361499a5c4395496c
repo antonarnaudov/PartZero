@@ -1,0 +1,181 @@
+packages/mcp-server/test/helpers/tee-shim.mjs
+  s_59c0dd2af30db2::t_37a81affac4a99 1-16
+packages/mcp-server/src/bridge-client.ts
+  s_59c0dd2af30db2::t_b55fd4eb0d44cc 175,180-181,186
+  s_59c0dd2af30db2::t_80518de553c00f 57,66-70
+  s_59c0dd2af30db2::t_7087f8d31f96b5 212-213
+  s_59c0dd2af30db2::t_098844c892bc35 9-11
+  s_59c0dd2af30db2::t_ab3041d3180aa9 22,187-188
+  s_59c0dd2af30db2::t_ef84611dec4b3a 1-8,12-18,20-21,23-56,58-65,71-135,137-165,167,169,171,173-174,176-179,182-185,189-194,196,198-211,214-216
+  s_59c0dd2af30db2::t_eec79369c223f4 197
+  s_59c0dd2af30db2::t_a383922d471353 166,168,170,172,195
+  s_59c0dd2af30db2::t_83897e23837778 136
+  s_59c0dd2af30db2::t_dd808dc7c141b0 19
+packages/mcp-server/test/headless.test.ts
+  s_59c0dd2af30db2::t_78e06d1eceeaae 1-4,7-13,17-80,84-90,94-102,106-116,163-186
+  s_59c0dd2af30db2::t_52fd169a0650c0 16,93
+  s_59c0dd2af30db2::t_a1cda6c165f3fa 15
+  s_59c0dd2af30db2::t_beb6d43af27b96 5-6,14,81-83,91-92,103-105,117-162
+packages/mcp-server/test/broker.test.ts
+  s_59c0dd2af30db2::t_c88f5102be2c5b 312-452
+  s_59c0dd2af30db2::t_86f4eb2e2e3576 1-3,9-31,33-43,45,47-50,53-215,217-218,220,222-237,239-246,248-262,264-275,277,279-311,453-506,508,556
+  s_59c0dd2af30db2::t_4c3816e0a25e83 4-8,32,44,46,51-52,216,219,221,238,247,263,276,278,507
+  s_59c0dd2af30db2::t_e669c188525f66 509-555
+packages/mcp-server/test/helpers/scrub.ts
+  s_59c0dd2af30db2::t_daeb71479c2954 45-46
+  s_59c0dd2af30db2::t_d0d6f5b1fc5f4e 1-42,50-67
+  s_59c0dd2af30db2::t_ac25bac4de48b8 43-44,47-49
+packages/mcp-server/src/version.ts
+  s_59c0dd2af30db2::t_4a77d8dccfba0a 1-2
+packages/mcp-server/src/tools.ts
+  s_59c0dd2af30db2::t_43f43d430b582b 7-12
+  s_59c0dd2af30db2::t_dd08b877510093 1-6,13-41
+packages/mcp-server/test/shim-conformance.test.ts
+  s_59c0dd2af30db2::t_bc18510c34dd0a 11,15,28-32,45,108-122
+  s_59c0dd2af30db2::t_d5a1d0882c188c 73-74
+  s_59c0dd2af30db2::t_22c0dc55b5d1c9 1-10,12-14,16-27,33-44,46-72,75-89,93-107,123-167
+  s_59c0dd2af30db2::t_ab3041d3180aa9 90-92
+packages/mcp-server/test/tools.test.ts
+  s_59c0dd2af30db2::t_8b68665f71d051 5-8,10,34-35,57-66,96,98-102,104-118,120-122
+  s_59c0dd2af30db2::t_d9758511ad2694 2-4,9,11-33,36-56,67-90,103,119
+  s_59c0dd2af30db2::t_49f2c7460ac577 1,91-95,97
+packages/mcp-server/test/fixtures/clients/gemini-cli-0.49.0.synthetic.jsonl
+  s_59c0dd2af30db2::t_95bc3131e7e0f7 1-5
+packages/mcp-server/test/session-handler.test.ts
+  s_59c0dd2af30db2::t_59e84059ccafd5 34-36
+  s_59c0dd2af30db2::t_ba73bfcaab1cc0 1-33,37-49
+packages/mcp-server/src/scopes.ts
+  s_59c0dd2af30db2::t_e05ae43de1bdaf 1-27,34-84
+  s_59c0dd2af30db2::t_74a113351674e7 28-33
+  s_59c0dd2af30db2::t_ad00a6ebb80a24 85-97
+packages/mcp-server/package.json
+  s_59c0dd2af30db2::t_21c414df449db4 1-49
+packages/mcp-server/test/fixtures/cli/claude/runtime-read-2.1.260.broker.json
+  s_59c0dd2af30db2::t_9c49b864b16e32 1-23
+packages/mcp-server/tsconfig.json
+  s_59c0dd2af30db2::t_21c414df449db4 1-3,7-12
+  s_59c0dd2af30db2::t_70a23d6a15050d 4-6
+packages/mcp-server/src/host/export-dir.ts
+  s_59c0dd2af30db2::t_4201d173b8a31d 1-78
+packages/mcp-server/test/design-host.test.ts
+  s_59c0dd2af30db2::t_52fd169a0650c0 75-77,99
+  s_59c0dd2af30db2::t_f5e56077ffe7a1 179-313
+  s_59c0dd2af30db2::t_7052b65cc41013 44-61
+  s_59c0dd2af30db2::t_9a65a493bcde3f 7,10-11,137
+  s_59c0dd2af30db2::t_4edbb266aedba4 1-6,8-9,12-43,62-74,78-98,100-136,138-178,314-356
+  s_59c0dd2af30db2::t_20e56c3aa2471c 357-368,370-380
+  s_59c0dd2af30db2::t_9719ef5fe42b02 369
+packages/mcp-server/vitest.config.ts
+  s_59c0dd2af30db2::t_a824c544385aca 1-21
+packages/mcp-server/src/stdio.ts
+  s_59c0dd2af30db2::t_7e8221fbfc85d2 31
+  s_59c0dd2af30db2::t_b074472847e103 1-30,32-87
+packages/mcp-server/test/fixtures/clients/claude-code-2.1.260.jsonl
+  s_59c0dd2af30db2::t_77d1fab4335138 1
+  s_59c0dd2af30db2::t_9c49b864b16e32 2-6
+packages/mcp-server/test/protocol.test.ts
+  s_59c0dd2af30db2::t_58f1f8a4ec2337 1,15-90,92-117,120-156,170-171
+  s_59c0dd2af30db2::t_bc18510c34dd0a 2-14,91,118-119,157-169
+packages/mcp-server/src/jsonrpc.ts
+  s_59c0dd2af30db2::t_25aa69445c9cec 1-167
+packages/mcp-server/src/types.ts
+  s_59c0dd2af30db2::t_831a8c70c0c650 87-91,94-108,110
+  s_59c0dd2af30db2::t_9eacb506067fae 8-15
+  s_59c0dd2af30db2::t_7c9b18c3de48f0 1-7,16-38,49-86,92-93,109,111
+  s_59c0dd2af30db2::t_79b95fe87c55a6 39-48
+packages/mcp-server/src/host/headless.ts
+  s_59c0dd2af30db2::t_53a4d4f58adbaf 9-13,17-19
+  s_59c0dd2af30db2::t_3829cf43391c6d 205
+  s_59c0dd2af30db2::t_801f58067b563c 125-180
+  s_59c0dd2af30db2::t_9472e972d12232 219,221
+  s_59c0dd2af30db2::t_998305ace8ac4e 1-8,14-16,20-124,181-204,206-218,220,222-232
+packages/mcp-server/test/fixtures/clients/codex-0.156.1.synthetic.jsonl
+  s_59c0dd2af30db2::t_95bc3131e7e0f7 1-7
+packages/mcp-server/test/fixtures/clients/future-client.synthetic.jsonl
+  s_59c0dd2af30db2::t_95bc3131e7e0f7 1-6
+packages/mcp-server/src/broker.ts
+  s_59c0dd2af30db2::t_374dd73087b4f9 303-305,412,477,514,528
+  s_59c0dd2af30db2::t_4370c673a0af26 211-212
+  s_59c0dd2af30db2::t_12973df12313f8 376
+  s_59c0dd2af30db2::t_3e5335230cad20 9-10,13-18,20-25,29,32,38,40,47,49
+  s_59c0dd2af30db2::t_4bae41b1fc8b23 252
+  s_59c0dd2af30db2::t_697dc6425b74ac 135-136,219,244-247,366
+  s_59c0dd2af30db2::t_64f94b2c03d049 556-560,562,568-570,573-576,586-593,595,601,605-606,616
+  s_59c0dd2af30db2::t_1eb3432917d8c4 1-8,11-12,19,26-28,30-31,33-37,39,41-46,48,50-77,81-83,89-95,98-101,106-134,137-157,160-210,213-218,220-243,248-251,253-290,300-302,306-365,367-375,377-393,404-411,413-433,462-464,469,471,474-476,478,499-500,509-511,513,515-517,520-522,525-527,529-539,541-555,561,563-567,571-572,577-585,594,596-600,602-604,607-615,617-632
+  s_59c0dd2af30db2::t_cbff43273ef60d 434-461,465-468,470,472-473,479-498,501-508,512,518-519,523-524
+  s_59c0dd2af30db2::t_d17da65fa5ea5d 540
+  s_59c0dd2af30db2::t_256ff632357adf 158-159
+  s_59c0dd2af30db2::t_394d23f873a610 78-80,84-88,96-97,102-105
+  s_59c0dd2af30db2::t_46648e2a277ec5 291-299
+  s_59c0dd2af30db2::t_cae67e16cee177 394-403
+packages/mcp-server/test/mcp.test.ts
+  s_59c0dd2af30db2::t_411bab18de7e05 1-152
+packages/mcp-server/test/fixtures/clients/opencode-1.17.10.synthetic.jsonl
+  s_59c0dd2af30db2::t_95bc3131e7e0f7 1-6
+packages/mcp-server/test/fixtures/cli/claude/runtime-read-2.1.260.jsonl
+  s_59c0dd2af30db2::t_ac25bac4de48b8 1,5-9,11-14,17-18
+  s_59c0dd2af30db2::t_9c49b864b16e32 2-4,10,15-16,19
+packages/mcp-server/src/host/design-host.ts
+  s_59c0dd2af30db2::t_38343b12719e56 207,327,330-333
+  s_59c0dd2af30db2::t_697dc6425b74ac 276-279,285,288,302-303
+  s_59c0dd2af30db2::t_6cf4d258c372f8 7-14,17-25,27,42-54,57,64,67,69,104-109,114-120,124-126,185-187,193-194,244-248,255,269-275,280-284,286-287,289-301,304-309,328-329,334,340,346,354-355,359-362,364-369,416,439,446,448,453-459,467-468,470,472-482,487,491-501,503-507,509-513,515-521,523-524,527-545,547-553,557-576
+  s_59c0dd2af30db2::t_39e44935d41126 1-6,15-16,26,28-41,55-56,58-63,65-66,68,70-103,110-113,121-123,127-184,188-192,195-206,208-243,249-254,256-268,310-326,335-339,341-345,347-353,356-358,363,370-415,417-438,440-445,447,449-452,460-466,469,471,483-486,488-490,502,508,514,522,525-526,546,554-556,577-583
+packages/mcp-server/tsconfig.build.json
+  s_59c0dd2af30db2::t_21c414df449db4 1-9
+packages/mcp-server/test/helpers/util.ts
+  s_59c0dd2af30db2::t_82d5e911152c1c 8-9,11,120-151
+  s_59c0dd2af30db2::t_435ab2f74a87ce 1-7,10,12-119,152
+  s_59c0dd2af30db2::t_52fd169a0650c0 153-157
+packages/mcp-server/src/mcp.ts
+  s_59c0dd2af30db2::t_8ca29cba3b1f8f 38-53
+  s_59c0dd2af30db2::t_ce444a2dbb1288 140,192-193,215-225
+  s_59c0dd2af30db2::t_e2aa5ba1c1b73b 104
+  s_59c0dd2af30db2::t_638fc542e18cd9 1-37,54-103,105-139,141-191,194-214,226-280,283-330
+  s_59c0dd2af30db2::t_17d9e52cf57a83 281-282
+packages/mcp-server/src/bridge-protocol.ts
+  s_59c0dd2af30db2::t_132f6a98a99f64 58
+  s_59c0dd2af30db2::t_7d44c72ed10c97 29-31
+  s_59c0dd2af30db2::t_0e277b0ef9167d 1-28,32-40,45-47,80-198,201,205-212,218-226
+  s_59c0dd2af30db2::t_6ee5cb5da18a15 41-44,48-57,59-79
+  s_59c0dd2af30db2::t_bc5cd2a7bcb9e7 199-200,202-204
+  s_59c0dd2af30db2::t_ab3041d3180aa9 213-217
+packages/mcp-server/test/fixtures.test.ts
+  s_59c0dd2af30db2::t_d6ed35064fb8ba 1-158
+packages/mcp-server/src/host/session-handler.ts
+  s_59c0dd2af30db2::t_cded5a897fd3b6 32-36,39,46-47
+  s_59c0dd2af30db2::t_0b42a8046af7d4 13
+  s_59c0dd2af30db2::t_91e4987b43b59a 1-12,14-31,37-38,40-45,48-65
+packages/mcp-server/test/fixtures/clients/cursor-agent-2026.01.28.synthetic.jsonl
+  s_59c0dd2af30db2::t_95bc3131e7e0f7 1-8
+packages/mcp-server/test/live/claude-cli.live.test.ts
+  s_59c0dd2af30db2::t_00b9fc9a542de2 20,35-36,174
+  s_59c0dd2af30db2::t_77d1fab4335138 156-157
+  s_59c0dd2af30db2::t_3b3ba5f6c9b929 81,163,177-186
+  s_59c0dd2af30db2::t_daeb71479c2954 13-17,62-63,164-173,175-176
+  s_59c0dd2af30db2::t_eb968334f256ee 1-12,18-19,21-34,37-61,64-80,82-155,158-162,187-191
+packages/mcp-server/test/helpers/stub-engine.ts
+  s_59c0dd2af30db2::t_a1cda6c165f3fa 7-9
+  s_59c0dd2af30db2::t_435ab2f74a87ce 1-6,10-82
+packages/mcp-server/src/host/index.ts
+  s_59c0dd2af30db2::t_662f0d8a4715aa 1-13
+packages/mcp-server/src/index.ts
+  s_59c0dd2af30db2::t_dc9bd5b6036485 1-20
+pnpm-lock.yaml
+  s_59c0dd2af30db2::t_57d4ba487776de 42-44,258,276-303,528-533,549-558,988-991,996-1003,1066-1069,1098-1101,1118-1121,1178-1189,1193-1200,1204-1207,1251-1254,1289-1291,1320-1323,1369-1371,1379-1390,1398-1407,1440-1443,1452-1459,1569-1572,1580-1583,1596-1599,1607-1614,1619-1621,1653-1655,1673-1675,1802-1809,1814-1817,1822-1825,1880-1883,1917-1924,1933-1936,1976-1979,1988-1990,2005-2008,2058-2061,2075-2078,2083-2090,2152-2155,2162-2164,2196-2199,2204-2210,2219-2234,2269-2272,2331-2334,2352-2355,2383-2386,2396-2399,2597-2601,2788,2794-2795,2801-2804,2824-2845,3166-3170,3173-3176,3268-3281,3328-3329,3349-3353,3398-3403,3406-3409,3412-3416,3456-3457,3502-3503,3569-3570,3632-3633,3641-3648,3653-3693,3719-3729,3742-3745,3903-3904,3911-3918,3938-3941,3949-3952,3955-3956,3977-3978,3996-3997,4102-4105,4108-4109,4114-4117,4161-4164,4202-4205,4211-4214,4236-4237,4242-4243,4252-4253,4317-4321,4335-4339,4342-4350,4459-4468,4473-4474,4494-4509,4515-4525,4532-4559,4589-4590,4656-4657,4678-4683,4699-4700,4713-4714,4868-4871
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "660c89c7a7058cf280d40fb361499a5c4395496c",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
