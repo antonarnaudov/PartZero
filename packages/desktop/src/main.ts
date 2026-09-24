@@ -30,7 +30,7 @@ import { setupAgent, workspaceMcpServerDir, type AgentSetup } from "./agent/setu
 import { DEV_BUILD_INFO, mcpShimExecutable, readBuildInfo, type BuildInfo } from "./build-info.js";
 import { bundledMcpShimPath } from "./bundle-paths.js";
 import { debugSwitchRefusal, forbiddenDebugSwitches } from "./debug-switches.js";
-import { agentWorkerEnv, cliChildHostEnv, cliDetectEnv, readDevOverrides, resolveWebRoot } from "./env.js";
+import { agentWorkerEnv, cliChildHostEnv, cliDetectEnv, readDevOverrides, resolveWebRoot, withLoginNames } from "./env.js";
 import { documentStatePath, PathGrants, RecentFiles } from "./files.js";
 import { findRepoRoot, forgeInfo, forgeSelfCheck, locateForgeBinary } from "./forge-cli.js";
 import { registerIpc } from "./ipc.js";
@@ -143,7 +143,8 @@ function installLogFiles(dir: string): void {
 function spawnAgentWorker(): WorkerHandle {
   const child = utilityProcess.fork(join(here, "agent", "worker.js"), [], {
     serviceName: "aicad-agent",
-    env: agentWorkerEnv(process.env),
+    // USER/LOGNAME filled when the app was started without them: the worker's CLI children inherit them.
+    env: agentWorkerEnv(withLoginNames(process.env)),
     stdio: "pipe",
   });
   const forward = (stream: NodeJS.ReadableStream | null, level: "log" | "error"): void => {
@@ -342,7 +343,7 @@ function start(): void {
       spawnWorker: spawnAgentWorker,
       send: sendAgentEvent,
       log: (level, message) => console[level === "info" ? "log" : level](`[aicad-agent] ${message}`),
-      detectEnv: cliDetectEnv(process.env),
+      detectEnv: cliDetectEnv(withLoginNames(process.env)),
       // An isolated test profile never sees the user's real CLIs or local Ollama unless the test opts in (env.ts).
       cliDirs: overrides.cliDirs,
       detectLocalModels: overrides.detectLocalModels && !selfTest,

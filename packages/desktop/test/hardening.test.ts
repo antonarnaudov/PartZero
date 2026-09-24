@@ -15,7 +15,7 @@ import { liveTransports, OFFICIAL_BASE_URLS } from "../src/agent/runner.js";
 import { SettingsStore } from "../src/agent/settings.js";
 import { transportFromEnv } from "../src/agent/setup.js";
 import { DEBUG_SWITCHES, debugSwitchRefusal, forbiddenDebugSwitches } from "../src/debug-switches.js";
-import { agentWorkerEnv, CHILD_ENV_ALLOWLIST, forgeCliEnv, parseDevServerUrl, readDevOverrides, resolveWebRoot } from "../src/env.js";
+import { agentWorkerEnv, CHILD_ENV_ALLOWLIST, cliDetectEnv, forgeCliEnv, parseDevServerUrl, readDevOverrides, resolveWebRoot, withLoginNames } from "../src/env.js";
 import { canonicalPath, documentStatePath, PathGrants, RecentFiles } from "../src/files.js";
 import { forgeEval, locateForgeBinary } from "../src/forge-cli.js";
 import { buildMenuTemplate } from "../src/menu.js";
@@ -130,6 +130,25 @@ describe("L9/L11: child processes get allowlisted environments", () => {
     const env = { PATH: "/bin", HOME: "/h", TMPDIR: "/t", LANG: "C", SystemRoot: "C:\\Windows", RUST_BACKTRACE: "1", AICAD_BIN: "/x", ...HOSTILE_ENV };
     expect(agentWorkerEnv(env)).toEqual({ PATH: "/bin", HOME: "/h", TMPDIR: "/t", LANG: "C", SystemRoot: "C:\\Windows" });
     expect(forgeCliEnv(env)).toEqual({ PATH: "/bin", HOME: "/h", TMPDIR: "/t", LANG: "C", SystemRoot: "C:\\Windows", RUST_BACKTRACE: "1" });
+  });
+
+  it("fills USER and LOGNAME from the account when the app was started without them (CLI login probes need USER)", () => {
+    const me = (): string => "maker";
+    // Started without either (a launcher that sets only HOME and PATH): both come from the account, and reach the
+    // worker (whose CLI children inherit them) and the detection probes.
+    const bare = withLoginNames({ PATH: "/usr/bin:/bin", HOME: "/Users/maker" }, me, "darwin");
+    expect(agentWorkerEnv(bare)).toEqual({ PATH: "/usr/bin:/bin", HOME: "/Users/maker", USER: "maker", LOGNAME: "maker" });
+    expect(cliDetectEnv(bare)).toMatchObject({ USER: "maker", LOGNAME: "maker" });
+    // A value that is set wins, and fills the other one.
+    expect(withLoginNames({ USER: "anna" }, me, "darwin")).toEqual({ USER: "anna", LOGNAME: "anna" });
+    expect(withLoginNames({ LOGNAME: "anna" }, me, "linux")).toEqual({ USER: "anna", LOGNAME: "anna" });
+    const both = { USER: "a", LOGNAME: "b" };
+    expect(withLoginNames(both, me, "darwin")).toBe(both);
+    // No account name, or Windows (USERNAME): unchanged.
+    expect(withLoginNames({ HOME: "/h" }, () => null, "darwin")).toEqual({ HOME: "/h" });
+    expect(withLoginNames({ HOME: "C:\\Users\\m" }, me, "win32")).toEqual({ HOME: "C:\\Users\\m" });
+    // The real account (this machine): some non-empty name.
+    expect(withLoginNames({}, undefined, "darwin")["USER"]).toMatch(/^.+$/);
   });
 
   /** A fake `aicad` that dumps its environment to `dump` and prints `stdout`. */

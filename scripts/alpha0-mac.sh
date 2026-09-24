@@ -107,14 +107,14 @@ check_app() {
   run_self_test "$app"
 }
 
-# The app's own --self-test, in the environment a Finder launch gets (launchd's minimal PATH, no shell rc files), so
-# Claude Code must be found the way the installed app will find it.
+# The app's own --self-test, in an environment no richer than a Finder launch gets: launchd's minimal PATH and no
+# shell rc files, so Claude Code must be found the way the installed app will find it; and no USER, LOGNAME or SHELL
+# either (launchd sets them, but the app fills them from the account when they are missing, and this proves it).
 run_self_test() {
   local app="$1" exe="$1/Contents/MacOS/$APP_NAME" out="$REPORT_DIR/self-test.json" code=0
   [ -x "$exe" ] || die "no executable at $exe"
-  say "--self-test (Finder-like environment: PATH=/usr/bin:/bin:/usr/sbin:/sbin)"
-  env -i HOME="$HOME" USER="${USER:-$(id -un)}" LOGNAME="${LOGNAME:-$(id -un)}" TMPDIR="${TMPDIR:-/tmp}" SHELL="${SHELL:-/bin/zsh}" \
-    PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG="${LANG:-en_US.UTF-8}" \
+  say "--self-test (Finder-like environment: PATH=/usr/bin:/bin:/usr/sbin:/sbin, no USER, LOGNAME or SHELL)"
+  env -i HOME="$HOME" TMPDIR="${TMPDIR:-/tmp}" PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG="${LANG:-en_US.UTF-8}" \
     "$exe" --self-test > "$out" 2> "$REPORT_DIR/self-test.stderr.log" || code=$?
   node -e '
     const r = require(process.argv[1]);

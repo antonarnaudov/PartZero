@@ -13,6 +13,7 @@
  * - {@link parseDevServerUrl}: a dev server is accepted only on loopback (`localhost`, `127.0.0.1`,
  *   `[::1]`); its exact origin is what {@link isTrustedFrameUrl} (protocol-core.ts) trusts.
  */
+import { userInfo } from "node:os";
 import { delimiter, join, resolve } from "node:path";
 import { CLI_ENV_LOCATION, CLI_ENV_NETWORK } from "@aicad/llm-gateway/cli";
 
@@ -84,6 +85,29 @@ export function cliChildHostEnv(env: NodeJS.ProcessEnv): Record<string, string> 
     if (v !== undefined && allow.has(k.toUpperCase())) out[k] = v;
   }
   return out;
+}
+
+/** The account's login name, or null (`os.userInfo()` throws when the user database has no entry). */
+function accountName(): string | null {
+  try {
+    const name = userInfo().username;
+    return name.length > 0 ? name : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `env` with `USER` and `LOGNAME` filled from the account (`os.userInfo()`) when the app was started without them.
+ * launchd normally sets both for a GUI app, but not every launcher does, and CLI agents depend on them: without `USER`,
+ * `claude auth status` exits 1 (read as "not logged in") for a user who is logged in (observed with Claude Code
+ * 2.1.260). Like the `SHELL` fallback (llm-gateway `loginShellPath`). POSIX only; a value that is set is never changed.
+ */
+export function withLoginNames(env: NodeJS.ProcessEnv, username: () => string | null = accountName, platform: NodeJS.Platform = process.platform): NodeJS.ProcessEnv {
+  if (platform === "win32" || (env["USER"] && env["LOGNAME"])) return env;
+  const name = env["USER"] || env["LOGNAME"] || username();
+  if (!name) return env;
+  return { ...env, USER: env["USER"] || name, LOGNAME: env["LOGNAME"] || name };
 }
 
 /** CLI detection probes in the main process: the allowlist, the CLI locations and proxies, and `SHELL` for the login-shell lookup. */
