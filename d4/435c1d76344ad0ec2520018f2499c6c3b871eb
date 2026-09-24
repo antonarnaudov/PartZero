@@ -1,0 +1,44 @@
+packages/desktop/e2e/providers.e2e.ts
+  s_59c0dd2af30db2::t_f89fa6275e93f7 19,70
+packages/desktop/e2e/agent.e2e.ts
+  s_59c0dd2af30db2::t_f89fa6275e93f7 17,64
+packages/desktop/e2e/agent-live.e2e.ts
+  s_59c0dd2af30db2::t_f89fa6275e93f7 17,41
+packages/desktop/e2e/bundled-alpha.e2e.ts
+  s_59c0dd2af30db2::t_983135814adc35 1-12,14-18,20-85,87-94,96-114,116,118-120,122,127-130,133
+  s_59c0dd2af30db2::t_a6c38c36aba4c9 86
+  s_59c0dd2af30db2::t_9ebfb741448b9c 95
+  s_59c0dd2af30db2::t_bd2b0a44193569 115,117,121,123-126,131-132
+  s_59c0dd2af30db2::t_9ee240690c6aa9 13
+  s_59c0dd2af30db2::t_c9987ea15eeb6b 19
+packages/desktop/e2e/app-dir.ts
+  s_59c0dd2af30db2::t_abe6451328dc01 1-13
+packages/desktop/e2e/cli-quit-cleanup.e2e.ts
+  s_59c0dd2af30db2::t_f89fa6275e93f7 16,91
+packages/desktop/e2e/packaged.e2e.ts
+  s_59c0dd2af30db2::t_f89fa6275e93f7 20,38,116
+packages/desktop/e2e/runtime.e2e.ts
+  s_59c0dd2af30db2::t_f89fa6275e93f7 26,97
+packages/desktop/scripts/e2e-bundle.mjs
+  s_59c0dd2af30db2::t_058dc095ec74f1 1-17
+packages/desktop/e2e/smoke.e2e.ts
+  s_59c0dd2af30db2::t_f89fa6275e93f7 12,56
+packages/desktop/package.json
+  s_59c0dd2af30db2::t_a8a00af22ba874 23-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d4435c1d76344ad0ec2520018f2499c6c3b871eb",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
