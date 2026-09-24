@@ -110,7 +110,7 @@ Three gates. Each drop needs its G1 and G2 rows to pass on its hand-over commit.
 | a8 | Point the slicer path at a path that doesn't exist, then click **Open in Bambu Studio**. | It falls back to a plain export with **Show in Finder**. |
 | a9 | Undo and redo across an accept, a parameter edit and a code edit. | One stack, in order. |
 | a10 | Save, quit and reopen. Then open a v0 `.cad.ts` file. | Parameters are kept. The v0 file is refused with a plain message. |
-| a11 | (0.2) Enter Fit Lab readings (§2.5). | They're saved, and a new P4 run's `bore_clearance` default and machine line use the metal value. |
+| a11 | (0.2) Enter Fit Lab readings (§2.5). | They're saved, and a new P4 run's `bore_clearance` default and machine line use the metal value, or the derived one when no metal reading was entered. |
 | a12 | (0.2) **Help → Report Issue** (§5). | The folder holds the listed files and opens in Finder. |
 
 **G2b (agent, Bash only)**
@@ -230,10 +230,10 @@ Every part must be built as **one valid body per printed part**, fit the P2S bed
 1. Confirm the material. It's prefilled from the last export receipt.
 2. **Slip:** push the printed pin in from the top. Tap the lowest hole, counting from the notch, where it slides fully in and turns freely.
 3. **Press:** tap the lowest hole where the printed pin seats with firm thumb pressure and stays in when the plate is turned upside down.
-4. **Metal press (required):** repeat step 3 with the shank of a 5 mm drill bit (or any 5.00 mm metal rod). P4 uses this value, because a pot shaft is metal.
+4. **Metal press (optional, never required):** if a 5 mm metal rod or drill shank happens to be at hand, repeat step 3 with it. Otherwise `press_metal` is derived from the printed press reading (below), and P4's `bore_clearance` stays an editable parameter you adjust after the first knob.
 5. If no hole fits, or every hole does, the app offers a reprint with `offset` shifted by ±0.4.
 
-**What the app computes:** slip = 0.05·iS + offset; press = 0.05·iP + offset; press_metal = 0.05·iM + offset; running = slip + 0.10, marked as derived. All are diametral and for vertical holes. Slip and press are for a printed pin in a printed hole; press_metal is for a metal shaft in a printed hole.
+**What the app computes:** slip = 0.05·iS + offset; press = 0.05·iP + offset; press_metal = 0.05·iM + offset if a metal reading was entered, else press + 0.05 (derived: a metal shaft doesn't compress like a printed pin); running = slip + 0.10, marked as derived. All are diametral and for vertical holes. Slip and press are for a printed pin in a printed hole; press_metal is for a metal shaft in a printed hole.
 
 **Passes when:**
 - **G1:** it builds valid as 2 bodies; the holes meet G1 #6; it fits the bed.
@@ -254,7 +254,7 @@ Every part must be built as **one valid body per printed part**, fit the P2S bed
 | W3 | Golden-path UX fixes | M | Partly | W2, W5, W8 |
 | W4 | IR v1 in the app | L (×2 agents) | **Yes** | Phase C |
 | W5 | Printer profile, materials, Bambu handoff | L | Partly | — |
-| W6 | Starter gallery | S | Yes (v1 references) | W4, W5, your day-0 measurements |
+| W6 | Starter gallery | S | Yes (v1 references) | W4, W5, researched part dimensions (as5, as13, as14) |
 | W7 | Fit Lab v0 | M | Partly | W5, W6 |
 | W8 | Reliability: wall-time cap, clear errors | M | Partly (`maxWallMs`) | — |
 | W9 | No telemetry | S | No | W1 |
@@ -350,7 +350,7 @@ Every part must be built as **one valid body per printed part**, fit the P2S bed
     - metadata: Title, `Application = PartZero <ver>`, readable object names;
     - print tessellation from the profile (0.01 mm, 0.1 rad) passed through `exportMesh`, via forge-wasm, forge-web and `aicad export`.
     - If Bambu Studio ignores the transform, bake the offset into the vertices instead [as7].
-  - **Profile library:** `<userData>/machine-profiles.json`, owned by the main process and written atomically. It holds a built-in `builtin:bambu-p2s-0.4` written from the public P2S spec sheet and checked by you on day 0 [as5], and (0.2) 8 materials with default clearances [as6] (table below) and a printer and material picker in the toolbar. **Don't copy any value or file from Bambu Studio's bundled profiles** (ADR 0016 §3).
+  - **Profile library:** `<userData>/machine-profiles.json`, owned by the main process and written atomically. It holds a built-in `builtin:bambu-p2s-0.4` written from Bambu Lab's public P2S spec sheet [as5], and (0.2) 8 materials with default clearances [as6] (table below) and a printer and material picker in the toolbar. **Don't copy any value or file from Bambu Studio's bundled profiles** (ADR 0016 §3).
   - **Agent context:**
     - the `agent:start` request carries `process: "fdm"` (the field exists; the app never sets it today);
     - add a machine, material and clearance line through `conventions`;
@@ -394,7 +394,7 @@ Default clearances, stored with `source: "default"`. They are diametral, for a p
 
 **W6: Starter gallery** [C] (S)
 - **Do:**
-  - `corpus/gallery/`: the 5 starter parts and (0.2) the Fit Lab coupon, as parametric v1, from `corpus/alpha0/` after your day-0 measurements.
+  - `corpus/gallery/`: the 5 starter parts and (0.2) the Fit Lab coupon, as parametric v1, from `corpus/alpha0/` sized from researched part dimensions (as13, as14).
   - Each card offers **Open** (the finished, parametric part) or **Ask the agent** (sends its prompt).
   - The 5 starter prompts are the welcome chips.
   - The 61 v0 MakerBench references are hidden in the app.
@@ -461,7 +461,7 @@ Default clearances, stored with `source: "default"`. They are diametral, for a p
 
 | When | What |
 |---|---|
-| **Day 0, before W6** | Measure and tell a Claude Code session in the repo (it updates §2.4 and the references): your ESP32 board's length and width and its USB connector's size and height [as13]; your pot's shaft diameter, across-flat and length [as14]; the P2S bed size, nozzle and any exclusion zone as Bambu Studio shows them [as5]. Also find a 5 mm drill bit (or 5.00 mm metal rod) for the Fit Lab. |
+| **Nothing to measure** | The starter parts use researched dimensions of standard hardware (§6: as5 P2S, as13 ESP32 boards, as14 6 mm D-shaft pots), each exposed as a parameter. If your part differs, say so in chat ("my board is 69 mm long") and the agent changes the parameter. No calipers, drill bits or reference rods needed. |
 | Install, and after each rebuild | Run `scripts/alpha0-mac.sh --install`, or have a coding agent run it. It quits PartZero, keeps the old app as `PartZero-previous.app` for rollback, and copies the new one into `/Applications`. A build made on this Mac isn't quarantined, so it opens directly [as9]. If macOS blocks it anyway: **System Settings → Privacy & Security → Open Anyway**. Only you change that setting. |
 | First launch | No keychain or privacy prompt is expected [as10, as16]. If one appears, note it in G2c. A keychain prompt asks for your login password: never give it to an agent. |
 | Keep Claude Code logged in | If the card says "Log in needed", run `claude auth login` in Terminal and press **Re-check**. No API keys needed. |
@@ -520,7 +520,7 @@ Default clearances, stored with `source: "default"`. They are diametral, for a p
 | as2 | A 6-minute cap is enough for the starter parts on Claude Code. | W0 baseline. | Raise the cap, or use Sonnet for simple parts (D3). |
 | as3 | The v1 agent passes each starter within 2 attempts. First-attempt rates are recorded, not gated: five samples are noise. | G1 #5 (= W4f) | Fix the playbooks and prompts, or swap the part. |
 | as4 | Retired: P1 is no longer Gridfinity-style. | — | — |
-| as5 | P2S: bed 256 × 256 × 256 mm, 0.4 mm hardened-steel nozzle, no chamber heater. From the public spec sheet (read 2026-09-24), not checked on your machine. | You check it on day 0 (§4.2), with any exclusion zone. | Edit the built-in profile before W5 lands. |
+| as5 | P2S: 256 × 256 × 256 mm build volume, 0.4 mm hardened-steel nozzle as standard, 300 °C nozzle, 110 °C bed. From Bambu Lab's P2S spec page and spec sheet ([specs](https://bambulab.com/en/p2s/specs), [spec sheet](https://store.bblcdn.com/s7/default/2d1a01cd2dca425eb071ccc28c26c9fa/spec.pdf), read 2026-09-25). | The first **Open in Bambu Studio** shows the P2S plate; a part that doesn't fit is flagged there. | Edit the built-in profile. |
 | as6 | The default clearances, including press on metal, are starting values, not measurements. | Fit Lab v0 | That's what the Fit Lab is for. |
 | as7 | Bambu Studio 02.06.00.51 loads our 3MF as geometry only, honours the build-item transform, imports one object per body, and keeps your printer and filament presets. Whether "load geometry only" is a modal dialog or a notice is unknown. | W5 hands-on check | Bake the placement into the vertices; document the dialogs. |
 | as8 | `open -b com.bambulab.bambu-studio <file>` opens the file in a Bambu Studio that's already running, without a second instance. What happens with an unsaved project open, or with the previous version of the part open, is unknown. | W5 hands-on check | Use `-a <path>`, or tell you to save or close the project first. |
@@ -528,8 +528,8 @@ Default clearances, stored with `source: "default"`. They are diametral, for a p
 | as10 | With the cookie-encryption fuse off, API-key entry hidden, and `safeStorage` untouched unless a key file exists, PartZero never asks for the keychain. An ad-hoc signature changes with every rebuild, so any keychain approval or privacy grant would be asked for again. | G2c 2 | You create a free self-signed code-signing identity in Keychain Access (no Apple account needed), and the build script signs with it. The signature then stays stable across rebuilds, and approvals persist. A paid certificate isn't needed for this. |
 | as11 | Claude Code updates keep the flags our lockdown needs. A newer version runs at "static" lockdown, with tripwires. | Live smoke test on each rebuild | The app refuses that version and shows why; update the gateway's flags for it. |
 | as12 | Runtime mode is faster and uses less plan than completion mode. | W0 | Ship completion mode only (D1). |
-| as13 | Your ESP32 dev board is ≤ 56 × 29 mm, so it fits 60 × 32 inside. | You measure it on day 0. | Change the P5 prompt and reference before W6. |
-| as14 | Your pots have 6 mm D-shafts, 4.5 mm across the flat, at least 12 mm long. | You measure one on day 0. | Change the P4 prompt and reference before W6. |
+| as13 | ESP32 dev boards: the default is the Espressif ESP32-DevKitC V4 (38-pin), 54.4 × 27.9 mm, Micro-USB overhanging the short edge by about 1.2–1.5 mm; 30-pin DevKit-style boards are about 51 × 28 mm; headers add about 8.5 mm below and components about 11.5 mm above the PCB. The P5 cavity (60 × 32 mm inside) fits all of these. The ESP32-S3-DevKitC-1 (69 × 26 mm, USB-C) does not: P5 exposes `board_l`, `board_w`, `usb_w`, `usb_h`. Sources: [Espressif DevKitC V4 guide](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-devkitc/user_guide.html), [ElectricalFlux ESP32 dimensions guide](https://electricalflux.com/mcu-general/esp32-dimensions-breadboard-enclosure-guide), read 2026-09-25. | The first P5 print. | Change the parameters in chat. |
+| as14 | Pots and encoders with D-shafts: the most common is 6 mm diameter, 4.5 mm across the flat, 15–20 mm long; P4's bore is 12 mm deep, so any shaft ≥ 12 mm works. Sources: [Love My Switches knob guide](https://lovemyswitches.com/news/what-knob-will-fit-on-my-gear/), [Thonk 6 mm D-shaft knobs](https://www.thonk.co.uk/product-category/parts/knobs/6mm-d-shaft/), read 2026-09-25. | The first P4 print. | Change `shaft_d`, `shaft_flat` or `bore_clearance` in chat. |
 | as15 | Print tessellation (0.01 mm, 0.1 rad) keeps a starter part's 3MF ≤ 20 MB. | G1 #6 | Scale the chordal tolerance with part size. |
 | as16 | `~/PartZero` is outside the folders macOS guards, so neither PartZero writing there nor Bambu Studio reading from there triggers a privacy prompt. | G2c 2 | You allow it once; note it in the handoff note. |
 | as17 | Phase C lands as scoped: holes, patterns, fillet, chamfer, shell (not draft), booleans in the command layer, v1 playbooks, `maxWallMs`, with the limits in §2.4. | Its final verification | Plan B (§4.1). |
