@@ -2,7 +2,9 @@
  * `PartZero --self-test` (docs/ALPHA-0-PLAN.md W1, G1 #2): the packaged app starts hidden on a throwaway profile,
  * checks what a first run needs, prints one JSON report on stdout and exits (0 when every required check passed).
  * It is read-only for the user's own data: the real profile's `agent-settings.json` is copied into the throwaway
- * profile (so a Claude Code path set in Settings is honored), and nothing else of it is read or written.
+ * profile (so a Claude Code path set in Settings is honored), and nothing else of it is read or written. (macOS keeps
+ * the app's preferences, `~/Library/Preferences/ai.partzero.desktop.plist`, which AppKit and Chromium write at every
+ * launch of the bundle id, this one included: text direction, argument handling. No setting of ours is in it.)
  *
  * No model is ever called: Claude Code is only asked for `--version`, `--help` and `auth status` (what Settings shows).
  *
