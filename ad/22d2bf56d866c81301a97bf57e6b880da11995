@@ -1,0 +1,42 @@
+packages/desktop/e2e/bundled-alpha.e2e.ts
+  s_59c0dd2af30db2::t_86c9a693f16a28 10,133-135
+packages/desktop/src/agent/runner.ts
+  s_59c0dd2af30db2::t_c929ad08b00708 77
+  s_59c0dd2af30db2::t_e70efbf069d15f 339
+packages/desktop/src/agent/worker.ts
+  s_59c0dd2af30db2::t_244942ce1fa3cd 41
+packages/desktop/src/agent/self-test.ts
+  s_59c0dd2af30db2::t_c76c53fa853192 9-14,16-17,21,24-25
+  s_59c0dd2af30db2::t_7d9d841f3ceb2f 340
+  s_59c0dd2af30db2::t_a899c995fd943d 61-62
+  s_59c0dd2af30db2::t_c90d61f378c54a 101-104,109-288
+  s_59c0dd2af30db2::t_1af8de92bc5878 289
+scripts/alpha0-mac.sh
+  s_59c0dd2af30db2::t_86c9a693f16a28 125
+packages/desktop/src/agent/optional-modules.ts
+  s_59c0dd2af30db2::t_99b677ee2edc24 28-35
+packages/desktop/src/agent/setup.ts
+  s_59c0dd2af30db2::t_e8a36a87f4ec33 161-162,223
+packages/desktop/src/agent/protocol.ts
+  s_59c0dd2af30db2::t_89af50da104cc7 389-393
+packages/desktop/src/main.ts
+  s_59c0dd2af30db2::t_a82a96db3fa8e3 332-334,353,387,433-440,442,467,475,477,479,505
+packages/desktop/test/packaging.test.ts
+  s_59c0dd2af30db2::t_3789bf812d8b90 12-13,288,333-336,338-339,346-347,352-373
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ad22d2bf56d866c81301a97bf57e6b880da11995",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
