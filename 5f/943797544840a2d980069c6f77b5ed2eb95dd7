@@ -1,0 +1,28 @@
+packages/desktop/src/env.ts
+  s_59c0dd2af30db2::t_03d9b7ab37a4df 90-101,105-112
+  s_59c0dd2af30db2::t_d13827110cd612 102-104
+  s_59c0dd2af30db2::t_58b89985215da9 16
+packages/desktop/test/hardening.test.ts
+  s_59c0dd2af30db2::t_a0e2d61760c7c7 135-153
+  s_59c0dd2af30db2::t_5cf638d8849390 18
+scripts/alpha0-mac.sh
+  s_59c0dd2af30db2::t_37d0c86e671aaf 110-112,116-117
+packages/desktop/src/main.ts
+  s_59c0dd2af30db2::t_60672fcaa3f9cb 33,146-147,346
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5f943797544840a2d980069c6f77b5ed2eb95dd7",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
