@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import { mcpShimRoundTrip, summarizeReport, workerSelfTest } from "../src/agent/self-test.js";
 import { loadMcpServer, mcpShimCommand } from "../src/agent/optional-modules.js";
 import { parseWorkerMessage } from "../src/agent/protocol.js";
-import { DEV_BUILD_INFO, mcpShimExecutable, parseBuildInfo, readBuildInfo, type BuildInfo } from "../src/build-info.js";
+import { DEV_BUILD_INFO, loginShellProviders, mcpShimExecutable, parseBuildInfo, readBuildInfo, type BuildInfo } from "../src/build-info.js";
 import { bundledMcpShimPath, bundledPromptsDir, bundledWasmPath, unpackedPath } from "../src/bundle-paths.js";
 import { formatConsoleArgs, logFor, RotatingLog } from "../src/log-file.js";
 import { abortedSelfTestReport, claudeCodeCheck, describeRenderer, detectBambuStudio, rendererReady, SELF_TEST_EXIT, selfTestVerdict, type RendererSnapshot, type SelfTestReport } from "../src/self-test.js";
@@ -82,8 +82,8 @@ describe("builder configs: the tested base and the local Alpha 0 build", () => {
       expect(config.appId).toBe(e.appId);
       expect(e.flags.mcpShim).toBe(config.electronFuses["runAsNode"]);
     }
-    expect(editions["alpha-local"]!.flags).toEqual({ apiKeys: false, mcpShim: true });
-    expect(editions["default"]!.flags).toEqual({ apiKeys: true, mcpShim: false });
+    expect(editions["alpha-local"]!.flags).toEqual({ apiKeys: false, mcpShim: true, loginShell: "claude-cli" });
+    expect(editions["default"]!.flags).toEqual({ apiKeys: true, mcpShim: false, loginShell: "all" });
   });
 });
 
@@ -115,7 +115,7 @@ describe("each builder config packages only its own edition's bundle", () => {
 });
 
 describe("build info (bundle/build-info.json)", () => {
-  const valid = { edition: "alpha-local", productName: "PartZero", appId: "ai.partzero.desktop", version: "0.0.1", commit: "2487380265ab", dirty: false, builtAt: "2026-09-25T00:00:00.000Z", flags: { apiKeys: false, mcpShim: true } };
+  const valid = { edition: "alpha-local", productName: "PartZero", appId: "ai.partzero.desktop", version: "0.0.1", commit: "2487380265ab", dirty: false, builtAt: "2026-09-25T00:00:00.000Z", flags: { apiKeys: false, mcpShim: true, loginShell: "claude-cli" } };
 
   it("parses a valid file and drops unknown fields", () => {
     expect(parseBuildInfo({ ...valid, extra: 1 })).toEqual(valid);
@@ -128,7 +128,9 @@ describe("build info (bundle/build-info.json)", () => {
       { productName: "Part/Zero" },
       { appId: "PartZero" },
       { commit: "not-a-sha" },
-      { flags: { apiKeys: "no", mcpShim: true } },
+      { flags: { apiKeys: "no", mcpShim: true, loginShell: "all" } },
+      { flags: { apiKeys: true, mcpShim: true } },
+      { flags: { apiKeys: true, mcpShim: true, loginShell: "gemini-cli" } },
       { flags: undefined },
       { dirty: "yes" },
     ]) {
@@ -147,8 +149,10 @@ describe("build info (bundle/build-info.json)", () => {
     expect(readBuildInfo(dir)).toEqual(valid);
   });
 
-  it("development keeps today's behavior: aicad, API keys, and the shim only when unpackaged", () => {
-    expect(DEV_BUILD_INFO).toMatchObject({ productName: "aicad", flags: { apiKeys: true, mcpShim: false } });
+  it("development keeps today's behavior: aicad, API keys, the login shell for every CLI, and the shim only when unpackaged", () => {
+    expect(DEV_BUILD_INFO).toMatchObject({ productName: "aicad", flags: { apiKeys: true, mcpShim: false, loginShell: "all" } });
+    expect(loginShellProviders(DEV_BUILD_INFO)).toBeNull();
+    expect(loginShellProviders(parseBuildInfo(valid)!)).toEqual(["claude-cli"]);
     expect(mcpShimExecutable(DEV_BUILD_INFO, false, "/x/Electron")).toBe("/x/Electron");
     expect(mcpShimExecutable(DEV_BUILD_INFO, true, "/x/aicad")).toBeNull();
     expect(mcpShimExecutable(parseBuildInfo(valid)!, true, "/Applications/PartZero.app/Contents/MacOS/PartZero")).toBe("/Applications/PartZero.app/Contents/MacOS/PartZero");
@@ -299,7 +303,7 @@ describe("--self-test (electron-free parts)", () => {
   it("the verdict lists every failed required check; a missing slicer and a dirty tree are warnings", () => {
     const ok = { ok: true, detail: "" };
     const body: Omit<SelfTestReport, "ok" | "failures" | "warnings" | "schema"> = {
-      app: { name: "PartZero", version: "0.0.1", edition: "alpha-local", commit: "abcdef1", dirty: true, builtAt: null, packaged: true, flags: { apiKeys: false, mcpShim: true }, electron: "", chrome: "", node: "", platform: "darwin", arch: "arm64" },
+      app: { name: "PartZero", version: "0.0.1", edition: "alpha-local", commit: "abcdef1", dirty: true, builtAt: null, packaged: true, flags: { apiKeys: false, mcpShim: true, loginShell: "claude-cli" }, electron: "", chrome: "", node: "", platform: "darwin", arch: "arm64" },
       paths: { profile: "", logs: "", prints: "", reports: "" },
       forgeCli: { ok: true, path: "/x/aicad", version: "aicad 0.0.1", detail: "", v0: null, v1: null },
       worker: {
@@ -325,7 +329,7 @@ describe("--self-test (electron-free parts)", () => {
     expect(v.failures).toEqual(["v1 evaluation (forge-web): UNSUPPORTED_SCHEMA", "CAD MCP server: missing", expect.stringMatching(/^Claude Code: installed but not logged in/)]);
     expect(v.warnings).toEqual([expect.stringMatching(/^Bambu Studio was not found/), "the build was bundled from a working tree with uncommitted changes"]);
     // A packaged build that does not run the shim only warns about it.
-    const noShim = selfTestVerdict({ ...body, app: { ...body.app, flags: { apiKeys: true, mcpShim: false } } });
+    const noShim = selfTestVerdict({ ...body, app: { ...body.app, flags: { apiKeys: true, mcpShim: false, loginShell: "all" } } });
     expect(noShim.failures.some((f) => f.startsWith("CAD MCP"))).toBe(false);
     expect(noShim.warnings.some((w) => w.startsWith("CAD MCP"))).toBe(true);
     // The renderer fell back from its WASM engine to the Forge CLI: it still works, but the page's WASM did not load.
@@ -334,7 +338,7 @@ describe("--self-test (electron-free parts)", () => {
   });
 
   it("a self-test that could not finish still reports: not ok, the reason as its only failure, every check not finished", () => {
-    const appInfo: SelfTestReport["app"] = { name: "PartZero", version: "0.0.1", edition: "alpha-local", commit: "abcdef1", dirty: false, builtAt: null, packaged: true, flags: { apiKeys: false, mcpShim: true }, electron: "", chrome: "", node: "", platform: "darwin", arch: "arm64" };
+    const appInfo: SelfTestReport["app"] = { name: "PartZero", version: "0.0.1", edition: "alpha-local", commit: "abcdef1", dirty: false, builtAt: null, packaged: true, flags: { apiKeys: false, mcpShim: true, loginShell: "claude-cli" }, electron: "", chrome: "", node: "", platform: "darwin", arch: "arm64" };
     const r = abortedSelfTestReport("the self-test did not finish within 180 s", appInfo, { profile: "/p", logs: "/l", prints: "/pr", reports: "/r" });
     expect(r).toMatchObject({ schema: "partzero.self-test/1", ok: false, failures: ["the self-test did not finish within 180 s"], warnings: [], app: appInfo });
     for (const c of [r.forgeCli, r.worker, r.renderer, r.claudeCode]) expect(c).toMatchObject({ ok: false, detail: "not finished: the self-test did not finish within 180 s" });

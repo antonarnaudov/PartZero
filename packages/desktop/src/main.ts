@@ -27,7 +27,7 @@ import type { WorkerHandle } from "./agent/host.js";
 import type { Cipher } from "./agent/keys.js";
 import { parseWorkerMessage, PROTOCOL_VERSION, scrubKeyLike } from "./agent/protocol.js";
 import { setupAgent, workspaceMcpServerDir, type AgentSetup } from "./agent/setup.js";
-import { DEV_BUILD_INFO, mcpShimExecutable, readBuildInfo, type BuildInfo } from "./build-info.js";
+import { DEV_BUILD_INFO, loginShellProviders, mcpShimExecutable, readBuildInfo, type BuildInfo } from "./build-info.js";
 import { bundledMcpShimPath } from "./bundle-paths.js";
 import { debugSwitchRefusal, forbiddenDebugSwitches } from "./debug-switches.js";
 import { agentWorkerEnv, cliChildHostEnv, cliDetectEnv, readDevOverrides, resolveWebRoot, withLoginNames } from "./env.js";
@@ -358,6 +358,9 @@ function start(): void {
       detectEnv: cliDetectEnv(withLoginNames(process.env)),
       // An isolated test profile never sees the user's real CLIs or local Ollama unless the test opts in (env.ts).
       cliDirs: overrides.cliDirs,
+      // The login-shell lookup runs the user's shell startup files with this app held responsible by macOS privacy
+      // controls: the Alpha 0 build runs it for Claude Code only (build-info.ts `flags.loginShell`).
+      loginShellProviders: loginShellProviders(buildInfo),
       detectLocalModels: overrides.detectLocalModels && !selfTest,
       // CLI login locations and proxy/CA settings go to CLI children only, never into the worker's own environment.
       cliChildEnv: cliChildHostEnv(process.env),

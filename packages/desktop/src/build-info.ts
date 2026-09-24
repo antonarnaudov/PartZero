@@ -10,6 +10,10 @@
  * - `flags.apiKeys`: whether the build takes API keys at all (the Alpha 0 build does not: no key entry, no keychain).
  * - `flags.mcpShim`: whether a packaged build runs the CAD MCP shim as `ELECTRON_RUN_AS_NODE=1 <app> <shim>`, which
  *   needs the `runAsNode` fuse on (decision D1 keeps it on for the local Alpha 0 build only).
+ * - `flags.loginShell`: which CLIs may be looked up through the user's login shell (`$SHELL -ilc 'command -v …'`) when
+ *   they are in no known install folder: `all`, or `claude-cli` only (the Alpha 0 build). The lookup runs the user's
+ *   shell startup files as a child of the app, so macOS attributes anything they touch (Desktop, Documents, iCloud)
+ *   to the app, and may ask the user about it.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -17,7 +21,10 @@ import { join } from "node:path";
 export interface BuildFlags {
   apiKeys: boolean;
   mcpShim: boolean;
+  loginShell: LoginShellFlag;
 }
+
+export type LoginShellFlag = "all" | "claude-cli";
 
 export interface BuildInfo {
   /** `dev` (unbundled), or the edition the bundle was made for (`default`, `alpha-local`). */
@@ -45,7 +52,7 @@ export const DEV_BUILD_INFO: BuildInfo = {
   commit: null,
   dirty: false,
   builtAt: null,
-  flags: { apiKeys: true, mcpShim: false },
+  flags: { apiKeys: true, mcpShim: false, loginShell: "all" },
 };
 
 const NAME = /^[A-Za-z][A-Za-z0-9 ._-]{0,63}$/;
@@ -64,6 +71,7 @@ export function parseBuildInfo(raw: unknown): BuildInfo | null {
   if (o["commit"] !== null && !(typeof o["commit"] === "string" && /^[0-9a-f]{7,40}$/.test(o["commit"]))) return null;
   if (typeof o["dirty"] !== "boolean" || (o["builtAt"] !== null && !str(o["builtAt"]))) return null;
   if (typeof flags !== "object" || flags === null || typeof flags["apiKeys"] !== "boolean" || typeof flags["mcpShim"] !== "boolean") return null;
+  if (flags["loginShell"] !== "all" && flags["loginShell"] !== "claude-cli") return null;
   return {
     edition: o["edition"],
     productName: o["productName"],
@@ -72,7 +80,7 @@ export function parseBuildInfo(raw: unknown): BuildInfo | null {
     commit: o["commit"] as string | null,
     dirty: o["dirty"],
     builtAt: o["builtAt"] as string | null,
-    flags: { apiKeys: flags["apiKeys"], mcpShim: flags["mcpShim"] },
+    flags: { apiKeys: flags["apiKeys"], mcpShim: flags["mcpShim"], loginShell: flags["loginShell"] },
   };
 }
 
@@ -98,6 +106,11 @@ export function readBuildInfo(mainDir: string, read: (path: string) => string = 
   const info = parseBuildInfo(raw);
   if (info === null) throw new Error(`${BUILD_INFO_FILE} is not a valid build info`);
   return info;
+}
+
+/** The CLIs the login-shell lookup may run for (`flags.loginShell`), or null for every CLI (the detector's option). */
+export function loginShellProviders(info: BuildInfo): readonly ["claude-cli"] | null {
+  return info.flags.loginShell === "all" ? null : [info.flags.loginShell];
 }
 
 /**

@@ -14,7 +14,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { AgentEvent } from "@aicad/app/bridge";
+import type { AgentEvent, CliProviderId } from "@aicad/app/bridge";
 import { CLI_PROVIDERS, defaultWorkspaceRoot, probeOllama, setDefaultWorkspaceRoot, unsafeAncestor } from "@aicad/llm-gateway/cli";
 import { CliDetector } from "./cli-detect.js";
 import { AgentHost, type CliRunSetup, type WorkerHandle } from "./host.js";
@@ -116,6 +116,15 @@ export function cliWorkspaceRoot(userData: string, fallback: () => string = gate
   return { root: null, note: `CLI agents are off: ${why}, and no private folder was found for their workspaces (CLIs read config files from every folder above their working folder)` };
 }
 
+/**
+ * The detector's login-shell option: never with a restricted search (`AICAD_CLI_DIRS`, test profiles), else the CLIs
+ * the build allows (`build-info.ts` `loginShellProviders`), or every CLI.
+ */
+export function detectorLoginShell(cliDirs: readonly string[] | null, loginShellProviders: readonly CliProviderId[] | null): boolean | readonly CliProviderId[] {
+  if (cliDirs !== null) return false;
+  return loginShellProviders ?? true;
+}
+
 export interface AgentSetupOptions {
   userData: string;
   env: NodeJS.ProcessEnv;
@@ -130,6 +139,11 @@ export interface AgentSetupOptions {
   detectEnv: Record<string, string>;
   /** Development and tests: search CLIs only here (`AICAD_CLI_DIRS`). */
   cliDirs: string[] | null;
+  /**
+   * The CLIs the login-shell lookup may run for (`build-info.ts` `loginShellProviders`); null or absent: every CLI.
+   * Never used with {@link cliDirs} (a restricted search has no login shell).
+   */
+  loginShellProviders?: readonly CliProviderId[] | null;
   /** The app executable, for the MCP shim; null when it cannot run as Node (packaged: the runAsNode fuse is off). */
   exePath: string | null;
   /** Ollama probe (tests inject one; default: HTTP to the configured base URL). */
@@ -184,7 +198,7 @@ export function setupAgent(o: AgentSetupOptions): AgentSetup {
     env: () => o.detectEnv,
     cliPaths: () => settings.get().cliPaths,
     searchDirs: o.cliDirs,
-    loginShell: o.cliDirs === null,
+    loginShell: detectorLoginShell(o.cliDirs, o.loginShellProviders ?? null),
     // Lockdown blocks survive a restart (§5.5): only a passing Re-check or a changed binary lifts one.
     blocks: { load: () => settings.get().cliBlocks, save: (blocks) => settings.setCliBlocks(blocks) },
     log: o.log,
