@@ -1,0 +1,22 @@
+docs/ALPHA-0-PLAN.md
+  s_59c0dd2af30db2::t_bd109e0252e622 117,124,295,465
+  s_59c0dd2af30db2::t_573af63b7e9f69 89
+docs/AGENT-IN-APP.md
+  s_59c0dd2af30db2::t_573af63b7e9f69 374
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "570255c28ee054035f03dae9fc7d79c796f058b1",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
