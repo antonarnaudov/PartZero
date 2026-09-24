@@ -1,0 +1,28 @@
+packages/desktop/test/print.test.ts
+  s_59c0dd2af30db2::t_32787c319f8130 368,382,384,393,399-403,469-633
+  s_59c0dd2af30db2::t_3eb9785cdd0d31 11,23,30,35,40-48,229-255,257-262
+packages/desktop/src/forge-cli.ts
+  s_59c0dd2af30db2::t_12396ac80708c6 223-262
+packages/desktop/src/slicer.ts
+  s_59c0dd2af30db2::t_f2a4bd6f8e0d22 15-19,69-70,76,81,84,118-119,132,190-210,235,241
+packages/desktop/src/print-handoff.ts
+  s_59c0dd2af30db2::t_f6aa1d11beabd2 12-22,31-32,101-148,163,170,172-173,205,214,217,256-257,259-261,280,283,309
+packages/app/src/bridge.ts
+  s_59c0dd2af30db2::t_af0f4d6785e64a 188-210,212-217,219-221
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1065d4aad5b7654a0b90095ee95fed99142a45df",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
