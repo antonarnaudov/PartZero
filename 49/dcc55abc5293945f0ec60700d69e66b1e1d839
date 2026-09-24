@@ -1,0 +1,33 @@
+forge/crates/forge-cli/src/print.rs
+  s_59c0dd2af30db2::t_36c18986036549 28-40
+  s_59c0dd2af30db2::t_eed67689ffef37 5
+  s_59c0dd2af30db2::t_a4d84c6485d52e 1-4,6-27,41-273
+forge/crates/forge-cli/src/main.rs
+  s_59c0dd2af30db2::t_a577d2cb4235f7 234-252
+  s_59c0dd2af30db2::t_17434e0cff3334 121-140
+  s_59c0dd2af30db2::t_b95b1d632d89b3 58-59
+  s_59c0dd2af30db2::t_71653c8a8f4870 353,362-371,373-392,415-426
+  s_59c0dd2af30db2::t_a3c47eb02520e7 94-101
+  s_59c0dd2af30db2::t_0541ecc3c8db7b 270,272,283-288
+  s_59c0dd2af30db2::t_fc4ddc374748c3 301,345
+  s_59c0dd2af30db2::t_599135348f1e54 190-201
+forge/crates/forge-cli/tests/cli_print.rs
+  s_59c0dd2af30db2::t_fbf6638f9544ff 1-34,36-57,59-130,132-185,187-238
+  s_59c0dd2af30db2::t_fdf5111fe47814 35,58,131,186
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "49dcc55abc5293945f0ec60700d69e66b1e1d839",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
