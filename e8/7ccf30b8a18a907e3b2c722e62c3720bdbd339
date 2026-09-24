@@ -1,0 +1,44 @@
+packages/app/src/print/open-in-slicer.ts
+  s_59c0dd2af30db2::t_33abbf84a6b782 1-55
+packages/app/src/ui/Toolbar.tsx
+  s_59c0dd2af30db2::t_86898e6e6dd48c 1,4,8-39
+  s_59c0dd2af30db2::t_eb73458e25c654 96
+  s_59c0dd2af30db2::t_232f910362d827 40
+packages/app/src/ui/icons.tsx
+  s_59c0dd2af30db2::t_40634317778272 132-140
+packages/app/src/host/host.ts
+  s_59c0dd2af30db2::t_61f9a3e22303d8 12
+  s_59c0dd2af30db2::t_e8753ffe6641ea 35-36
+packages/app/test/print.test.ts
+  s_59c0dd2af30db2::t_27323c4ef85500 1-105
+packages/app/src/host/electron-host.ts
+  s_59c0dd2af30db2::t_69d4495b5ba384 28
+  s_59c0dd2af30db2::t_7cc90e602dbd22 18
+  s_59c0dd2af30db2::t_1837c70d437318 1
+packages/app/src/ui/Dialogs.tsx
+  s_59c0dd2af30db2::t_56454010840c6e 124-135
+packages/app/src/ui/styles.css
+  s_59c0dd2af30db2::t_90719fe5f0c1ae 1402-1416
+  s_59c0dd2af30db2::t_a01757ca2f0788 311-331
+packages/app/src/ui-store.ts
+  s_59c0dd2af30db2::t_505f15c14cdee8 37-38
+  s_59c0dd2af30db2::t_82848978017edf 181,183
+packages/app/src/host/browser-host.ts
+  s_59c0dd2af30db2::t_f804c609df931a 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e87ccf30b8a18a907e3b2c722e62c3720bdbd339",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
