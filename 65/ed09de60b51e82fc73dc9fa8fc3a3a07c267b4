@@ -1,0 +1,39 @@
+packages/desktop/src/self-test.ts
+  s_59c0dd2af30db2::t_2fb715a7369472 18
+  s_59c0dd2af30db2::t_edcec9993d1578 1-17,19-79,83-84,86-206,209-234,236,238
+  s_59c0dd2af30db2::t_fbed473a625fbd 80-82
+  s_59c0dd2af30db2::t_7e798a866e03bf 207-208
+  s_59c0dd2af30db2::t_7a1fa2b39ce22f 85
+  s_59c0dd2af30db2::t_e9ee0839522e31 235,237
+packages/desktop/src/agent/worker.ts
+  s_59c0dd2af30db2::t_f148f6989760b6 20,40-45
+packages/desktop/src/forge-cli.ts
+  s_59c0dd2af30db2::t_7f28a811a7f904 167-209
+packages/desktop/src/main.ts
+  s_59c0dd2af30db2::t_61500585ab087a 2,13-16,19,21,28-31,35,37,41-53,72-83,103-104,113-114,117-140,176,186,197,200-201,203-204,216-221,225,275,279-281,283-296,304,316,330,335,344,349-353,355-360,373,383-384,386-387,401-491,493-503,505-506,525-528,533-537
+  s_59c0dd2af30db2::t_f24a77e428b38d 504,507-523
+  s_59c0dd2af30db2::t_d23e136dcdb1bf 18
+  s_59c0dd2af30db2::t_e9ee0839522e31 297-301,385,492
+  s_59c0dd2af30db2::t_1aaa37b44244df 524
+packages/desktop/src/agent/self-test.ts
+  s_59c0dd2af30db2::t_7556aa68619465 1-152
+packages/desktop/src/agent/protocol.ts
+  s_59c0dd2af30db2::t_f148f6989760b6 31,388-390,399-401,426-427
+  s_59c0dd2af30db2::t_9f154be3fbdf7e 428
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "65ed09de60b51e82fc73dc9fa8fc3a3a07c267b4",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
