@@ -98,7 +98,8 @@ enum Command {
     /// point at z = 0 through the build items' transform (the vertices are unchanged), after
     /// checking that they fit the bed less `--bed-margin` per side; `--title` and
     /// `--application` set the 3MF metadata. `--summary` writes a JSON record of the export
-    /// (`aicad.export/1`: bodies, watertightness, bounding boxes, placement or error).
+    /// (`aicad.export/1`: bodies, watertightness, bounding boxes, placement or error, layout
+    /// warnings such as a body stacked above another, and a geometry hash without metadata).
     Export {
         /// IR document (`aicad.ir/0` or `aicad.ir/1` JSON). For v1, the final bodies of
         /// every part are written.
@@ -368,11 +369,16 @@ fn write_meshes(
         placement: None,
         bytes: None,
         error: None,
+        warnings: Vec::new(),
+        geometry_hash: None,
     };
     let bytes = match format {
         MeshFormat::ThreeMf => match print::encode_3mf(&named, &extras.print) {
             Ok((bytes, placement)) => {
                 summary.placement = placement;
+                if let Some(p) = &placement {
+                    summary.warnings = print::layout_warnings(&meshes, p, extras.deflection);
+                }
                 Ok(bytes)
             }
             Err(print::Print3mfError::Placement(e)) => {
@@ -418,7 +424,18 @@ fn write_meshes(
             meshes.len()
         );
     }
+    for w in &summary.warnings {
+        eprintln!(
+            "aicad: warning: {}: {}",
+            w["code"].as_str().unwrap_or("WARNING"),
+            w["message"].as_str().unwrap_or("")
+        );
+    }
     summary.bytes = Some(bytes.len());
+    summary.geometry_hash = Some(forge_io::geometry_hash(
+        &named,
+        summary.placement.map(|p| p.translation),
+    ));
     if let Some(path) = &extras.summary
         && !print::write_summary(path, &summary)
     {

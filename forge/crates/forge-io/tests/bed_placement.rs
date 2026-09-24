@@ -1,14 +1,16 @@
 //! Placing an export on a printer bed (ALPHA-0-PLAN W5): centring with z-min = 0, the
-//! `EXPORT_BED_FIT` check, and the 3MF that carries the placement as a build-item transform
-//! while leaving every vertex unchanged.
+//! `EXPORT_BED_FIT` check, the 3MF that carries the placement as a build-item transform
+//! while leaving every vertex unchanged, the layout warnings for bodies a slicer would drop
+//! onto the plate, and the geometry hash that ignores the metadata.
 
 // Exact (bit-level) equality of coordinates is the property under test here.
 #![allow(clippy::float_cmp)]
 
 use forge_core::topo::samples;
 use forge_io::{
-    Axis, BedRect, BuildVolume, PlacementError, ThreeMfOptions, parse_3mf_transform, place_on_bed,
-    read_3mf, try_write_3mf_with, validate_3mf, write_3mf, zip,
+    Axis, BedRect, BuildVolume, LayoutWarning, PlacementError, ThreeMfOptions, geometry_hash,
+    layout_warnings, parse_3mf_transform, place_on_bed, read_3mf, try_write_3mf_with, validate_3mf,
+    write_3mf, zip,
 };
 use forge_mesh::{BodyMesh, TessParams, check_watertight, tessellate};
 use proptest::prelude::*;
@@ -326,6 +328,144 @@ fn transforms_are_parsed_and_validated() {
     assert_eq!(validate_3mf(&broken).unwrap_err().code(), "IO_3MF");
 }
 
+/// A box with its lid modelled in place, 1 mm above it.
+fn box_and_lid() -> (BodyMesh, BodyMesh) {
+    (
+        box_mesh([0.0, 0.0, 0.0], [40.0, 30.0, 20.0]),
+        box_mesh([0.0, 0.0, 21.0], [40.0, 30.0, 24.0]),
+    )
+}
+
+#[test]
+fn bodies_resting_on_the_bed_give_no_layout_warning() {
+    let (a, b) = two_bodies();
+    let p = place_on_bed(&[&a, &b], &p2s()).expect("fits");
+    assert_eq!(layout_warnings(&[&a, &b], &p, 0.01), Ok(vec![]));
+    // Side by side, overlapping footprints on the bed (a print-in-place pair) are fine too.
+    let (x, y) = (
+        box_mesh([0.0; 3], [10.0, 10.0, 5.0]),
+        box_mesh([5.0, 5.0, 0.0], [15.0, 15.0, 8.0]),
+    );
+    let p = place_on_bed(&[&x, &y], &p2s()).expect("fits");
+    assert_eq!(layout_warnings(&[&x, &y], &p, 0.01), Ok(vec![]));
+}
+
+#[test]
+fn a_lid_modelled_on_its_box_floats_and_is_stacked_over_it() {
+    let (base, lid) = box_and_lid();
+    let p = place_on_bed(&[&base, &lid], &p2s()).expect("fits");
+    let w = layout_warnings(&[&base, &lid], &p, 0.01).expect("warnings");
+    // The 40 × 30 footprint centred on (128, 128).
+    let footprint = BedRect {
+        min: [108.0, 113.0],
+        max: [148.0, 143.0],
+    };
+    assert_eq!(
+        w,
+        vec![
+            LayoutWarning::Floating {
+                body: 1,
+                z_min: 21.0
+            },
+            LayoutWarning::StackedOverlap {
+                bodies: [0, 1],
+                overlap: footprint
+            },
+        ]
+    );
+    assert_eq!(w[0].code(), "EXPORT_BODY_FLOATING");
+    assert_eq!(w[1].code(), "EXPORT_BODIES_OVERLAP");
+    let name = |i: usize| ["box", "lid"][i].to_string();
+    assert_eq!(
+        w[0].describe(name),
+        "lid starts 21 mm above the bed; a slicer drops it onto the plate"
+    );
+    assert_eq!(
+        w[1].describe(name),
+        "box and lid are stacked: they overlap on the bed (108, 113 – 148, 143) and one floats above the other, so dropped onto the plate they would print inside each other"
+    );
+    // Laid out side by side, the lid still floats but no longer lands on the box.
+    let beside = shifted(&lid, [50.0, 0.0, 0.0]);
+    let p = place_on_bed(&[&base, &beside], &p2s()).expect("fits");
+    let w = layout_warnings(&[&base, &beside], &p, 0.01).expect("warnings");
+    assert_eq!(
+        w,
+        vec![LayoutWarning::Floating {
+            body: 1,
+            z_min: 21.0
+        }]
+    );
+    // Touching footprints (the lid's edge on the box's edge) do not overlap.
+    let touching = shifted(&lid, [40.0, 0.0, 0.0]);
+    let p = place_on_bed(&[&base, &touching], &p2s()).expect("fits");
+    assert_eq!(
+        layout_warnings(&[&base, &touching], &p, 0.01)
+            .expect("w")
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn the_contact_tolerance_absorbs_a_curved_underside_and_nothing_more() {
+    let flat = box_mesh([0.0; 3], [10.0, 10.0, 10.0]);
+    let near = box_mesh([20.0, 0.0, 0.005], [30.0, 10.0, 10.0]);
+    let p = place_on_bed(&[&flat, &near], &p2s()).expect("fits");
+    assert_eq!(layout_warnings(&[&flat, &near], &p, 0.01), Ok(vec![]));
+    assert_eq!(
+        layout_warnings(&[&flat, &near], &p, 0.001),
+        Ok(vec![LayoutWarning::Floating {
+            body: 1,
+            z_min: 0.005
+        }])
+    );
+    for bad in [-1.0, f64::NAN, f64::INFINITY] {
+        let e = layout_warnings(&[&flat], &p, bad).unwrap_err();
+        assert_eq!(e.code(), "EXPORT_BED_INVALID", "{bad}");
+    }
+}
+
+#[test]
+fn the_geometry_hash_is_pinned_and_changes_with_any_geometry() {
+    let m = box_mesh([-10.0, -5.0, -2.0], [10.0, 5.0, 3.0]);
+    let t = Some([128.0, 128.0, 2.0]);
+    let h = geometry_hash(&[("box", &m)], t);
+    // Pinned: the same on every target (IEEE bits, little-endian integers).
+    assert_eq!(format!("{h:016x}"), PINNED_BOX_HASH);
+    assert_eq!(h, geometry_hash(&[("box", &m.clone())], t));
+    let mut ulp = m.clone();
+    ulp.positions[3][1] = f64::from_bits(ulp.positions[3][1].to_bits() + 1);
+    let mut flipped = m.clone();
+    flipped.triangles[0] = [0, 1, 2];
+    let others = [
+        geometry_hash(&[("box", &ulp)], t),
+        geometry_hash(&[("box", &flipped)], t),
+        geometry_hash(&[("lid", &m)], t),
+        geometry_hash(&[("box", &m)], None),
+        geometry_hash(&[("box", &m)], Some([128.0, 128.0, 2.5])),
+        geometry_hash(&[("box", &m), ("box", &m)], t),
+        geometry_hash(&[], t),
+    ];
+    for (i, o) in others.iter().enumerate() {
+        assert_ne!(*o, h, "variant {i}");
+    }
+    // The metadata is not an input: files that differ only in Title/Application share it.
+    let file = |title: &str| {
+        try_write_3mf_with(
+            &[("box", &m)],
+            &ThreeMfOptions {
+                title: Some(title.into()),
+                application: Some("PartZero 0.0.1".into()),
+                translation: t,
+            },
+        )
+        .expect("write")
+    };
+    assert_ne!(file("a"), file("b"));
+}
+
+const PINNED_BOX_HASH: &str = "bb587c4885a10fd7";
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
 
@@ -391,5 +531,57 @@ proptest! {
             prop_assert!((pa.placed.min[i] - pb.placed.min[i]).abs() < 1e-9);
             prop_assert!((pa.placed.max[i] - pb.placed.max[i]).abs() < 1e-9);
         }
+    }
+    /// Floating is exactly "lowest point above the tolerance", and a pair is stacked exactly
+    /// when their footprints overlap and one of them floats; the order is deterministic.
+    #[test]
+    fn layout_warnings_follow_their_definitions(
+        boxes in prop::collection::vec(
+            (prop::array::uniform3(0.0f64..60.0), prop::array::uniform3(0.5f64..30.0)),
+            1..5,
+        ),
+        tol in 0.0f64..2.0,
+    ) {
+        let meshes: Vec<BodyMesh> = boxes
+            .iter()
+            .map(|(o, e)| box_mesh(*o, [o[0] + e[0], o[1] + e[1], o[2] + e[2]]))
+            .collect();
+        let refs: Vec<&BodyMesh> = meshes.iter().collect();
+        let p = place_on_bed(&refs, &p2s()).expect("fits");
+        let w = layout_warnings(&refs, &p, tol).expect("warnings");
+        prop_assert_eq!(&w, &layout_warnings(&refs, &p, tol).expect("again"));
+        let placed: Vec<_> = boxes
+            .iter()
+            .map(|(o, e)| {
+                let min = [o[0] + p.translation[0], o[1] + p.translation[1], o[2] + p.translation[2]];
+                (min, [min[0] + e[0], min[1] + e[1], min[2] + e[2]])
+            })
+            .collect();
+        let floats = |i: usize| placed[i].0[2] > tol;
+        let mut want = Vec::new();
+        for i in 0..placed.len() {
+            if floats(i) {
+                want.push(("EXPORT_BODY_FLOATING", vec![i]));
+            }
+        }
+        for i in 0..placed.len() {
+            for j in i + 1..placed.len() {
+                let (a, b) = (placed[i], placed[j]);
+                let overlap = a.0[0] < b.1[0] && b.0[0] < a.1[0] && a.0[1] < b.1[1] && b.0[1] < a.1[1];
+                if overlap && (floats(i) || floats(j)) {
+                    want.push(("EXPORT_BODIES_OVERLAP", vec![i, j]));
+                }
+            }
+        }
+        let got: Vec<(&str, Vec<usize>)> = w
+            .iter()
+            .map(|x| match x {
+                LayoutWarning::Floating { body, .. } => (x.code(), vec![*body]),
+                LayoutWarning::StackedOverlap { bodies, .. } => (x.code(), bodies.to_vec()),
+            })
+            .collect();
+        prop_assert_eq!(got, want);
+        // The lowest body always rests on the bed.
+        prop_assert!((0..placed.len()).any(|i| !floats(i)));
     }
 }

@@ -174,6 +174,50 @@ pub fn try_write_3mf_with(
     ])
 }
 
+/// FNV-1a (64-bit) of the geometry a 3MF from [`try_write_3mf_with`] carries, without its
+/// metadata: for each body its name, vertex coordinates (IEEE bits) and triangles, then the
+/// build translation. The same design gives the same hash whatever its `Title` or
+/// `Application` (a document rename, an app upgrade), and any change to a vertex, a triangle, a
+/// name or the placement changes it. Not cryptographic: it identifies a result, it does not
+/// authenticate one. Deterministic on every target, like the tessellation it hashes.
+pub fn geometry_hash(bodies: &[(&str, &BodyMesh)], translation: Option<[f64; 3]>) -> u64 {
+    const OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const PRIME: u64 = 0x0000_0100_0000_01b3;
+    let mut h = OFFSET;
+    let mut eat = |bytes: &[u8]| {
+        for b in bytes {
+            h = (h ^ u64::from(*b)).wrapping_mul(PRIME);
+        }
+    };
+    eat(&(bodies.len() as u64).to_le_bytes());
+    for (name, m) in bodies {
+        eat(&(name.len() as u64).to_le_bytes());
+        eat(name.as_bytes());
+        eat(&(m.positions.len() as u64).to_le_bytes());
+        for p in &m.positions {
+            for v in p {
+                eat(&v.to_bits().to_le_bytes());
+            }
+        }
+        eat(&(m.triangles.len() as u64).to_le_bytes());
+        for t in &m.triangles {
+            for k in t {
+                eat(&k.to_le_bytes());
+            }
+        }
+    }
+    match translation {
+        None => eat(&[0]),
+        Some(t) => {
+            eat(&[1]);
+            for v in t {
+                eat(&v.to_bits().to_le_bytes());
+            }
+        }
+    }
+    h
+}
+
 /// Write a 3MF package (see the module docs) with one object per `(name, mesh)`.
 ///
 /// # Panics

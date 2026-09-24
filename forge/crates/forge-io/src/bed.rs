@@ -387,6 +387,122 @@ pub fn place_on_bed(
     })
 }
 
+/// A layout that a slicer may load differently from the model (see [`layout_warnings`]).
+///
+/// Slicers drop each object of a plain 3MF onto the plate on import (Bambu Studio does, see
+/// `docs/SLICER-HANDOFF.md`), and [`place_on_bed`] moves all bodies together. A body that does
+/// not reach the bed is therefore printed lower than modelled, and a body stacked above another
+/// ends up inside it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum LayoutWarning {
+    /// The body's lowest point is `z_min` above the bed after placement.
+    Floating {
+        /// Index into the meshes.
+        body: usize,
+        /// Height of its lowest point above the bed, mm (more than the contact tolerance).
+        z_min: f64,
+    },
+    /// The bodies' footprints overlap (their interiors intersect) and at least one of them
+    /// floats: one is stacked above the other, and dropped onto the plate they would occupy the
+    /// same space.
+    StackedOverlap {
+        /// Indices into the meshes, the lower index first.
+        bodies: [usize; 2],
+        /// Where the footprints overlap, in bed coordinates.
+        overlap: BedRect,
+    },
+}
+
+impl LayoutWarning {
+    /// Stable machine-readable code: `EXPORT_BODY_FLOATING` or `EXPORT_BODIES_OVERLAP`.
+    pub fn code(&self) -> &'static str {
+        match self {
+            LayoutWarning::Floating { .. } => "EXPORT_BODY_FLOATING",
+            LayoutWarning::StackedOverlap { .. } => "EXPORT_BODIES_OVERLAP",
+        }
+    }
+
+    /// A plain sentence, naming each body with `name(index)`.
+    pub fn describe(&self, name: impl Fn(usize) -> String) -> String {
+        match self {
+            LayoutWarning::Floating { body, z_min } => format!(
+                "{} starts {} above the bed; a slicer drops it onto the plate",
+                name(*body),
+                mm(*z_min)
+            ),
+            LayoutWarning::StackedOverlap { bodies, overlap } => format!(
+                "{} and {} are stacked: they overlap on the bed ({} – {}) and one floats above the other, so dropped onto the plate they would print inside each other",
+                name(bodies[0]),
+                name(bodies[1]),
+                xy(overlap.min),
+                xy(overlap.max)
+            ),
+        }
+    }
+}
+
+/// What a slicer would do differently from the model with bodies placed by `placement`
+/// (see [`LayoutWarning`]): every floating body in index order, then every stacked pair in
+/// `(i, j)` order. Deterministic; empty when every body rests on the bed.
+///
+/// `contact_tolerance` (mm, finite, not negative): a body whose lowest point is at most this far
+/// above the bed counts as resting on it. Pass at least the chordal tolerance of the
+/// tessellation: the vertices lie on the exact surfaces, so the mesh of a curved underside (a
+/// cylinder on its side) can sit up to that far above the point that touches the bed.
+pub fn layout_warnings(
+    meshes: &[&BodyMesh],
+    placement: &BedPlacement,
+    contact_tolerance: f64,
+) -> Result<Vec<LayoutWarning>, PlacementError> {
+    if !contact_tolerance.is_finite() || contact_tolerance < 0.0 {
+        return Err(PlacementError::InvalidBed {
+            detail: format!(
+                "the contact tolerance must be finite and not negative, got {}",
+                mm(contact_tolerance)
+            ),
+        });
+    }
+    let mut placed = Vec::with_capacity(meshes.len());
+    for (i, m) in meshes.iter().enumerate() {
+        check_mesh(m, i)?;
+        // A body without triangles has no footprint and nothing for a slicer to drop.
+        placed.push(
+            mesh_bounds(&[*m])
+                .ok()
+                .map(|b| b.translated(placement.translation)),
+        );
+    }
+    let floats = |b: &Aabb| b.min[2] > contact_tolerance;
+    let mut out: Vec<LayoutWarning> = placed
+        .iter()
+        .enumerate()
+        .filter_map(|(body, b)| match b {
+            Some(b) if floats(b) => Some(LayoutWarning::Floating {
+                body,
+                z_min: b.min[2],
+            }),
+            _ => None,
+        })
+        .collect();
+    for (i, a) in placed.iter().enumerate() {
+        let Some(a) = a else { continue };
+        for (j, b) in placed.iter().enumerate().skip(i + 1) {
+            let Some(b) = b else { continue };
+            let (fa, fb) = (a.footprint(), b.footprint());
+            if (floats(a) || floats(b)) && fa.overlaps(&fb) {
+                out.push(LayoutWarning::StackedOverlap {
+                    bodies: [i, j],
+                    overlap: BedRect {
+                        min: [fa.min[0].max(fb.min[0]), fa.min[1].max(fb.min[1])],
+                        max: [fa.max[0].min(fb.max[0]), fa.max[1].min(fb.max[1])],
+                    },
+                });
+            }
+        }
+    }
+    Ok(out)
+}
+
 /// A length for messages: at most 3 decimals, trailing zeros dropped, with the unit.
 fn mm(v: f64) -> String {
     format!("{} mm", num3(v))

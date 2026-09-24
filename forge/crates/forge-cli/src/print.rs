@@ -1,6 +1,8 @@
 //! `aicad export` for a printer (ALPHA-0-PLAN W5): 3MF metadata, centring on the bed with the
 //! bed-fit check (`--bed`, `EXPORT_BED_FIT`), and the JSON export summary (`--summary`) that
-//! the desktop's print handoff turns into a receipt.
+//! the desktop's print handoff turns into a receipt: bodies, watertightness, placement, layout
+//! warnings (`EXPORT_BODY_FLOATING`, `EXPORT_BODIES_OVERLAP`) and a geometry hash that ignores
+//! the metadata.
 
 use std::path::{Path, PathBuf};
 
@@ -193,6 +195,49 @@ pub struct Summary<'a> {
     pub bytes: Option<usize>,
     /// `(code, message, details)` of the failure that stopped the export.
     pub error: Option<(&'a str, String, Value)>,
+    /// What a slicer would load differently from the model (see [`layout_warnings`]).
+    pub warnings: Vec<Value>,
+    /// [`forge_io::geometry_hash`] of the written file, when it was written.
+    pub geometry_hash: Option<u64>,
+}
+
+/// `fnv1a64:<16 hex digits>`, the summary's (and the print receipt's) determinism hash.
+pub fn geometry_hash_text(h: u64) -> String {
+    format!("fnv1a64:{h:016x}")
+}
+
+/// The [`forge_io::LayoutWarning`]s of a placed export as summary entries
+/// (`{ code, message, details }`), bodies named as in the file. The contact tolerance is the
+/// export's chordal tolerance: a curved underside's mesh sits up to that far above the bed.
+pub fn layout_warnings(
+    meshes: &[(String, BodyMesh)],
+    placement: &BedPlacement,
+    deflection: f64,
+) -> Vec<Value> {
+    let refs: Vec<&BodyMesh> = meshes.iter().map(|(_, m)| m).collect();
+    let name = |i: usize| format!("body {:?}", meshes[i].0);
+    match forge_io::layout_warnings(&refs, placement, deflection) {
+        Ok(ws) => ws
+            .iter()
+            .map(|w| {
+                let details = match w {
+                    forge_io::LayoutWarning::Floating { body, z_min } => json!({
+                        "body": body,
+                        "name": meshes[*body].0,
+                        "zMin": z_min,
+                    }),
+                    forge_io::LayoutWarning::StackedOverlap { bodies, overlap } => json!({
+                        "bodies": bodies,
+                        "names": [meshes[bodies[0]].0, meshes[bodies[1]].0],
+                        "overlap": { "min": overlap.min, "max": overlap.max },
+                    }),
+                };
+                json!({ "code": w.code(), "message": w.describe(name), "details": details })
+            })
+            .collect(),
+        // The meshes were placed already, so only a bad tolerance fails here: say so.
+        Err(e) => vec![json!({ "code": e.code(), "message": e.to_string(), "details": {} })],
+    }
 }
 
 /// The `aicad.export/1` JSON document (see [`Summary`]).
@@ -235,6 +280,8 @@ pub fn summary_json(s: &Summary) -> Value {
             "bbox": aabb(&p.placed),
         })),
         "bytes": s.bytes,
+        "geometryHash": s.geometry_hash.map(geometry_hash_text),
+        "warnings": s.warnings,
     })
 }
 

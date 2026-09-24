@@ -13,7 +13,9 @@
 //! [`place_on_bed`] ([`bed`]) checks that the bodies fit a printer's bed (less a margin per
 //! side, `EXPORT_BED_FIT` otherwise) and computes the translation that centres them on it
 //! with their lowest point at z = 0; the 3MF writer stores it as the build items' `transform`
-//! and leaves the vertices unchanged.
+//! and leaves the vertices unchanged. [`layout_warnings`] flags bodies a slicer would drop
+//! onto the plate (floating, or stacked above another), and [`geometry_hash`] identifies the
+//! geometry of a 3MF without its metadata.
 //!
 //! ```
 //! use forge_core::topo::samples;
@@ -60,16 +62,16 @@ use forge_mesh::BodyMesh;
 use thiserror::Error;
 
 pub use bed::{
-    Aabb, Axis, BedPlacement, BedRect, BuildVolume, Overflow, PlacementError, mesh_bounds,
-    place_on_bed,
+    Aabb, Axis, BedPlacement, BedRect, BuildVolume, LayoutWarning, Overflow, PlacementError,
+    layout_warnings, mesh_bounds, place_on_bed,
 };
 pub use obj::{try_write_obj, write_obj};
 pub use stl::{StlFile, StlSolid, StlTriangle, read_stl, try_write_stl, write_stl};
 pub use threemf::{
     BuildItem3mf, CORE_NS, DEFAULT_APPLICATION, IDENTITY_3MF_TRANSFORM, MODEL_CONTENT_TYPE,
     MODEL_REL_TYPE, Model3mf, Object3mf, RELS_CONTENT_TYPE, ThreeMfOptions, ThreeMfReport,
-    apply_3mf_transform, parse_3mf_transform, read_3mf, try_write_3mf, try_write_3mf_with,
-    validate_3mf, write_3mf,
+    apply_3mf_transform, geometry_hash, parse_3mf_transform, read_3mf, try_write_3mf,
+    try_write_3mf_with, validate_3mf, write_3mf,
 };
 
 /// An I/O failure. Every variant has a stable [`IoError::code`].

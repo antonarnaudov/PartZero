@@ -236,3 +236,106 @@ fn a_multi_body_stl_points_to_3mf() {
     assert!(r.status.success());
     assert!(String::from_utf8_lossy(&r.stderr).contains("export 3MF to keep them apart"));
 }
+
+#[test]
+fn the_geometry_hash_ignores_the_metadata_and_follows_the_geometry() {
+    let doc = corpus("programs/extrude_two_regions.json");
+    let run = |title: &str, application: &str, bed: &str, name: &str| {
+        let summary = scratch(&format!("{name}.summary.json"));
+        let out = scratch(&format!("{name}.3mf"));
+        let r = aicad()
+            .arg("export")
+            .arg(&doc)
+            .arg("--out")
+            .arg(&out)
+            .args(["--deflection", "0.01", "--angular", "0.1", "--bed", bed])
+            .args(["--title", title, "--application", application])
+            .arg("--summary")
+            .arg(&summary)
+            .output()
+            .expect("run aicad");
+        assert!(r.status.success(), "{}", String::from_utf8_lossy(&r.stderr));
+        let s = read_json(&summary);
+        assert_eq!(
+            s["warnings"],
+            serde_json::json!([]),
+            "both pucks rest on the bed"
+        );
+        (
+            s["geometryHash"].as_str().expect("hash").to_string(),
+            std::fs::read(&out).expect("written"),
+        )
+    };
+    let (h1, f1) = run("Two pucks", "PartZero 0.0.1", "256,256,256", "hash_a");
+    let (h2, f2) = run("Renamed", "PartZero 0.0.2", "256,256,256", "hash_b");
+    assert!(
+        h1.starts_with("fnv1a64:") && h1.len() == "fnv1a64:".len() + 16,
+        "{h1}"
+    );
+    assert_ne!(f1, f2, "the files differ in their metadata");
+    assert_eq!(h1, h2, "the same geometry and placement give the same hash");
+    // Another bed moves the build: another placement, another hash.
+    let (h3, _) = run("Two pucks", "PartZero 0.0.1", "300,300,300", "hash_c");
+    assert_ne!(h1, h3);
+}
+
+/// Two 20 × 10 mm bars on the XZ plane, one at z 0..5 and one at z 10..15: modelled stacked.
+const STACKED: &str = r#"{
+  "schema": "aicad.ir/0",
+  "parts": [{ "id": "p", "name": "stack", "features": [
+    { "type": "sketch", "id": "s", "name": "bars", "plane": "XZ", "curves": [
+      { "kind": "line", "id": "a1", "start": [-10, 0], "end": [10, 0] },
+      { "kind": "line", "id": "a2", "start": [10, 0], "end": [10, 5] },
+      { "kind": "line", "id": "a3", "start": [10, 5], "end": [-10, 5] },
+      { "kind": "line", "id": "a4", "start": [-10, 5], "end": [-10, 0] },
+      { "kind": "line", "id": "b1", "start": [-10, 10], "end": [10, 10] },
+      { "kind": "line", "id": "b2", "start": [10, 10], "end": [10, 15] },
+      { "kind": "line", "id": "b3", "start": [10, 15], "end": [-10, 15] },
+      { "kind": "line", "id": "b4", "start": [-10, 15], "end": [-10, 10] }
+    ]},
+    { "type": "extrude", "id": "e", "name": "stack", "sketch": "bars", "distance": 10, "direction": "symmetric" }
+  ]}]
+}"#;
+
+#[test]
+fn bodies_stacked_above_each_other_are_exported_with_layout_warnings() {
+    let doc = scratch("stacked.json");
+    std::fs::write(&doc, STACKED).expect("write doc");
+    let out = scratch("stacked.3mf");
+    let summary = scratch("stacked.summary.json");
+    let r = print_export(&doc, &out, &summary, "256,256,256");
+    // A warning, not a failure: the file is what was modelled (the handoff decides).
+    assert!(r.status.success(), "{}", String::from_utf8_lossy(&r.stderr));
+    assert!(out.exists());
+    let stderr = String::from_utf8_lossy(&r.stderr);
+    assert!(stderr.contains("warning: EXPORT_BODY_FLOATING"), "{stderr}");
+    assert!(
+        stderr.contains("warning: EXPORT_BODIES_OVERLAP"),
+        "{stderr}"
+    );
+    let s = read_json(&summary);
+    let w = s["warnings"].as_array().expect("warnings");
+    assert_eq!(w.len(), 2, "{w:?}");
+    assert_eq!(w[0]["code"], "EXPORT_BODY_FLOATING");
+    assert_eq!(w[0]["details"]["zMin"], 10.0);
+    let upper = w[0]["details"]["body"].as_u64().expect("body") as usize;
+    assert_eq!(w[1]["code"], "EXPORT_BODIES_OVERLAP");
+    let pair: Vec<usize> = w[1]["details"]["bodies"]
+        .as_array()
+        .expect("bodies")
+        .iter()
+        .map(|v| v.as_u64().expect("index") as usize)
+        .collect();
+    assert!(pair.contains(&upper) && pair.len() == 2, "{pair:?}");
+    // Both bars cover the same 20 × 10 mm, centred on the bed.
+    assert_eq!(
+        w[1]["details"]["overlap"],
+        serde_json::json!({ "min": [118.0, 123.0], "max": [138.0, 133.0] })
+    );
+    assert!(
+        w[1]["message"]
+            .as_str()
+            .expect("message")
+            .contains("print inside each other")
+    );
+}
