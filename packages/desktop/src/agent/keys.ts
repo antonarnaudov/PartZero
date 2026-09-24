@@ -10,9 +10,11 @@
  *   sent to the renderer: it sees `configured`, the source and the last four characters.
  * - In development, keys can also come from the environment or the repo-root `.env` (gitignored).
  *   Precedence: Settings (keychain) → environment → `.env`.
+ * - Keys are optional (ADR 0014): CLI agents run on the user's own login and local models need none.
+ *   Only API-key providers (`ApiProviderId`) have keys; CLI credentials are never read.
  */
 import { chmodSync, existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import type { KeySource, ProviderId } from "@aicad/app/bridge";
+import type { ApiProviderId as ProviderId, KeySource } from "@aicad/app/bridge";
 import { PROVIDER_IDS } from "./protocol.js";
 
 export interface ProviderInfo {

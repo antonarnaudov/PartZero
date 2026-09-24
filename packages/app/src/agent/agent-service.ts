@@ -16,7 +16,10 @@ import type {
   AgentQuestion,
   AgentRunResult,
   AgentSettingsView,
+  AgentStartErrorCode,
   AgentTransportKind,
+  ApiProviderId,
+  PlanUsageView,
   ProviderId,
   SettingsBridge,
   SettingsUpdate,
@@ -51,6 +54,10 @@ export interface AgentRun {
   activity: ActivityItem[];
   spentUsd: number;
   budgetUsd: number;
+  /** The spend is (partly) a CLI plan's list-price estimate, not a bill ("≈ $0.42 plan usage"). */
+  notional?: boolean;
+  /** Plan usage a CLI reported during the run (Claude: 5-hour and 7-day windows). */
+  planUsage?: PlanUsageView | null;
   /** ms since the run started (latest event). */
   elapsedMs: number;
   models: Partial<Record<string, AgentModelInfo>>;
@@ -111,6 +118,9 @@ export interface AgentServiceDeps {
   ui: UiStore;
 }
 
+/** Start refusals that Settings fixes (a key, a CLI login or update, a local model): the message offers "Open Settings". */
+const SETTINGS_FIXES: ReadonlySet<AgentStartErrorCode> = new Set<AgentStartErrorCode>(["NO_API_KEY", "CLI_NOT_INSTALLED", "CLI_UNSUPPORTED", "CLI_BLOCKED", "CLI_NOT_LOGGED_IN", "LOCAL_UNAVAILABLE"]);
+
 /** Proposal preview tint (sRGB 0..1). */
 export const PREVIEW_TINT: [number, number, number] = [0.33, 0.74, 0.58];
 const MAX_ACTIVITY = 120;
@@ -136,6 +146,8 @@ function newRun(runId: string, prompt: string, chips: SelectionChip[]): AgentRun
     activity: [],
     spentUsd: 0,
     budgetUsd: 0,
+    notional: false,
+    planUsage: null,
     elapsedMs: 0,
     models: {},
     transport: null,
@@ -161,6 +173,7 @@ export function reduceRun(run: AgentRun, e: AgentEvent): AgentRun {
       r.budgetUsd = e.budgetUsd;
       r.transport = e.transport;
       r.engine = e.engine;
+      if (e.transport === "live" && Object.values(e.models).some((m) => m?.billing === "subscription")) r.notional = true;
       break;
     case "phase":
       r.phase = e.phase;
@@ -179,6 +192,10 @@ export function reduceRun(run: AgentRun, e: AgentEvent): AgentRun {
     case "cost":
       r.spentUsd = e.spentUsd;
       r.budgetUsd = e.budgetUsd;
+      if (e.notional) r.notional = true;
+      break;
+    case "plan":
+      r.planUsage = e.usage;
       break;
     case "draft":
       r.draft = { source: e.source, applyIndex: e.applyIndex, verified: e.verified };
@@ -262,7 +279,7 @@ export class AgentService extends Store<AgentState> {
     const selection = describeSelection(input.chips, ir);
     const res = await bridge.start({ v: 1, prompt: input.prompt, source: s.source, documentName: s.name, selection });
     if (!res.ok) {
-      ui.addChatMessage("system", res.message, [], { tone: "error", ...(res.code === "NO_API_KEY" ? { action: { label: "Open Settings", command: "settings.open" } } : {}) });
+      ui.addChatMessage("system", res.message, [], { tone: "error", ...(SETTINGS_FIXES.has(res.code) ? { action: { label: "Open Settings", command: "settings.open" } } : {}) });
       throw new AgentError(res.code, res.message);
     }
     const run = newRun(res.runId, input.prompt, input.chips);
@@ -579,12 +596,17 @@ export class AgentService extends Store<AgentState> {
     return this.#settingsCall((b) => b.get());
   }
 
-  setApiKey(provider: ProviderId, key: string): Promise<AgentSettingsView> {
+  setApiKey(provider: ApiProviderId, key: string): Promise<AgentSettingsView> {
     return this.#settingsCall((b) => b.setApiKey({ v: 1, provider, key }));
   }
 
-  clearApiKey(provider: ProviderId): Promise<AgentSettingsView> {
+  clearApiKey(provider: ApiProviderId): Promise<AgentSettingsView> {
     return this.#settingsCall((b) => b.clearApiKey({ v: 1, provider }));
+  }
+
+  /** Settings → Re-check: detect CLI agents and local models again now (no model call is made). */
+  probeProviders(providers?: ProviderId[]): Promise<AgentSettingsView> {
+    return this.#settingsCall((b) => (b.probeProviders ? b.probeProviders({ v: 1, ...(providers ? { providers } : {}) }) : b.get()));
   }
 
   updateSettings(update: Omit<SettingsUpdate, "v">): Promise<AgentSettingsView> {

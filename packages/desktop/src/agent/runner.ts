@@ -2,40 +2,113 @@
  * The agent host logic that runs inside the agent utility process (`worker.ts` wires it to
  * `process.parentPort`). Kept free of Electron so it is unit-testable in plain Node.
  *
- * One run at a time: `start` builds an {@link LLMGateway} (live SDK transports with the keys from
- * the main process, or the offline scripted / replay transports), picks the engine, runs
- * `@aicad/agent` in interactive mode and streams {@link AgentEvent}s back:
+ * One run at a time: `start` builds an {@link LLMGateway} with every provider kind the run's models need (ADR 0014):
  *
- *   trace state → `phase` · tool call → `tool` (summarized) · model call → `llm` + `cost`
+ * - API providers: the official SDK transports with the keys from the main process;
+ * - CLI agents (Claude Code, Gemini CLI, Codex, opencode): `cliGatewayParts` from `@aicad/llm-gateway/cli`. Every
+ *   completion-mode model call is one fresh, locked-down CLI invocation on the user's own login: built-in tools off,
+ *   only our MCP server (when one is used), an empty 0700 workspace, an allowlisted environment, its own process group,
+ *   the version gate and the runtime tripwires. In agent-runtime mode (`auto` when available, or `runtime`) each SPEC /
+ *   BUILD / ASK phase is one such CLI process running its own loop over our CAD tools (`@aicad/agent/cli-runtime`,
+ *   through the MCP broker). The binaries are the ones the main process detected; the gateway re-stats them before
+ *   every spawn and refuses one that changed. A lockdown violation in either mode is reported to the main process,
+ *   which blocks that binary;
+ * - local models (Ollama): the OpenAI-compatible transport to the local endpoint, without the compat key;
+ * - offline: the scripted / replay transports.
+ *
+ * It then runs `@aicad/agent` in interactive mode and streams {@link AgentEvent}s back:
+ *
+ *   trace state → `phase` · tool call → `tool` (summarized) · model call → `llm` + `cost` (notional for CLI plans)
  *   apply/rollback → `draft` (CadScript snapshot) · ask_user / budget checkpoint → `question`
- *   end → `result` (proposal, summary, assumptions, known issues, cost) or `error`
+ *   CLI plan usage → `plan` · end → `result` (proposal, summary, assumptions, known issues, cost) or `error`
  *
  * Every string that leaves this module is scrubbed of the run's API keys.
  */
-import { readFileSync } from "node:fs";
-import type { AgentEvent, AgentEventBody, AgentModelInfo, AgentQuestion, AgentRoleId, AgentRunResult, ProviderId } from "@aicad/app/bridge";
-import { Agent, ScriptedTransport, type AgentResult, type ScriptTurn, type Scripts, type TraceEvent } from "@aicad/agent";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import type { AgentEvent, AgentEventBody, AgentModelInfo, AgentQuestion, AgentRoleId, AgentRunResult, ApiProviderId, BillingKind, CliProviderId, ProviderKindId } from "@aicad/app/bridge";
+import {
+  Agent,
+  ScriptedTransport,
+  type AgentOptions,
+  type AgentResult,
+  type AgentRuntime,
+  type RuntimePhase,
+  type RuntimePhaseOutcome,
+  type RuntimePhaseSpec,
+  type ScriptTurn,
+  type Scripts,
+  type TraceEvent,
+} from "@aicad/agent";
+import type { CliAgentRuntimeOptions } from "@aicad/agent/cli-runtime";
 import type { UserQuestion } from "@aicad/agent-tools";
 import {
   AnthropicSdkTransport,
+  BUILTIN_CLI_PROFILES,
+  BUILTIN_LOCAL_PROFILES,
+  BUILTIN_PROFILES,
   GatewayError,
   GoogleSdkTransport,
   LLMGateway,
   OpenAISdkTransport,
+  profileKind,
   ReplayTransport,
   type Fixture,
+  type ModelProfile,
+  type PlanUsage,
+  type Provider,
+  type ProviderAdapter,
   type ProviderTransport,
   type TransportCall,
 } from "@aicad/llm-gateway";
+import {
+  CLI_ENV_LOCATION,
+  CLI_ENV_NETWORK,
+  cliGatewayParts,
+  liveCliProcessGroups,
+  ollamaContextCheck,
+  sweepCliWorkspaces,
+  type CliMcpHost,
+  type CliTurnOutcome,
+} from "@aicad/llm-gateway/cli";
+import { planResetAt, planUsageView } from "./cli-detect.js";
 import { createAgentEngine, type AgentEngine } from "./engine.js";
-import { baseUrlProblem, composePrompt, PROTOCOL_VERSION, type HostToWorker, type WorkerRunConfig, type WorkerToHost } from "./protocol.js";
-import { routingFor } from "./settings.js";
+import {
+  baseUrlProblem,
+  binaryFromWire,
+  brokerSocketFits,
+  composePrompt,
+  isCliProviderId,
+  MAX_SOCKET_PATH_BYTES,
+  PROTOCOL_VERSION,
+  type HostToWorker,
+  type McpShimCommand,
+  type WorkerCliConfig,
+  type WorkerRunConfig,
+  type WorkerToHost,
+} from "./protocol.js";
+import { displayProvider, providerLabel, routingFor } from "./settings.js";
+
+/** The subset of `@aicad/mcp-server` the worker uses (loaded at run time: see {@link loadMcpServer}). */
+export interface McpServerModule {
+  createMcpHost(options: { shim: McpShimCommand }): CliMcpHost;
+}
 
 export interface RunnerDeps {
   post(message: WorkerToHost): void;
   /** Engine factory (tests inject a fake; default: forge-web in Node → Forge CLI). */
   createEngine?(forgeBin: string): Promise<AgentEngine>;
   now?(): number;
+  /**
+   * The base environment CLI children start from (default: this process's, which the main process allowlisted). The
+   * run's `WorkerCliConfig.childEnv` (CLI login locations, proxies) is added on top, for CLI children only.
+   */
+  env?(): Record<string, string>;
+  /** Loads `@aicad/mcp-server` (tests inject; default {@link loadMcpServer}). */
+  loadMcpServer?(dir: string | null): Promise<{ module: McpServerModule; stdio: string } | null>;
+  /** Loads the agent-runtime driver (`@aicad/agent/cli-runtime`) when the agent package has it (default {@link loadCliRuntime}). */
+  loadCliRuntime?(): Promise<CliRuntimeModule | null>;
 }
 
 // ─── Transports ────────────────────────────────────────────────────────────────────────────
@@ -58,25 +131,32 @@ class MissingKeyTransport implements ProviderTransport {
   }
 }
 
-/** OpenAI-compatible servers: one SDK client per base URL (the Settings override, else the profile's). */
+/**
+ * OpenAI-compatible servers: one SDK client per base URL (the Settings override, else the profile's). A local model
+ * server (`localEndpoints`, e.g. Ollama's `/v1`) always gets its own endpoint and never the compat key.
+ */
 class CompatTransport implements ProviderTransport {
   readonly #clients = new Map<string, OpenAISdkTransport>();
   readonly #apiKey: string | undefined;
   readonly #baseUrl: string | null;
-  constructor(apiKey: string | undefined, baseUrl: string | null) {
+  readonly #local: ReadonlySet<string>;
+  constructor(apiKey: string | undefined, baseUrl: string | null, localEndpoints: readonly string[] = []) {
     this.#apiKey = apiKey;
     this.#baseUrl = baseUrl;
+    this.#local = new Set(localEndpoints.map((e) => e.replace(/\/+$/, "")));
   }
   #client(call: TransportCall): OpenAISdkTransport {
-    const baseURL = this.#baseUrl ?? call.endpoint;
+    const local = call.endpoint !== undefined && this.#local.has(call.endpoint.replace(/\/+$/, ""));
+    const baseURL = local ? call.endpoint! : (this.#baseUrl ?? call.endpoint);
     if (!baseURL) throw new GatewayError("invalid_request", "No base URL for the OpenAI-compatible endpoint: set one in Settings.");
     // Settings are validated on the way in; this also covers a profile's endpoint (defence in depth).
     const problem = baseUrlProblem(baseURL);
     if (problem) throw new GatewayError("invalid_request", `The OpenAI-compatible base URL ${problem}.`);
-    let c = this.#clients.get(baseURL);
+    const cacheKey = `${local ? "local" : "compat"} ${baseURL}`;
+    let c = this.#clients.get(cacheKey);
     if (!c) {
-      c = new OpenAISdkTransport({ apiKey: this.#apiKey ?? "not-needed", baseURL }, "openai-compat");
-      this.#clients.set(baseURL, c);
+      c = new OpenAISdkTransport({ apiKey: local ? "not-needed" : (this.#apiKey ?? "not-needed"), baseURL }, "openai-compat");
+      this.#clients.set(cacheKey, c);
     }
     return c;
   }
@@ -122,6 +202,65 @@ class PacedTransport implements ProviderTransport {
   }
 }
 
+/**
+ * The CLI providers that broke their lockdown in this run (§5.6), shared by every CLI path of the run: the first
+ * violation of a provider is reported once to the main process (which blocks that exact binary), and every later
+ * completion call to it in the run is refused without spawning it.
+ */
+class CliViolations {
+  readonly #seen = new Map<CliProviderId, string>();
+  readonly #report: (provider: CliProviderId, detail: string) => void;
+  constructor(report: (provider: CliProviderId, detail: string) => void) {
+    this.#report = report;
+  }
+  blocked(provider: CliProviderId): string | null {
+    return this.#seen.get(provider) ?? null;
+  }
+  record(provider: CliProviderId, detail: string): void {
+    if (this.#seen.has(provider)) return;
+    this.#seen.set(provider, detail.slice(0, 200));
+    this.#report(provider, detail);
+  }
+}
+
+/**
+ * Completion mode: reports a CLI invocation that broke its lockdown so the main process blocks that binary, and
+ * refuses every later call to that CLI in the same run. The outcome itself is unchanged: the adapter turns it into a
+ * `lockdown_violation` gateway error and the run stops.
+ */
+class ObservedCliTransport implements ProviderTransport {
+  readonly #inner: ProviderTransport;
+  readonly #provider: CliProviderId;
+  readonly #violations: CliViolations;
+  constructor(inner: ProviderTransport, provider: CliProviderId, violations: CliViolations) {
+    this.#inner = inner;
+    this.#provider = provider;
+    this.#violations = violations;
+  }
+  #refuse(): void {
+    const blocked = this.#violations.blocked(this.#provider);
+    if (blocked !== null) throw new GatewayError("lockdown_violation", `${this.#provider} is blocked for this run after a lockdown violation (${blocked}); press Re-check in Settings to test it again`);
+  }
+  #check(outcome: unknown): void {
+    const f = (outcome as Partial<CliTurnOutcome> | null)?.failure;
+    if (f?.code !== "lockdown_violation") return;
+    this.#violations.record(this.#provider, f.message);
+  }
+  async send(call: TransportCall): Promise<unknown> {
+    this.#refuse();
+    const out = await this.#inner.send(call);
+    this.#check(out);
+    return out;
+  }
+  async *stream(call: TransportCall): AsyncIterable<unknown> {
+    this.#refuse();
+    for await (const out of this.#inner.stream(call)) {
+      this.#check(out);
+      yield out;
+    }
+  }
+}
+
 /** A scripted-transport file: `{ paceMs?, triage?: ScriptTurn[], spec_writer?: …, designer?: … }` (JSON). */
 export function parseScriptFile(text: string): { scripts: Scripts; paceMs: number } {
   const j = JSON.parse(text) as Record<string, unknown>;
@@ -142,12 +281,148 @@ export function parseScriptFile(text: string): { scripts: Scripts; paceMs: numbe
   return { scripts, paceMs: typeof pace === "number" && pace > 0 ? Math.min(pace, 10_000) : 0 };
 }
 
+// ─── MCP server and agent runtime (optional modules) ───────────────────────────────────────
+
+/**
+ * `@aicad/mcp-server` for the `mcp-submit` envelope channel (Gemini, opencode) and the agent runtime. Resolved as a
+ * package first; in development, from the workspace (`WorkerCliConfig.mcpServerDir`) when the desktop app does not
+ * depend on it. Null when neither exists or the shim is not built: Gemini and opencode then use the `text-json`
+ * envelope, and Claude Code (JSON-schema envelope) needs no MCP server at all.
+ */
+export async function loadMcpServer(dir: string | null): Promise<{ module: McpServerModule; stdio: string } | null> {
+  const candidates: Array<{ spec: string; stdio: () => string }> = [
+    { spec: "@aicad/mcp-server", stdio: () => fileURLToPath(import.meta.resolve("@aicad/mcp-server/stdio")) },
+  ];
+  if (dir !== null) candidates.push({ spec: pathToFileURL(join(dir, "dist", "index.js")).href, stdio: () => join(dir, "dist", "stdio.js") });
+  for (const c of candidates) {
+    try {
+      const stdio = c.stdio();
+      if (!existsSync(stdio)) continue;
+      const module = (await import(c.spec)) as Partial<McpServerModule>;
+      if (typeof module.createMcpHost === "function") return { module: module as McpServerModule, stdio };
+    } catch {
+      // not installed here
+    }
+  }
+  return null;
+}
+
+/**
+ * Runtime mode: reports a phase that ended in a lockdown violation (§5.6 steps 4 and 5; the orchestrator itself stops
+ * the run with `lockdown_violation`), so the main process blocks that binary exactly as in completion mode.
+ */
+class ReportingRuntime implements AgentRuntime {
+  readonly kind = "cli" as const;
+  readonly #inner: AgentRuntime;
+  readonly #violations: CliViolations;
+  constructor(inner: AgentRuntime, violations: CliViolations) {
+    this.#inner = inner;
+    this.#violations = violations;
+  }
+  supports(profile: ModelProfile, phase: RuntimePhase): boolean {
+    return this.#inner.supports(profile, phase);
+  }
+  async runPhase(spec: RuntimePhaseSpec): Promise<RuntimePhaseOutcome> {
+    const outcome = await this.#inner.runPhase(spec);
+    if (outcome.endedBy === "lockdown_violation" || outcome.failure?.code === "lockdown_violation") {
+      const provider = outcome.cli?.provider ?? spec.profile.provider;
+      if (isCliProviderId(provider)) this.#violations.record(provider, outcome.failure?.message ?? "lockdown violation");
+    }
+    return outcome;
+  }
+}
+
+/** `@aicad/agent/cli-runtime` (docs/CLI-PROVIDERS.md §8.3), typed against the agent package's own declarations. */
+export interface CliRuntimeModule {
+  CliAgentRuntime: new (options: CliAgentRuntimeOptions) => AgentRuntime;
+}
+
+export async function loadCliRuntime(): Promise<CliRuntimeModule | null> {
+  const spec = "@aicad/agent/cli-runtime";
+  try {
+    const m = (await import(spec)) as Partial<CliRuntimeModule>;
+    return typeof m.CliAgentRuntime === "function" ? (m as CliRuntimeModule) : null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Gateway ───────────────────────────────────────────────────────────────────────────────
+
 interface BuiltGateway {
   gateway: LLMGateway;
   note?: string;
+  /** Extra agent options for CLI providers (the runtime, when available). */
+  agentOptions?: Partial<AgentOptions> & Record<string, unknown>;
+  notes?: string[];
 }
 
-export function buildGateway(config: WorkerRunConfig, secrets: Partial<Record<ProviderId, string>>): BuiltGateway {
+export interface CliHooks {
+  /** The environment CLI children start from (the worker's own plus the run's `childEnv`). */
+  env(): Record<string, string>;
+  onPlanUsage(usage: PlanUsage): void;
+  onViolation(provider: CliProviderId, realPath: string, detail: string): void;
+  loadMcpServer(dir: string | null): Promise<{ module: McpServerModule; stdio: string } | null>;
+  loadCliRuntime(): Promise<CliRuntimeModule | null>;
+}
+
+/** Every profile the worker knows: built-in API and CLI profiles plus the local and discovered ones from the main process. */
+export function workerProfiles(extra: readonly ModelProfile[] | undefined): ModelProfile[] {
+  const byId = new Map<string, ModelProfile>();
+  for (const p of [...BUILTIN_PROFILES, ...BUILTIN_CLI_PROFILES, ...(extra ?? BUILTIN_LOCAL_PROFILES)]) byId.set(p.id, p);
+  return [...byId.values()];
+}
+
+/** The MCP shim command for CLIs: the app executable run as Node (development builds; packaged builds turn that off). */
+function shimCommand(cli: WorkerCliConfig, stdio: string): McpShimCommand | null {
+  if (cli.exePath === null) return null;
+  return { command: cli.exePath, args: [stdio], env: { ELECTRON_RUN_AS_NODE: "1" } };
+}
+
+/** The note for a workspace root whose broker socket would be too long (§5.4). */
+function socketNote(root: string): string {
+  return `The CLI workspace folder (${root}) is too long for the CAD MCP broker's socket (at most ${MAX_SOCKET_PATH_BYTES} bytes): CLI providers run one call at a time, and Gemini CLI and opencode answer through the text-json envelope.`;
+}
+
+async function cliParts(
+  cli: WorkerCliConfig,
+  hooks: CliHooks,
+  runtime: CliRuntimeModule | null,
+  violations: CliViolations,
+): Promise<{ adapters: Partial<Record<Provider, ProviderAdapter>>; transports: Partial<Record<Provider, ProviderTransport>>; mcpHost: CliMcpHost | null; notes: string[] }> {
+  const notes: string[] = [];
+  const providers = (Object.keys(cli.binaries) as CliProviderId[]).filter(isCliProviderId);
+  let mcpHost: CliMcpHost | null = null;
+  // The MCP server is needed for the mcp-submit envelope (every CLI but Claude Code) and for the agent runtime.
+  const needsMcp = providers.some((p) => p !== "claude-cli") || runtime !== null;
+  // The broker listens on `<root>/s/<8 hex>/b.sock`; a root too long for that is checked here, not at the first phase.
+  const socketOk = brokerSocketFits(cli.workspaceRoot);
+  if (needsMcp && socketOk && cli.exePath !== null) {
+    const loaded = await hooks.loadMcpServer(cli.mcpServerDir).catch(() => null);
+    const shim = loaded ? shimCommand(cli, loaded.stdio) : null;
+    if (loaded && shim) mcpHost = loaded.module.createMcpHost({ shim });
+  }
+  if (mcpHost === null && socketOk && providers.some((p) => p === "gemini-cli" || p === "opencode")) {
+    notes.push("The CAD MCP server is not available in this build: Gemini CLI and opencode answer through the text-json envelope.");
+  }
+  const parts = cliGatewayParts({
+    providers,
+    binary: async (provider) => {
+      const w = cli.binaries[provider];
+      if (!w) throw new GatewayError("not_installed", `${provider} is not available: open Settings and press Re-check`);
+      return binaryFromWire(w);
+    },
+    env: hooks.env,
+    ...(mcpHost ? { mcpHost } : {}),
+    workspaceRoot: cli.workspaceRoot,
+    onPlanUsage: hooks.onPlanUsage,
+  });
+  const transports: Partial<Record<Provider, ProviderTransport>> = {};
+  for (const [id, t] of Object.entries(parts.transports) as Array<[CliProviderId, ProviderTransport]>) transports[id] = new ObservedCliTransport(t, id, violations);
+  return { adapters: parts.adapters, transports, mcpHost, notes };
+}
+
+export async function buildGateway(config: WorkerRunConfig, secrets: Partial<Record<ApiProviderId, string>>, hooks?: CliHooks): Promise<BuiltGateway> {
   const t = config.transport;
   if (t.kind === "scripted") {
     const { scripts, paceMs } = parseScriptFile(readFileSync(t.scriptPath, "utf8"));
@@ -165,12 +440,60 @@ export function buildGateway(config: WorkerRunConfig, secrets: Partial<Record<Pr
       note: "replay transport (offline): recorded responses, no API calls are made",
     };
   }
+  const transports: Partial<Record<Provider, ProviderTransport>> = { ...liveTransports(secrets, config.compatBaseUrl, config.localEndpoints ?? []) };
+  let adapters: Partial<Record<Provider, ProviderAdapter>> = {};
+  const notes: string[] = [];
+  let agentOptions: BuiltGateway["agentOptions"];
+  if (config.cli && hooks) {
+    const cli = config.cli;
+    // One report per provider per run, whichever path (completion call or runtime phase) saw the violation.
+    const violations = new CliViolations((provider, detail) => hooks.onViolation(provider, cli.binaries[provider]?.realPath ?? "", detail));
+    const socketOk = brokerSocketFits(cli.workspaceRoot);
+    const runtime = cli.mode !== "completion" && socketOk ? await hooks.loadCliRuntime().catch(() => null) : null;
+    const parts = await cliParts(cli, hooks, runtime, violations);
+    Object.assign(transports, parts.transports);
+    adapters = parts.adapters;
+    // Checked up front: without this the first runtime phase would fail with "broker socket path is longer than 103 bytes".
+    const wantsBroker = cli.mode === "auto" || (Object.keys(cli.binaries) as CliProviderId[]).some((p) => p !== "claude-cli");
+    if (!socketOk && wantsBroker) notes.push(socketNote(cli.workspaceRoot));
+    notes.push(...parts.notes);
+    agentOptions = { cliMode: cli.mode };
+    if (cli.mode !== "completion") {
+      if (runtime && parts.mcpHost) {
+        try {
+          const inner = new runtime.CliAgentRuntime({
+            binary: async (provider) => {
+              const w = cli.binaries[provider];
+              if (!w) throw new GatewayError("not_installed", `${provider} is not available`);
+              return binaryFromWire(w);
+            },
+            env: hooks.env,
+            mcpHost: parts.mcpHost,
+            workspaceRoot: cli.workspaceRoot,
+          });
+          agentOptions.runtime = new ReportingRuntime(inner, violations);
+        } catch (e) {
+          notes.push(`The CLI agent runtime could not start (${(e as Error).message}); CLI providers run one call at a time.`);
+        }
+      } else if (cli.mode === "runtime") {
+        notes.push(
+          brokerSocketFits(cli.workspaceRoot)
+            ? "Agent-runtime mode is not available in this build (it needs @aicad/agent/cli-runtime, the CAD MCP server and the MCP shim): the run stops at the first tool loop. Pick \"Automatic (recommended)\" or \"Single calls only\" in Settings → Agent mode for CLI providers."
+            : "Agent-runtime mode is not available: the CLI workspace folder is too long for the MCP broker's socket, so the run stops at the first tool loop. Pick \"Automatic (recommended)\" or \"Single calls only\" in Settings → Agent mode for CLI providers.",
+        );
+      }
+    }
+  }
   return {
     gateway: new LLMGateway({
       config: { routing: routingFor(config.models) },
-      transports: liveTransports(secrets, config.compatBaseUrl),
+      profiles: workerProfiles(config.profiles),
+      transports,
+      adapters,
       onRoutingWarning: () => undefined,
     }),
+    notes,
+    ...(agentOptions ? { agentOptions } : {}),
   };
 }
 
@@ -187,13 +510,13 @@ export const OFFICIAL_BASE_URLS = {
 } as const;
 
 /** Live SDK transports with the run's keys (the OpenAI-compatible endpoint comes from Settings or the profile). */
-export function liveTransports(secrets: Partial<Record<ProviderId, string>>, compatBaseUrl: string | null): Record<ProviderId, ProviderTransport> {
+export function liveTransports(secrets: Partial<Record<ApiProviderId, string>>, compatBaseUrl: string | null, localEndpoints: readonly string[] = []): Record<ApiProviderId, ProviderTransport> {
   const k = secrets;
   return {
     anthropic: k.anthropic ? new AnthropicSdkTransport({ apiKey: k.anthropic, baseURL: OFFICIAL_BASE_URLS.anthropic }) : new MissingKeyTransport("Anthropic"),
     openai: k.openai ? new OpenAISdkTransport({ apiKey: k.openai, baseURL: OFFICIAL_BASE_URLS.openai }, "openai") : new MissingKeyTransport("OpenAI"),
     google: k.google ? new GoogleSdkTransport({ apiKey: k.google, baseURL: OFFICIAL_BASE_URLS.google }) : new MissingKeyTransport("Google Gemini"),
-    "openai-compat": new CompatTransport(k["openai-compat"], compatBaseUrl),
+    "openai-compat": new CompatTransport(k["openai-compat"], compatBaseUrl, localEndpoints),
   };
 }
 
@@ -233,7 +556,7 @@ export function redact<T>(value: T, secrets: readonly string[]): T {
   return walk(value) as T;
 }
 
-export function toRunResult(r: AgentResult, baseSource: string, budgetUsd: number): AgentRunResult {
+export function toRunResult(r: AgentResult, baseSource: string, budgetUsd: number, billing?: BillingKind): AgentRunResult {
   const proposedSource = r.status === "answered" || r.cadscript === "" ? baseSource : r.cadscript;
   const passed = r.tests?.filter((t) => t.pass).length;
   const out: AgentRunResult = {
@@ -254,7 +577,13 @@ export function toRunResult(r: AgentResult, baseSource: string, budgetUsd: numbe
   };
   if (r.answer !== undefined) out.answer = r.answer;
   if (r.tests && r.tests.length > 0) out.tests = { passed: passed ?? 0, total: r.tests.length };
+  if (billing !== undefined) out.billing = billing;
   return out;
+}
+
+/** The model info a `started` event carries: local profiles are shown as Ollama's. */
+export function modelInfo(p: ModelProfile): AgentModelInfo {
+  return { id: p.id, name: p.displayName, provider: displayProvider(p), kind: profileKind(p) as ProviderKindId, billing: (p.billing ?? "metered") as BillingKind };
 }
 
 // ─── One run ───────────────────────────────────────────────────────────────────────────────
@@ -322,9 +651,48 @@ class Run {
   }
 }
 
+function processEnv(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) if (v !== undefined) out[k] = v;
+  return out;
+}
+
+const CHILD_ENV_NAMES: ReadonlySet<string> = new Set([...CLI_ENV_LOCATION, ...CLI_ENV_NETWORK].map((k) => k.toUpperCase()));
+
+/**
+ * The run's `childEnv` as CLI children may get it: only CLI login locations and proxy settings (defence in depth: the
+ * main process sends nothing else, and the gateway allowlists again per CLI).
+ */
+export function cliChildEnv(raw: Record<string, unknown> | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw ?? {})) {
+    if (typeof v === "string" && v.length <= 8192 && CHILD_ENV_NAMES.has(k.toUpperCase())) out[k] = v;
+  }
+  return out;
+}
+
+/** Plan-limit stops (§12): what the result says about them, from the stop message and the plan usage seen in the run. */
+export function quotaInfo(
+  r: Pick<AgentResult, "stopReason" | "message">,
+  plans: ReadonlyMap<string, PlanUsage>,
+  fallbackProvider: string | null,
+): { kind: "quota_exhausted" | "rate_limited"; provider: string | null; resetsAt: string | null } | null {
+  if (r.stopReason !== "model_error") return null;
+  const m = /\b(quota_exhausted|rate_limited)\b(?:\):\s*([a-z][a-z0-9-]*):)?/.exec(r.message);
+  if (!m) return null;
+  const kind = m[1] as "quota_exhausted" | "rate_limited";
+  const rejected = [...plans.values()].filter((u) => u.status === "rejected");
+  const provider = m[2] !== undefined && isCliProviderId(m[2]) ? m[2] : (rejected.at(-1)?.provider ?? fallbackProvider);
+  const plan = (provider !== null ? plans.get(provider) : undefined) ?? rejected.at(-1);
+  // The reset of the window that ran out (the 5-hour one, typically), not the latest window's (days later).
+  const resetsAt = plan?.status === "rejected" ? planResetAt(plan.windows) : null;
+  return { kind, provider, resetsAt };
+}
+
 export class AgentRunner {
   readonly #deps: RunnerDeps;
   #run: Run | null = null;
+  #swept = new Set<string>();
 
   constructor(deps: RunnerDeps) {
     this.#deps = deps;
@@ -358,28 +726,80 @@ export class AgentRunner {
     }
     this.#run = run;
     const { request, config } = msg;
+    let lastPids = "";
+    const reportProcs = (): void => {
+      const pids = liveCliProcessGroups();
+      const key = pids.join(",");
+      if (key === lastPids) return;
+      lastPids = key;
+      this.#deps.post({ type: "procs", v: PROTOCOL_VERSION, pids });
+    };
+    const procTimer = config.cli ? setInterval(reportProcs, 500) : null;
+    (procTimer as { unref?: () => void } | null)?.unref?.();
     try {
-      const { gateway, note } = buildGateway(config, msg.secrets);
+      if (config.cli && !this.#swept.has(config.cli.workspaceRoot)) {
+        this.#swept.add(config.cli.workspaceRoot);
+        // Leftovers of crashed runs older than 24 h (the workspace root is private to this app).
+        await sweepCliWorkspaces(config.cli.workspaceRoot).catch(() => 0);
+      }
+      const baseEnv = this.#deps.env ?? processEnv;
+      const childEnv = cliChildEnv(config.cli?.childEnv);
+      // Plan usage reaches the runner twice for a completion call (the gateway's CLI hook and the orchestrator's
+      // `onPlanUsage`) and once for a runtime phase (the orchestrator only): one `plan` event per distinct report.
+      const plans = new Map<string, PlanUsage>();
+      const planKeys = new Map<string, string>();
+      const onPlanUsage = (usage: PlanUsage): void => {
+        const view = planUsageView(usage);
+        const key = JSON.stringify(view);
+        plans.set(usage.provider, usage);
+        if (planKeys.get(usage.provider) === key) return;
+        planKeys.set(usage.provider, key);
+        run.emit({ type: "plan", provider: usage.provider, usage: view });
+      };
+      const hooks: CliHooks = {
+        env: () => ({ ...baseEnv(), ...childEnv }),
+        onPlanUsage,
+        onViolation: (provider, realPath, detail) => this.#deps.post({ type: "cli", v: PROTOCOL_VERSION, kind: "lockdown_violation", provider, realPath, detail: detail.slice(0, 300) }),
+        loadMcpServer: this.#deps.loadMcpServer ?? loadMcpServer,
+        loadCliRuntime: this.#deps.loadCliRuntime ?? loadCliRuntime,
+      };
+      const built = await buildGateway(config, msg.secrets, hooks);
+      const { gateway, note } = built;
       const engine = await (this.#deps.createEngine ?? createAgentEngine)(config.forgeBin);
       const models: Partial<Record<AgentRoleId, AgentModelInfo>> = {};
+      const profiles: Partial<Record<AgentRoleId, ModelProfile>> = {};
       for (const role of ["designer", "spec_writer", "triage", "judge"] as const) {
-        const id = gateway.router.resolve(role).model;
-        const p = gateway.profile(id);
-        models[role] = { id, name: p.displayName, provider: p.provider };
+        const p = gateway.profile(gateway.router.resolve(role).model);
+        profiles[role] = p;
+        models[role] = modelInfo(p);
       }
+      const offline = config.transport.kind !== "live";
+      const billingOf = (id: string): BillingKind | undefined => (gateway.registry.has(id) ? ((gateway.profile(id).billing ?? "metered") as BillingKind) : undefined);
+      const planRun = !offline && (["designer", "spec_writer", "triage"] as const).some((r) => profiles[r]?.billing === "subscription");
       const budgetUsd = request.settings?.budgetUsd ?? config.budgetUsd;
       run.emit({ type: "started", models, budgetUsd, transport: config.transport.kind, engine: engine.label });
       if (note) run.emit({ type: "note", text: note });
+      for (const text of [...(config.notes ?? []), ...(built.notes ?? [])]) run.emit({ type: "note", text });
+      // Local models behind Ollama's /v1 endpoint: warn when the server's context is below what the profile needs.
+      const localChecked = new Set<string>();
+      const checkLocal = async (p: ModelProfile | undefined): Promise<void> => {
+        if (!p || offline || profileKind(p) !== "local" || localChecked.has(p.id)) return;
+        const r = await ollamaContextCheck(p, { allowRemote: true }).catch(() => null);
+        if (r?.ok !== null && r !== null) localChecked.add(p.id);
+        if (r?.warning) run.emit({ type: "note", text: r.warning });
+      };
+      for (const role of ["designer", "spec_writer", "triage"] as const) await checkLocal(profiles[role]);
       let lastCost = -1;
       const emitCost = (): void => {
         const spent = gateway.totalCostUsd;
         if (spent !== lastCost) {
           lastCost = spent;
-          run.emit({ type: "cost", spentUsd: spent, budgetUsd });
+          const notional = planRun || gateway.ledger.some((e) => e.billing === "subscription");
+          run.emit({ type: "cost", spentUsd: spent, budgetUsd, ...(notional ? { notional: true } : {}) });
         }
       };
       emitCost();
-      const agent = new Agent({
+      const options: AgentOptions = {
         gateway,
         engine: engine.engine,
         budgetUsd,
@@ -389,23 +809,30 @@ export class AgentRunner {
         taskId: `app-${msg.runId}`,
         hooks: {
           onEvent: (e) => {
-            for (const body of traceToEvents(e)) run.emit(body);
+            for (const body of traceToEvents(e)) {
+              if (body.type === "llm") {
+                const billing = billingOf(body.model);
+                run.emit(billing === undefined ? body : { ...body, billing });
+                if (gateway.registry.has(body.model)) void checkLocal(gateway.profile(body.model));
+              } else run.emit(body);
+            }
             if (e.type === "llm") emitCost();
           },
           onDraft: (d) => run.emit({ type: "draft", source: d.source, applyIndex: d.applyIndex, verified: d.verified, reason: d.reason }),
           onBudgetCheckpoint: async ({ spentUsd, capUsd }) => {
-            const [a] = await run.ask("budget", [
-              {
-                id: "continue",
-                question: `The task has spent $${spentUsd.toFixed(2)} of its $${capUsd.toFixed(2)} budget (80 %). Continue up to the cap?`,
-                options: ["Continue", "Stop here"],
-                default: "Stop here",
-              },
-            ]);
+            const question = planRun
+              ? `About 80 % of this task's plan-usage budget is spent (≈ $${spentUsd.toFixed(2)} of $${capUsd.toFixed(2)} at API list prices; not billed). Continue up to the cap?`
+              : `The task has spent $${spentUsd.toFixed(2)} of its $${capUsd.toFixed(2)} budget (80 %). Continue up to the cap?`;
+            const [a] = await run.ask("budget", [{ id: "continue", question, options: ["Continue", "Stop here"], default: "Stop here" }]);
             return a === "Continue";
           },
+          // Every CLI plan report of the run, runtime phases included (§12): the main process caches it for Settings.
+          onPlanUsage,
         },
-      });
+        // (additive, ADR 0014) `cliMode` and, when the agent package provides it, the CLI agent runtime.
+        ...built.agentOptions,
+      };
+      const agent = new Agent(options);
       const result = await agent.run({
         prompt: composePrompt(request.prompt, request.selection),
         context: request.source.trim() ? request.source : undefined,
@@ -413,9 +840,25 @@ export class AgentRunner {
         process: request.process,
       });
       emitCost();
-      run.emit({ type: "result", result: toRunResult(result, request.source, budgetUsd) });
+      const out = toRunResult(result, request.source, budgetUsd, offline ? undefined : (profiles.designer?.billing as BillingKind | undefined));
+      const designerProvider = profiles.designer && isCliProviderId(profiles.designer.provider) ? profiles.designer.provider : null;
+      const quota = offline ? null : quotaInfo(result, plans, designerProvider);
+      if (quota !== null) {
+        const who = quota.provider !== null && isCliProviderId(quota.provider) ? providerLabel(quota.provider) : "The provider";
+        const what =
+          quota.kind === "quota_exhausted"
+            ? `${who}: your plan's usage limit is reached${quota.resetsAt ? `; it resets at ${quota.resetsAt}` : ""}.`
+            : `${who} is rate limiting requests${quota.resetsAt ? ` until ${quota.resetsAt}` : ""}; try again later.`;
+        out.quota = { kind: quota.kind, provider: quota.provider, resetsAt: quota.resetsAt };
+        out.message = `${what} (${out.message})`;
+        out.summary = out.message;
+      }
+      run.emit({ type: "result", result: out });
     } catch (e) {
       run.emit({ type: "error", code: e instanceof GatewayError ? `GATEWAY_${e.code.toUpperCase()}` : "RUN_FAILED", message: e instanceof Error ? e.message : String(e) });
+    } finally {
+      if (procTimer !== null) clearInterval(procTimer);
+      reportProcs();
     }
   }
 }

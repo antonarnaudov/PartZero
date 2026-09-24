@@ -1870,6 +1870,15 @@ button.sb-item:hover {
   margin: 0;
   line-height: 1.5;
 }
+.run-quota {
+  margin: 0;
+  color: var(--warn);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.run-quota svg {
+  vertical-align: -2px;
+}
 .assumptions {
   display: flex;
   flex-wrap: wrap;
@@ -2043,7 +2052,7 @@ button.sb-item:hover {
 }
 .model-row {
   display: grid;
-  grid-template-columns: 180px 1fr auto;
+  grid-template-columns: 180px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 4px 0;
@@ -2067,6 +2076,161 @@ button.sb-item:hover {
 }
 .inline-field input[type="number"] {
   width: 110px;
+}
+
+/* Providers (ADR 0014): CLI agents, local models, optional API keys. */
+.settings-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 4px;
+  font-size: 11.5px;
+  font-weight: 650;
+}
+.provider-group {
+  padding: 2px 0 8px;
+}
+.provider-group + .provider-group {
+  border-top: 1px dashed var(--border);
+}
+.provider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+}
+.provider-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.provider-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 17px;
+  padding: 0 7px;
+  border-radius: 9px;
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge-ok {
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
+  color: var(--ok);
+}
+.badge-warn {
+  background: var(--warn-weak);
+  color: var(--warn);
+}
+.badge-err {
+  background: var(--err-weak);
+  color: var(--err);
+}
+.badge-muted {
+  background: var(--panel-3);
+  color: var(--text-muted);
+}
+.provider-path {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+.provider-path .mono {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+}
+.provider-login.ok {
+  color: var(--ok);
+}
+.provider-login.warn,
+.provider-detail {
+  color: var(--warn);
+}
+.provider-more summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.provider-more ul {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  color: var(--text-muted);
+}
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  cursor: pointer;
+}
+.link-btn:hover {
+  text-decoration: underline;
+}
+.selectable {
+  user-select: text;
+}
+.plan-usage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.plan-window {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.plan-bar {
+  width: 70px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--panel-3);
+  overflow: hidden;
+}
+.plan-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.plan-fill.warn {
+  background: var(--warn);
+}
+.local-models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.local-models li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.model-kind {
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+.model-row select {
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+.model-row select option:disabled {
+  color: var(--text-faint);
+}
+.provider-path > .muted,
+.provider-path > .link-btn {
+  flex: none;
+  white-space: nowrap;
+}
+.run-plan {
+  padding: 0 2px;
 }
 
 /* ─── Viewport proposal preview ───────────────────────────────────────────────────────── */

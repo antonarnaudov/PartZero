@@ -65,6 +65,7 @@ const bridge: AicadBridge = {
     update: (update) => invoke("settings:update", update),
     setApiKey: (request) => invoke("settings:setApiKey", request),
     clearApiKey: (request) => invoke("settings:clearApiKey", request),
+    probeProviders: (request) => invoke("settings:probeProviders", request),
   },
 };
 

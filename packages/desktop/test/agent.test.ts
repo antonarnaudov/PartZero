@@ -2,7 +2,6 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AgentEvent } from "@aicad/app/bridge";
-import { SMALL_MODEL_BY_PROVIDER as AGENT_SMALL_MODELS } from "@aicad/agent";
 import { describe, expect, it } from "vitest";
 import { AgentHost, type WorkerHandle } from "../src/agent/host.js";
 import { KeyResolver, KeyStore, keysFromVariables, last4, parseDotenv, type Cipher } from "../src/agent/keys.js";
@@ -19,7 +18,7 @@ import {
   type WorkerToHost,
 } from "../src/agent/protocol.js";
 import { AgentRunner, parseScriptFile, redact, traceToEvents } from "../src/agent/runner.js";
-import { buildSettingsView, effectiveModels, profileRegistry, providersForRun, SettingsStore, SMALL_MODEL_BY_PROVIDER, type StoredSettings } from "../src/agent/settings.js";
+import { buildSettingsView, effectiveModels, profileRegistry, providersForRun, SettingsStore, type StoredSettings } from "../src/agent/settings.js";
 import { dotenvKeys, transportFromEnv } from "../src/agent/setup.js";
 import { tempDirs } from "./temp-dirs.js";
 
@@ -178,7 +177,7 @@ describe("API keys: encrypted store, env and .env", () => {
 
 describe("agent settings", () => {
   const registry = profileRegistry();
-  const stored = (models: StoredSettings["models"] = {}): StoredSettings => ({ v: 1, models, budgetUsd: 1, compatBaseUrl: null });
+  const stored = (models: StoredSettings["models"] = {}): StoredSettings => ({ v: 1, models, budgetUsd: 1, compatBaseUrl: null, cliPaths: {}, cliMode: "auto", ollamaBaseUrl: null, cliBlocks: [] });
 
   it("follows the designer's provider for unset roles (one key per run)", () => {
     expect(effectiveModels(stored(), registry)).toEqual({ designer: "claude-opus-5-5", spec_writer: "claude-opus-5-5", triage: "claude-haiku-4-5", judge: "claude-fable-5-1" });
@@ -186,7 +185,10 @@ describe("agent settings", () => {
     expect(openai).toMatchObject({ designer: "gpt-6-sol", spec_writer: "gpt-6-sol", triage: "gpt-6-luna" });
     expect(providersForRun(openai, registry)).toEqual(["openai"]);
     expect(effectiveModels(stored({ designer: "no-such-model" }), registry).designer).toBe("claude-opus-5-5");
-    expect(SMALL_MODEL_BY_PROVIDER).toEqual(AGENT_SMALL_MODELS);
+    // A CLI designer: triage uses that CLI's small model, so the run needs one provider (and no key).
+    const cli = effectiveModels(stored({ designer: "claude-cli:opus" }), registry);
+    expect(cli).toMatchObject({ designer: "claude-cli:opus", spec_writer: "claude-cli:opus", triage: "claude-cli:haiku" });
+    expect(providersForRun(cli, registry)).toEqual([]);
   });
 
   it("persists updates, refuses unknown models and reports routing warnings", () => {
@@ -197,7 +199,7 @@ describe("agent settings", () => {
     expect(() => s.update({ v: 1, models: { designer: "gpt-99" } }, registry)).toThrow(/unknown model profile/);
     const store = new KeyStore(join(tmp(), "k.json"), fakeCipher());
     store.set("anthropic", "sk-ant-secret-value-123456789");
-    const view = buildSettingsView(s.get(), new KeyResolver(store), "live", registry);
+    const view = buildSettingsView({ stored: s.get(), keys: new KeyResolver(store), transport: "live", registry });
     expect(JSON.stringify(view)).not.toContain("secret-value");
     expect(view.providers.find((p) => p.id === "anthropic")).toMatchObject({ configured: true, source: "keychain", last4: "6789" });
     expect(view.warnings.join(" ")).toMatch(/judge/i); // judge from the designer's family
@@ -254,27 +256,29 @@ function host(options: { keys?: Record<string, string>; transport?: "live" | "sc
 }
 
 describe("agent host (main process)", () => {
-  it("refuses a live run without keys, naming the provider, roles and env var", () => {
+  it("refuses a live run without keys, naming the provider, roles and env var (and the keyless options)", async () => {
     const { h, workers } = host();
-    const r = h.start(START);
+    const r = await h.start(START);
     expect(r).toEqual({
       ok: false,
       code: "NO_API_KEY",
-      message: "No API key for Anthropic (designer: Claude Opus 5.5, spec_writer: Claude Opus 5.5, triage: Claude Haiku 4.5) — add it in Settings or set ANTHROPIC_API_KEY.",
+      message:
+        "No API key for Anthropic (designer: Claude Opus 5.5, spec_writer: Claude Opus 5.5, triage: Claude Haiku 4.5) — add it in Settings or set ANTHROPIC_API_KEY. No provider is set up yet: you can also use a CLI agent you already have (Claude Code, Codex, Gemini CLI, opencode) or a local Ollama model, without any key.",
     });
     expect(workers).toHaveLength(0);
-    expect(h.start({ ...START, v: 9 })).toMatchObject({ ok: false, code: "INVALID_REQUEST" });
+    expect(await h.start({ ...START, v: 9 })).toMatchObject({ ok: false, code: "INVALID_REQUEST" });
   });
 
-  it("starts a run with only the keys it needs, forwards events, answers and stops", () => {
+  it("starts a run with only the keys it needs, forwards events, answers and stops", async () => {
     const { h, workers, events } = host({ keys: { anthropic: "sk-ant-aaaaaaaaaaaaaaaa1111", openai: "sk-openai-bbbbbbbbbbbb2222" } });
-    const r = h.start(START);
+    const r = await h.start(START);
     expect(r).toMatchObject({ ok: true });
     const runId = (r as { runId: string }).runId;
     const start = workers[0]!.sent[0] as Extract<HostToWorker, { type: "start" }>;
     expect(start).toMatchObject({ type: "start", runId, request: START, config: { budgetUsd: 1, models: { designer: "claude-opus-5-5" }, forgeBin: "/bin/aicad" } });
     expect(start.secrets).toEqual({ anthropic: "sk-ant-aaaaaaaaaaaaaaaa1111" }); // not the OpenAI key
-    expect(h.start(START)).toMatchObject({ ok: false, code: "BUSY" });
+    expect(start.config.cli).toBeUndefined(); // no CLI provider in this run
+    expect(await h.start(START)).toMatchObject({ ok: false, code: "BUSY" });
 
     workers[0]!.reply({ type: "event", v: 1, event: { v: 1, runId, seq: 1, t: 5, type: "phase", phase: "TRIAGE", detail: "" } });
     workers[0]!.reply({ type: "event", v: 1, event: { v: 1, runId: "other", seq: 1, t: 5, type: "note", text: "stray" } });
@@ -286,25 +290,25 @@ describe("agent host (main process)", () => {
     workers[0]!.reply({ type: "event", v: 1, event: { v: 1, runId, seq: 2, t: 9, type: "result", result: {} as never } });
     expect(h.activeRunId).toBeNull();
     // The worker is reused for the next run.
-    expect(h.start(START)).toMatchObject({ ok: true });
+    expect(await h.start(START)).toMatchObject({ ok: true });
     expect(workers).toHaveLength(1);
   });
 
-  it("reports a crashed agent process as a terminal error event and forks a new one next time", () => {
+  it("reports a crashed agent process as a terminal error event and forks a new one next time", async () => {
     const { h, workers, events } = host({ transport: "scripted" });
-    const r = h.start(START) as { ok: true; runId: string };
+    const r = (await h.start(START)) as { ok: true; runId: string };
     expect((workers[0]!.sent[0] as { secrets: object }).secrets).toEqual({}); // scripted: no keys needed or sent
     workers[0]!.reply({ type: "event", v: 1, event: { v: 1, runId: r.runId, seq: 4, t: 5, type: "note", text: "…" } });
     workers[0]!.exit(134);
     expect(events.at(-1)).toMatchObject({ runId: r.runId, seq: 5, type: "error", code: "WORKER_EXITED" });
     expect(h.activeRunId).toBeNull();
-    expect(h.start(START)).toMatchObject({ ok: true });
+    expect(await h.start(START)).toMatchObject({ ok: true });
     expect(workers).toHaveLength(2);
   });
 
   it("kills a process that does not wind down after Stop", async () => {
     const { h, workers, events } = host({ transport: "scripted", stopGraceMs: 20 });
-    const r = h.start(START) as { ok: true; runId: string };
+    const r = (await h.start(START)) as { ok: true; runId: string };
     h.stop({ v: 1, runId: r.runId });
     await new Promise((res) => setTimeout(res, 60));
     expect(workers[0]!.killed).toBe(true);

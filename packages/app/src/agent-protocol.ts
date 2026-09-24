@@ -10,13 +10,29 @@
  * misbehaving.
  *
  * Secrets never cross this boundary towards the renderer: settings views carry only whether a key
- * is configured, where it comes from and its last four characters.
+ * is configured, where it comes from and its last four characters. CLI agents (ADR 0014) run on the
+ * user's own login; the app never reads their credentials, and the views carry only the login state
+ * and the plan name.
+ *
+ * Every change since v1 shipped is additive (docs/CLI-PROVIDERS.md §11.4): the version stays 1.
  */
 
 export type AgentProtocolVersion = 1;
 
-/** LLM providers the gateway speaks (`@aicad/llm-gateway` `Provider`). */
-export type ProviderId = "anthropic" | "openai" | "google" | "openai-compat";
+/** API-key providers (official SDKs; the key is optional since ADR 0014). */
+export type ApiProviderId = "anthropic" | "openai" | "google" | "openai-compat";
+/** CLI coding agents run headless on the user's own login (ADR 0014, docs/CLI-PROVIDERS.md). */
+export type CliProviderId = "claude-cli" | "gemini-cli" | "codex-cli" | "opencode" | "cursor-agent";
+/** Local model servers. */
+export type LocalProviderId = "ollama";
+/** Every provider the gateway speaks (`@aicad/llm-gateway` `Provider`). */
+export type ProviderId = ApiProviderId | CliProviderId | LocalProviderId;
+/** How a provider is reached: an API key, the user's CLI subscription, or a local server. */
+export type ProviderKindId = "api" | "cli" | "local";
+/** Who pays: per-token on a key, the user's CLI plan (notional cost), or nobody (local compute). */
+export type BillingKind = "metered" | "subscription" | "local";
+/** Settings → Advanced: how CLI providers run the tool loops (docs/CLI-PROVIDERS.md §3.4). */
+export type CliModeSetting = "auto" | "completion" | "runtime";
 
 /** Roles whose model the user picks in Settings (gateway router roles). */
 export type AgentRoleId = "designer" | "judge" | "triage" | "spec_writer";
@@ -51,7 +67,16 @@ export interface AgentStartRequest {
   settings?: { budgetUsd?: number };
 }
 
-export type AgentStartErrorCode = "NO_API_KEY" | "BUSY" | "INVALID_REQUEST" | "UNAVAILABLE";
+export type AgentStartErrorCode =
+  | "NO_API_KEY"
+  | "BUSY"
+  | "INVALID_REQUEST"
+  | "UNAVAILABLE"
+  | "CLI_NOT_INSTALLED"
+  | "CLI_UNSUPPORTED"
+  | "CLI_BLOCKED"
+  | "CLI_NOT_LOGGED_IN"
+  | "LOCAL_UNAVAILABLE";
 
 export type AgentStartResponse = { ok: true; runId: string } | { ok: false; code: AgentStartErrorCode; message: string };
 
@@ -80,6 +105,8 @@ export interface AgentModelInfo {
   id: string;
   name: string;
   provider: ProviderId;
+  kind: ProviderKindId;
+  billing: BillingKind;
 }
 
 export type AgentRunStatus = "proposed" | "answered" | "stopped" | "failed";
@@ -105,10 +132,18 @@ export interface AgentRunResult {
   /** ASK route: the answer. */
   answer?: string;
   tests?: { passed: number; total: number };
+  /** Notional (API list price) for subscription runs, 0 for local models. */
   costUsd: number;
   budgetUsd: number;
   latencyMs: number;
   turns: number;
+  /** Billing of the designer's profile. */
+  billing?: BillingKind;
+  /**
+   * (additive) The run stopped on a plan or rate limit of a CLI or API provider (docs/CLI-PROVIDERS.md §12):
+   * `quota_exhausted` (the plan's usage limit; `resetsAt` from the plan usage the CLI reported) or `rate_limited`.
+   */
+  quota?: { kind: "quota_exhausted" | "rate_limited"; provider: string | null; resetsAt: string | null };
 }
 
 interface AgentEventBase {
@@ -131,8 +166,11 @@ export type AgentEventBody =
     }
   | { type: "phase"; phase: AgentPhase; detail: string }
   | { type: "tool"; name: string; ok: boolean; summary: string }
-  | { type: "llm"; role: string; model: string; costUsd: number; summary: string }
-  | { type: "cost"; spentUsd: number; budgetUsd: number }
+  | { type: "llm"; role: string; model: string; costUsd: number; summary: string; billing?: BillingKind }
+  /** `notional`: some spend in the run is a CLI plan's list-price estimate, not a bill. */
+  | { type: "cost"; spentUsd: number; budgetUsd: number; notional?: boolean }
+  /** Plan usage windows a CLI reported during the run (Claude `rate_limit_event`). */
+  | { type: "plan"; provider: CliProviderId; usage: PlanUsageView }
   | { type: "draft"; source: string; applyIndex: number; verified: boolean; reason: "apply" | "rollback" }
   | { type: "note"; text: string }
   | { type: "question"; questionId: string; kind: "clarify" | "budget"; questions: AgentQuestion[] }
@@ -150,7 +188,7 @@ export type AgentEventType = AgentEventBody["type"];
 export type KeySource = "keychain" | "env" | "dotenv";
 
 export interface ProviderKeyStatus {
-  id: ProviderId;
+  id: ApiProviderId;
   label: string;
   configured: boolean;
   /** Where the effective key comes from (`keychain` = entered in Settings, encrypted with the OS keychain). */
@@ -168,6 +206,55 @@ export interface ModelProfileInfo {
   name: string;
   provider: ProviderId;
   family: string;
+  kind: ProviderKindId;
+  billing: BillingKind;
+  /** Whether a run could use it right now (CLI ready and logged in, key set, local model pulled). */
+  available: boolean;
+  /** (additive) Why it is unavailable, e.g. "Claude Code is not installed". */
+  reason?: string;
+}
+
+/** Plan usage windows of a CLI subscription (utilization 0..1). */
+export interface PlanUsageView {
+  status: "allowed" | "allowed_warning" | "rejected" | "unknown";
+  /** label: "5-hour", "7-day", … */
+  windows: Array<{ id: string; label: string; utilization: number | null; resetsAt: string | null }>;
+  observedAt: string;
+}
+
+/** One CLI agent as detected on this machine (docs/CLI-PROVIDERS.md §11.4). No model call is ever made to get it. */
+export interface CliProviderStatus {
+  id: CliProviderId;
+  /** "Claude Code". */
+  label: string;
+  installed: boolean;
+  path: string | null;
+  pathSource: "settings" | "path" | "known-dir" | "login-shell" | null;
+  version: string | null;
+  support: "ready" | "unsupported_version" | "blocked" | "not_installed";
+  /** e.g. "needs >= 2.1.260", "web search cannot be disabled". */
+  supportDetail: string;
+  lockdownLevel: "verified" | "static" | "none" | null;
+  residualRisks: string[];
+  auth: "logged_in" | "logged_out" | "unknown";
+  /** e.g. "max"; never an email, org or account id. */
+  plan: string | null;
+  billing: BillingKind;
+  /** Shown verbatim: "Run `claude auth login` in a terminal". */
+  loginHint: string;
+  modes: Array<"completion" | "runtime">;
+  planUsage: PlanUsageView | null;
+  checkedAt: string | null;
+}
+
+/** A local model server (Ollama) and the models it has. The app never pulls models. */
+export interface LocalProviderStatus {
+  id: "ollama";
+  baseUrl: string;
+  running: boolean;
+  version: string | null;
+  models: Array<{ id: string; tag: string; tools: boolean; vision: boolean; contextLength: number | null }>;
+  detail: string;
 }
 
 export interface AgentSettingsView {
@@ -185,6 +272,19 @@ export interface AgentSettingsView {
   transport: AgentTransportKind;
   /** Routing problems, e.g. a judge from the designer's model family. */
   warnings: string[];
+  /**
+   * CLI agents found on this machine. Optional only so an older shell (and the app's test doubles) still type-check;
+   * the desktop app always sets it.
+   */
+  cli?: CliProviderStatus[];
+  /** Local model servers (Ollama). */
+  local?: LocalProviderStatus[];
+  /** Settings → Advanced: how CLI providers run the tool loops. */
+  cliMode?: CliModeSetting;
+  /** The provider the default models come from when the user chose none ("Using Claude Code (detected)"). */
+  autoDefault?: { provider: ProviderId; label: string } | null;
+  /** The Ollama base URL from Settings (null = http://127.0.0.1:11434). */
+  ollamaBaseUrl?: string | null;
 }
 
 export interface SettingsUpdate {
@@ -193,17 +293,29 @@ export interface SettingsUpdate {
   models?: Partial<Record<AgentRoleId, string | null>>;
   budgetUsd?: number;
   compatBaseUrl?: string | null;
+  /** Path override per CLI (absolute, existing, executable, with the CLI's own file name); null clears it. */
+  cliPaths?: Partial<Record<CliProviderId, string | null>>;
+  cliMode?: CliModeSetting;
+  /** https://…, or http:// on loopback; null restores http://127.0.0.1:11434. */
+  ollamaBaseUrl?: string | null;
 }
 
 export interface SetApiKeyRequest {
   v: AgentProtocolVersion;
-  provider: ProviderId;
+  provider: ApiProviderId;
   key: string;
 }
 
 export interface ClearApiKeyRequest {
   v: AgentProtocolVersion;
-  provider: ProviderId;
+  provider: ApiProviderId;
+}
+
+/** Re-run detection (CLI version, lockdown, login; Ollama) now, bypassing the caches. */
+export interface ProbeProvidersRequest {
+  v: AgentProtocolVersion;
+  /** Only these providers (default: all). */
+  providers?: ProviderId[];
 }
 
 /** `window.aicad.agent` */
@@ -222,4 +334,6 @@ export interface SettingsBridge {
   /** Encrypts and stores the key in the main process; the renderer never gets it back. */
   setApiKey(request: SetApiKeyRequest): Promise<AgentSettingsView>;
   clearApiKey(request: ClearApiKeyRequest): Promise<AgentSettingsView>;
+  /** Channel `settings:probeProviders`. Optional only for older shells; the desktop app implements it. */
+  probeProviders?(request: ProbeProvidersRequest): Promise<AgentSettingsView>;
 }

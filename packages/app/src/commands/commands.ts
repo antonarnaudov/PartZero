@@ -28,8 +28,12 @@ const ProjectionSchema = z.enum(["perspective", "orthographic"]);
 const ThemeSchema = z.enum(["dark", "light", "system"]);
 const PanelSchema = z.enum(["left", "right", "chat", "problems"]);
 const EngineSchema = z.enum(["auto", "forge-web", "forge-cli"]);
+/** API-key providers (keys are optional since ADR 0014). */
 const ProviderSchema = z.enum(["anthropic", "openai", "google", "openai-compat"]);
+const CliProviderSchema = z.enum(["claude-cli", "gemini-cli", "codex-cli", "opencode", "cursor-agent"]);
+const AnyProviderSchema = z.enum(["anthropic", "openai", "google", "openai-compat", "claude-cli", "gemini-cli", "codex-cli", "opencode", "cursor-agent", "ollama"]);
 const RoleSchema = z.enum(["designer", "judge", "triage", "spec_writer"]);
+const CliModeSchema = z.enum(["auto", "completion", "runtime"]);
 
 const OPEN_FILTERS = [
   { name: "CAD documents (CadScript, IR JSON)", extensions: ["ts", "json"] },
@@ -744,7 +748,7 @@ export const COMMANDS = {
     id: "settings.open",
     title: "Settings…",
     category: "Settings",
-    description: "Open the agent settings: API keys, models per role, budget.",
+    description: "Open the agent settings: models per role, CLI agents, local models, optional API keys, budget.",
     args: NoArgs,
     keys: ["Mod+,"],
     async run(_args, ctx) {
@@ -819,6 +823,61 @@ export const COMMANDS = {
     async run({ url }, ctx) {
       const view = await ctx.agent.updateSettings({ compatBaseUrl: url });
       return { compatBaseUrl: view.compatBaseUrl };
+    },
+  }),
+
+  "settings.probeProviders": command({
+    id: "settings.probeProviders",
+    title: "Re-check Model Providers",
+    category: "Settings",
+    description: "Detect the CLI agents (version, lockdown, login) and local models again now. Makes no model call.",
+    args: z.strictObject({ providers: z.array(AnyProviderSchema).max(10).optional() }),
+    async run({ providers }, ctx) {
+      const view = await ctx.agent.probeProviders(providers);
+      return {
+        cli: (view.cli ?? []).map((c) => ({ id: c.id, support: c.support, auth: c.auth, version: c.version })),
+        local: (view.local ?? []).map((l) => ({ id: l.id, running: l.running, models: l.models.length })),
+      };
+    },
+  }),
+
+  "settings.setCliPath": command({
+    id: "settings.setCliPath",
+    title: "Set CLI Agent Path",
+    category: "Settings",
+    description: "Use this binary for a CLI agent (an absolute path to the CLI itself, e.g. /opt/homebrew/bin/claude); null restores automatic detection.",
+    args: z.strictObject({ provider: CliProviderSchema, path: z.string().min(1).max(1024).nullable() }),
+    palette: false,
+    async run({ provider, path }, ctx) {
+      const view = await ctx.agent.updateSettings({ cliPaths: { [provider]: path } });
+      const s = view.cli?.find((c) => c.id === provider);
+      return { provider, path: s?.path ?? null, pathSource: s?.pathSource ?? null, support: s?.support ?? null };
+    },
+  }),
+
+  "settings.setCliMode": command({
+    id: "settings.setCliMode",
+    title: "Set Agent Mode for CLI Providers",
+    category: "Settings",
+    description: "auto (recommended): the CLI's own agent loop for tool loops when available, single calls otherwise; completion: single calls only; runtime: always the agent loop.",
+    args: z.strictObject({ mode: CliModeSchema }),
+    palette: false,
+    async run({ mode }, ctx) {
+      const view = await ctx.agent.updateSettings({ cliMode: mode });
+      return { cliMode: view.cliMode ?? mode };
+    },
+  }),
+
+  "settings.setOllamaUrl": command({
+    id: "settings.setOllamaUrl",
+    title: "Set Ollama URL",
+    category: "Settings",
+    description: "Base URL of the local Ollama server (https, or http on localhost); null restores http://127.0.0.1:11434.",
+    args: z.strictObject({ url: z.string().url().max(500).nullable() }),
+    palette: false,
+    async run({ url }, ctx) {
+      const view = await ctx.agent.updateSettings({ ollamaBaseUrl: url });
+      return { ollamaBaseUrl: view.ollamaBaseUrl ?? null, running: view.local?.[0]?.running ?? false };
     },
   }),
 

@@ -21,6 +21,7 @@ import type {
   AgentStartResponse,
   AgentStopRequest,
   ClearApiKeyRequest,
+  ProbeProvidersRequest,
   SetApiKeyRequest,
   SettingsBridge,
   SettingsUpdate,
@@ -166,6 +167,7 @@ export interface IpcContract {
   "settings:update": { args: [SettingsUpdate]; result: AgentSettingsView };
   "settings:setApiKey": { args: [SetApiKeyRequest]; result: AgentSettingsView };
   "settings:clearApiKey": { args: [ClearApiKeyRequest]; result: AgentSettingsView };
+  "settings:probeProviders": { args: [ProbeProvidersRequest]; result: AgentSettingsView };
 }
 
 export type IpcChannel = keyof IpcContract;

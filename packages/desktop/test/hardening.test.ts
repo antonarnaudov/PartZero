@@ -64,12 +64,15 @@ describe("L10: packaged builds ignore dev and test overrides", () => {
     AICAD_BIN: "/tmp/aicad",
     AICAD_AGENT_TRANSPORT: "scripted",
     AICAD_AGENT_SCRIPT: thisFile,
+    AICAD_CLI_DIRS: "/tmp/fake-cli-bin",
   };
 
   it("reads no AICAD_* override when packaged, and says so", () => {
     const warnings: string[] = [];
-    expect(readDevOverrides({ ...env, AICAD_ALLOW_DEBUGGER: "1" }, true, (m) => warnings.push(m))).toEqual({ devServer: null, userDataDir: null, appDist: null, skipClosePrompt: false, simulatePackaged: false, allowDebugger: false });
-    expect(warnings).toEqual(expect.arrayContaining(["AICAD_DEV_URL is ignored in packaged builds", "AICAD_BIN is ignored in packaged builds", "AICAD_APP_DIST is ignored in packaged builds", "AICAD_ALLOW_DEBUGGER is ignored in packaged builds"]));
+    expect(readDevOverrides({ ...env, AICAD_ALLOW_DEBUGGER: "1" }, true, (m) => warnings.push(m))).toEqual({ devServer: null, userDataDir: null, appDist: null, skipClosePrompt: false, simulatePackaged: false, allowDebugger: false, cliDirs: null, detectLocalModels: true, cliAutoMode: "runtime" });
+    expect(warnings).toEqual(
+      expect.arrayContaining(["AICAD_DEV_URL is ignored in packaged builds", "AICAD_BIN is ignored in packaged builds", "AICAD_APP_DIST is ignored in packaged builds", "AICAD_ALLOW_DEBUGGER is ignored in packaged builds", "AICAD_CLI_DIRS is ignored in packaged builds"]),
+    );
     expect(locateForgeBinary({ env, isPackaged: true, resourcesPath: "/App/Resources", appPath: "/" })).toBe(join("/App/Resources", "bin", process.platform === "win32" ? "aicad.exe" : "aicad"));
     expect(transportFromEnv(env, () => undefined, true)).toEqual({ kind: "live" });
     expect(resolveWebRoot({ isPackaged: true, appPath: "/App/Resources/app.asar", appDistOverride: "/tmp/web", workspaceWebRoot: () => "/ws" })).toBe(join("/App/Resources/app.asar", "app-web"));
@@ -77,7 +80,13 @@ describe("L10: packaged builds ignore dev and test overrides", () => {
 
   it("honours them unpackaged, with the dev server on loopback only", () => {
     const o = readDevOverrides(env, false);
-    expect(o).toMatchObject({ devServer: { url: "http://localhost:5173/", origin: "http://localhost:5173" }, userDataDir: resolve("/tmp/profile"), appDist: resolve("/tmp/web"), skipClosePrompt: true });
+    expect(o).toMatchObject({ devServer: { url: "http://localhost:5173/", origin: "http://localhost:5173" }, userDataDir: resolve("/tmp/profile"), appDist: resolve("/tmp/web"), skipClosePrompt: true, cliDirs: [resolve("/tmp/fake-cli-bin")], detectLocalModels: false });
+    // An isolated test profile never finds the user's real CLIs (or probes a local Ollama) unless the test opts in.
+    // It also runs the `auto` CLI mode as single calls, unless the test opts into the agent runtime.
+    expect(readDevOverrides({ AICAD_USER_DATA_DIR: "/tmp/profile" }, false)).toMatchObject({ cliDirs: [], detectLocalModels: false, cliAutoMode: "completion" });
+    expect(readDevOverrides({ AICAD_USER_DATA_DIR: "/tmp/profile", AICAD_CLI_AUTO: "runtime" }, false)).toMatchObject({ cliAutoMode: "runtime" });
+    expect(readDevOverrides({}, false)).toMatchObject({ cliDirs: null, detectLocalModels: true, cliAutoMode: "runtime" });
+    expect(readDevOverrides({ AICAD_CLI_AUTO: "completion" }, true).cliAutoMode).toBe("runtime"); // packaged: ignored
     expect(locateForgeBinary({ env, isPackaged: false, resourcesPath: "", appPath: "/" })).toBe(resolve("/tmp/aicad"));
     expect(transportFromEnv(env, () => undefined, false)).toEqual({ kind: "scripted", scriptPath: thisFile });
     expect(resolveWebRoot({ isPackaged: false, appPath: "/x", appDistOverride: null, workspaceWebRoot: () => "/ws" })).toBe("/ws");

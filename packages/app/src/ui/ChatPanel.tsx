@@ -73,12 +73,19 @@ function money(usd: number): string {
   return usd < 0.1 ? `$${usd.toFixed(3)}` : `$${usd.toFixed(2)}`;
 }
 
-function CostMeter({ spent, budget }: { spent: number; budget: number }): ReactElement {
+/**
+ * Spend vs the per-task budget. On a CLI plan the spend is notional: the API list price of what the run used, counted
+ * against the same budget, but not billed (docs/CLI-PROVIDERS.md §11.6).
+ */
+function CostMeter({ spent, budget, notional }: { spent: number; budget: number; notional: boolean }): ReactElement {
   const frac = budget > 0 ? Math.min(1, spent / budget) : 0;
+  const title = notional
+    ? "Plan usage of this task at API list prices (not billed; your plan's own limits apply) vs the per-task budget (the run stops at 80 % and asks)"
+    : "Model spend for this task vs the per-task budget (the run stops at 80 % and asks)";
   return (
-    <div className={`cost-meter${frac >= 0.8 ? " warn" : ""}`} data-testid="agent-cost" title="Model spend for this task vs the per-task budget (the run stops at 80 % and asks)">
+    <div className={`cost-meter${frac >= 0.8 ? " warn" : ""}`} data-testid="agent-cost" data-notional={notional ? "yes" : "no"} title={title}>
       <span className="cost-text mono">
-        {money(spent)} <span className="muted">/ {money(budget)}</span>
+        {notional ? `≈ ${money(spent)} plan usage` : money(spent)} <span className="muted">/ {money(budget)}</span>
       </span>
       <span className="cost-bar" aria-hidden="true">
         <span className="cost-fill" style={{ width: `${(frac * 100).toFixed(1)}%` }} />
@@ -154,6 +161,7 @@ const STOP_LABEL: Record<string, string> = {
   no_progress: "Stopped: no progress",
   engine_unavailable: "Failed: no geometry engine",
   model_error: "Failed: model error",
+  lockdown_violation: "Stopped: the CLI broke its lockdown",
 };
 
 function headline(run: AgentRun): string {
@@ -166,7 +174,14 @@ function headline(run: AgentRun): string {
   const r = run.result!;
   if (r.status === "proposed") return r.changed ? "Proposal ready" : "Done — no changes";
   if (r.status === "answered") return "Answered";
+  if (r.quota) return r.quota.kind === "quota_exhausted" ? "Stopped: plan usage limit reached" : "Stopped: rate limited";
   return STOP_LABEL[r.stopReason] ?? `Stopped (${r.stopReason})`;
+}
+
+/** A reset time for people: local date and time (the ISO string when it does not parse). */
+function resetTime(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit", month: "short", day: "numeric" });
 }
 
 function ResultBlock({ run }: { run: AgentRun }): ReactElement | null {
@@ -177,6 +192,13 @@ function ResultBlock({ run }: { run: AgentRun }): ReactElement | null {
   const pending = review && review.status === "ready" && review.resolution === null;
   return (
     <div className="run-result" data-testid="agent-result" data-result={r.status}>
+      {r.quota && (
+        <p className="run-quota" data-testid="agent-quota" data-kind={r.quota.kind}>
+          <Icon.Warning size={12} />{" "}
+          {r.quota.kind === "quota_exhausted" ? "Your plan's usage limit is reached." : "The provider is rate limiting requests."}
+          {r.quota.resetsAt ? ` It resets ${resetTime(r.quota.resetsAt)}.` : " Try again later."}
+        </p>
+      )}
       {r.status !== "answered" && <p className="run-summary">{r.summary}</p>}
       {r.assumptions.length > 0 && (
         <div className="assumptions" aria-label="Assumptions">
@@ -275,12 +297,24 @@ function RunCard({ runId }: { runId: string }): ReactElement | null {
         ))}
       </ol>
       <div className="run-meta">
-        <CostMeter spent={run.spentUsd} budget={run.budgetUsd} />
+        <CostMeter spent={run.spentUsd} budget={run.budgetUsd} notional={run.notional === true} />
         <span className="run-model muted" title={Object.entries(run.models).map(([k, v]) => `${k}: ${v?.name ?? "?"}`).join("\n")}>
           {designer?.name ?? ""}
           {run.transport && run.transport !== "live" ? ` · ${run.transport}` : ""}
         </span>
       </div>
+      {(run.notional === true || (run.planUsage?.windows.length ?? 0) > 0) && (
+        <div className="run-plan muted small" data-testid="agent-plan-note" title="Plan usage the CLI reported during this run">
+          {run.notional === true ? "(API list price; not billed)" : ""}
+          {run.notional === true && run.planUsage && run.planUsage.windows.length > 0 ? " · " : ""}
+          {run.planUsage && run.planUsage.windows.length > 0 && (
+            <span data-testid="agent-plan-usage">
+              Plan: {run.planUsage.windows.map((w) => `${w.label} ${w.utilization === null ? "?" : `${Math.round(w.utilization * 100)} %`}`).join(" · ")}
+              {run.planUsage.status === "rejected" ? " · limit reached" : ""}
+            </span>
+          )}
+        </div>
+      )}
       {run.question && <QuestionCard key={run.question.questionId} {...run.question} />}
       {run.error && (
         <div className="run-error" data-testid="agent-error">
@@ -377,7 +411,7 @@ export function ChatPanel(): ReactElement {
           <span className="dot" /> {state}
         </span>
         {available && (
-          <button type="button" className="icon-btn" aria-label="Agent settings" title="Agent settings (API keys, models, budget)" onClick={() => run({ id: "settings.open" })}>
+          <button type="button" className="icon-btn" aria-label="Agent settings" title="Agent settings (models, CLI agents, local models, API keys, budget)" onClick={() => run({ id: "settings.open" })}>
             <Icon.Gear size={13} />
           </button>
         )}

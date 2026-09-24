@@ -21,7 +21,7 @@ import type { Cipher } from "./agent/keys.js";
 import { scrubKeyLike } from "./agent/protocol.js";
 import { setupAgent, type AgentSetup } from "./agent/setup.js";
 import { debugSwitchRefusal, forbiddenDebugSwitches } from "./debug-switches.js";
-import { agentWorkerEnv, readDevOverrides, resolveWebRoot } from "./env.js";
+import { agentWorkerEnv, cliChildHostEnv, cliDetectEnv, readDevOverrides, resolveWebRoot } from "./env.js";
 import { documentStatePath, PathGrants, RecentFiles } from "./files.js";
 import { findRepoRoot, forgeInfo, locateForgeBinary } from "./forge-cli.js";
 import { registerIpc } from "./ipc.js";
@@ -248,7 +248,22 @@ function start(): void {
       spawnWorker: spawnAgentWorker,
       send: sendAgentEvent,
       log: (level, message) => console[level === "info" ? "log" : level](`[aicad-agent] ${message}`),
+      detectEnv: cliDetectEnv(process.env),
+      // An isolated test profile never sees the user's real CLIs or local Ollama unless the test opts in (env.ts).
+      cliDirs: overrides.cliDirs,
+      detectLocalModels: overrides.detectLocalModels,
+      // CLI login locations and proxy/CA settings go to CLI children only, never into the worker's own environment.
+      cliChildEnv: cliChildHostEnv(process.env),
+      // Test profiles run `auto` as completion unless the test opts into runtime mode (env.ts).
+      cliAutoMode: overrides.cliAutoMode,
+      // The MCP shim for CLI agents runs as `ELECTRON_RUN_AS_NODE=1 <app> stdio.js`. Packaged builds flip the
+      // runAsNode fuse off, so there the shim is unavailable (Claude Code needs none; see AGENT-IN-APP.md).
+      exePath: app.isPackaged ? null : app.getPath("exe"),
     });
+    // Warm the provider detection (CLI versions, lockdown, logins, Ollama; no model call) in the background, so
+    // Settings and the first run do not wait for it.
+    const warm = setTimeout(() => void agent?.host.settingsView().catch((e: unknown) => console.warn(`[aicad-agent] provider detection failed: ${e instanceof Error ? e.message : String(e)}`)), 1500);
+    warm.unref();
     registerIpc({
       agent,
       window: () => mainWindow,

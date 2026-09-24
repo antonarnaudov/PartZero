@@ -7,7 +7,9 @@
  * - {@link HostToWorker} / {@link WorkerToHost} are the main ⇄ agent utility process messages.
  *   API keys travel only in `start.secrets` (main → worker, in memory) and never come back.
  * - {@link composePrompt} turns selection chips into semantic context for the agent.
+ * - {@link CliBinaryWire}: a detected CLI binary as it travels to the worker (plain JSON, no Sets).
  */
+import { basename, isAbsolute, join } from "node:path";
 import type {
   AgentAnswerRequest,
   AgentEvent,
@@ -16,14 +18,32 @@ import type {
   AgentSelectionItem,
   AgentStartRequest,
   AgentStopRequest,
+  ApiProviderId,
   ClearApiKeyRequest,
+  CliModeSetting,
+  CliProviderId,
+  ProbeProvidersRequest,
   ProviderId,
   SetApiKeyRequest,
   SettingsUpdate,
 } from "@aicad/app/bridge";
+import type { CliBinary, ModelProfile } from "@aicad/llm-gateway";
 
 export const PROTOCOL_VERSION: AgentProtocolVersion = 1;
-export const PROVIDER_IDS: readonly ProviderId[] = ["anthropic", "openai", "google", "openai-compat"];
+/** API-key providers: the only ones with keys (`keys.ts`). */
+export const PROVIDER_IDS: readonly ApiProviderId[] = ["anthropic", "openai", "google", "openai-compat"];
+/** CLI agents (ADR 0014), in the auto-default order of docs/CLI-PROVIDERS.md §9.3. */
+export const CLI_PROVIDER_IDS: readonly CliProviderId[] = ["claude-cli", "codex-cli", "gemini-cli", "opencode", "cursor-agent"];
+export const ALL_PROVIDER_IDS: readonly ProviderId[] = [...PROVIDER_IDS, ...CLI_PROVIDER_IDS, "ollama"];
+export const CLI_MODES: readonly CliModeSetting[] = ["auto", "completion", "runtime"];
+
+export function isApiProviderId(p: string): p is ApiProviderId {
+  return (PROVIDER_IDS as readonly string[]).includes(p);
+}
+
+export function isCliProviderId(p: string): p is CliProviderId {
+  return (CLI_PROVIDER_IDS as readonly string[]).includes(p);
+}
 export const ROLE_IDS: readonly AgentRoleId[] = ["designer", "judge", "triage", "spec_writer"];
 export const MIN_BUDGET_USD = 0.01;
 export const MAX_BUDGET_USD = 100;
@@ -152,14 +172,33 @@ export function baseUrlProblem(value: string): string | null {
 }
 
 /** An https URL, or an http URL on a loopback host, without credentials; returns the normalized URL. */
-export function parseBaseUrl(v: unknown): string {
-  const s = str(v, "compatBaseUrl", 500, 1).trim();
+export function parseBaseUrl(v: unknown, what = "compatBaseUrl"): string {
+  const s = str(v, what, 500, 1).trim();
   const problem = baseUrlProblem(s);
-  if (problem) throw new ProtocolError(`compatBaseUrl ${problem}`);
+  if (problem) throw new ProtocolError(`${what} ${problem}`);
   return s.replace(/\/+$/, "");
 }
 
-export function parseSettingsUpdate(v: unknown): SettingsUpdate {
+/**
+ * A CLI path override as typed in Settings: an absolute path whose file name is one of the CLI's own names
+ * (`claude`, `gemini`, …; `.exe`/`.cmd` on Windows). Whether it exists and is executable is checked by the main
+ * process before it is stored (`cli-detect.ts` `cliPathProblem`), because that needs the file system.
+ */
+export function parseCliPath(v: unknown, provider: CliProviderId, binaryNames: readonly string[]): string {
+  const s = str(v, `cliPaths.${provider}`, 1024, 1).trim();
+  if (s.includes("\u0000")) throw new ProtocolError(`cliPaths.${provider} has invalid characters`);
+  if (!isAbsolute(s)) throw new ProtocolError(`cliPaths.${provider} must be an absolute path`);
+  const name = basename(s).replace(/\.(exe|cmd)$/i, "");
+  if (!binaryNames.includes(name)) throw new ProtocolError(`cliPaths.${provider} must point to ${binaryNames.join(" or ")} (got ${JSON.stringify(basename(s))})`);
+  return s;
+}
+
+export interface SettingsUpdateOptions {
+  /** File names each CLI may have (`CliProvider.binaryNames`), for `cliPaths`. */
+  cliBinaryNames?: Readonly<Partial<Record<CliProviderId, readonly string[]>>>;
+}
+
+export function parseSettingsUpdate(v: unknown, options: SettingsUpdateOptions = {}): SettingsUpdate {
   const o = obj(v, "settings update");
   version(o, "settings update");
   const out: SettingsUpdate = { v: PROTOCOL_VERSION };
@@ -174,6 +213,29 @@ export function parseSettingsUpdate(v: unknown): SettingsUpdate {
   }
   if (o["budgetUsd"] !== undefined) out.budgetUsd = parseBudget(o["budgetUsd"]);
   if (o["compatBaseUrl"] !== undefined) out.compatBaseUrl = o["compatBaseUrl"] === null ? null : parseBaseUrl(o["compatBaseUrl"]);
+  if (o["cliPaths"] !== undefined) {
+    const m = obj(o["cliPaths"], "cliPaths");
+    const paths: Partial<Record<CliProviderId, string | null>> = {};
+    for (const [provider, path] of Object.entries(m)) {
+      const p = oneOf(provider, CLI_PROVIDER_IDS, "cliPaths provider");
+      paths[p] = path === null ? null : parseCliPath(path, p, options.cliBinaryNames?.[p] ?? []);
+    }
+    out.cliPaths = paths;
+  }
+  if (o["cliMode"] !== undefined) out.cliMode = oneOf(o["cliMode"], CLI_MODES, "cliMode");
+  if (o["ollamaBaseUrl"] !== undefined) out.ollamaBaseUrl = o["ollamaBaseUrl"] === null ? null : parseBaseUrl(o["ollamaBaseUrl"], "ollamaBaseUrl");
+  return out;
+}
+
+export function parseProbeProvidersRequest(v: unknown): ProbeProvidersRequest {
+  const o = obj(v, "probeProviders request");
+  version(o, "probeProviders request");
+  const out: ProbeProvidersRequest = { v: PROTOCOL_VERSION };
+  if (o["providers"] !== undefined) {
+    const list = o["providers"];
+    if (!Array.isArray(list) || list.length > ALL_PROVIDER_IDS.length) throw new ProtocolError("providers must be an array of provider ids");
+    out.providers = [...new Set(list.map((p, i) => oneOf(p, ALL_PROVIDER_IDS, `providers[${i}]`)))];
+  }
   return out;
 }
 
@@ -205,6 +267,89 @@ export function parseClearApiKey(v: unknown): ClearApiKeyRequest {
 
 export type TransportConfig = { kind: "live" } | { kind: "scripted"; scriptPath: string } | { kind: "replay"; fixturesPath: string };
 
+/**
+ * A detected CLI binary as it crosses to the worker: `CliBinary` with its `--help` sets as arrays. The worker
+ * rebuilds the `CliBinary`; the gateway re-stats the file before every spawn (size, mtime) and refuses a binary that
+ * changed since detection, so a CLI that updated itself fails closed until Settings → Re-check.
+ */
+export interface CliBinaryWire {
+  provider: CliProviderId;
+  path: string;
+  realPath: string;
+  source: CliBinary["source"];
+  version: string;
+  rawVersion: string;
+  help: { flags: string[]; subcommands: string[]; sha256: string; choices: Array<[string, string[]]> };
+  stat: { size: number; mtimeMs: number };
+}
+
+export function binaryToWire(b: CliBinary): CliBinaryWire {
+  return {
+    provider: b.provider,
+    path: b.path,
+    realPath: b.realPath,
+    source: b.source,
+    version: b.version,
+    rawVersion: b.rawVersion,
+    help: { flags: [...b.help.flags], subcommands: [...b.help.subcommands], sha256: b.help.sha256, choices: [...(b.help.choices ?? new Map()).entries()].map(([k, v]) => [k, [...v]]) },
+    stat: { size: b.stat.size, mtimeMs: b.stat.mtimeMs },
+  };
+}
+
+export function binaryFromWire(w: CliBinaryWire): CliBinary {
+  return {
+    provider: w.provider,
+    path: w.path,
+    realPath: w.realPath,
+    source: w.source,
+    version: w.version,
+    rawVersion: w.rawVersion,
+    help: { flags: new Set(w.help.flags), subcommands: new Set(w.help.subcommands), sha256: w.help.sha256, choices: new Map(w.help.choices.map(([k, v]) => [k, v])) },
+    stat: { size: w.stat.size, mtimeMs: w.stat.mtimeMs },
+  };
+}
+
+/** How the MCP shim is launched by a CLI (`@aicad/mcp-server` `McpShimCommand`). */
+export interface McpShimCommand {
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+}
+
+/** What the worker needs to run CLI providers (docs/CLI-PROVIDERS.md §11.1). */
+export interface WorkerCliConfig {
+  /** The detected binaries of the CLI providers the run's models use. */
+  binaries: Partial<Record<CliProviderId, CliBinaryWire>>;
+  mode: CliModeSetting;
+  /** Private root for CLI workspaces and broker sockets (`<userData>/cli-work`, or a shorter private root: `setup.ts`). */
+  workspaceRoot: string;
+  /**
+   * (additive) The host's CLI login locations and proxy settings (`CLI_ENV_LOCATION`, `CLI_ENV_NETWORK`), for CLI
+   * children only. The utility process itself never has them in its own environment (`env.ts` `agentWorkerEnv`), so a
+   * `NODE_EXTRA_CA_CERTS` or proxy from the app's environment cannot reach the process that holds the API keys.
+   */
+  childEnv?: Record<string, string>;
+  /**
+   * The app executable, for the MCP shim (`ELECTRON_RUN_AS_NODE=1 <exe> <mcp-server>/dist/stdio.js`); null when the
+   * shim cannot run (then Gemini and opencode fall back to the text-json envelope, and runtime mode is off).
+   */
+  exePath: string | null;
+  /** Development: the workspace's `packages/mcp-server` when the package is not a dependency of the desktop app. */
+  mcpServerDir: string | null;
+}
+
+/** macOS `sun_path` limit (Linux allows 107): the broker socket path must not be longer. */
+export const MAX_SOCKET_PATH_BYTES = 103;
+
+/**
+ * Whether the MCP broker socket fits under a CLI workspace root: the gateway puts it at `<root>/s/<8 hex>/b.sock`
+ * (docs/CLI-PROVIDERS.md §5.4). Always true on Windows (named pipes).
+ */
+export function brokerSocketFits(root: string, platform: NodeJS.Platform = process.platform): boolean {
+  if (platform === "win32") return true;
+  return Buffer.byteLength(join(root, "s", "00000000", "b.sock"), "utf8") <= MAX_SOCKET_PATH_BYTES;
+}
+
 export interface WorkerRunConfig {
   /** Effective gateway profile id per role. */
   models: Record<AgentRoleId, string>;
@@ -213,6 +358,14 @@ export interface WorkerRunConfig {
   transport: TransportConfig;
   /** Forge CLI binary for the fallback engine. */
   forgeBin: string;
+  /** Profiles beyond the built-in API and CLI ones: local (Ollama) and discovered CLI models. */
+  profiles?: ModelProfile[];
+  /** CLI providers (absent: the run uses none). */
+  cli?: WorkerCliConfig;
+  /** Base URLs of local model servers (`<ollama>/v1`): OpenAI-compatible calls there never get the compat key or override. */
+  localEndpoints?: string[];
+  /** Notes the run starts with (e.g. a plan-usage warning from the detection cache). */
+  notes?: string[];
 }
 
 export type HostToWorker =
@@ -222,8 +375,8 @@ export type HostToWorker =
       runId: string;
       request: AgentStartRequest;
       config: WorkerRunConfig;
-      /** API keys of the providers this run needs (in memory only; never echoed back). */
-      secrets: Partial<Record<ProviderId, string>>;
+      /** API keys of the providers this run needs (in memory only; never echoed back). CLI runs need none. */
+      secrets: Partial<Record<ApiProviderId, string>>;
     }
   | { type: "answer"; v: AgentProtocolVersion; runId: string; questionId: string; answers: string[] }
   | { type: "stop"; v: AgentProtocolVersion; runId: string };
@@ -231,7 +384,11 @@ export type HostToWorker =
 export type WorkerToHost =
   | { type: "ready"; v: AgentProtocolVersion }
   | { type: "event"; v: AgentProtocolVersion; event: AgentEvent }
-  | { type: "log"; v: AgentProtocolVersion; level: "info" | "warn" | "error"; message: string };
+  | { type: "log"; v: AgentProtocolVersion; level: "info" | "warn" | "error"; message: string }
+  /** A CLI broke its lockdown (§5.6): the main process marks that exact binary blocked until Re-check. */
+  | { type: "cli"; v: AgentProtocolVersion; kind: "lockdown_violation"; provider: CliProviderId; realPath: string; detail: string }
+  /** Process-group ids of the live CLI processes (the main process kills them if the worker dies: §5.8 backstop). */
+  | { type: "procs"; v: AgentProtocolVersion; pids: number[] };
 
 const TERMINAL: ReadonlySet<string> = new Set(["result", "error"]);
 
@@ -252,6 +409,13 @@ export function parseWorkerMessage(v: unknown): WorkerToHost | null {
     const e = o["event"] as Obj | undefined;
     if (!e || typeof e !== "object" || e["v"] !== PROTOCOL_VERSION || typeof e["runId"] !== "string" || typeof e["type"] !== "string" || typeof e["seq"] !== "number") return null;
     return { type: "event", v: PROTOCOL_VERSION, event: e as unknown as AgentEvent };
+  }
+  if (o["type"] === "cli" && o["kind"] === "lockdown_violation" && typeof o["provider"] === "string" && isCliProviderId(o["provider"]) && typeof o["realPath"] === "string") {
+    return { type: "cli", v: PROTOCOL_VERSION, kind: "lockdown_violation", provider: o["provider"], realPath: o["realPath"].slice(0, 4096), detail: typeof o["detail"] === "string" ? o["detail"].slice(0, 500) : "" };
+  }
+  if (o["type"] === "procs" && Array.isArray(o["pids"])) {
+    const pids = o["pids"].filter((p): p is number => typeof p === "number" && Number.isInteger(p) && p > 1).slice(0, 64);
+    return { type: "procs", v: PROTOCOL_VERSION, pids };
   }
   return null;
 }
