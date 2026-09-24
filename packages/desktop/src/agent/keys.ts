@@ -12,6 +12,12 @@
  *   Precedence: Settings (keychain) → environment → `.env`.
  * - Keys are optional (ADR 0014): CLI agents run on the user's own login and local models need none.
  *   Only API-key providers (`ApiProviderId`) have keys; CLI credentials are never read.
+ * - No keychain access until a key is stored (docs/ALPHA-0-PLAN.md W1, as10): on macOS every `safeStorage` call reads
+ *   or creates the app's "Safe Storage" keychain item, and an ad-hoc signed build (a new signature after every
+ *   rebuild) is then asked for the login password. So a store without a key file never probes the cipher when the
+ *   cipher says a probe may prompt ({@link Cipher.probeMayPrompt}); the probe runs when the first key is saved.
+ * - A build can turn API keys off altogether (`build-info.ts` `flags.apiKeys`, the Alpha 0 build): then the store
+ *   never reads its file or touches the cipher, and saving a key is refused.
  */
 import { chmodSync, existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { ApiProviderId as ProviderId, KeySource } from "@aicad/app/bridge";
@@ -87,7 +93,15 @@ export interface Cipher {
   decryptString(encrypted: Buffer): string;
   /** Linux: `basic_text` | `gnome_libsecret` | `kwallet*` …; elsewhere the OS store name. */
   backend(): string;
+  /**
+   * Whether asking {@link isEncryptionAvailable} may itself show an OS prompt (macOS: it reads or creates the app's
+   * keychain item). Then the store probes only once a key file exists or a key is being saved.
+   */
+  probeMayPrompt?: boolean;
 }
+
+/** Why saving a key is refused in a build without API keys. */
+export const API_KEYS_OFF_DETAIL = "API keys are turned off in this build: the agent runs on a CLI agent you are logged into (Claude Code), with no key.";
 
 interface StoredKey {
   ciphertext: string;
@@ -107,15 +121,23 @@ export class KeyStoreError extends Error {
   }
 }
 
+export interface KeyStoreOptions {
+  /** False: API keys are off in this build (never read, never stored, no keychain access). Default true. */
+  enabled?: boolean;
+}
+
 export class KeyStore {
   readonly file: string;
+  /** Whether this build takes API keys at all (`build-info.ts` `flags.apiKeys`). */
+  readonly enabled: boolean;
   readonly #cipher: Cipher;
   #data: KeyFile;
 
-  constructor(file: string, cipher: Cipher) {
+  constructor(file: string, cipher: Cipher, options: KeyStoreOptions = {}) {
     this.file = file;
+    this.enabled = options.enabled ?? true;
     this.#cipher = cipher;
-    this.#data = KeyStore.#read(file);
+    this.#data = this.enabled ? KeyStore.#read(file) : { v: 1, keys: {} };
   }
 
   static #read(file: string): KeyFile {
@@ -133,8 +155,20 @@ export class KeyStore {
     }
   }
 
-  /** Whether keys can be stored securely on this machine, and how. */
+  /**
+   * Whether keys can be stored securely on this machine, and how (the Settings view). Touches the cipher only when
+   * that cannot prompt, or when keys are already stored (see the file header).
+   */
   secureStorage(): { available: boolean; detail: string } {
+    if (!this.enabled) return { available: false, detail: API_KEYS_OFF_DETAIL };
+    if (this.#cipher.probeMayPrompt === true && Object.keys(this.#data.keys).length === 0 && !existsSync(this.file)) {
+      return { available: true, detail: "Keys you save are encrypted with the OS keychain." };
+    }
+    return this.#probe();
+  }
+
+  /** The cipher's real answer (may read the keychain). */
+  #probe(): { available: boolean; detail: string } {
     let available = false;
     let backend = "unknown";
     try {
@@ -157,7 +191,8 @@ export class KeyStore {
   }
 
   set(provider: ProviderId, key: string): void {
-    const s = this.secureStorage();
+    if (!this.enabled) throw new KeyStoreError(API_KEYS_OFF_DETAIL);
+    const s = this.#probe();
     if (!s.available) throw new KeyStoreError(`Cannot store the key securely: ${s.detail}`);
     const ciphertext = this.#cipher.encryptString(key).toString("base64");
     this.#data = { v: 1, keys: { ...this.#data.keys, [provider]: { ciphertext, last4: last4(key), savedAt: new Date().toISOString() } } };

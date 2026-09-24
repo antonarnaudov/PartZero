@@ -323,7 +323,9 @@ export class AgentHost {
         else if (!l.models.some((m) => m.tag === tag && m.tools)) problems.push({ order, code: "LOCAL_UNAVAILABLE", message: `${tag} has no tool calling, which the agent needs (${roleText}). Pick another model in Settings.` });
       } else if (kind === "api" && provider !== "ollama" && !isCliProviderId(provider)) {
         const info = providerInfo(provider);
-        if (info.keyRequired && !this.#deps.keys.resolve(provider).key) {
+        if (info.keyRequired && !this.#deps.keys.store.enabled) {
+          problems.push({ order, code: "NO_API_KEY", message: `${info.label} API models are turned off in this build, which runs on Claude Code (${roleText}). Pick a Claude Code model in Settings.` });
+        } else if (info.keyRequired && !this.#deps.keys.resolve(provider).key) {
           const hint = nothingSetUp ? " No provider is set up yet: you can also use a CLI agent you already have (Claude Code, Codex, Gemini CLI, opencode) or a local Ollama model, without any key." : "";
           problems.push({ order, code: "NO_API_KEY", message: `No API key for ${info.label} (${roleText}) — add it in Settings or set ${info.envVars[0]}.${hint}` });
         }

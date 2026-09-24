@@ -425,6 +425,7 @@ export function buildSettingsView(input: SettingsViewInput): AgentSettingsView {
       return { id: p.id, label: p.label, configured: st.source !== null, source: st.source, last4: st.last4, envVar: p.envVars[0]!, keyRequired: p.keyRequired };
     }),
     secureStorage: keys.store.secureStorage(),
+    ...(keys.store.enabled ? {} : { apiKeysEnabled: false }),
     models,
     defaults: auto.models,
     profiles: registry

@@ -140,6 +140,16 @@ export interface AgentSetupOptions {
   cliChildEnv?: Record<string, string>;
   /** What the `auto` CLI mode means (`env.ts` `DevOverrides.cliAutoMode`; default `runtime`). */
   cliAutoMode?: "runtime" | "completion";
+  /**
+   * Whether this build takes API keys (`build-info.ts` `flags.apiKeys`; default true). False: no key store, no keys
+   * from the environment or a `.env`, and no keychain access at all (the Alpha 0 build runs on Claude Code only).
+   */
+  apiKeys?: boolean;
+  /**
+   * The bundled MCP shim (`bundle/mcp/stdio.mjs`, asar-unpacked in a packaged build), or null: then development runs
+   * use the workspace's `packages/mcp-server`, and a packaged build has none.
+   */
+  mcpShimPath?: string | null;
 }
 
 export interface AgentSetup {
@@ -151,8 +161,9 @@ export interface AgentSetup {
 }
 
 export function setupAgent(o: AgentSetupOptions): AgentSetup {
-  const store = new KeyStore(join(o.userData, "agent-keys.json"), o.cipher);
-  const keys = new KeyResolver(store, keysFromVariables(o.env), dotenvKeys(o.env, o.repoRoot, o.isPackaged));
+  const apiKeys = o.apiKeys ?? true;
+  const store = new KeyStore(join(o.userData, "agent-keys.json"), o.cipher, { enabled: apiKeys });
+  const keys = apiKeys ? new KeyResolver(store, keysFromVariables(o.env), dotenvKeys(o.env, o.repoRoot, o.isPackaged)) : new KeyResolver(store);
   const settings = new SettingsStore(join(o.userData, "agent-settings.json"));
   const transport = transportFromEnv(o.env, (m) => o.log("warn", m), o.isPackaged);
   // CLI workspaces, broker sockets and detection probes live under a private folder whose socket path fits (§5.4).
