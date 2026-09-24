@@ -1,0 +1,21 @@
+packages/app/src/print/open-in-slicer.ts
+  s_59c0dd2af30db2::t_c5488cbfe697a4 9-15,21-25,29-30,41-53,55-56,58,60-63,69-86,89-94,96,98
+packages/app/test/print.test.ts
+  s_59c0dd2af30db2::t_27ee1b3fca644f 8,54,64-65,78,107-170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2b6c3a0972ad766d7d7c45c36ef9d33022fcf569",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
