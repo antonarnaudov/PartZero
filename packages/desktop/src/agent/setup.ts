@@ -201,7 +201,8 @@ export function setupAgent(o: AgentSetupOptions): AgentSetup {
       : {
           workspaceRoot,
           exePath: o.exePath,
-          mcpServerDir: o.isPackaged ? null : workspaceMcpServerDir(o.repoRoot),
+          mcpServerDir: o.isPackaged || o.mcpShimPath ? null : workspaceMcpServerDir(o.repoRoot),
+          mcpShimPath: o.mcpShimPath ?? null,
           childEnv: { ...(o.cliChildEnv ?? {}) },
           autoMode: o.cliAutoMode ?? "runtime",
         };

@@ -84,6 +84,8 @@ export interface CliRunSetup {
   exePath: string | null;
   /** Development: the workspace's `packages/mcp-server`. */
   mcpServerDir: string | null;
+  /** The bundled MCP shim (`bundle/mcp/stdio.mjs`), or null (`setup.ts`). */
+  mcpShimPath?: string | null;
   /** CLI login locations and proxy settings for CLI children only (`env.ts` `cliChildHostEnv`). */
   childEnv?: Record<string, string>;
   /** What the `auto` CLI mode means here (`env.ts` `DevOverrides.cliAutoMode`; default `runtime`). */
@@ -268,6 +270,7 @@ export class AgentHost {
         if (!setup) return { ok: false, code: "UNAVAILABLE", message: "CLI providers are not set up in this build." };
         const mode = stored.cliMode === "auto" && setup.autoMode === "completion" ? "completion" : stored.cliMode;
         cliConfig = { binaries, mode, workspaceRoot: setup.workspaceRoot, exePath: setup.exePath, mcpServerDir: setup.mcpServerDir };
+        if (setup.mcpShimPath) cliConfig.mcpShimPath = setup.mcpShimPath;
         if (setup.childEnv && Object.keys(setup.childEnv).length > 0) cliConfig.childEnv = { ...setup.childEnv };
       }
     }

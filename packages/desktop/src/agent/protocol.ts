@@ -336,6 +336,11 @@ export interface WorkerCliConfig {
   exePath: string | null;
   /** Development: the workspace's `packages/mcp-server` when the package is not a dependency of the desktop app. */
   mcpServerDir: string | null;
+  /**
+   * (additive) The bundled shim (`bundle/mcp/stdio.mjs`; asar-unpacked in a packaged build, so the app executable run
+   * as Node can read it). When set it wins over {@link mcpServerDir}, and the MCP host is the one bundled into the worker.
+   */
+  mcpShimPath?: string | null;
 }
 
 /** macOS `sun_path` limit (Linux allows 107): the broker socket path must not be longer. */

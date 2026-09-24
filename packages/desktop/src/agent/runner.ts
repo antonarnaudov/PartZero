@@ -25,8 +25,8 @@
  * Every string that leaves this module is scrubbed of the run's API keys.
  */
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { AgentEvent, AgentEventBody, AgentModelInfo, AgentQuestion, AgentRoleId, AgentRunResult, ApiProviderId, BillingKind, CliProviderId, ProviderKindId } from "@aicad/app/bridge";
 import {
   Agent,
@@ -41,7 +41,6 @@ import {
   type Scripts,
   type TraceEvent,
 } from "@aicad/agent";
-import type { CliAgentRuntimeOptions } from "@aicad/agent/cli-runtime";
 import type { UserQuestion } from "@aicad/agent-tools";
 import {
   AnthropicSdkTransport,
@@ -73,7 +72,9 @@ import {
   type CliTurnOutcome,
 } from "@aicad/llm-gateway/cli";
 import { planResetAt, planUsageView } from "./cli-detect.js";
+import { bundledPromptsDir } from "../bundle-paths.js";
 import { createAgentEngine, type AgentEngine } from "./engine.js";
+import { loadCliRuntime, loadMcpServer, type CliRuntimeModule, type McpServerModule } from "./optional-modules.js";
 import {
   baseUrlProblem,
   binaryFromWire,
@@ -90,10 +91,7 @@ import {
 } from "./protocol.js";
 import { displayProvider, providerLabel, routingFor } from "./settings.js";
 
-/** The subset of `@aicad/mcp-server` the worker uses (loaded at run time: see {@link loadMcpServer}). */
-export interface McpServerModule {
-  createMcpHost(options: { shim: McpShimCommand }): CliMcpHost;
-}
+export { loadCliRuntime, loadMcpServer, type CliRuntimeModule, type McpServerModule } from "./optional-modules.js";
 
 export interface RunnerDeps {
   post(message: WorkerToHost): void;
@@ -106,9 +104,11 @@ export interface RunnerDeps {
    */
   env?(): Record<string, string>;
   /** Loads `@aicad/mcp-server` (tests inject; default {@link loadMcpServer}). */
-  loadMcpServer?(dir: string | null): Promise<{ module: McpServerModule; stdio: string } | null>;
+  loadMcpServer?(dir: string | null, shimPath: string | null): Promise<{ module: McpServerModule; stdio: string } | null>;
   /** Loads the agent-runtime driver (`@aicad/agent/cli-runtime`) when the agent package has it (default {@link loadCliRuntime}). */
   loadCliRuntime?(): Promise<CliRuntimeModule | null>;
+  /** The role prompts' folder (tests; default: a bundled worker's `bundle/prompts`, else the agent package's own). */
+  promptsDir?: string | null;
 }
 
 // ─── Transports ────────────────────────────────────────────────────────────────────────────
@@ -281,31 +281,7 @@ export function parseScriptFile(text: string): { scripts: Scripts; paceMs: numbe
   return { scripts, paceMs: typeof pace === "number" && pace > 0 ? Math.min(pace, 10_000) : 0 };
 }
 
-// ─── MCP server and agent runtime (optional modules) ───────────────────────────────────────
-
-/**
- * `@aicad/mcp-server` for the `mcp-submit` envelope channel (Gemini, opencode) and the agent runtime. Resolved as a
- * package first; in development, from the workspace (`WorkerCliConfig.mcpServerDir`) when the desktop app does not
- * depend on it. Null when neither exists or the shim is not built: Gemini and opencode then use the `text-json`
- * envelope, and Claude Code (JSON-schema envelope) needs no MCP server at all.
- */
-export async function loadMcpServer(dir: string | null): Promise<{ module: McpServerModule; stdio: string } | null> {
-  const candidates: Array<{ spec: string; stdio: () => string }> = [
-    { spec: "@aicad/mcp-server", stdio: () => fileURLToPath(import.meta.resolve("@aicad/mcp-server/stdio")) },
-  ];
-  if (dir !== null) candidates.push({ spec: pathToFileURL(join(dir, "dist", "index.js")).href, stdio: () => join(dir, "dist", "stdio.js") });
-  for (const c of candidates) {
-    try {
-      const stdio = c.stdio();
-      if (!existsSync(stdio)) continue;
-      const module = (await import(c.spec)) as Partial<McpServerModule>;
-      if (typeof module.createMcpHost === "function") return { module: module as McpServerModule, stdio };
-    } catch {
-      // not installed here
-    }
-  }
-  return null;
-}
+// ─── Agent runtime ─────────────────────────────────────────────────────────────────────────
 
 /**
  * Runtime mode: reports a phase that ended in a lockdown violation (§5.6 steps 4 and 5; the orchestrator itself stops
@@ -332,21 +308,6 @@ class ReportingRuntime implements AgentRuntime {
   }
 }
 
-/** `@aicad/agent/cli-runtime` (docs/CLI-PROVIDERS.md §8.3), typed against the agent package's own declarations. */
-export interface CliRuntimeModule {
-  CliAgentRuntime: new (options: CliAgentRuntimeOptions) => AgentRuntime;
-}
-
-export async function loadCliRuntime(): Promise<CliRuntimeModule | null> {
-  const spec = "@aicad/agent/cli-runtime";
-  try {
-    const m = (await import(spec)) as Partial<CliRuntimeModule>;
-    return typeof m.CliAgentRuntime === "function" ? (m as CliRuntimeModule) : null;
-  } catch {
-    return null;
-  }
-}
-
 // ─── Gateway ───────────────────────────────────────────────────────────────────────────────
 
 interface BuiltGateway {
@@ -362,7 +323,7 @@ export interface CliHooks {
   env(): Record<string, string>;
   onPlanUsage(usage: PlanUsage): void;
   onViolation(provider: CliProviderId, realPath: string, detail: string): void;
-  loadMcpServer(dir: string | null): Promise<{ module: McpServerModule; stdio: string } | null>;
+  loadMcpServer(dir: string | null, shimPath: string | null): Promise<{ module: McpServerModule; stdio: string } | null>;
   loadCliRuntime(): Promise<CliRuntimeModule | null>;
 }
 
@@ -398,7 +359,7 @@ async function cliParts(
   // The broker listens on `<root>/s/<8 hex>/b.sock`; a root too long for that is checked here, not at the first phase.
   const socketOk = brokerSocketFits(cli.workspaceRoot);
   if (needsMcp && socketOk && cli.exePath !== null) {
-    const loaded = await hooks.loadMcpServer(cli.mcpServerDir).catch(() => null);
+    const loaded = await hooks.loadMcpServer(cli.mcpServerDir, cli.mcpShimPath ?? null).catch(() => null);
     const shim = loaded ? shimCommand(cli, loaded.stdio) : null;
     if (loaded && shim) mcpHost = loaded.module.createMcpHost({ shim });
   }
@@ -832,6 +793,9 @@ export class AgentRunner {
         // (additive, ADR 0014) `cliMode` and, when the agent package provides it, the CLI agent runtime.
         ...built.agentOptions,
       };
+      // A bundled worker ships the role prompts next to it (bundle-paths.ts); unbundled, the agent package's own.
+      const promptsDir = this.#deps.promptsDir !== undefined ? this.#deps.promptsDir : bundledPromptsDir(dirname(fileURLToPath(import.meta.url)));
+      if (promptsDir !== null) options.promptsDir = promptsDir;
       const agent = new Agent(options);
       const result = await agent.run({
         prompt: composePrompt(request.prompt, request.selection),
