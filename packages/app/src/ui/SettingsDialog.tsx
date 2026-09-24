@@ -14,6 +14,7 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 import type { AgentRoleId, AgentSettingsView, CliModeSetting, CliProviderStatus, LocalProviderStatus, ModelProfileInfo, PlanUsageView, ProviderId, ProviderKeyStatus } from "../agent-protocol";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
+import { PrintingSection } from "./PrintingSettings";
 
 const ROLES: Array<{ id: AgentRoleId; label: string; hint: string }> = [
   { id: "designer", label: "Designer", hint: "Main loop: plan, build, repair" },
@@ -575,6 +576,7 @@ export function SettingsDialog(): ReactElement {
                 <p className="muted small">vLLM, LM Studio, OpenRouter… Empty uses each profile&apos;s default. Ollama has its own URL above.</p>
               </div>
             </section>
+            <PrintingSection />
             {view.transport === "live" && (
               <section className="settings-section">
                 <h3>Advanced</h3>

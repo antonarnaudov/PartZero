@@ -111,3 +111,28 @@ test("a wrong Bambu Studio path falls back to a plain export with Show in Finder
   const cleared = await page.evaluate(() => (window as unknown as { aicad: { print: PrintApi } }).aicad.print.setSlicerPath(null));
   expect(cleared).toMatchObject({ found: true, path: fakeApp, customPath: null });
 });
+
+test("Settings → Printing shows the profile and the Bambu Studio in use, and takes a path", async () => {
+  await page.getByTestId("toolbar").getByRole("button", { name: "Settings" }).click();
+  const section = page.getByTestId("settings-printing");
+  await expect(section).toContainText("Bambu Lab P2S · 0.4 mm · PLA");
+  await expect(section).toContainText("parts must fit 236 × 236 mm");
+  await expect(section).toContainText("not yet checked on your printer");
+  const row = page.getByTestId("settings-slicer");
+  await expect(row).toHaveAttribute("data-found", "true");
+  await expect(row).toContainText("02.06.00.51");
+  await expect(row).toContainText(fakeApp);
+  await section.scrollIntoViewIfNeeded();
+  await section.screenshot({ path: join(desktopRoot, "test-results", "settings-printing.png") });
+  // A path that isn't there: "not found", with the fix.
+  await row.getByRole("button", { name: "Change…" }).click();
+  const missing = join(root, "Elsewhere", "BambuStudio.app");
+  await row.getByLabel("Bambu Studio path").fill(missing);
+  await row.getByRole("button", { name: "Save" }).click();
+  await expect(row).toHaveAttribute("data-found", "false");
+  await expect(row).toContainText(`Bambu Studio isn't at ${missing}`);
+  await row.getByRole("button", { name: "Change…" }).click();
+  await row.getByRole("button", { name: "Use automatic" }).click();
+  await expect(row).toHaveAttribute("data-found", "true");
+  await page.keyboard.press("Escape");
+});
