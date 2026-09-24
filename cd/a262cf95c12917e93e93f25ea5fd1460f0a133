@@ -1,0 +1,326 @@
+packages/llm-gateway/test/cli/real-harness.ts
+  s_59c0dd2af30db2::t_a3b0224142f698 1,105-118
+  s_59c0dd2af30db2::t_626d2bbcfbeab9 2-14,16-21,24-48,54-87,89-104,119-120
+  s_59c0dd2af30db2::t_9ea07760408efd 15,22-23
+  s_59c0dd2af30db2::t_ccebf0e0c69551 88
+  s_59c0dd2af30db2::t_9c1e177df6f98f 49-53
+packages/llm-gateway/test/cli/fixtures/gemini/completion-mcp-submit.jsonl
+  s_59c0dd2af30db2::t_7bd702cb5c0299 2-7
+  s_59c0dd2af30db2::t_5f8cb19b906bfe 1
+packages/llm-gateway/test/cli/fake/fake-cli.mjs
+  s_59c0dd2af30db2::t_640e1761f451eb 1-51,57-58,67-70,82-125
+  s_59c0dd2af30db2::t_fdc9beb7539eec 52,54-56
+  s_59c0dd2af30db2::t_d4906b8648acb3 53
+  s_59c0dd2af30db2::t_c5444da6a93b6f 59-66,71-81
+packages/llm-gateway/src/cli/lockdown.ts
+  s_59c0dd2af30db2::t_4e496851b71873 7-8
+  s_59c0dd2af30db2::t_340cc4066a3361 17-29,37-47
+  s_59c0dd2af30db2::t_6f4a603c994009 70-71,74-75,81,85-124,126-138,140-156
+  s_59c0dd2af30db2::t_e6cd71c210bb4a 1-6,9-16,30-36,48-69,72-73,157-197
+  s_59c0dd2af30db2::t_bbbdc9082723a4 76-80,82-84,125,139
+packages/llm-gateway/src/cli/failure.ts
+  s_59c0dd2af30db2::t_b4cf7fe43f616b 1-66
+packages/llm-gateway/src/cli/ollama.ts
+  s_59c0dd2af30db2::t_a05b5b56c07c8c 132-190
+  s_59c0dd2af30db2::t_e67babb9a927f7 1-131,191-211
+packages/llm-gateway/test/cli/fixtures/gemini/text-json-valid.jsonl
+  s_59c0dd2af30db2::t_c5444da6a93b6f 1-4
+packages/llm-gateway/test/cli/fixtures/opencode/real-1.17.10-mcp-submit.jsonl
+  s_59c0dd2af30db2::t_a3b0224142f698 1-6
+packages/llm-gateway/src/cli/index.ts
+  s_59c0dd2af30db2::t_b900f5d87636e1 35-45
+  s_59c0dd2af30db2::t_a05b5b56c07c8c 10-19,62,67,79,86
+  s_59c0dd2af30db2::t_7fef9d180b9faa 1-9,20-34,46,48,50-55,57-61,63-66,68,70,72-78,80-85,87-89
+  s_59c0dd2af30db2::t_b6d1b78c52ebcf 47,49,56,69,71
+packages/llm-gateway/src/budget.ts
+  s_59c0dd2af30db2::t_a315d34fa9ee68 2,11-14,75-85
+  s_59c0dd2af30db2::t_a3cef0108d3786 86-87
+packages/llm-gateway/test/cli/fake/mini-mcp.mjs
+  s_59c0dd2af30db2::t_2e5cf69b3c61ca 1-52
+packages/llm-gateway/test/cli/fixtures/claude/completion-plain.jsonl
+  s_59c0dd2af30db2::t_47f9fc478be0e2 1-5
+packages/llm-gateway/src/builtin-profiles.ts
+  s_59c0dd2af30db2::t_6fe7176b8dca84 2,1131-1139
+  s_59c0dd2af30db2::t_01a7030180f583 1,3,766-889,891-912,914-932,934-953,965-1130
+  s_59c0dd2af30db2::t_b892a200193b85 42,122,195,267,337,492,572,677
+  s_59c0dd2af30db2::t_6f0e4b976527ac 890,913,933,954-957,962-964
+  s_59c0dd2af30db2::t_0582c79db1a4b1 958-961
+packages/llm-gateway/test/cli/fixtures/cursor/stream.jsonl
+  s_59c0dd2af30db2::t_7bd702cb5c0299 1-6
+packages/llm-gateway/test/cli/gateway.test.ts
+  s_59c0dd2af30db2::t_28d79b1734ad8c 212,241-243
+  s_59c0dd2af30db2::t_65048576e140ee 256-257
+  s_59c0dd2af30db2::t_d4906b8648acb3 253
+  s_59c0dd2af30db2::t_2c2728e48d59b3 255
+  s_59c0dd2af30db2::t_fdc9beb7539eec 254,258-259
+  s_59c0dd2af30db2::t_8a1cc3629a0a03 1-211,213-240,244-252,260-298
+packages/llm-gateway/test/cli/fixtures/gemini/real-0.49.0-unavailable-tool.jsonl
+  s_59c0dd2af30db2::t_982cdc6b827536 1-8
+packages/llm-gateway/src/cli/opencode.ts
+  s_59c0dd2af30db2::t_e026fc8a2fcab6 21-22,26,29-39,105,121-122,189,196,210,228-229,252-253,257-264,270,282-283,311,340
+  s_59c0dd2af30db2::t_3fc994c5a279e0 133-137,139,145,342,347
+  s_59c0dd2af30db2::t_9c83a1026ce685 428-429
+  s_59c0dd2af30db2::t_448e7159cf6c9a 312-313
+  s_59c0dd2af30db2::t_0d13e723a859fc 19
+  s_59c0dd2af30db2::t_6f0e4b976527ac 337,346
+  s_59c0dd2af30db2::t_cbf65efc476ad5 1-4,6-18,20,24-25,27-28,72-104,106-109,115-120,123-132,138,140-144,146-188,197-199,202-209,211-212,214-227,230-251,254-256,271-281,285-307,314-336,338-339,341,343-345,348-380,387-389,393-427,430-447
+  s_59c0dd2af30db2::t_b01c0b4edd3d56 5
+  s_59c0dd2af30db2::t_ba6638576d4830 200-201
+  s_59c0dd2af30db2::t_9078648192f196 23,40-71,110-114,190-195,213,265-269,284,308-310,381-386,390-392
+packages/llm-gateway/test/cli/fixtures/codex/unknown-item.jsonl
+  s_59c0dd2af30db2::t_06b2ef164305d2 1-6
+packages/llm-gateway/src/cli/adapter.ts
+  s_59c0dd2af30db2::t_4ed024602fb649 1-23,25-26,28-175,179,183-185,188-201,205-206,211-213,215-227,230-233,235-268
+  s_59c0dd2af30db2::t_b68518d04cf854 228-229,234
+  s_59c0dd2af30db2::t_08c5776be22ae8 180-182
+  s_59c0dd2af30db2::t_9ee2815664ee58 177-178
+  s_59c0dd2af30db2::t_0b2e8a3f763d3c 24,186-187
+  s_59c0dd2af30db2::t_87fdb0bbddc8cf 27,176,202-204,207-210,214
+packages/llm-gateway/test/cli-live/claude.live.test.ts
+  s_59c0dd2af30db2::t_9072593073fc9b 144
+  s_59c0dd2af30db2::t_d7027266736eee 138-143,145-157
+  s_59c0dd2af30db2::t_6c0dfe637bd832 1-7,9-137,158-238
+  s_59c0dd2af30db2::t_3f569a8cb85ecd 8
+packages/llm-gateway/test/cli/fixtures/codex/builtin-command.jsonl
+  s_59c0dd2af30db2::t_7bd702cb5c0299 1-3
+packages/llm-gateway/test/cli/fixtures/help/cursor-agent-trust.synthetic.txt
+  s_59c0dd2af30db2::t_7bd702cb5c0299 1-64
+packages/llm-gateway/src/cli/parse.ts
+  s_59c0dd2af30db2::t_9401f9fa9b54ab 1-29,31,33-34,36,43-90
+  s_59c0dd2af30db2::t_48d979ce3e264c 30,32,35,37-42
+packages/llm-gateway/test/cli/fixtures/help/codex-exec-0.156.1.synthetic.txt
+  s_59c0dd2af30db2::t_7bd702cb5c0299 1-49
+packages/llm-gateway/src/cli/envelope.ts
+  s_59c0dd2af30db2::t_875a60a1fc68c5 217
+  s_59c0dd2af30db2::t_0b2e8a3f763d3c 298-301,304-315
+  s_59c0dd2af30db2::t_979280e6f478ae 163,166-173
+  s_59c0dd2af30db2::t_a968f0f424c7da 147
+  s_59c0dd2af30db2::t_be6918d1029523 1-117,140-146,148-162,164-165,174-216,218-297,302-303,316
+  s_59c0dd2af30db2::t_b57e48b0509d31 118-139
+packages/llm-gateway/test/cli/real-opencode.test.ts
+  s_59c0dd2af30db2::t_a3b0224142f698 125-127,177-179
+  s_59c0dd2af30db2::t_f5251d1a833d81 8,196-221
+  s_59c0dd2af30db2::t_1a5e62fb79c266 153-157,159,268
+  s_59c0dd2af30db2::t_a9d214523e391e 1-7,9-10,12-48,54-58,60-75,97-124,128-136,138-141,150-152,158,160-167,169-173,175-176,180-190,259-263,278
+  s_59c0dd2af30db2::t_b7cae5243fc735 269-271
+  s_59c0dd2af30db2::t_bb215f1f398790 11,49-53,59,76-96,142-149,168,174,191-195,222-258,264
+  s_59c0dd2af30db2::t_3fc994c5a279e0 137,265-267,272-277
+packages/llm-gateway/src/cli/events.ts
+  s_59c0dd2af30db2::t_e9e1b2013d97de 21-31
+  s_59c0dd2af30db2::t_87fdb0bbddc8cf 56-72
+  s_59c0dd2af30db2::t_5568dda284d8ef 1-20,32-55
+packages/llm-gateway/test/cli-live/fixtures/ping-mcp.mjs
+  s_59c0dd2af30db2::t_87725865ac8424 1-39
+packages/llm-gateway/test/cli/fixtures/claude/side-calls-result.jsonl
+  s_59c0dd2af30db2::t_06b2ef164305d2 1-3
+packages/llm-gateway/test/cli/hardening.test.ts
+  s_59c0dd2af30db2::t_b90b34921a9f3b 1-259,261,263,266-268,271-285,287-378
+  s_59c0dd2af30db2::t_2c2728e48d59b3 286
+  s_59c0dd2af30db2::t_3fd09caf3b7fcc 260,262,264-265,269-270
+packages/llm-gateway/test/cli/fixtures/opencode/running-builtin.jsonl
+  s_59c0dd2af30db2::t_06b2ef164305d2 1-4
+packages/llm-gateway/src/cli/detect.ts
+  s_59c0dd2af30db2::t_0eee49df6a936f 1-155,159-165,168-171,178-182,185-188,190-191,194-203,206,210-225
+  s_59c0dd2af30db2::t_245db30b224276 156-158,166-167,172-177,183-184,189,192-193,204-205,207-209
+packages/llm-gateway/src/transport/transport.ts
+  s_59c0dd2af30db2::t_3e926e0a3ff471 14-18
+packages/llm-gateway/test/cli/env-workspace.test.ts
+  s_59c0dd2af30db2::t_92ea1d94541f40 1-134
+packages/llm-gateway/src/cli/registry.ts
+  s_59c0dd2af30db2::t_c0a3662dc629e6 1-22
+packages/llm-gateway/test/cli/helpers.ts
+  s_59c0dd2af30db2::t_c5444da6a93b6f 56-58
+  s_59c0dd2af30db2::t_317698e2cab4e4 1-55,59-91
+packages/llm-gateway/test/cli/fixtures/help/claude-2.1.260.txt
+  s_59c0dd2af30db2::t_a029f6907df419 1-304
+packages/llm-gateway/src/cli/base.ts
+  s_59c0dd2af30db2::t_0f504e3c339b81 1-3,9,29,60-87,144,154,163,166-169,260,262,341-348,377-378,389-392,421-424,498-505
+  s_59c0dd2af30db2::t_0f875538544225 362-365
+  s_59c0dd2af30db2::t_8f6ee2fd6f934a 240-247
+  s_59c0dd2af30db2::t_fa4fd40e99803a 443-445,451-457
+  s_59c0dd2af30db2::t_5c83ad4b0b3fb9 100,103,108-109,114,120-128,139,147,156,164-165,170-171,356,411,413,482,487-489,491-494,507
+  s_59c0dd2af30db2::t_a3413c79e8db3c 274
+  s_59c0dd2af30db2::t_6da71c2cfccf41 4-7,10-28,30-59,88-99,101-102,104-107,110-113,115-119,129-138,140-143,145-146,148-153,155,157-162,172-239,248-259,261,263-273,275-340,349-355,357-361,366-376,379-388,393-410,412,414-420,425-442,446-450,458-481,483-486,490,495-497,506,508-529
+  s_59c0dd2af30db2::t_7c8c7d24edc304 8
+packages/llm-gateway/src/cli/cursor.ts
+  s_59c0dd2af30db2::t_6f0e4b976527ac 155
+  s_59c0dd2af30db2::t_18f480a8a5312f 99,117
+  s_59c0dd2af30db2::t_ef852c02e1831a 1-90,93-98,100-116,118-154,156-179
+  s_59c0dd2af30db2::t_1148ad46dcbee4 91-92
+packages/llm-gateway/test/cli/fixtures/gemini/real-0.49.0-mcp-submit.jsonl
+  s_59c0dd2af30db2::t_a3b0224142f698 1-6
+packages/llm-gateway/test/cli/review-round2.test.ts
+  s_59c0dd2af30db2::t_45ab4dbeb8e3b1 1-2,4-31,34-280,282-302,304-346
+  s_59c0dd2af30db2::t_2e00def00c15cb 3,32-33,281,303
+packages/llm-gateway/test/cli/fixtures/opencode/runtime-mcp-submit.jsonl
+  s_59c0dd2af30db2::t_7bd702cb5c0299 1-7
+packages/llm-gateway/test/cli/fixtures/codex/runtime-mcp.jsonl
+  s_59c0dd2af30db2::t_7bd702cb5c0299 1-9
+packages/llm-gateway/src/adapters/adapter.ts
+  s_59c0dd2af30db2::t_c9661992049509 86
+packages/llm-gateway/test/cli/fixtures/claude/unoffered-tool-call.jsonl
+  s_59c0dd2af30db2::t_61c088f2af38ee 1-25
+packages/llm-gateway/test/cli/real-gemini.test.ts
+  s_59c0dd2af30db2::t_36a08ba6140158 82-87,205,209
+  s_59c0dd2af30db2::t_5f8cb19b906bfe 219,233-235,248,251
+  s_59c0dd2af30db2::t_a3b0224142f698 10,229-231,282-284
+  s_59c0dd2af30db2::t_1acfd1191747c5 2-5,7-9,11-19,24-26,28-30,42-55,76-81,88-97,103-113,117-124,126-127,133-170,172-176,180-184,195-196,198-201,203-204,206-208,210-212,216-218,220-228,232,236-247,249,263-278,280-281,285-288,362-364,379-383
+  s_59c0dd2af30db2::t_65048576e140ee 213-215,250,255-257,259-261
+  s_59c0dd2af30db2::t_4d16e0de5ccfa8 1,6,20-23,27,31-41,56-75,98-102,114-116,125,128-132,171,177-179,185-194,197,202,279,289-361,365-378
+  s_59c0dd2af30db2::t_99e1566540fa58 252-254,258,262
+packages/llm-gateway/test/cli/fixtures/help/opencode-run-1.17.10.txt
+  s_59c0dd2af30db2::t_a029f6907df419 1-41
+packages/llm-gateway/test/cli/fixtures/cursor/builtin-shell.jsonl
+  s_59c0dd2af30db2::t_7bd702cb5c0299 1-2
+packages/llm-gateway/test/cli/fixtures/gemini/quota-terminal.jsonl
+  s_59c0dd2af30db2::t_7bd702cb5c0299 1-3
+packages/llm-gateway/src/gateway.ts
+  s_59c0dd2af30db2::t_8293c3b7cf411f 15,22-25,27,128-146,159,171,239,300,329-335,371-379
+  s_59c0dd2af30db2::t_9b65d6ab9f4aaf 380-381
+packages/llm-gateway/test/cli/fixtures/gemini/real-0.49.0-plain.jsonl
+  s_59c0dd2af30db2::t_a3b0224142f698 1-4
+packages/llm-gateway/src/cli/codex.ts
+  s_59c0dd2af30db2::t_ba6638576d4830 160-161
+  s_59c0dd2af30db2::t_b01c0b4edd3d56 5
+  s_59c0dd2af30db2::t_6f0e4b976527ac 299,309
+  s_59c0dd2af30db2::t_115dd0c9b6eabf 19,23,26-31,82-83,110,222-225,228-229,295-298,302
+  s_59c0dd2af30db2::t_8578a90a2ecfe7 1-4,6-18,20-22,24-25,32-81,84-109,111-159,162-221,226-227,230-281,283-294,300-301,303-308,310-376
+  s_59c0dd2af30db2::t_b68518d04cf854 282
+packages/llm-gateway/test/cli/fixtures/codex/completion-output-schema.jsonl
+  s_59c0dd2af30db2::t_7bd702cb5c0299 1-5
+packages/llm-gateway/src/cli/gemini.ts
+  s_59c0dd2af30db2::t_b01c0b4edd3d56 8
+  s_59c0dd2af30db2::t_e97101fbdfe68d 28,30,117,178-179,212,215-216,222-224,236-237,256,261,271,290,299,327,336,338-339,346-348,354-355,364-368,381,394-400,410
+  s_59c0dd2af30db2::t_a968f0f424c7da 202
+  s_59c0dd2af30db2::t_5f8cb19b906bfe 1,333,349-353,356-363
+  s_59c0dd2af30db2::t_61d5302398d734 34-75,106-110,118-130,175-177,213-214,272-275,342-344
+  s_59c0dd2af30db2::t_0d13e723a859fc 26
+  s_59c0dd2af30db2::t_6f0e4b976527ac 337
+  s_59c0dd2af30db2::t_ba6638576d4830 206-207
+  s_59c0dd2af30db2::t_94b8cb6e6e510a 4,328-332,334-335,340-341
+  s_59c0dd2af30db2::t_478d198b3dbdfd 17-18,27,31
+  s_59c0dd2af30db2::t_06c95455d76943 2-3,5-7,9-16,19-25,29,32-33,76-105,111-116,131-174,180-201,203-205,208-211,217-221,225-235,238-255,257-260,262-270,276-289,291-298,300-326,345,369-380,382-393,401-409,411
+packages/llm-gateway/test/cli/lockdown-detect.test.ts
+  s_59c0dd2af30db2::t_bc381fb2ff4575 1-165
+packages/llm-gateway/src/cli/workspace.ts
+  s_59c0dd2af30db2::t_7b82bda4c509ca 4,27-82,84-108
+  s_59c0dd2af30db2::t_797d5f503b7b43 1-3,5-26,83,109-203
+packages/llm-gateway/src/cli/mcp.ts
+  s_59c0dd2af30db2::t_2f1e73cd93e11a 1-94
+packages/llm-gateway/src/errors.ts
+  s_59c0dd2af30db2::t_35084e2da0ad82 21-28
+packages/llm-gateway/src/types.ts
+  s_59c0dd2af30db2::t_b04a7dc55f01b6 12-47
+  s_59c0dd2af30db2::t_2df9682de83565 272-305
+  s_59c0dd2af30db2::t_2f10ebbf1464e3 205-206
+  s_59c0dd2af30db2::t_e8971d4312e098 164-165
+packages/llm-gateway/test/cli/fixtures/opencode/mcp-list-1.17.10-empty.txt
+  s_59c0dd2af30db2::t_698f3165bed644 1-6
+packages/llm-gateway/test/cli/fixtures/codex/usage-limit.jsonl
+  s_59c0dd2af30db2::t_7bd702cb5c0299 1-4
+packages/llm-gateway/src/cli/provider.ts
+  s_59c0dd2af30db2::t_0f21bf1cdbe780 1-130,133-163,170-260
+  s_59c0dd2af30db2::t_7eb084fe2dc5b8 164-169
+  s_59c0dd2af30db2::t_4db13a56c8131b 131-132
+packages/llm-gateway/test/cli/fixtures/opencode/auth-401.jsonl
+  s_59c0dd2af30db2::t_7bd702cb5c0299 1-2
+packages/llm-gateway/src/cli/transport.ts
+  s_59c0dd2af30db2::t_7eb084fe2dc5b8 7,80
+  s_59c0dd2af30db2::t_521970e4b90c17 1-6,8,10-79,81-134,137-148,152-192,194-271
+  s_59c0dd2af30db2::t_b68518d04cf854 135-136,149-151
+  s_59c0dd2af30db2::t_87fdb0bbddc8cf 9,193
+packages/llm-gateway/test/cli/args.test.ts
+  s_59c0dd2af30db2::t_55c76fa28b73c9 1,3-72,75-133,137-143,146-152,157-164,176-177,179-183,186-206,208-255,257-265,268-294
+  s_59c0dd2af30db2::t_5f8cb19b906bfe 145
+  s_59c0dd2af30db2::t_f2d7856ab4b4c3 2,73-74,134,144,155-156,165-175,178,184-185,207,256,266-267
+  s_59c0dd2af30db2::t_2c2728e48d59b3 135-136,153-154
+packages/llm-gateway/test/cli/fixtures/help/cursor-agent-2026.01.28.txt
+  s_59c0dd2af30db2::t_a029f6907df419 1-63
+packages/llm-gateway/test/cli/fixtures/claude/not-logged-in.jsonl
+  s_59c0dd2af30db2::t_07064631680f26 1-3
+packages/llm-gateway/test/cli/fixtures/opencode/recovered-429.jsonl
+  s_59c0dd2af30db2::t_06b2ef164305d2 1-8
+packages/llm-gateway/src/cli/process.ts
+  s_59c0dd2af30db2::t_a3413c79e8db3c 2,418-436,440,451-455,462,468-471,517-522
+  s_59c0dd2af30db2::t_9e7e5c238182d5 1,3-400,402-417,437-439,441-450,456-461,463-467,472-516,523-536
+  s_59c0dd2af30db2::t_5944e68b1e7da9 401
+packages/llm-gateway/test/cli/parsers.test.ts
+  s_59c0dd2af30db2::t_f19bff4689646a 1-114,116-202
+  s_59c0dd2af30db2::t_6a3ad3196d0f07 115
+packages/llm-gateway/test/cli/fixtures/gemini/builtin-tool.jsonl
+  s_59c0dd2af30db2::t_7bd702cb5c0299 1-4
+packages/llm-gateway/test/cli/fixtures/gemini/text-json-invalid.jsonl
+  s_59c0dd2af30db2::t_c5444da6a93b6f 1-3
+packages/llm-gateway/test/cli/fixtures/claude/runtime-mcp-ping.jsonl
+  s_59c0dd2af30db2::t_07064631680f26 1-8
+packages/llm-gateway/test/cli/fixtures/opencode/mcp-list-1.17.10-servers.txt
+  s_59c0dd2af30db2::t_698f3165bed644 1-15
+packages/llm-gateway/test/cli/fixtures/claude/completion-json-schema.jsonl
+  s_59c0dd2af30db2::t_47f9fc478be0e2 1-9
+packages/llm-gateway/src/profile.ts
+  s_59c0dd2af30db2::t_903f2376c5fdf0 182-190,201-235
+  s_59c0dd2af30db2::t_c18fc9937d93c9 120-121
+  s_59c0dd2af30db2::t_97737f9f0401de 74-77
+  s_59c0dd2af30db2::t_7f366ebdb37fa9 151-152
+  s_59c0dd2af30db2::t_82ac7f4fcd5bbf 191-200
+  s_59c0dd2af30db2::t_11c5d7dd73f57f 13-33
+  s_59c0dd2af30db2::t_6fe7176b8dca84 3,239-249
+packages/llm-gateway/test/cli/fixtures/opencode/real-1.17.10-plain.jsonl
+  s_59c0dd2af30db2::t_a3b0224142f698 1-3
+packages/llm-gateway/src/cli/env.ts
+  s_59c0dd2af30db2::t_e39718e7d297a4 1-86,88-90
+  s_59c0dd2af30db2::t_25ed84c631e64b 87
+packages/llm-gateway/src/cli/claude.ts
+  s_59c0dd2af30db2::t_92602eafede8ca 150-155,197
+  s_59c0dd2af30db2::t_82dacbd08fc048 3,387-388,391-392,394,396-401,404-409
+  s_59c0dd2af30db2::t_451528c45360f2 148-149,389-390,395,403
+  s_59c0dd2af30db2::t_f8e22a6a766c0b 1-2,4-147,156-196,198-386,393,402,410-435
+packages/llm-gateway/test/cli/fixtures/codex/plain.jsonl
+  s_59c0dd2af30db2::t_06b2ef164305d2 1-5
+packages/llm-gateway/test/cli/envelope.test.ts
+  s_59c0dd2af30db2::t_23cee636ba7bd7 10,171,173,175-192
+  s_59c0dd2af30db2::t_dc592a47787b90 1-9,11-170,172,174,193-194
+packages/llm-gateway/test/cli/fixtures/opencode/builtin-bash.jsonl
+  s_59c0dd2af30db2::t_7bd702cb5c0299 1-2
+packages/llm-gateway/test/cli/process.test.ts
+  s_59c0dd2af30db2::t_4ae7d4f25449e0 99
+  s_59c0dd2af30db2::t_8b056b72c3fc4c 1-98,100-179
+packages/llm-gateway/test/cli/profiles-ollama.test.ts
+  s_59c0dd2af30db2::t_1a5e62fb79c266 127-128
+  s_59c0dd2af30db2::t_e982863fcb70ee 1-126,129-201
+packages/llm-gateway/src/index.ts
+  s_59c0dd2af30db2::t_6fe7176b8dca84 8,14-23
+  s_59c0dd2af30db2::t_c6553f75a79dc9 24-47
+packages/llm-gateway/test/cli/fixtures/help/gemini-0.49.0.txt
+  s_59c0dd2af30db2::t_a029f6907df419 1-45
+packages/llm-gateway/package.json
+  s_59c0dd2af30db2::t_7aa9fb18dcab2d 14-17,27
+packages/llm-gateway/test/cli/fixtures/opencode/real-1.17.10-length.jsonl
+  s_26f5e669d3043c::t_bd9e52769a607d 1-3
+packages/llm-gateway/test/cli/fixtures/opencode/real-1.17.10-unavailable-tool.jsonl
+  s_26f5e669d3043c::t_d032b9c7a71da9 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "cda262cf95c12917e93e93f25ea5fd1460f0a133",
+  "prompts": {},
+  "sessions": {
+    "s_26f5e669d3043c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84d5bd8e-bf89-4d7c-9932-e410f3e06481",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    },
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
