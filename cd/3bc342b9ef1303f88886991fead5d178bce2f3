@@ -1,0 +1,45 @@
+.github/pull_request_template.md
+  s_59c0dd2af30db2::t_135ff552aa3899 25
+  s_59c0dd2af30db2::t_c954081b52aff8 1-24,26-31
+LICENSING.md
+  s_59c0dd2af30db2::t_0d5db1422d4468 22
+CONTRIBUTING.md
+  s_59c0dd2af30db2::t_74982bb446317c 1-60
+SECURITY.md
+  s_59c0dd2af30db2::t_45f5bccf2cac5f 1-46
+README.md
+  s_59c0dd2af30db2::t_c0fa78b70bbb93 23,48-63
+docs/PLAN-2026-09-23.md
+  s_59c0dd2af30db2::t_0d5db1422d4468 4,10-11,656
+CODE_OF_CONDUCT.md
+  s_59c0dd2af30db2::t_4df36d920f4bb0 1-18
+docs/adr/0001-open-core-licensing.md
+  s_59c0dd2af30db2::t_0d5db1422d4468 49,60-66
+  s_59c0dd2af30db2::t_1db0a0770f660e 67
+docs/audits/2026-09-23-phase0-audit.md
+  s_59c0dd2af30db2::t_0d5db1422d4468 3
+.github/ISSUE_TEMPLATE/config.yml
+  s_59c0dd2af30db2::t_95e34d8aeefcee 1-8
+CLAUDE.md
+  s_59c0dd2af30db2::t_0d5db1422d4468 120
+.github/ISSUE_TEMPLATE/bug_report.md
+  s_59c0dd2af30db2::t_e3a52a6f8ba94b 1-56
+packages/desktop/test/cli-providers.test.ts
+  s_59c0dd2af30db2::t_0d5db1422d4468 707
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "cd3bc342b9ef1303f88886991fead5d178bce2f3",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
