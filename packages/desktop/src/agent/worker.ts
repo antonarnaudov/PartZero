@@ -17,6 +17,7 @@
 import { killAllCliProcesses } from "@aicad/llm-gateway/cli";
 import { PROTOCOL_VERSION, scrubKeyLike, type HostToWorker, type WorkerToHost } from "./protocol.js";
 import { AgentRunner } from "./runner.js";
+import { workerSelfTest } from "./self-test.js";
 
 interface ParentPort {
   on(event: "message", listener: (e: { data: unknown }) => void): void;
@@ -36,6 +37,12 @@ port.on("message", (e) => {
   const m = e.data as HostToWorker | undefined;
   if (!m || typeof m !== "object" || m.v !== PROTOCOL_VERSION) return;
   if (m.type === "start" || m.type === "answer" || m.type === "stop") runner.handle(m);
+  if (m.type === "selftest") {
+    void workerSelfTest({ mcpShimPath: m.mcpShimPath, mcpServerDir: m.mcpServerDir }).then(
+      (report) => post({ type: "selftest", v: PROTOCOL_VERSION, report }),
+      (e: unknown) => post({ type: "log", v: PROTOCOL_VERSION, level: "error", message: scrubKeyLike(`self-test failed: ${e instanceof Error ? e.message : String(e)}`) }),
+    );
+  }
 });
 
 process.on("unhandledRejection", (reason) => {
