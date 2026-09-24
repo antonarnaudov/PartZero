@@ -26,7 +26,7 @@ import { documentStatePath, PathGrants, RecentFiles } from "./files.js";
 import { findRepoRoot, forgeInfo, locateForgeBinary } from "./forge-cli.js";
 import { registerIpc } from "./ipc.js";
 import { buildMenuTemplate } from "./menu.js";
-import { ProfileStore } from "./profiles.js";
+import { agentConventionsLine, ProfileStore } from "./profiles.js";
 import { APP_ENTRY_URL, isTrustedFrameUrl } from "./protocol-core.js";
 import { registerAppScheme, serveApp } from "./protocol.js";
 import { defaultSlicerSystem } from "./slicer.js";
@@ -262,6 +262,10 @@ function start(): void {
       // runAsNode fuse off, so there the shim is unavailable (Claude Code needs none; see AGENT-IN-APP.md).
       exePath: app.isPackaged ? null : app.getPath("exe"),
     });
+    // The printer profile behind "Open in Bambu Studio" also sets every agent run's defaults (ALPHA-0-PLAN W5):
+    // FDM, and the machine, material and clearance line, read at each start.
+    const printProfiles = new ProfileStore(join(app.getPath("userData"), "machine-profiles.json"), (m) => console.warn(`[aicad] ${m}`));
+    agent.host.setRunDefaults(() => ({ process: "fdm", conventions: agentConventionsLine(printProfiles.printer(), printProfiles.material()) }));
     // Warm the provider detection (CLI versions, lockdown, logins, Ollama; no model call) in the background, so
     // Settings and the first run do not wait for it.
     const warm = setTimeout(() => void agent?.host.settingsView().catch((e: unknown) => console.warn(`[aicad-agent] provider detection failed: ${e instanceof Error ? e.message : String(e)}`)), 1500);
@@ -273,7 +277,7 @@ function start(): void {
         forgeBin,
         printsDir: overrides.printsDir ?? join(app.getPath("home"), "PartZero", "Prints"),
         appVersion: app.getVersion(),
-        profiles: new ProfileStore(join(app.getPath("userData"), "machine-profiles.json"), (m) => console.warn(`[aicad] ${m}`)),
+        profiles: printProfiles,
         slicer: defaultSlicerSystem({ searchDirs: overrides.slicerDirs, openBin: overrides.openBin }),
         revealInFolder: (path) => shell.showItemInFolder(path),
       },

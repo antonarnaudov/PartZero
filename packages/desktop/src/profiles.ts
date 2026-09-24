@@ -219,7 +219,7 @@ export function agentConventionsLine(printer: MachineProfile, material: Material
   const c = material.clearances;
   return [
     `Machine: ${printer.name}, FDM, ${n(printer.nozzle)} mm nozzle, bed ${n(b.x)} × ${n(b.y)} × ${n(b.z)} mm;`,
-    `every part must fit ${n(b.x - 2 * printer.bedMargin)} × ${n(b.y - 2 * printer.bedMargin)} mm in X and Y and ${n(b.z)} mm in Z, modelled in print orientation (Z up, the face on the bed at z = 0).`,
+    `every part must fit ${n(b.x - 2 * printer.bedMargin)} × ${n(b.y - 2 * printer.bedMargin)} mm in X and Y and ${n(b.z)} mm in Z, modelled in print orientation (Z up, the face on the bed at z = 0), every body resting on the bed side by side, none stacked above another.`,
     `Material: ${material.name} (${material.clearanceSource} values): diametral clearances press ${n(c.press)}, slip ${n(c.slip)}, running ${n(c.running)}, press on metal ${n(c.pressMetal)} mm;`,
     `walls at least ${n(material.minWall)} mm; overhangs up to ${n(material.maxOverhangDeg)}° from vertical print without supports.`,
   ].join(" ");

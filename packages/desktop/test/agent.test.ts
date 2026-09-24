@@ -294,6 +294,34 @@ describe("agent host (main process)", () => {
     expect(workers).toHaveLength(1);
   });
 
+  it("starts every run with the printer profile's process and conventions, read at each start (W5)", async () => {
+    const { h, workers } = host({ keys: { anthropic: "[REDACTED]" } });
+    let material = "PLA";
+    h.setRunDefaults(() => ({ process: "fdm", conventions: `Machine: Bambu Lab P2S; Material: ${material}.` }));
+    const first = (await h.start(START)) as { ok: true; runId: string };
+    const start = workers[0]!.sent[0] as Extract<HostToWorker, { type: "start" }>;
+    expect(start.request.process).toBe("fdm");
+    expect(start.config.conventions).toBe("Machine: Bambu Lab P2S; Material: PLA.");
+    workers[0]!.reply({ type: "event", v: 1, event: { v: 1, runId: first.runId, seq: 1, t: 1, type: "result", result: {} as never } });
+    // A material change applies to the next run; a process the request names is kept.
+    material = "PETG";
+    await h.start({ ...START, process: "cnc" });
+    const next = workers[0]!.sent.at(-1) as Extract<HostToWorker, { type: "start" }>;
+    expect(next.request.process).toBe("cnc");
+    expect(next.config.conventions).toContain("Material: PETG.");
+  });
+
+  it("starts without the printer context when the profile can't be read", async () => {
+    const { h, workers } = host({ keys: { anthropic: "[REDACTED]" } });
+    h.setRunDefaults(() => {
+      throw new Error("machine-profiles.json is unreadable");
+    });
+    expect(await h.start(START)).toMatchObject({ ok: true });
+    const start = workers[0]!.sent[0] as Extract<HostToWorker, { type: "start" }>;
+    expect(start.request).toEqual(START);
+    expect(start.config.conventions).toBeUndefined();
+  });
+
   it("reports a crashed agent process as a terminal error event and forks a new one next time", async () => {
     const { h, workers, events } = host({ transport: "scripted" });
     const r = (await h.start(START)) as { ok: true; runId: string };

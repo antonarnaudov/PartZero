@@ -366,6 +366,11 @@ export interface WorkerRunConfig {
   localEndpoints?: string[];
   /** Notes the run starts with (e.g. a plan-usage warning from the detection cache). */
   notes?: string[];
+  /**
+   * The machine and material conventions line of the active printer profile (ALPHA-0-PLAN W5), for
+   * the Agent's `conventions` option. The runner passes it where it builds the Agent (W4b).
+   */
+  conventions?: string;
 }
 
 export type HostToWorker =

@@ -114,6 +114,16 @@ export interface AgentHostDeps {
   killProcessGroup?(pid: number): void;
 }
 
+/**
+ * What every run starts with unless its request says otherwise (ALPHA-0-PLAN W5 "Agent context"):
+ * the manufacturing process and one line of machine and material conventions from the active
+ * printer profile (`profiles.ts` `agentConventionsLine`).
+ */
+export interface RunDefaults {
+  process?: "fdm" | "cnc" | "laser" | "any";
+  conventions?: string;
+}
+
 interface ActiveRun {
   runId: string;
   startedAt: number;
@@ -146,6 +156,7 @@ export class AgentHost {
   #cliGroups: number[] = [];
   /** The worker that reported {@link #cliGroups}: a replaced worker's late exit must not kill its successor's CLIs. */
   #cliGroupsOwner: WorkerHandle | null = null;
+  #runDefaults: (() => RunDefaults) | null = null;
 
   constructor(deps: AgentHostDeps) {
     this.#deps = deps;
@@ -154,6 +165,24 @@ export class AgentHost {
 
   get activeRunId(): string | null {
     return this.#run?.runId ?? null;
+  }
+
+  /**
+   * Set the {@link RunDefaults} provider (the main process passes the printer profile's). It is
+   * read at every start, so a material change applies to the next run and never to a running one.
+   */
+  setRunDefaults(provider: (() => RunDefaults) | null): void {
+    this.#runDefaults = provider;
+  }
+
+  #defaults(): RunDefaults {
+    try {
+      return this.#runDefaults?.() ?? {};
+    } catch (e) {
+      // A broken profile file must not block the agent: run without the printer context.
+      this.#deps.log?.("warn", `run defaults unavailable: ${e instanceof Error ? e.message : String(e)}`);
+      return {};
+    }
   }
 
   get registry(): ProfileRegistry {
@@ -293,7 +322,10 @@ export class AgentHost {
     }
     if (cliConfig) config.cli = cliConfig;
     if (notes.length > 0) config.notes = notes;
-    worker.postMessage({ type: "start", v: PROTOCOL_VERSION, runId, request, config, secrets });
+    const defaults = this.#defaults();
+    if (defaults.conventions) config.conventions = defaults.conventions;
+    const withDefaults = request.process === undefined && defaults.process ? { ...request, process: defaults.process } : request;
+    worker.postMessage({ type: "start", v: PROTOCOL_VERSION, runId, request: withDefaults, config, secrets });
     return { ok: true, runId };
   }
 
