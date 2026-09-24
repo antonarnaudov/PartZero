@@ -1,0 +1,27 @@
+packages/llm-gateway/test/cli/lockdown-detect.test.ts
+  s_59c0dd2af30db2::t_125c8c4551326f 125-159
+  s_59c0dd2af30db2::t_ea540c07c919de 2,5
+packages/llm-gateway/src/cli/detect.ts
+  s_59c0dd2af30db2::t_167ac4175eec58 122
+  s_59c0dd2af30db2::t_9bfa9160951a06 21-26,36,43-88
+  s_59c0dd2af30db2::t_64e2ee2e3836c2 2-3
+  s_59c0dd2af30db2::t_3f8e2fd8d90a6d 89
+packages/llm-gateway/src/cli/index.ts
+  s_59c0dd2af30db2::t_76d0497c6b1412 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "248738026502cee4bd0689895b33d563aed51a6f",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
