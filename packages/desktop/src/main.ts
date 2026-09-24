@@ -36,6 +36,7 @@ import { findRepoRoot, forgeInfo, forgeSelfCheck, locateForgeBinary } from "./fo
 import { registerIpc } from "./ipc.js";
 import { formatConsoleArgs, logFor, RotatingLog, type LogLevel } from "./log-file.js";
 import { buildMenuTemplate } from "./menu.js";
+import { agentConventionsLine, ProfileStore } from "./profiles.js";
 import { APP_ENTRY_URL, isTrustedFrameUrl } from "./protocol-core.js";
 import { registerAppScheme, serveApp } from "./protocol.js";
 import {
@@ -55,6 +56,7 @@ import {
   type RendererSnapshot,
   type SelfTestReport,
 } from "./self-test.js";
+import { defaultSlicerSystem } from "./slicer.js";
 import { mainWindowWebPreferences } from "./web-preferences.js";
 import { loadWindowState, MIN_SIZE, saveWindowState, type WindowState } from "./window-state.js";
 
@@ -370,6 +372,10 @@ function start(): void {
       mcpShimPath,
       apiKeys: buildInfo.flags.apiKeys,
     });
+    // The printer profile behind "Open in Bambu Studio" also sets every agent run's defaults (ALPHA-0-PLAN W5):
+    // FDM, and the machine, material and clearance line, read at each start.
+    const printProfiles = new ProfileStore(join(app.getPath("userData"), "machine-profiles.json"), (m) => console.warn(`[aicad] ${m}`));
+    agent.host.setRunDefaults(() => ({ process: "fdm", conventions: agentConventionsLine(printProfiles.printer(), printProfiles.material()) }));
     if (!selfTest) {
       // Warm the provider detection (CLI versions, lockdown, logins, Ollama; no model call) in the background, so
       // Settings and the first run do not wait for it.
@@ -378,6 +384,15 @@ function start(): void {
     }
     registerIpc({
       agent,
+      // "Open in Bambu Studio" (print-handoff.ts): prints go to ~/PartZero/Prints (ALPHA-0-PLAN D4).
+      print: {
+        forgeBin,
+        printsDir: overrides.printsDir ?? join(app.getPath("home"), "PartZero", "Prints"),
+        appVersion: app.getVersion(),
+        profiles: printProfiles,
+        slicer: defaultSlicerSystem({ searchDirs: overrides.slicerDirs, openBin: overrides.openBin }),
+        revealInFolder: (path) => shell.showItemInFolder(path),
+      },
       window: () => mainWindow,
       isTrustedSender,
       grants,

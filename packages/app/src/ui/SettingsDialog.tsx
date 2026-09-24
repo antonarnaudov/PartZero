@@ -14,6 +14,7 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 import type { AgentRoleId, AgentSettingsView, CliModeSetting, CliProviderStatus, LocalProviderStatus, ModelProfileInfo, PlanUsageView, ProviderId, ProviderKeyStatus } from "../agent-protocol";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
+import { PrintingSection } from "./PrintingSettings";
 
 const ROLES: Array<{ id: AgentRoleId; label: string; hint: string }> = [
   { id: "designer", label: "Designer", hint: "Main loop: plan, build, repair" },
@@ -487,12 +488,11 @@ export function SettingsDialog(): ReactElement {
             <Icon.Close size={12} />
           </button>
         </header>
-        {!view ? (
-          <div className="settings-body">
+        <div className="settings-body">
+          {!view ? (
             <p className="muted">{services.host.settings ? (error ?? "Loading…") : "Agent settings are only available in the desktop app."}</p>
-          </div>
-        ) : (
-          <div className="settings-body">
+          ) : (
+            <>
             {view.transport !== "live" && (
               <div className="panel-banner" data-testid="settings-transport">
                 <Icon.Info size={13} /> {view.transport === "scripted" ? "Scripted" : "Replay"} transport: the agent runs offline from a script; no model is called and keys are not used.
@@ -577,27 +577,30 @@ export function SettingsDialog(): ReactElement {
                 <p className="muted small">vLLM, LM Studio, OpenRouter… Empty uses each profile&apos;s default. Ollama has its own URL above.</p>
               </div>
             </section>
-            {view.transport === "live" && (
-              <section className="settings-section">
-                <h3>Advanced</h3>
-                <label className="model-row" data-testid="settings-cli-mode">
-                  <span className="model-role">
-                    Agent mode for CLI providers
-                    <span className="muted small">How a CLI agent runs the design loop</span>
-                  </span>
-                  <select value={view.cliMode ?? "auto"} aria-label="Agent mode for CLI providers" onChange={(e) => run({ id: "settings.setCliMode", args: { mode: e.target.value as CliModeSetting } })}>
-                    {(Object.keys(CLI_MODE_LABEL) as CliModeSetting[]).map((m) => (
-                      <option key={m} value={m}>
-                        {CLI_MODE_LABEL[m]}
-                      </option>
-                    ))}
-                  </select>
-                  <span />
-                </label>
-              </section>
-            )}
-          </div>
-        )}
+            </>
+          )}
+          {/* Printing does not depend on the agent settings: it stays reachable while they load or fail (the a8 fix path). */}
+          <PrintingSection />
+          {view?.transport === "live" && (
+            <section className="settings-section">
+              <h3>Advanced</h3>
+              <label className="model-row" data-testid="settings-cli-mode">
+                <span className="model-role">
+                  Agent mode for CLI providers
+                  <span className="muted small">How a CLI agent runs the design loop</span>
+                </span>
+                <select value={view.cliMode ?? "auto"} aria-label="Agent mode for CLI providers" onChange={(e) => run({ id: "settings.setCliMode", args: { mode: e.target.value as CliModeSetting } })}>
+                  {(Object.keys(CLI_MODE_LABEL) as CliModeSetting[]).map((m) => (
+                    <option key={m} value={m}>
+                      {CLI_MODE_LABEL[m]}
+                    </option>
+                  ))}
+                </select>
+                <span />
+              </label>
+            </section>
+          )}
+        </div>
       </div>
     </div>
   );

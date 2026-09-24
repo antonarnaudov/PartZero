@@ -185,6 +185,18 @@ export interface DevOverrides {
    * the e2e suite can check that a self-test that does not finish still prints a report and exits.
    */
   selfTestTimeoutMs: number | null;
+  /**
+   * `AICAD_PRINTS_DIR`: where "Open in Bambu Studio" saves prints instead of `~/PartZero/Prints`. With an isolated
+   * profile and no `AICAD_PRINTS_DIR`, `<profile>/Prints`: a test run never writes into the user's real prints folder.
+   */
+  printsDir: string | null;
+  /**
+   * `AICAD_SLICER_DIRS` (path-list): look for `BambuStudio.app` only in these folders (no `/Applications`, no
+   * LaunchServices). With an isolated profile and none given, `[]`: a test run never launches the user's real slicer.
+   */
+  slicerDirs: string[] | null;
+  /** `AICAD_OPEN_BIN`: the `open` executable the slicer launch uses (a fake in tests) instead of `/usr/bin/open`. */
+  openBin: string | null;
 }
 
 const NO_OVERRIDES: DevOverrides = {
@@ -198,6 +210,9 @@ const NO_OVERRIDES: DevOverrides = {
   detectLocalModels: true,
   cliAutoMode: "runtime",
   selfTestTimeoutMs: null,
+  printsDir: null,
+  slicerDirs: null,
+  openBin: null,
 };
 
 /** Every `AICAD_*` variable read by the main process for development and tests. */
@@ -216,6 +231,9 @@ export const DEV_OVERRIDE_VARIABLES = [
   "AICAD_CLI_DIRS",
   "AICAD_CLI_AUTO",
   "AICAD_SELF_TEST_TIMEOUT_MS",
+  "AICAD_PRINTS_DIR",
+  "AICAD_SLICER_DIRS",
+  "AICAD_OPEN_BIN",
 ] as const;
 
 /**
@@ -242,6 +260,13 @@ export function readDevOverrides(env: NodeJS.ProcessEnv, isPackaged: boolean, wa
     detectLocalModels: !env["AICAD_USER_DATA_DIR"],
     cliAutoMode: cliAutoMode(env, warn),
     selfTestTimeoutMs: /^[1-9]\d{0,6}$/.test(env["AICAD_SELF_TEST_TIMEOUT_MS"] ?? "") ? Number(env["AICAD_SELF_TEST_TIMEOUT_MS"]) : null,
+    printsDir: path("AICAD_PRINTS_DIR") ?? (env["AICAD_USER_DATA_DIR"] ? join(resolve(env["AICAD_USER_DATA_DIR"]), "Prints") : null),
+    slicerDirs: env["AICAD_SLICER_DIRS"]
+      ? env["AICAD_SLICER_DIRS"].split(delimiter).filter((d) => d.length > 0).map((d) => resolve(d))
+      : env["AICAD_USER_DATA_DIR"]
+        ? []
+        : null,
+    openBin: path("AICAD_OPEN_BIN"),
   };
 }
 

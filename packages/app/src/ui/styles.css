@@ -308,6 +308,27 @@ html[data-platform="darwin"] .toolbar {
   opacity: 0.35;
   cursor: default;
 }
+.tb-primary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px 0 8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tb-primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+.tb-primary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
 
 .doc-title {
   flex: 1;
@@ -1377,6 +1398,21 @@ button.sb-item:hover {
 }
 .toast-info svg {
   color: var(--accent-text);
+}
+.toast-action {
+  flex: none;
+  align-self: center;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--accent-text);
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.toast-action:hover {
+  background: var(--panel-3);
 }
 
 /* ─── Code panel tabs & proposal review ────────────────────────────────────────────────── */

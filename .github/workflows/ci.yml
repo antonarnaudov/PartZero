@@ -217,6 +217,8 @@ jobs:
         run: node scripts/license-check/own-licenses.mjs
       - name: Oracle libraries only in oracle directories, and nothing that ships reaches into one
         run: node scripts/license-check/oracle-boundary.mjs
+      - name: No slicer binary, engine or profile library in the repository (ADR 0016)
+        run: node scripts/license-check/slicer-boundary.mjs
       - name: External datasets are recorded in the tracked corpus/EXTERNAL_SOURCES.md
         run: node scripts/license-check/dataset-record.mjs
       - name: JS production dependencies of every shipped package

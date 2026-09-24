@@ -11,6 +11,7 @@ export class BrowserHost implements AppHost {
   readonly forgeCli = null;
   readonly agent = null;
   readonly settings = null;
+  readonly print = null;
   private readonly files = new Map<string, string>();
 
   appInfo(): Promise<AppInfo> {
