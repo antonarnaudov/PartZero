@@ -1,0 +1,36 @@
+forge/crates/forge-cli/src/print.rs
+  s_59c0dd2af30db2::t_d60c22778e17dc 3-5,198-240,283-284
+forge/crates/forge-cli/tests/cli_print.rs
+  s_59c0dd2af30db2::t_48cd1eea6716ad 239-244,246-249,251-258,264-265,267-270,275-295,297-311,316-341
+  s_59c0dd2af30db2::t_958d2c1e3c9e4f 259-263,271-274,312-315
+  s_59c0dd2af30db2::t_09f03aeaf56f4f 245,250,266,296
+forge/crates/forge-io/tests/bed_placement.rs
+  s_59c0dd2af30db2::t_958d2c1e3c9e4f 12-13,331-406,415,421
+  s_59c0dd2af30db2::t_f118b18cb988d6 2-4,11,407-414,416-420,422-468,535-586
+forge/crates/forge-io/src/bed.rs
+  s_59c0dd2af30db2::t_8b5146eb2dcf07 390-478,481-482,485-505
+  s_59c0dd2af30db2::t_080b52123bd38a 479-480,483-484
+forge/crates/forge-io/src/lib.rs
+  s_59c0dd2af30db2::t_be705632768c59 16-18,65-66,73-74
+forge/crates/forge-io/src/threemf.rs
+  s_59c0dd2af30db2::t_ea792b59dbd226 177-220
+forge/crates/forge-cli/src/main.rs
+  s_59c0dd2af30db2::t_4beb3a82d1dfc4 372-373,379-381,427-433,435-438
+  s_59c0dd2af30db2::t_5b0e9f7f99e329 101-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "84744e32f47a7759b6b8613da20efc77f8a51b97",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
