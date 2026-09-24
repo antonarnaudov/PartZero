@@ -25,6 +25,14 @@ export interface CliRuntimeModule {
   CliAgentRuntime: new (options: CliAgentRuntimeOptions) => AgentRuntime;
 }
 
+/**
+ * How a CLI launches the MCP shim: the app executable run as Node (`ELECTRON_RUN_AS_NODE=1 <exe> <shim>`). The runner
+ * and `--self-test` (self-test.ts) build it here, so the self-test runs exactly what a CLI run starts.
+ */
+export function mcpShimCommand(exePath: string, stdio: string): McpShimCommand {
+  return { command: exePath, args: [stdio], env: { ELECTRON_RUN_AS_NODE: "1" } };
+}
+
 function asMcpServer(module: unknown): McpServerModule | null {
   return typeof (module as Partial<McpServerModule> | null)?.createMcpHost === "function" ? (module as McpServerModule) : null;
 }

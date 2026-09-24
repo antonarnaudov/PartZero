@@ -158,6 +158,8 @@ export interface AgentSetup {
   settings: SettingsStore;
   cli: CliDetector;
   local: LocalModels;
+  /** The private root CLI runs use for workspaces and broker sockets ({@link cliWorkspaceRoot}), or null: CLIs are off. */
+  workspaceRoot: string | null;
 }
 
 export function setupAgent(o: AgentSetupOptions): AgentSetup {
@@ -218,5 +220,5 @@ export function setupAgent(o: AgentSetupOptions): AgentSetup {
     local,
     ...(cliRun !== null ? { cliRun } : { cliOff: rootNote ?? "CLI agents are off: no private folder was found for their workspaces" }),
   });
-  return { host, keys, settings, cli, local };
+  return { host, keys, settings, cli, local, workspaceRoot };
 }

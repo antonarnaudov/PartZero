@@ -74,7 +74,7 @@ import {
 import { planResetAt, planUsageView } from "./cli-detect.js";
 import { bundledPromptsDir } from "../bundle-paths.js";
 import { createAgentEngine, type AgentEngine } from "./engine.js";
-import { loadCliRuntime, loadMcpServer, type CliRuntimeModule, type McpServerModule } from "./optional-modules.js";
+import { loadCliRuntime, loadMcpServer, mcpShimCommand, type CliRuntimeModule, type McpServerModule } from "./optional-modules.js";
 import {
   baseUrlProblem,
   binaryFromWire,
@@ -336,8 +336,7 @@ export function workerProfiles(extra: readonly ModelProfile[] | undefined): Mode
 
 /** The MCP shim command for CLIs: the app executable run as Node (development builds; packaged builds turn that off). */
 function shimCommand(cli: WorkerCliConfig, stdio: string): McpShimCommand | null {
-  if (cli.exePath === null) return null;
-  return { command: cli.exePath, args: [stdio], env: { ELECTRON_RUN_AS_NODE: "1" } };
+  return cli.exePath === null ? null : mcpShimCommand(cli.exePath, stdio);
 }
 
 /** The note for a workspace root whose broker socket would be too long (§5.4). */

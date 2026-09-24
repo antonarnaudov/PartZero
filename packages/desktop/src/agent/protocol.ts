@@ -386,8 +386,11 @@ export type HostToWorker =
     }
   | { type: "answer"; v: AgentProtocolVersion; runId: string; questionId: string; answers: string[] }
   | { type: "stop"; v: AgentProtocolVersion; runId: string }
-  /** `--self-test` only (main.ts): the worker checks its bundle and answers with a `selftest` message. */
-  | { type: "selftest"; v: AgentProtocolVersion; mcpShimPath: string | null; mcpServerDir: string | null };
+  /**
+   * `--self-test` only (main.ts): the worker checks its bundle and answers with a `selftest` message. `exePath` and
+   * `workspaceRoot` are what a CLI run gets ({@link WorkerCliConfig}): the worker runs the MCP shim through them once.
+   */
+  | { type: "selftest"; v: AgentProtocolVersion; mcpShimPath: string | null; mcpServerDir: string | null; exePath: string | null; workspaceRoot: string | null };
 
 export type WorkerToHost =
   | { type: "ready"; v: AgentProtocolVersion }

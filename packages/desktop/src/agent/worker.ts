@@ -38,7 +38,7 @@ port.on("message", (e) => {
   if (!m || typeof m !== "object" || m.v !== PROTOCOL_VERSION) return;
   if (m.type === "start" || m.type === "answer" || m.type === "stop") runner.handle(m);
   if (m.type === "selftest") {
-    void workerSelfTest({ mcpShimPath: m.mcpShimPath, mcpServerDir: m.mcpServerDir }).then(
+    void workerSelfTest({ mcpShimPath: m.mcpShimPath, mcpServerDir: m.mcpServerDir, exePath: m.exePath, workspaceRoot: m.workspaceRoot }).then(
       (report) => post({ type: "selftest", v: PROTOCOL_VERSION, report }),
       (e: unknown) => post({ type: "log", v: PROTOCOL_VERSION, level: "error", message: scrubKeyLike(`self-test failed: ${e instanceof Error ? e.message : String(e)}`) }),
     );

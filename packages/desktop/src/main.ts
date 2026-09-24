@@ -329,6 +329,9 @@ function start(): void {
 
     const forgeBin = locateForgeBinary({ env: process.env, isPackaged: app.isPackaged, resourcesPath: process.resourcesPath, appPath: app.getAppPath() });
     const repoRoot = app.isPackaged ? null : findRepoRoot(app.getAppPath());
+    // The MCP shim for CLI agents runs as `ELECTRON_RUN_AS_NODE=1 <app> <shim>`: always in development; in a packaged
+    // build only when its edition keeps the runAsNode fuse on for it (build-info.ts, decision D1).
+    const shimExe = mcpShimExecutable(buildInfo, app.isPackaged, app.getPath("exe"));
     agent = setupAgent({
       userData: app.getPath("userData"),
       env: process.env,
@@ -347,9 +350,7 @@ function start(): void {
       cliChildEnv: cliChildHostEnv(process.env),
       // Test profiles run `auto` as completion unless the test opts into runtime mode (env.ts).
       cliAutoMode: overrides.cliAutoMode,
-      // The MCP shim for CLI agents runs as `ELECTRON_RUN_AS_NODE=1 <app> <shim>`: always in development; in a
-      // packaged build only when its edition keeps the runAsNode fuse on for it (build-info.ts, decision D1).
-      exePath: mcpShimExecutable(buildInfo, app.isPackaged, app.getPath("exe")),
+      exePath: shimExe,
       mcpShimPath,
       apiKeys: buildInfo.flags.apiKeys,
     });
@@ -383,7 +384,7 @@ function start(): void {
     rebuildMenu();
     mainWindow = createWindow({ hidden: selfTest });
     if (selfTest) {
-      void runSelfTest(mainWindow, forgeBin, mcpShimPath, mcpShimPath ? null : workspaceMcpServerDir(repoRoot), profile);
+      void runSelfTest(mainWindow, forgeBin, { mcpShimPath, mcpServerDir: mcpShimPath ? null : workspaceMcpServerDir(repoRoot), exePath: shimExe, workspaceRoot: agent.workspaceRoot }, profile);
       return;
     }
 
@@ -429,8 +430,16 @@ async function probeRenderer(win: BrowserWindow, timeoutMs: number): Promise<Sel
   return { ok: false, detail: error ?? `the starting document was not evaluated within ${timeoutMs / 1000} s; last seen: ${describeRenderer(last)}`, ms: null, snapshot: last };
 }
 
+/** What the worker's self-test gets: the MCP shim and server, and what a CLI run gets to run the shim with. */
+interface WorkerProbeOptions {
+  mcpShimPath: string | null;
+  mcpServerDir: string | null;
+  exePath: string | null;
+  workspaceRoot: string | null;
+}
+
 /** A fresh agent worker starts, then checks its bundle (agent/self-test.ts) and answers. */
-function probeWorker(shimPath: string | null, mcpServerDir: string | null, timeoutMs: number): Promise<SelfTestReport["worker"]> {
+function probeWorker(o: WorkerProbeOptions, timeoutMs: number): Promise<SelfTestReport["worker"]> {
   const t0 = Date.now();
   return new Promise((resolve) => {
     let readyMs: number | null = null;
@@ -455,7 +464,7 @@ function probeWorker(shimPath: string | null, mcpServerDir: string | null, timeo
       const m = parseWorkerMessage(raw);
       if (m?.type === "ready") {
         readyMs = Date.now() - t0;
-        w?.postMessage({ type: "selftest", v: PROTOCOL_VERSION, mcpShimPath: shimPath, mcpServerDir });
+        w?.postMessage({ type: "selftest", v: PROTOCOL_VERSION, ...o });
       } else if (m?.type === "selftest") {
         finish({ ok: true, detail: `ready in ${readyMs ?? "?"} ms`, readyMs, report: m.report });
       }
@@ -463,11 +472,11 @@ function probeWorker(shimPath: string | null, mcpServerDir: string | null, timeo
   });
 }
 
-async function runSelfTest(win: BrowserWindow, forgeBin: string, shimPath: string | null, mcpServerDir: string | null, profile: string): Promise<void> {
+async function runSelfTest(win: BrowserWindow, forgeBin: string, worker: WorkerProbeOptions, profile: string): Promise<void> {
   const setup = agent!;
-  const [renderer, worker, forgeCli, claudeCode, slicer] = await Promise.all([
+  const [renderer, workerCheck, forgeCli, claudeCode, slicer] = await Promise.all([
     probeRenderer(win, 120_000),
-    probeWorker(shimPath, mcpServerDir, 120_000),
+    probeWorker(worker, 120_000),
     forgeSelfCheck(forgeBin, JSON.stringify(SELF_TEST_IR)).catch((e: unknown) => ({ ok: false, path: forgeBin, version: null, detail: message(e), v0: null, v1: null })),
     setup.host.settingsView().then(
       (view) => claudeCodeCheck(view),
@@ -493,7 +502,7 @@ async function runSelfTest(win: BrowserWindow, forgeBin: string, shimPath: strin
     },
     paths: reportPaths({ profile, logs: overrides.userDataDir ? join(overrides.userDataDir, "logs") : join(app.getPath("home"), "Library", "Logs", productName) }),
     forgeCli,
-    worker,
+    worker: workerCheck,
     renderer,
     claudeCode,
     slicer,

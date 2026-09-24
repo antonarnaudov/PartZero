@@ -7,7 +7,7 @@
  * - The app is PartZero: its name, window title and log files (`main.log`, `agent.log`) come from the bundle's build
  *   info; the renderer loads app://, cross-origin isolated, and Forge evaluates the starting document (any shape).
  * - Settings: Claude Code detected and used by default, and no API-key entry anywhere.
- * - `--self-test` on the bundle: every check passes, with the bundled MCP shim and prompts.
+ * - `--self-test` on the bundle: every check passes, with the bundled prompts and the bundled MCP shim run end to end.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
@@ -130,6 +130,9 @@ test("--self-test on the bundle passes: aicad, worker (CadScript, forge-web v0/v
   expect(w.engine.wasm).toBe(join(bundleDir, "agent", "forge_wasm_bg.wasm"));
   expect(w.prompts.dir).toBe(join(bundleDir, "prompts"));
   expect(w.mcp.shim).toBe(join(bundleDir, "mcp", "stdio.mjs"));
+  // The shim ran end to end as a CLI starts it (the Electron binary as Node) and reached the broker with its ticket.
+  expect(w.mcp, w.mcp.detail).toMatchObject({ ok: true, exe: expect.any(String) });
+  expect(w.mcp.detail).toMatch(/^the shim \(ELECTRON_RUN_AS_NODE=1 Electron stdio\.mjs\) answered initialize, tools\/list and tools\/call through the broker/);
   expect([w.cadscript.ok, w.v0.ok, w.v1.ok, w.cliRuntime.ok]).toEqual([true, true, true, true]);
   expect(report.renderer).toMatchObject({ ok: true, snapshot: { url: "app://aicad/index.html", crossOriginIsolated: true, engine: "forge-web · wasm", problems: "0", status: expect.stringMatching(/^Up to date/) } });
   expect(report.claudeCode).toMatchObject({ ok: true, version: "2.1.260", auth: "logged_in", autoDefault: "Claude Code" });

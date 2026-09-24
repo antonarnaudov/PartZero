@@ -122,6 +122,7 @@ run_self_test() {
     line("app", `${r.app.name} ${r.app.version} (${r.app.edition}, ${r.app.commit ?? "no commit"}${r.app.dirty ? ", dirty" : ""})`);
     line("aicad", r.forgeCli.detail);
     line("worker", `${r.worker.detail}; ${r.worker.report ? r.worker.report.engine.detail : "no report"}`);
+    line("MCP shim", r.worker.report ? r.worker.report.mcp.detail : "no report");
     line("renderer", r.renderer.detail);
     line("Claude Code", r.claudeCode.detail);
     line("slicer", r.slicer.found ? `${r.slicer.name} ${r.slicer.version} (${r.slicer.bundleId}) at ${r.slicer.path}` : "Bambu Studio not found");

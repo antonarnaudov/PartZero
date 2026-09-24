@@ -9,8 +9,8 @@ import { join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AgentSettingsView, CliProviderStatus } from "@aicad/app/bridge";
 import { describe, expect, it } from "vitest";
-import { summarizeReport, workerSelfTest } from "../src/agent/self-test.js";
-import { loadMcpServer } from "../src/agent/optional-modules.js";
+import { mcpShimRoundTrip, summarizeReport, workerSelfTest } from "../src/agent/self-test.js";
+import { loadMcpServer, mcpShimCommand } from "../src/agent/optional-modules.js";
 import { parseWorkerMessage } from "../src/agent/protocol.js";
 import { DEV_BUILD_INFO, mcpShimExecutable, parseBuildInfo, readBuildInfo, type BuildInfo } from "../src/build-info.js";
 import { bundledMcpShimPath, bundledPromptsDir, bundledWasmPath, unpackedPath } from "../src/bundle-paths.js";
@@ -285,7 +285,7 @@ describe("--self-test (electron-free parts)", () => {
           v0: { ...ok, schema: "aicad.metrics/0", status: "ok", bodies: 1, volume: 32000 },
           v1: { ok: false, detail: "UNSUPPORTED_SCHEMA", schema: null, status: null, bodies: 0, volume: null },
           prompts: { ...ok, dir: "", ids: [] },
-          mcp: { ok: false, detail: "missing", shim: null },
+          mcp: { ok: false, detail: "missing", shim: null, exe: null, ms: null },
           cliRuntime: ok,
         },
       },
@@ -330,21 +330,47 @@ describe("--self-test (electron-free parts)", () => {
   });
 
   const wasmBuilt = existsSync(join(repo, "packages", "forge-web", "pkg", "forge_wasm_bg.wasm"));
-  it.skipIf(!wasmBuilt || !existsSync(join(repo, "packages", "mcp-server", "dist", "stdio.js")))(
-    "the worker's checks pass on the workspace build: CadScript, forge-web v0 and v1, prompts, MCP host, runtime",
+  const mcpServerDir = join(repo, "packages", "mcp-server");
+  const shimBuilt = existsSync(join(mcpServerDir, "dist", "stdio.js"));
+  it.skipIf(!wasmBuilt || !shimBuilt)(
+    "the worker's checks pass on the workspace build: CadScript, forge-web v0 and v1, prompts, MCP shim end to end, runtime",
     async () => {
-      const r = await workerSelfTest({ mcpShimPath: null, mcpServerDir: join(repo, "packages", "mcp-server"), workerDir: join(desktopRoot, "dist", "agent") });
+      // The shim runs under this Node as a CLI would start it (ELECTRON_RUN_AS_NODE is ignored by Node itself).
+      const r = await workerSelfTest({ mcpShimPath: null, mcpServerDir, exePath: process.execPath, workspaceRoot: tmp(), workerDir: join(desktopRoot, "dist", "agent") });
       expect(r.cadscript).toMatchObject({ ok: true });
       expect(r.engine.ok).toBe(true);
       expect(r.v0).toMatchObject({ ok: true, schema: "aicad.metrics/0", bodies: 1 });
       expect(r.v1).toMatchObject({ ok: true, schema: "aicad.metrics/1", bodies: 1 });
       expect(r.prompts).toMatchObject({ ok: true, dir: "(package default)" });
       expect(r.prompts.ids.map((i) => i.split("@")[0])).toEqual(["triage.v1", "spec_writer.v1", "designer.v1"]);
-      expect(r.mcp).toMatchObject({ ok: true, shim: join(repo, "packages", "mcp-server", "dist", "stdio.js") });
+      expect(r.mcp, r.mcp.detail).toMatchObject({ ok: true, shim: join(mcpServerDir, "dist", "stdio.js"), exe: process.execPath });
+      expect(r.mcp.detail).toMatch(/^the shim \(ELECTRON_RUN_AS_NODE=1 \S+ stdio\.js\) answered initialize, tools\/list and tools\/call through the broker in \d+ ms$/);
       expect(r.cliRuntime.ok).toBe(true);
     },
     60_000,
   );
+
+  it.skipIf(!shimBuilt || process.platform === "win32")("the MCP round trip fails, with the reason, on a wrong ticket, a missing executable, or no workspace root", async () => {
+    const loaded = (await loadMcpServer(mcpServerDir, null))!;
+    const host = loaded.module.createMcpHost({ shim: mcpShimCommand(process.execPath, loaded.stdio) });
+    const root = tmp();
+    const ok = await mcpShimRoundTrip({ host, workspaceRoot: root });
+    expect(ok.ok, ok.detail).toBe(true);
+    // The broker refuses a wrong ticket; the shim then serves no tools, which the check reports.
+    const badTicket = await mcpShimRoundTrip({ host, workspaceRoot: root, ticket: (t) => `${t.slice(0, -1)}${t.endsWith("0") ? "1" : "0"}` });
+    expect(badTicket).toMatchObject({ ok: false, ms: null });
+    expect(badTicket.detail).toMatch(/^tools\/list has no self_test_ping \(tools: none\): the shim did not get through to the broker/);
+    const noExe = await mcpShimRoundTrip({ host: loaded.module.createMcpHost({ shim: mcpShimCommand(join(root, "no-such-app"), loaded.stdio) }), workspaceRoot: root });
+    expect(noExe).toMatchObject({ ok: false });
+    expect(noExe.detail).toMatch(/could not be started|exited/);
+    // Workspaces and sockets are removed after each round trip.
+    expect(readdirSync(root).filter((n) => n !== "s")).toEqual([]);
+    expect(readdirSync(join(root, "s"))).toEqual([]);
+    const off = await workerSelfTest({ mcpShimPath: null, mcpServerDir, exePath: process.execPath, workspaceRoot: null, workerDir: join(desktopRoot, "dist", "agent") });
+    expect(off.mcp).toMatchObject({ ok: false, detail: expect.stringMatching(/^CLI agents are off/) });
+    const noShimExe = await workerSelfTest({ mcpShimPath: null, mcpServerDir, exePath: null, workspaceRoot: root, workerDir: join(desktopRoot, "dist", "agent") });
+    expect(noShimExe.mcp).toMatchObject({ ok: false, detail: expect.stringMatching(/cannot run the MCP shim/) });
+  }, 60_000);
 });
 
 describe("optional modules in a bundled build", () => {
