@@ -15,7 +15,7 @@ import { parseWorkerMessage } from "../src/agent/protocol.js";
 import { DEV_BUILD_INFO, mcpShimExecutable, parseBuildInfo, readBuildInfo, type BuildInfo } from "../src/build-info.js";
 import { bundledMcpShimPath, bundledPromptsDir, bundledWasmPath, unpackedPath } from "../src/bundle-paths.js";
 import { formatConsoleArgs, logFor, RotatingLog } from "../src/log-file.js";
-import { claudeCodeCheck, detectBambuStudio, rendererReady, selfTestVerdict, type RendererSnapshot, type SelfTestReport } from "../src/self-test.js";
+import { claudeCodeCheck, describeRenderer, detectBambuStudio, rendererReady, selfTestVerdict, type RendererSnapshot, type SelfTestReport } from "../src/self-test.js";
 import { ensureUserFolder, userFolders } from "../src/user-folders.js";
 import { tempDirs } from "./temp-dirs.js";
 
@@ -208,15 +208,30 @@ describe("--self-test (electron-free parts)", () => {
     ],
     bodies: "1 body",
     problems: "0",
+    status: "Up to date",
   };
 
   it("the renderer is ready once the starting document evaluated in an isolated page", () => {
     expect(rendererReady(snapshot)).toBe(true);
-    expect(rendererReady({ ...snapshot, features: [] })).toBe(false);
+    expect(rendererReady({ ...snapshot, bodies: "2 bodies", status: "Up to date · Modified" })).toBe(true);
     expect(rendererReady({ ...snapshot, features: [{ name: "block", status: "error" }] })).toBe(false);
     expect(rendererReady({ ...snapshot, crossOriginIsolated: false })).toBe(false);
     expect(rendererReady({ ...snapshot, bodies: "0 bodies" })).toBe(false);
+    expect(rendererReady({ ...snapshot, problems: "1" })).toBe(false);
+    // Compiled but not (yet) evaluated, or still evaluating: not ready.
+    for (const status of ["Ready", "Evaluating…", "Compiling…", "Errors", null]) expect(rendererReady({ ...snapshot, status }), String(status)).toBe(false);
+    for (const engine of ["Starting engine…", "No engine", null]) expect(rendererReady({ ...snapshot, engine }), String(engine)).toBe(false);
     expect(rendererReady(null)).toBe(false);
+  });
+
+  it("an empty starting document (W2) is ready once it evaluated: no features, no bodies, no problems", () => {
+    const empty: RendererSnapshot = { ...snapshot, features: [], bodies: "0 bodies" };
+    expect(rendererReady(empty)).toBe(true);
+    expect(rendererReady({ ...empty, status: "Ready" })).toBe(false);
+    expect(rendererReady({ ...empty, bodies: "1 body" })).toBe(false);
+    expect(rendererReady({ ...empty, engine: "Starting engine…" })).toBe(false);
+    expect(describeRenderer(empty)).toBe('app://aicad/index.html: forge-web · wasm, the empty starting document, 0 bodies, 0 problems, status "Up to date"');
+    expect(describeRenderer(null)).toBe("the page did not answer");
   });
 
   const claude = (s: Partial<CliProviderStatus>): Pick<AgentSettingsView, "cli" | "autoDefault"> => ({
@@ -286,6 +301,9 @@ describe("--self-test (electron-free parts)", () => {
     const noShim = selfTestVerdict({ ...body, app: { ...body.app, flags: { apiKeys: true, mcpShim: false } } });
     expect(noShim.failures.some((f) => f.startsWith("CAD MCP"))).toBe(false);
     expect(noShim.warnings.some((w) => w.startsWith("CAD MCP"))).toBe(true);
+    // The renderer fell back from its WASM engine to the Forge CLI: it still works, but the page's WASM did not load.
+    const cli = selfTestVerdict({ ...body, renderer: { ...body.renderer, snapshot: { ...snapshot, engine: "Forge CLI · native" } } });
+    expect(cli.warnings).toContain("the renderer evaluates with Forge CLI · native, not forge-web · wasm: the WASM engine did not start in the page");
   });
 
   it("finds Bambu Studio where the user installed it and reads its version and bundle id", async () => {

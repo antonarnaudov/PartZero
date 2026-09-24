@@ -5,7 +5,7 @@
  * offline, with a FAKE Claude Code (fake-cli.ts) standing in for the real one.
  *
  * - The app is PartZero: its name, window title and log files (`main.log`, `agent.log`) come from the bundle's build
- *   info; the renderer loads app://, cross-origin isolated, and Forge evaluates the starting v0 document.
+ *   info; the renderer loads app://, cross-origin isolated, and Forge evaluates the starting document (any shape).
  * - Settings: Claude Code detected and used by default, and no API-key entry anywhere.
  * - `--self-test` on the bundle: every check passes, with the bundled MCP shim and prompts.
  */
@@ -74,11 +74,14 @@ test("the bundle runs as PartZero: renderer on app://, Forge evaluates the start
   expect(await page.evaluate(() => globalThis.crossOriginIsolated)).toBe(true);
   expect(await page.evaluate(() => typeof (window as unknown as { __aicad?: unknown }).__aicad)).toBe("undefined");
   await expect(page.getByTestId("engine-label")).toHaveText(/forge-web · wasm/);
-  await expect(page.getByTestId("body-count")).toHaveText("1 body");
+  // Forge evaluated the starting document, whatever it is (a block today, empty once W2 lands): "Up to date" needs an
+  // evaluation with status ok, not only a compile.
+  await expect(page.getByTestId("doc-status")).toHaveText(/^Up to date/);
   await expect(page.getByTestId("problems-count")).toHaveText("0");
   const features = page.getByTestId("timeline-feature");
-  await expect(features).toHaveCount(2);
+  const count = await features.count();
   for (const f of await features.all()) await expect(f).toHaveAttribute("data-status", "ok");
+  await expect(page.getByTestId("body-count")).toHaveText(count === 0 ? "0 bodies" : /^[1-9]\d* bod(y|ies)$/);
 
   const info = await app.evaluate(({ app: a, BrowserWindow }) => ({ name: a.getName(), userData: a.getPath("userData"), logs: a.getPath("logs"), title: BrowserWindow.getAllWindows()[0]?.getTitle() }));
   expect(info.name).toBe("PartZero");
@@ -128,6 +131,6 @@ test("--self-test on the bundle passes: aicad, worker (CadScript, forge-web v0/v
   expect(w.prompts.dir).toBe(join(bundleDir, "prompts"));
   expect(w.mcp.shim).toBe(join(bundleDir, "mcp", "stdio.mjs"));
   expect([w.cadscript.ok, w.v0.ok, w.v1.ok, w.cliRuntime.ok]).toEqual([true, true, true, true]);
-  expect(report.renderer.snapshot).toMatchObject({ url: "app://aicad/index.html", crossOriginIsolated: true, bodies: "1 body" });
+  expect(report.renderer).toMatchObject({ ok: true, snapshot: { url: "app://aicad/index.html", crossOriginIsolated: true, engine: "forge-web · wasm", problems: "0", status: expect.stringMatching(/^Up to date/) } });
   expect(report.claudeCode).toMatchObject({ ok: true, version: "2.1.260", auth: "logged_in", autoDefault: "Claude Code" });
 });

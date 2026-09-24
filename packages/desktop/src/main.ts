@@ -40,6 +40,7 @@ import { APP_ENTRY_URL, isTrustedFrameUrl } from "./protocol-core.js";
 import { registerAppScheme, serveApp } from "./protocol.js";
 import {
   claudeCodeCheck,
+  describeRenderer,
   detectBambuStudio,
   RENDERER_PROBE,
   rendererReady,
@@ -403,7 +404,10 @@ function start(): void {
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 const message = (e: unknown): string => (e instanceof Error ? e.message : String(e)).slice(0, 300);
 
-/** The hidden window loads the app and evaluates its starting document (a v0 block) with the renderer's engine. */
+/**
+ * The hidden window loads the app and evaluates its starting document with the renderer's engine (any starting
+ * document: today a v0 block, empty once W2 lands; `rendererReady`).
+ */
 async function probeRenderer(win: BrowserWindow, timeoutMs: number): Promise<SelfTestReport["renderer"]> {
   const t0 = Date.now();
   let last: RendererSnapshot | null = null;
@@ -419,12 +423,10 @@ async function probeRenderer(win: BrowserWindow, timeoutMs: number): Promise<Sel
     } catch (e) {
       error = message(e);
     }
-    if (rendererReady(last)) {
-      return { ok: true, detail: `${last.url}: ${last.engine ?? "?"} evaluated the starting document (${last.features.length} features ok, ${last.bodies}, 0 problems)`, ms: Date.now() - t0, snapshot: last };
-    }
+    if (rendererReady(last)) return { ok: true, detail: `evaluated: ${describeRenderer(last)}`, ms: Date.now() - t0, snapshot: last };
     await sleep(250);
   }
-  return { ok: false, detail: error ?? `the starting document was not evaluated within ${timeoutMs / 1000} s`, ms: null, snapshot: last };
+  return { ok: false, detail: error ?? `the starting document was not evaluated within ${timeoutMs / 1000} s; last seen: ${describeRenderer(last)}`, ms: null, snapshot: last };
 }
 
 /** A fresh agent worker starts, then checks its bundle (agent/self-test.ts) and answers. */

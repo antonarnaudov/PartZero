@@ -57,6 +57,8 @@ export interface RendererSnapshot {
   features: Array<{ name: string | null; status: string | null }>;
   bodies: string | null;
   problems: string | null;
+  /** The status bar's document status: "Up to date" once Forge evaluated the document with status ok. */
+  status: string | null;
 }
 
 /**
@@ -74,12 +76,37 @@ export const RENDERER_PROBE = `(() => {
     features: [...document.querySelectorAll('[data-testid="timeline-feature"]')].map((el) => ({ name: el.getAttribute("data-feature"), status: el.getAttribute("data-status") })),
     bodies: text("body-count"),
     problems: text("problems-count"),
+    status: text("doc-status"),
   };
 })()`;
 
-/** The starting document evaluated in a cross-origin-isolated page: every feature ok, one body, no problems. */
+/** The renderer's own WASM engine (`packages/app` `ForgeWebEngine.label`); a fresh profile picks it first. */
+export const RENDERER_WASM_ENGINE = "forge-web · wasm";
+/** Engine labels that mean no engine has evaluated anything yet. */
+const ENGINE_NOT_READY: ReadonlySet<string> = new Set(["Starting engine…", "No engine"]);
+const BODY_COUNT = /^(\d+) bod(?:y|ies)$/;
+
+/**
+ * The starting document evaluated in a cross-origin-isolated page: an engine is up, Forge's report came back ok
+ * ("Up to date", which needs an evaluation, not only a compile), and there are no problems. Whatever the starting
+ * document is: a document with features needs every feature ok and at least one body; an empty one (W2 makes a new
+ * document start empty) needs no body. It only has to be evaluated, not to have a particular shape.
+ */
 export function rendererReady(s: RendererSnapshot | null): s is RendererSnapshot {
-  return s !== null && s.shell && s.crossOriginIsolated && s.features.length > 0 && s.features.every((f) => f.status === "ok") && s.bodies === "1 body" && s.problems === "0";
+  if (s === null || !s.shell || !s.crossOriginIsolated) return false;
+  if (s.engine === null || s.engine.length === 0 || ENGINE_NOT_READY.has(s.engine)) return false;
+  if (s.problems !== "0" || s.status === null || !s.status.startsWith("Up to date")) return false;
+  const bodies = BODY_COUNT.exec(s.bodies ?? "");
+  if (bodies === null) return false;
+  if (s.features.length === 0) return Number(bodies[1]) === 0;
+  return s.features.every((f) => f.status === "ok") && Number(bodies[1]) > 0;
+}
+
+/** One line about what the renderer showed, for the report. */
+export function describeRenderer(s: RendererSnapshot | null): string {
+  if (s === null) return "the page did not answer";
+  const what = s.features.length === 0 ? "the empty starting document" : `the starting document (${s.features.length} features, ${s.features.filter((f) => f.status === "ok").length} ok)`;
+  return `${s.url}: ${s.engine ?? "no engine label"}, ${what}, ${s.bodies ?? "? bodies"}, ${s.problems ?? "?"} problems, status "${s.status ?? "?"}"${s.crossOriginIsolated ? "" : ", NOT cross-origin isolated"}`;
 }
 
 export type ForgeCliCheck = ForgeSelfCheck;
@@ -191,6 +218,9 @@ export function selfTestVerdict(r: Omit<SelfTestReport, "ok" | "failures" | "war
     if (!w.mcp.ok) (r.app.flags.mcpShim || !r.app.packaged ? failures : warnings).push(`CAD MCP server: ${w.mcp.detail}`);
   }
   if (!r.renderer.ok) failures.push(`renderer: ${r.renderer.detail}`);
+  else if (r.renderer.snapshot !== null && r.renderer.snapshot.engine !== RENDERER_WASM_ENGINE) {
+    warnings.push(`the renderer evaluates with ${r.renderer.snapshot.engine ?? "?"}, not ${RENDERER_WASM_ENGINE}: the WASM engine did not start in the page`);
+  }
   if (!r.claudeCode.ok) failures.push(`Claude Code: ${r.claudeCode.detail}`);
   if (!r.slicer.found) warnings.push("Bambu Studio was not found in /Applications or ~/Applications: Open in Bambu Studio falls back to a plain export");
   if (r.app.packaged && r.app.commit === null) warnings.push("the build has no commit (it was not bundled from a git checkout)");
