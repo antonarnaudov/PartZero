@@ -17,9 +17,14 @@
  *   (the desktop bundle's: `bundle/THIRD_PARTY_NOTICES.txt`).
  * @type {import("electron-builder").Configuration}
  */
+const { join } = require("node:path");
+const { assertBundleEdition } = require("./scripts/check-bundle-edition.cjs");
+
 module.exports = {
   appId: "dev.aicad.desktop",
   productName: "aicad",
+  // `bundle/` must be this config's edition (`bundle.mjs --edition default`, what `pnpm package` makes).
+  beforePack: () => assertBundleEdition(join(__dirname, "bundle"), "default"),
   copyright: "aicad contributors (MPL-2.0)",
   directories: { output: "release", buildResources: "build" },
   // The bundle, not `dist/` (tsc output that imports workspace packages at run time): the package has no runtime

@@ -119,7 +119,7 @@ check_app() {
 # app cannot: a main thread blocked by a system dialog (a keychain or privacy prompt), which a hidden app never shows.
 run_self_test() {
   local app="$1" exe="$1/Contents/MacOS/$APP_NAME" out="$REPORT_DIR/self-test.json" errlog="$REPORT_DIR/self-test.stderr.log"
-  local code=0 pid ticks=0 tmp="${TMPDIR:-/tmp}" marker
+  local code=0 ncode=0 pid ticks=0 tmp="${TMPDIR:-/tmp}" marker
   [ -x "$exe" ] || die "no executable at $exe"
   say "--self-test (Finder-like environment: PATH=/usr/bin:/bin:/usr/sbin:/sbin, no USER, LOGNAME or SHELL; limit ${SELF_TEST_TIMEOUT} s)"
   rm -f "$out"
@@ -155,7 +155,17 @@ run_self_test() {
     line("slicer", r.slicer.found ? `${r.slicer.name} ${r.slicer.version} (${r.slicer.bundleId}) at ${r.slicer.path}` : "Bambu Studio not found");
     for (const w of r.warnings) console.log(`    warning: ${w}`);
     for (const f of r.failures) console.log(`    FAILED: ${f}`);
-  ' "$out" || die "--self-test printed no report (exit $code; see $errlog)"
+    // The app must be the Alpha 0 edition itself, not a bundle of another edition packaged with the alpha config.
+    if (r.app.edition !== "alpha-local" || r.app.name !== "PartZero" || r.app.packaged !== true) {
+      console.log(`    FAILED: this is ${r.app.name} (edition ${r.app.edition}${r.app.packaged ? "" : ", not packaged"}), not the packaged PartZero alpha-local build`);
+      process.exit(3);
+    }
+  ' "$out" || ncode=$?
+  case "$ncode" in
+    0) ;;
+    3) die "the app at $app is not the PartZero alpha-local build: rebuild it with --build" ;;
+    *) die "--self-test printed no report (exit $code; see $errlog)" ;;
+  esac
   [ "$code" != 2 ] || die "--self-test did not finish (exit 2): see the reason above; the full report is $out"
   [ "$code" = 0 ] || die "--self-test failed (exit $code); the full report is $out"
   say "self-test passed ($out)"

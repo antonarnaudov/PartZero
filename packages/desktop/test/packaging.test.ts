@@ -87,6 +87,33 @@ describe("builder configs: the tested base and the local Alpha 0 build", () => {
   });
 });
 
+describe("each builder config packages only its own edition's bundle", () => {
+  const { bundleEditionProblem } = require(join(desktopRoot, "scripts", "check-bundle-edition.cjs")) as { bundleEditionProblem(dir: string, expected: string): string | null };
+  const bundleOf = (info: object | null): string => {
+    const dir = tmp();
+    if (info !== null) writeFileSync(join(dir, "build-info.json"), JSON.stringify(info));
+    return dir;
+  };
+  const alphaInfo = { edition: "alpha-local", productName: "PartZero", appId: "ai.partzero.desktop" };
+  const defaultInfo = { edition: "default", productName: "aicad", appId: "dev.aicad.desktop" };
+
+  it("accepts the matching edition and refuses another one, a renamed one, or no bundle, saying how to fix it", () => {
+    expect(bundleEditionProblem(bundleOf(alphaInfo), "alpha-local")).toBeNull();
+    expect(bundleEditionProblem(bundleOf(defaultInfo), "default")).toBeNull();
+    // A leftover default bundle (test:e2e:bundle) packaged with the alpha config, and the reverse.
+    expect(bundleEditionProblem(bundleOf(defaultInfo), "alpha-local")).toBe('the bundle is the "default" edition, but this config packages "alpha-local": run `node scripts/bundle.mjs --edition alpha-local` first');
+    expect(bundleEditionProblem(bundleOf(alphaInfo), "default")).toMatch(/^the bundle is the "alpha-local" edition, but this config packages "default"/);
+    expect(bundleEditionProblem(bundleOf({ ...alphaInfo, productName: "aicad" }), "alpha-local")).toMatch(/^the bundle names the app aicad \(ai\.partzero\.desktop\)/);
+    expect(bundleEditionProblem(bundleOf(null), "alpha-local")).toMatch(/^cannot read .*build-info\.json \(ENOENT\): run `node scripts\/bundle\.mjs --edition alpha-local` first$/);
+    expect(bundleEditionProblem(bundleOf(alphaInfo), "nope")).toBe('unknown edition "nope"');
+  });
+
+  it("both configs check the bundle before packing", () => {
+    for (const c of [base, alpha]) expect(typeof (c as unknown as { beforePack?: unknown }).beforePack).toBe("function");
+    expect((alpha as unknown as { beforePack: () => void }).beforePack).not.toBe((base as unknown as { beforePack: () => void }).beforePack);
+  });
+});
+
 describe("build info (bundle/build-info.json)", () => {
   const valid = { edition: "alpha-local", productName: "PartZero", appId: "ai.partzero.desktop", version: "0.0.1", commit: "2487380265ab", dirty: false, builtAt: "2026-09-25T00:00:00.000Z", flags: { apiKeys: false, mcpShim: true } };
 

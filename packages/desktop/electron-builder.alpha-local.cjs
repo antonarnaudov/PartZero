@@ -20,13 +20,18 @@
  *   no keychain), written by `scripts/bundle.mjs --edition alpha-local`.
  * @type {import("electron-builder").Configuration}
  */
+const { join } = require("node:path");
 const base = require("./electron-builder.config.cjs");
 const editions = require("./editions.cjs");
+const { assertBundleEdition } = require("./scripts/check-bundle-edition.cjs");
 
 const edition = editions["alpha-local"];
 
 module.exports = {
   ...base,
+  // `bundle/` must be the alpha edition's (`bundle.mjs --edition alpha-local`): a leftover default bundle (from
+  // `test:e2e:bundle`) would make a PartZero.app that runs as aicad, with API keys and the keychain.
+  beforePack: () => assertBundleEdition(join(__dirname, "bundle"), "alpha-local"),
   appId: edition.appId,
   productName: edition.productName,
   copyright: "PartZero contributors (MPL-2.0)",
