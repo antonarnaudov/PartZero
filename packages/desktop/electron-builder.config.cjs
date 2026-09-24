@@ -33,6 +33,9 @@ module.exports = {
   ],
   asar: true,
   npmRebuild: false,
+  // ADR 0016 §3: fail the build if a slicer, libslic3r or a slicer's profiles got into the app.
+  // A function (not a path string, which electron-builder resolves against the cwd).
+  afterPack: require("./scripts/slicer-gate-after-pack.cjs"),
   /**
    * Electron fuses (flipped in the binary at package time). Without them any process running as
    * the user can run code as the signed app: `ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS`, or
