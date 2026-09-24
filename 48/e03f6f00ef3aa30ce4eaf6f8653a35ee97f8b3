@@ -1,0 +1,38 @@
+forge/crates/forge-io/src/lib.rs
+  s_59c0dd2af30db2::t_cf3c80e27db7d5 10,13-16
+  s_59c0dd2af30db2::t_024947c2647898 50,62-65,69-72
+  s_59c0dd2af30db2::t_f9980af2c85b40 17
+forge/crates/forge-io/src/bed.rs
+  s_59c0dd2af30db2::t_e4c609ebcaf82c 336-339,415-421,443-450
+  s_59c0dd2af30db2::t_ec325f8c8049d4 1-335,340-414,422-426,428-442,451-473
+  s_59c0dd2af30db2::t_cb7700af20213a 427
+forge/crates/forge-io/src/threemf.rs
+  s_59c0dd2af30db2::t_9e76df3df06250 76,84-94,120-123,125,131-146,150-158,162-166,169
+  s_59c0dd2af30db2::t_b31631df95a874 33
+  s_59c0dd2af30db2::t_e4c609ebcaf82c 237
+  s_59c0dd2af30db2::t_70e051fef3dba5 12-15
+  s_59c0dd2af30db2::t_5171d4e06c2e44 263-295
+  s_59c0dd2af30db2::t_f8fa73ca865be8 535
+  s_59c0dd2af30db2::t_70d0ab8a47860b 214-236,238-249
+forge/crates/forge-io/tests/bed_placement.rs
+  s_59c0dd2af30db2::t_e4c609ebcaf82c 10-11,86-89,94-97,100-109,235-238,257-261,263-266,269-272,275-278,283-286,293-295,298-308,316-319,321-324
+  s_59c0dd2af30db2::t_cb7700af20213a 356
+  s_59c0dd2af30db2::t_6d1d189dffbed9 1-9,12-85,90-93,98-99,110-177,179-234,239-256,262,267-268,273-274,279-282,287-292,296-297,309-315,320,325-355,357-395
+  s_59c0dd2af30db2::t_eceded0c195f9a 178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "48e03f6f00ef3aa30ce4eaf6f8653a35ee97f8b3",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
