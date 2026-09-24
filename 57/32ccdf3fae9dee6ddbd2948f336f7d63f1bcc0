@@ -1,0 +1,35 @@
+packages/desktop/src/agent/setup.ts
+  s_59c0dd2af30db2::t_c4fb58b8df8f49 119-127,142-146,201
+  s_59c0dd2af30db2::t_4fb26957cff8d5 17
+packages/desktop/test/packaging.test.ts
+  s_59c0dd2af30db2::t_cffab1a286855d 306
+  s_59c0dd2af30db2::t_a1a79d072cec9e 15,85-86,118,131-133,152-155,332,341
+packages/desktop/editions.cjs
+  s_59c0dd2af30db2::t_a1a79d072cec9e 12
+  s_59c0dd2af30db2::t_5e8cbc57f0c090 9-11,18,23
+packages/desktop/test/cli-providers.test.ts
+  s_59c0dd2af30db2::t_0ce0d556458740 63-93,98-100
+  s_59c0dd2af30db2::t_c4fb58b8df8f49 22,94-97
+packages/desktop/src/agent/cli-detect.ts
+  s_59c0dd2af30db2::t_3fb0cf32fd4716 87-91,418-422,446
+packages/desktop/src/build-info.ts
+  s_59c0dd2af30db2::t_8f2493418e758a 13-16,24,27-28,55,74,83,111-115
+packages/desktop/src/main.ts
+  s_59c0dd2af30db2::t_311563e9b96fd7 30,361-363
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5732ccdf3fae9dee6ddbd2948f336f7d63f1bcc0",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
