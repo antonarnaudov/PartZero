@@ -261,6 +261,8 @@ export interface AgentSettingsView {
   v: AgentProtocolVersion;
   providers: ProviderKeyStatus[];
   secureStorage: { available: boolean; detail: string };
+  /** False when this build takes no API keys (the Alpha 0 build): Settings shows no key entry. Absent: true. */
+  apiKeysEnabled?: boolean;
   /** Effective model per role (the user's choice or the default routing). */
   models: Record<AgentRoleId, string>;
   defaults: Record<AgentRoleId, string>;

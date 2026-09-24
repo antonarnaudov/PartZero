@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { AgentEvent } from "@aicad/app/bridge";
 import { describe, expect, it } from "vitest";
 import { AgentHost, type WorkerHandle } from "../src/agent/host.js";
-import { KeyResolver, KeyStore, keysFromVariables, last4, parseDotenv, type Cipher } from "../src/agent/keys.js";
+import { API_KEYS_OFF_DETAIL, KeyResolver, KeyStore, keysFromVariables, last4, parseDotenv, type Cipher } from "../src/agent/keys.js";
 import { agentWorkerEnv } from "../src/env.js";
 import {
   composePrompt,
@@ -132,6 +132,46 @@ describe("API keys: encrypted store, env and .env", () => {
     expect(linux.secureStorage().available).toBe(false);
     expect(() => linux.set("openai", "sk-abcdefghijklmnop")).toThrow(/No OS keyring/);
     expect(existsSync(join(dir, "b.json"))).toBe(false);
+  });
+
+  it("never asks the keychain before a key is stored when a probe may prompt (macOS, ALPHA-0-PLAN as10)", () => {
+    const dir = tmp();
+    let probes = 0;
+    const counting: Cipher = { ...fakeCipher(), probeMayPrompt: true, isEncryptionAvailable: () => (probes++, true) };
+    const store = new KeyStore(join(dir, "k.json"), counting);
+    expect(store.secureStorage()).toEqual({ available: true, detail: "Keys you save are encrypted with the OS keychain." });
+    expect(new KeyResolver(store).status("anthropic")).toEqual({ source: null, last4: null });
+    expect(probes).toBe(0);
+    // Saving the first key is what asks the keychain; from then on the view reflects the real store.
+    store.set("anthropic", "sk-ant-abcdefghijklmnop-1234");
+    expect(probes).toBe(1);
+    expect(new KeyStore(join(dir, "k.json"), counting).secureStorage().available).toBe(true);
+    expect(probes).toBe(2);
+  });
+
+  it("a build without API keys never reads the key file, never touches the cipher and refuses to save one", () => {
+    const dir = tmp();
+    const file = join(dir, "agent-keys.json");
+    new KeyStore(file, fakeCipher()).set("anthropic", "sk-ant-abcdefghijklmnop-1234");
+    const touched: string[] = [];
+    const spy: Cipher = {
+      isEncryptionAvailable: () => (touched.push("available"), true),
+      backend: () => (touched.push("backend"), "x"),
+      encryptString: () => (touched.push("encrypt"), Buffer.alloc(0)),
+      decryptString: () => (touched.push("decrypt"), ""),
+    };
+    const off = new KeyStore(file, spy, { enabled: false });
+    expect(off.enabled).toBe(false);
+    expect(off.has("anthropic")).toBe(false);
+    expect(off.get("anthropic")).toBeUndefined();
+    expect(off.secureStorage()).toEqual({ available: false, detail: API_KEYS_OFF_DETAIL });
+    expect(() => off.set("openai", "sk-abcdefghijklmnop")).toThrow(/turned off in this build/);
+    expect(new KeyResolver(off).resolve("anthropic")).toEqual({ key: undefined, source: null, last4: null });
+    expect(touched).toEqual([]);
+    // The view tells the renderer to hide key entry.
+    const view = buildSettingsView({ stored: new SettingsStore(join(dir, "s.json")).get(), keys: new KeyResolver(off), transport: "live" });
+    expect(view.apiKeysEnabled).toBe(false);
+    expect(buildSettingsView({ stored: new SettingsStore(join(dir, "s.json")).get(), keys: new KeyResolver(new KeyStore(join(dir, "k3.json"), fakeCipher())), transport: "live" })).not.toHaveProperty("apiKeysEnabled");
   });
 
   it("survives a corrupted file and an undecryptable key", () => {

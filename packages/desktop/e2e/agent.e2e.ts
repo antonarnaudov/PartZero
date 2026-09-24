@@ -14,6 +14,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from "@playwright/test";
 import { screenshotPath as screenshotTarget } from "./screenshots.js";
+import { appDir } from "./app-dir.js";
 
 const desktopRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const script = join(desktopRoot, "e2e", "fixtures", "nema17-thicker.script.json");
@@ -60,7 +61,7 @@ test.beforeAll(async () => {
   userData = mkdtempSync(join(tmpdir(), "aicad-e2e-agent-"));
   app = await electron.launch({
     // --use-mock-keychain: safeStorage uses a mock OS keychain (no keychain prompt on macOS test runs).
-    args: [desktopRoot, "--use-mock-keychain"],
+    args: [appDir, "--use-mock-keychain"],
     env: offlineEnv({ AICAD_USER_DATA_DIR: userData, AICAD_AGENT_TRANSPORT: "scripted", AICAD_AGENT_SCRIPT: script }),
   });
   page = await app.firstWindow();

@@ -86,7 +86,7 @@ Three gates. Each drop needs its G1 and G2 rows to pass on its hand-over commit.
 | # | Check | Passes when |
 |---|---|---|
 | 1 | The build script (W1) | `codesign --verify --deep --strict` passes; the fuses are exactly the ones the alpha config sets (cookie encryption off). |
-| 2 | `PartZero --self-test` (W1) | Its JSON reports: the app version and commit; the `aicad` version; the worker is ready; the forge-web WASM loads; the prompts are found; a v1 engine is available; Claude Code is found, logged in, with its lockdown level; Bambu Studio is found, with its version. |
+| 2 | `PartZero --self-test` (W1) | Its JSON reports: the app version and commit; the `aicad` version; the worker is ready; the forge-web WASM loads; the prompts are found; a v1 engine is available; the MCP shim answers through the broker (the path runtime mode uses); the renderer evaluates the starting document, whatever it is; Claude Code is found, logged in, with its lockdown level; Bambu Studio is found, with its version. |
 | 3 | Repo gates | `cargo test --workspace`, clippy and `pnpm -r test` are clean. |
 | 4 | Reference solutions: the 5 starter parts and the coupon (`corpus/alpha0/`) [C] | Every model check in §2.4–2.5 passes on Forge, and `uv run oracle diff` shows no unexplained differences. |
 | 5 | Live agent runs: the 5 starter prompts through `aicad-agent --ir v1` with Claude Code, twice each [C]. Run for each change to the agent or its prompts, not for each build, and outside the builder agents' 5-hour windows. This is also W4f. | **Floor:** each starter passes its model checks within 2 attempts, or it is swapped [as3]. **Recorded, not gated:** first-attempt pass, time-to-proposal, notional cost, plan-window %, stop reason. P4's spec must include a blind-bore test in every run (W4h). |
@@ -114,14 +114,14 @@ Three gates. Each drop needs its G1 and G2 rows to pass on its hand-over commit.
 | a12 | (0.2) **Help → Report Issue** (§5). | The folder holds the listed files and opens in Finder. |
 
 **G2b (agent, Bash only)**
-- `codesign -dv` and a fuse read of `/Applications/PartZero.app` match the alpha config.
+- `codesign -dv` and a fuse read of `/Applications/PartZero.app` match the alpha config. (`alpha0-mac.sh --install` runs this one and lists the rest; G2b stays open until an agent runs them on the installed app.)
 - After a5's Stop, `ps` shows no `claude` process left from PartZero.
 - Mid-run, `kill` the agent worker's process. The G2a run shows "The agent process stopped; your document is safe", and the next run works.
 - `lsof -nP -i`, on the installed app while idle and on the G2a app during a live run: no outbound connection from PartZero's own processes (only the `claude` child connects out).
 
 **G2c (you, about 15 minutes)**
 1. Double-click PartZero in `/Applications` in Finder. It opens with no "damaged" dialog [as9, as19]. If Gatekeeper blocks it, use **Open Anyway** (§4.2). That's a security setting only you change.
-2. Note any keychain or privacy prompt. None is expected [as10, as16].
+2. Note any keychain or privacy prompt. None is expected [as10, as16]. One that names PartZero and a folder your shell's startup files touch would come from the login-shell lookup, which the Alpha 0 build runs for Claude Code only, and only when it is not in a known install folder.
 3. The welcome card shows Claude Code as ready (Gemini may or may not show [as23]).
 4. Open a starter, then **Open in Bambu Studio**. Write down each dialog Bambu Studio shows.
 5. Pick the P2S and PLA and slice. Write down the time estimate. That sets your print budget (§4.2).
@@ -292,7 +292,7 @@ Every part must be built as **one valid body per printed part**, fit the P2S bed
   - **No keychain prompt:** a build flag hides API-key entry, and the key store touches `safeStorage` only when a key file exists (`agent/keys.ts`) [as10]. The keychain prompt needs your login password, which an agent must never enter.
   - **Runtime mode (D1):** the alpha config keeps `runAsNode: true`, the MCP shim is bundled into one file and asar-unpacked, and `exePath` is enabled by a build flag baked into the asar.
   - **A native MCP relay** (`aicad mcp-shim`) is tracked for the first signed build. It's not needed for Alpha 0.
-  - **`scripts/alpha0-mac.sh`:** pnpm install → cargo release build of `forge-cli` → package builds → bundle → notices → `electron-builder --dir` → `codesign --verify` → fuses read → `--self-test`. With `--install`, it then quits PartZero, moves `/Applications/PartZero.app` to `PartZero-previous.app` (for rollback), and `ditto`s the new app into `/Applications`.
+  - **`scripts/alpha0-mac.sh`:** pnpm install → cargo release build of `forge-cli` → package builds → bundle → notices → `electron-builder --dir` → `codesign --verify` → fuses read → `--self-test`. With `--install`, it then quits PartZero, moves `/Applications/PartZero.app` to `/Applications/.PartZero-builds/previous` (for rollback; not named `*.app`, so macOS never lists a second PartZero), `ditto`s the new app into `/Applications`, and reads the installed copy's signature and fuses.
   - **`--self-test`:** a read-only switch that prints JSON (including the app version and commit) and exits.
   - **Log file:** `~/Library/Logs/PartZero/main.log` and `agent.log`, rotated, scrubbed with `scrubKeyLike`.
   - **Third-party notices** for the worker bundle.
@@ -462,7 +462,7 @@ Default clearances, stored with `source: "default"`. They are diametral, for a p
 | When | What |
 |---|---|
 | **Nothing to measure** | The starter parts use researched dimensions of standard hardware (§6: as5 P2S, as13 ESP32 boards, as14 6 mm D-shaft pots), each exposed as a parameter. If your part differs, say so in chat ("my board is 69 mm long") and the agent changes the parameter. No calipers, drill bits or reference rods needed. |
-| Install, and after each rebuild | Run `scripts/alpha0-mac.sh --install`, or have a coding agent run it. It quits PartZero, keeps the old app as `PartZero-previous.app` for rollback, and copies the new one into `/Applications`. A build made on this Mac isn't quarantined, so it opens directly [as9]. If macOS blocks it anyway: **System Settings → Privacy & Security → Open Anyway**. Only you change that setting. |
+| Install, and after each rebuild | Run `scripts/alpha0-mac.sh --install`, or have a coding agent run it. It quits PartZero, keeps the old app in `/Applications/.PartZero-builds` for `--rollback` (hidden, and not listed as an app), and copies the new one into `/Applications`. If macOS refuses to let it quit or move PartZero (Automation, App Management), it names the setting; only you change it. A build made on this Mac isn't quarantined, so it opens directly [as9]. If macOS blocks it anyway: **System Settings → Privacy & Security → Open Anyway**. Only you change that setting. |
 | First launch | No keychain or privacy prompt is expected [as10, as16]. If one appears, note it in G2c. A keychain prompt asks for your login password: never give it to an agent. |
 | Keep Claude Code logged in | If the card says "Log in needed", run `claude auth login` in Terminal and press **Re-check**. No API keys needed. |
 | G2c, at each drop | The 15-minute checklist in §2.3. |

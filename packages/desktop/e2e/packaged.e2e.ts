@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from "@playwright/test";
+import { appDir } from "./app-dir.js";
 
 const desktopRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -34,7 +35,7 @@ let userData: string;
 test.beforeAll(async () => {
   userData = mkdtempSync(join(tmpdir(), "aicad-e2e-packaged-"));
   app = await electron.launch({
-    args: [desktopRoot, "--use-mock-keychain"],
+    args: [appDir, "--use-mock-keychain"],
     env: {
       ...baseEnv(),
       AICAD_USER_DATA_DIR: userData,
@@ -112,7 +113,7 @@ async function stop(l: Launched): Promise<void> {
 /** The app in packaged mode, started directly (no Playwright switches), with `args` and `env` added. */
 function launchPackagedMode(args: string[], env: Record<string, string> = {}): Launched {
   const userData = mkdtempSync(join(tmpdir(), "aicad-e2e-switches-"));
-  const child = spawn(electronBinary, [desktopRoot, "--use-mock-keychain", ...args], {
+  const child = spawn(electronBinary, [appDir, "--use-mock-keychain", ...args], {
     env: { ...baseEnv(), AICAD_USER_DATA_DIR: userData, AICAD_SKIP_CLOSE_PROMPT: "1", AICAD_AGENT_DOTENV: "off", AICAD_SIMULATE_PACKAGED: "1", ...env },
     stdio: ["ignore", "ignore", "pipe"],
   });

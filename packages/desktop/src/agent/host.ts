@@ -84,6 +84,8 @@ export interface CliRunSetup {
   exePath: string | null;
   /** Development: the workspace's `packages/mcp-server`. */
   mcpServerDir: string | null;
+  /** The bundled MCP shim (`bundle/mcp/stdio.mjs`), or null (`setup.ts`). */
+  mcpShimPath?: string | null;
   /** CLI login locations and proxy settings for CLI children only (`env.ts` `cliChildHostEnv`). */
   childEnv?: Record<string, string>;
   /** What the `auto` CLI mode means here (`env.ts` `DevOverrides.cliAutoMode`; default `runtime`). */
@@ -268,6 +270,7 @@ export class AgentHost {
         if (!setup) return { ok: false, code: "UNAVAILABLE", message: "CLI providers are not set up in this build." };
         const mode = stored.cliMode === "auto" && setup.autoMode === "completion" ? "completion" : stored.cliMode;
         cliConfig = { binaries, mode, workspaceRoot: setup.workspaceRoot, exePath: setup.exePath, mcpServerDir: setup.mcpServerDir };
+        if (setup.mcpShimPath) cliConfig.mcpShimPath = setup.mcpShimPath;
         if (setup.childEnv && Object.keys(setup.childEnv).length > 0) cliConfig.childEnv = { ...setup.childEnv };
       }
     }
@@ -323,7 +326,9 @@ export class AgentHost {
         else if (!l.models.some((m) => m.tag === tag && m.tools)) problems.push({ order, code: "LOCAL_UNAVAILABLE", message: `${tag} has no tool calling, which the agent needs (${roleText}). Pick another model in Settings.` });
       } else if (kind === "api" && provider !== "ollama" && !isCliProviderId(provider)) {
         const info = providerInfo(provider);
-        if (info.keyRequired && !this.#deps.keys.resolve(provider).key) {
+        if (info.keyRequired && !this.#deps.keys.store.enabled) {
+          problems.push({ order, code: "NO_API_KEY", message: `${info.label} API models are turned off in this build, which runs on Claude Code (${roleText}). Pick a Claude Code model in Settings.` });
+        } else if (info.keyRequired && !this.#deps.keys.resolve(provider).key) {
           const hint = nothingSetUp ? " No provider is set up yet: you can also use a CLI agent you already have (Claude Code, Codex, Gemini CLI, opencode) or a local Ollama model, without any key." : "";
           problems.push({ order, code: "NO_API_KEY", message: `No API key for ${info.label} (${roleText}) — add it in Settings or set ${info.envVars[0]}.${hint}` });
         }

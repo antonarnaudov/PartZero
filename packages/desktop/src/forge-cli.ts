@@ -164,3 +164,46 @@ export async function forgeExport(bin: string, req: ForgeExportRequest, timeoutM
     return { data, exitCode: r.code, stderr: r.stderr.trim(), ...(r.error ? { error: r.error } : {}) };
   });
 }
+
+/** What `--self-test` reports about the Forge CLI (`self-test.ts`). */
+export interface ForgeSelfCheck {
+  ok: boolean;
+  path: string;
+  version: string | null;
+  detail: string;
+  v0: { status: string | null; schema: string | null } | null;
+  v1: { status: string | null; schema: string | null } | null;
+}
+
+function reportHead(stdout: Buffer): { status: string | null; schema: string | null } | null {
+  try {
+    const j = JSON.parse(stdout.toString("utf8")) as { status?: unknown; schema?: unknown };
+    return { status: typeof j.status === "string" ? j.status : null, schema: typeof j.schema === "string" ? j.schema : null };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `--self-test`: the bundled `aicad` runs (`--version`), evaluates `irJson` (a v0 document), migrates it to
+ * `aicad.ir/1` and evaluates that. The v1 path is the one the Alpha 0 agent's fallback engine uses.
+ */
+export async function forgeSelfCheck(bin: string, irJson: string, timeoutMs = 60_000): Promise<ForgeSelfCheck> {
+  const info = await forgeInfo(bin);
+  if (!info.available) return { ok: false, path: bin, version: null, detail: info.detail, v0: null, v1: null };
+  const ver = await run(bin, ["--version"], timeoutMs);
+  const version = ver.code === 0 ? ver.stdout.toString("utf8").trim().slice(0, 100) : null;
+  return withTempDoc(irJson, async (dir, docPath) => {
+    const v0 = reportHead((await run(bin, ["eval", docPath, "--format", "json"], timeoutMs)).stdout);
+    const v1Path = join(dir, "document.v1.json");
+    const mig = await run(bin, ["migrate", docPath, "--out", v1Path], timeoutMs);
+    const v1 = mig.code === 0 ? reportHead((await run(bin, ["eval", v1Path, "--format", "json"], timeoutMs)).stdout) : null;
+    const ok = version !== null && v0?.status === "ok" && v0.schema === "aicad.metrics/0" && v1?.status === "ok" && v1.schema === "aicad.metrics/1";
+    const detail = ok
+      ? `${version}: evaluates v0 and v1`
+      : version === null
+        ? `${bin} --version failed: ${ver.error ?? ver.stderr.slice(0, 200)}`
+        : `v0 ${v0?.schema ?? "no report"} ${v0?.status ?? ""}; migrate exit ${mig.code}${mig.code === 0 ? "" : ` (${mig.stderr.slice(0, 200)})`}; v1 ${v1?.schema ?? "no report"} ${v1?.status ?? ""}`;
+    return { ok, path: bin, version, detail, v0, v1 };
+  });
+}

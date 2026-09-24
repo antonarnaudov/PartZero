@@ -19,7 +19,7 @@ import { LocalModels, rebaseLocalProfile } from "../src/agent/local-detect.js";
 import { binaryFromWire, binaryToWire, brokerSocketFits, parseProbeProvidersRequest, parseSettingsUpdate, parseWorkerMessage, type HostToWorker, type WorkerToHost } from "../src/agent/protocol.js";
 import { AgentRunner, cliChildEnv, loadCliRuntime, loadMcpServer } from "../src/agent/runner.js";
 import { autoDefaults, buildSettingsView, profileAvailability, profileRegistry, readinessFrom, SettingsStore } from "../src/agent/settings.js";
-import { cliWorkspaceRoot, profileWorkspaceDir, setupAgent, type AgentSetupOptions } from "../src/agent/setup.js";
+import { cliWorkspaceRoot, detectorLoginShell, profileWorkspaceDir, setupAgent, type AgentSetupOptions } from "../src/agent/setup.js";
 import { defaultWorkspaceRoot, liveCliProcessGroups, setDefaultWorkspaceRoot, unsafeAncestor } from "@aicad/llm-gateway/cli";
 import { agentWorkerEnv, cliChildHostEnv } from "../src/env.js";
 import { tempDirs } from "./temp-dirs.js";
@@ -59,6 +59,44 @@ function detector(binDir: string, options: { cliPaths?: Record<string, string> }
 const status = (list: CliProviderStatus[], id: string): CliProviderStatus => list.find((s) => s.id === id)!;
 /** macOS temp dirs live behind a symlink (/var → /private/var): compare paths without it. */
 const unprivate = (p: string): string => p.replace(/^\/private(?=\/(var|tmp)\/)/, "");
+
+describe("CLI detection: which CLIs may be looked up through the login shell", () => {
+  /** Providers whose detection records the `loginShell` option it was given and finds nothing (no binary is run). */
+  function recording(loginShell: boolean | readonly string[] | undefined): { d: CliDetector; seen: Map<string, boolean> } {
+    const seen = new Map<string, boolean>();
+    const providers = new Map<string, CliProvider>();
+    for (const [id, p] of CLI_PROVIDERS) {
+      const wrapped = Object.create(p) as CliProvider;
+      wrapped.detect = async (o) => {
+        seen.set(id, o.loginShell);
+        return { provider: id, status: "not_installed", binary: null, lockdown: null, detail: "not found" } as never;
+      };
+      providers.set(id, wrapped);
+    }
+    const d = new CliDetector({ providers: providers as never, env: probeEnv, cliPaths: () => ({}), searchDirs: null, ...(loginShell === undefined ? {} : { loginShell: loginShell as never }) });
+    return { d, seen };
+  }
+
+  it("the Alpha 0 build runs the lookup (the user's shell startup files) for Claude Code only; others by default", async () => {
+    const alpha = recording(["claude-cli"]);
+    await alpha.d.status();
+    expect(Object.fromEntries(alpha.seen)).toEqual({ "claude-cli": true, "gemini-cli": false, "codex-cli": false, opencode: false, "cursor-agent": false });
+    const all = recording(undefined);
+    await all.d.status();
+    expect([...all.seen.values()].every((v) => v)).toBe(true);
+    const none = recording(false);
+    await none.d.status();
+    expect([...none.seen.values()].some((v) => v)).toBe(false);
+  });
+
+  it("setupAgent turns a restricted search off and passes the build's list otherwise", () => {
+    // Restricted search (AICAD_CLI_DIRS): never a login shell, whatever the build allows.
+    expect(detectorLoginShell([], ["claude-cli"])).toBe(false);
+    expect(detectorLoginShell(["/fake/bin"], null)).toBe(false);
+    expect(detectorLoginShell(null, ["claude-cli"])).toEqual(["claude-cli"]);
+    expect(detectorLoginShell(null, null)).toBe(true);
+  });
+});
 
 describe.skipIf(!posix)("CLI detection (main process), with a fake Claude Code", () => {
   it("detects the fake as Claude Code 2.1.260: verified lockdown, logged in with a Max plan, never showing the account", async () => {

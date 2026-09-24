@@ -68,6 +68,11 @@ export interface AppInfo {
   /** True when running unpackaged (`pnpm dev` / `pnpm start`). */
   isDev: boolean;
   forgeCli: ForgeCliInfo;
+  /**
+   * The build identity of a bundled build (`packages/desktop/src/build-info.ts`): edition, commit, whether the tree was
+   * dirty, and when it was bundled. Development runs report edition `dev` and no commit. Optional for older shells.
+   */
+  build?: { edition: string; commit: string | null; dirty: boolean; builtAt: string | null };
 }
 
 /** Result of `aicad eval` (+ an OBJ export for display meshes). */

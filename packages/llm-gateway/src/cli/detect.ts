@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { accessSync, constants, realpathSync, statSync } from "node:fs";
-import { homedir } from "node:os";
+import { accessSync, constants, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { homedir, userInfo } from "node:os";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import { absolutePathEntries } from "./env.js";
 import type { CliHelpInfo, DetectOptions } from "./provider.js";
@@ -18,7 +18,12 @@ export interface ResolvedBinary {
   stat: { size: number; mtimeMs: number };
 }
 
-/** Common install directories (§11.2). Provider-specific ones are added by each provider. */
+/**
+ * Common install directories (§11.2). Provider-specific ones are added by each provider. An app launched from the
+ * Finder or the Dock gets launchd's minimal PATH (`/usr/bin:/bin:/usr/sbin:/sbin`) and never runs the shell rc files,
+ * so every place a CLI is usually installed is listed here: the native installers' `~/.local/bin`, Homebrew, npm's
+ * global prefixes, bun, Volta and nvm.
+ */
 export function commonInstallDirs(env: Readonly<Record<string, string | undefined>> = process.env): string[] {
   const home = env["HOME"] ?? env["USERPROFILE"] ?? homedir();
   const dirs = [
@@ -28,10 +33,58 @@ export function commonInstallDirs(env: Readonly<Record<string, string | undefine
     join(home, ".npm-global", "bin"),
     join(home, ".bun", "bin"),
     join(home, ".volta", "bin"),
+    ...nvmBinDirs(env),
   ];
   const appData = env["APPDATA"];
   if (appData !== undefined) dirs.push(join(appData, "npm"));
   return dirs;
+}
+
+const NVM_VERSION = /^v\d+\.\d+\.\d+$/;
+
+/**
+ * nvm's per-version `bin` directories (`$NVM_DIR`, else `~/.nvm`): the one nvm's `default` alias selects first (when
+ * the alias names a version or a version prefix such as `22`), then every other installed Node, newest first. A CLI
+ * installed with `npm i -g` under nvm lives there, and nvm puts it on PATH only in an interactive shell. POSIX only
+ * (nvm-windows keeps no such tree).
+ */
+export function nvmBinDirs(env: Readonly<Record<string, string | undefined>> = process.env): string[] {
+  if (process.platform === "win32") return [];
+  const home = env["HOME"] ?? homedir();
+  const configured = env["NVM_DIR"];
+  const root = configured !== undefined && isAbsolute(configured) ? configured : join(home, ".nvm");
+  const versionsDir = join(root, "versions", "node");
+  let versions: string[];
+  try {
+    versions = readdirSync(versionsDir).filter((v) => NVM_VERSION.test(v));
+  } catch {
+    return [];
+  }
+  versions.sort((a, b) => compareVersions(b, a));
+  let preferred: string | undefined;
+  try {
+    const alias = readFileSync(join(root, "alias", "default"), "utf8").trim().replace(/^v/, "");
+    if (/^\d+(\.\d+){0,2}$/.test(alias)) preferred = versions.find((v) => v === `v${alias}` || v.startsWith(`v${alias}.`));
+  } catch {
+    preferred = undefined;
+  }
+  const ordered = preferred === undefined ? versions : [preferred, ...versions.filter((v) => v !== preferred)];
+  return ordered.map((v) => join(versionsDir, v, "bin"));
+}
+
+/**
+ * The user's login shell: `$SHELL`, else the account's shell from the user database (`os.userInfo().shell`). An app
+ * launched by launchd normally has `SHELL`, but not every launcher sets it, and without a shell the login-shell lookup
+ * (the only way to see a PATH set up in `.zshrc`, e.g. by nvm) would silently not run.
+ */
+export function loginShellPath(env: Readonly<Record<string, string | undefined>>): string | undefined {
+  const fromEnv = env["SHELL"] ?? process.env["SHELL"];
+  if (fromEnv !== undefined && fromEnv.length > 0) return fromEnv;
+  try {
+    return userInfo().shell ?? undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function executableNames(name: string): string[] {
@@ -66,7 +119,7 @@ let loginShellCache: Map<string, string | null> | null = null;
 async function loginShellLookup(name: string, env: Readonly<Record<string, string>>): Promise<string | null> {
   loginShellCache ??= new Map();
   if (loginShellCache.has(name)) return loginShellCache.get(name) ?? null;
-  const shell = env["SHELL"] ?? process.env["SHELL"];
+  const shell = loginShellPath(env);
   let found: string | null = null;
   if (process.platform !== "win32" && shell !== undefined && isAbsolute(shell) && /^[A-Za-z0-9_.-]+$/.test(name)) {
     const r = await runCommand(shell, ["-ilc", `command -v ${name}`], { cwd: homedir(), env: { ...env, TERM: "dumb" }, timeoutMs: 5_000, maxBytes: 16_384 });

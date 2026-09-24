@@ -149,13 +149,19 @@ importers:
         version: 4.1.11(@types/node@22.20.4)(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.2)(jiti@2.7.0))
 
   packages/desktop:
-    dependencies:
+    devDependencies:
       '@aicad/agent':
         specifier: workspace:*
         version: link:../agent
       '@aicad/agent-tools':
         specifier: workspace:*
         version: link:../agent-tools
+      '@aicad/app':
+        specifier: workspace:*
+        version: link:../app
+      '@aicad/cadscript':
+        specifier: workspace:*
+        version: link:../cadscript
       '@aicad/evals':
         specifier: workspace:*
         version: link:../evals
@@ -168,10 +174,12 @@ importers:
       '@aicad/llm-gateway':
         specifier: workspace:*
         version: link:../llm-gateway
-    devDependencies:
-      '@aicad/app':
+      '@aicad/mcp-server':
         specifier: workspace:*
-        version: link:../app
+        version: link:../mcp-server
+      '@electron/fuses':
+        specifier: ^1.8.0
+        version: 1.8.0
       '@playwright/test':
         specifier: ^1.63.0
         version: 1.63.0
@@ -184,6 +192,9 @@ importers:
       electron-builder:
         specifier: ^26.15.3
         version: 26.15.3(electron-builder-squirrel-windows@26.15.3)
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
       typescript:
         specifier: ~5.9.3
         version: 5.9.3

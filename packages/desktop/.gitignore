@@ -4,3 +4,5 @@ playwright-report/
 release/
 # Generated licence notices (scripts/package-notices.mjs)
 build/generated/
+# The packaging bundle (scripts/bundle.mjs)
+bundle/

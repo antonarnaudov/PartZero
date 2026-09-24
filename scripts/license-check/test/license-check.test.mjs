@@ -10,7 +10,7 @@ import { check as checkJs } from "../js-licenses.mjs";
 import { check as checkDatasets } from "../dataset-record.mjs";
 import { check as checkBoundary } from "../oracle-boundary.mjs";
 import { check as checkOwn } from "../own-licenses.mjs";
-import { classifyOracleDir, expectedOwnLicense, inOracleDir } from "../policy.mjs";
+import { classifyOracleDir, expectedOwnLicense, inOracleDir, SHIPPED_DEV_DEPENDENCIES } from "../policy.mjs";
 import { evaluate } from "../spdx.mjs";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -165,6 +165,20 @@ describe("js-licenses", () => {
     const v = checkJs(root).violations;
     assert.equal(v.length, 1);
     assert.match(v[0].problem, /declares "Apache-2\.0", LICENSING\.md assigns MPL-2\.0/);
+  });
+});
+
+describe("what the desktop app ships", () => {
+  test("every workspace devDependency of @aicad/desktop is listed as shipped (the bundle inlines them all)", () => {
+    const pkg = JSON.parse(readFileSync(join(repo, "packages/desktop/package.json"), "utf8"));
+    const workspaceDevDeps = Object.entries(pkg.devDependencies ?? {})
+      .filter(([, v]) => String(v).startsWith("workspace:"))
+      .map(([n]) => n)
+      .sort();
+    const listed = SHIPPED_DEV_DEPENDENCIES["@aicad/desktop"].map((d) => d.name);
+    assert.deepEqual(workspaceDevDeps.filter((n) => !listed.includes(n)), [], "a workspace package the desktop app bundles is missing from SHIPPED_DEV_DEPENDENCIES");
+    assert.ok(workspaceDevDeps.length > 0);
+    for (const d of SHIPPED_DEV_DEPENDENCIES["@aicad/desktop"]) assert.ok(d.reason.length > 0, d.name);
   });
 });
 

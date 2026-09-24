@@ -65,9 +65,21 @@ export function expectedOwnLicense(relPath) {
  * `leaf: true` means only the package itself ships (its own dependencies are install-time
  * tooling): Electron's runtime is downloaded by `@electron/get`, which does not ship.
  */
+const INLINED = "inlined into bundle/ by packages/desktop/scripts/bundle.mjs (main process, agent worker, MCP shim)";
+
 export const SHIPPED_DEV_DEPENDENCIES = {
+  // Every workspace package the desktop app depends on ships: the web UI as app-web, the rest inlined into the bundle
+  // (test: license-check.test.mjs checks that each `workspace:` devDependency is listed here).
   "@aicad/desktop": [
     { name: "@aicad/app", reason: "the web UI ships as the app-web extra resource" },
+    { name: "@aicad/agent", reason: INLINED },
+    { name: "@aicad/agent-tools", reason: INLINED },
+    { name: "@aicad/cadscript", reason: INLINED },
+    { name: "@aicad/evals", reason: `${INLINED}: the agent's Forge CLI engine` },
+    { name: "@aicad/forge-web", reason: `${INLINED}, and its WASM next to the worker` },
+    { name: "@aicad/ir-types", reason: INLINED },
+    { name: "@aicad/llm-gateway", reason: INLINED },
+    { name: "@aicad/mcp-server", reason: INLINED },
     { name: "electron", leaf: true, reason: "the Electron runtime ships with the desktop app" },
   ],
 };

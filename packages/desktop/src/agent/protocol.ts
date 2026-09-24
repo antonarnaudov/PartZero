@@ -28,6 +28,7 @@ import type {
   SettingsUpdate,
 } from "@aicad/app/bridge";
 import type { CliBinary, ModelProfile } from "@aicad/llm-gateway";
+import type { WorkerSelfTestReport } from "./self-test.js";
 
 export const PROTOCOL_VERSION: AgentProtocolVersion = 1;
 /** API-key providers: the only ones with keys (`keys.ts`). */
@@ -336,6 +337,11 @@ export interface WorkerCliConfig {
   exePath: string | null;
   /** Development: the workspace's `packages/mcp-server` when the package is not a dependency of the desktop app. */
   mcpServerDir: string | null;
+  /**
+   * (additive) The bundled shim (`bundle/mcp/stdio.mjs`; asar-unpacked in a packaged build, so the app executable run
+   * as Node can read it). When set it wins over {@link mcpServerDir}, and the MCP host is the one bundled into the worker.
+   */
+  mcpShimPath?: string | null;
 }
 
 /** macOS `sun_path` limit (Linux allows 107): the broker socket path must not be longer. */
@@ -379,7 +385,12 @@ export type HostToWorker =
       secrets: Partial<Record<ApiProviderId, string>>;
     }
   | { type: "answer"; v: AgentProtocolVersion; runId: string; questionId: string; answers: string[] }
-  | { type: "stop"; v: AgentProtocolVersion; runId: string };
+  | { type: "stop"; v: AgentProtocolVersion; runId: string }
+  /**
+   * `--self-test` only (main.ts): the worker checks its bundle and answers with a `selftest` message. `exePath` and
+   * `workspaceRoot` are what a CLI run gets ({@link WorkerCliConfig}): the worker runs the MCP shim through them once.
+   */
+  | { type: "selftest"; v: AgentProtocolVersion; mcpShimPath: string | null; mcpServerDir: string | null; exePath: string | null; workspaceRoot: string | null };
 
 export type WorkerToHost =
   | { type: "ready"; v: AgentProtocolVersion }
@@ -388,7 +399,9 @@ export type WorkerToHost =
   /** A CLI broke its lockdown (§5.6): the main process marks that exact binary blocked until Re-check. */
   | { type: "cli"; v: AgentProtocolVersion; kind: "lockdown_violation"; provider: CliProviderId; realPath: string; detail: string }
   /** Process-group ids of the live CLI processes (the main process kills them if the worker dies: §5.8 backstop). */
-  | { type: "procs"; v: AgentProtocolVersion; pids: number[] };
+  | { type: "procs"; v: AgentProtocolVersion; pids: number[] }
+  /** The answer to a `selftest` request (`agent/self-test.ts`). */
+  | { type: "selftest"; v: AgentProtocolVersion; report: WorkerSelfTestReport };
 
 const TERMINAL: ReadonlySet<string> = new Set(["result", "error"]);
 
@@ -412,6 +425,9 @@ export function parseWorkerMessage(v: unknown): WorkerToHost | null {
   }
   if (o["type"] === "cli" && o["kind"] === "lockdown_violation" && typeof o["provider"] === "string" && isCliProviderId(o["provider"]) && typeof o["realPath"] === "string") {
     return { type: "cli", v: PROTOCOL_VERSION, kind: "lockdown_violation", provider: o["provider"], realPath: o["realPath"].slice(0, 4096), detail: typeof o["detail"] === "string" ? o["detail"].slice(0, 500) : "" };
+  }
+  if (o["type"] === "selftest" && typeof o["report"] === "object" && o["report"] !== null) {
+    return { type: "selftest", v: PROTOCOL_VERSION, report: o["report"] as WorkerSelfTestReport };
   }
   if (o["type"] === "procs" && Array.isArray(o["pids"])) {
     const pids = o["pids"].filter((p): p is number => typeof p === "number" && Number.isInteger(p) && p > 1).slice(0, 64);

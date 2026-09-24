@@ -519,18 +519,20 @@ export function SettingsDialog(): ReactElement {
                 {view.transport === "live" ? (view.cli ?? []).map((s) => <CliRow key={s.id} s={s} />) : <p className="muted small">Not checked in offline mode.</p>}
               </div>
               {view.transport === "live" && <LocalGroup l={view.local?.[0]} url={view.ollamaBaseUrl ?? null} profiles={view.profiles} />}
-              <div className="provider-group" data-testid="settings-keys">
-                <h4>
-                  <Icon.Key size={13} /> API keys (optional)
-                </h4>
-                <p className="muted small">
-                  Only needed for the vendors&apos; APIs, which bill per token. {view.secureStorage.detail} Keys stay in the desktop app&apos;s main and agent processes and are never
-                  shown again; in development they can also come from environment variables or the repository&apos;s <code>.env</code>.
-                </p>
-                {view.providers.map((p) => (
-                  <KeyRow key={p.id} p={p} storageAvailable={view.secureStorage.available} />
-                ))}
-              </div>
+              {view.apiKeysEnabled !== false && (
+                <div className="provider-group" data-testid="settings-keys">
+                  <h4>
+                    <Icon.Key size={13} /> API keys (optional)
+                  </h4>
+                  <p className="muted small">
+                    Only needed for the vendors&apos; APIs, which bill per token. {view.secureStorage.detail} Keys stay in the desktop app&apos;s main and agent processes and are
+                    never shown again; in development they can also come from environment variables or the repository&apos;s <code>.env</code>.
+                  </p>
+                  {view.providers.map((p) => (
+                    <KeyRow key={p.id} p={p} storageAvailable={view.secureStorage.available} />
+                  ))}
+                </div>
+              )}
             </section>
             <section className="settings-section two-col">
               <div>
