@@ -20,7 +20,9 @@
     "package:win": "pnpm run package --win",
     "package:linux": "pnpm run package --linux",
     "test:e2e:fallback": "node scripts/ensure-electron.mjs && pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && node scripts/e2e-fallback.mjs",
-    "bundle": "node scripts/bundle.mjs"
+    "bundle": "node scripts/bundle.mjs",
+    "test:e2e:bundle": "node scripts/ensure-electron.mjs && pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && node scripts/e2e-bundle.mjs",
+    "package:alpha": "bash ../../scripts/alpha0-mac.sh --build"
   },
   "devDependencies": {
     "@aicad/agent": "workspace:*",
