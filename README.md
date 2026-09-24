@@ -20,7 +20,7 @@ It is built on **Forge**, our own AI-native geometry kernel, written in Rust and
 
 | Path | What | Language | License |
 |---|---|---|---|
-| `forge/` | Forge engine: kernel, solvers, tessellation, regeneration, I/O, renderer, bindings | Rust | MPL-2.0 |
+| `forge/` | Forge engine: kernel, solvers, tessellation, regeneration, I/O, renderer, bindings | Rust | MPL-2.0 (`forge-ir`: Apache-2.0) |
 | `packages/` | App, UI, CadScript compiler, agent, LLM gateway, MCP server, evals | TypeScript | MPL-2.0; CadScript, format and SDK packages are Apache-2.0 |
 | `oracle/` | Differential-testing oracle: evaluates the same IR with OCCT (build123d/OCP). **CI only, never shipped.** | Python | MPL-2.0 |
 | `ml/` | Datasets, fine-tuning, RL | Python | MPL-2.0 |
@@ -45,4 +45,19 @@ See [LICENSING.md](LICENSING.md) for details.
 - [Roadmap](docs/ROADMAP.md)
 - [Research](docs/RESEARCH.md)
 - [ADRs](docs/adr/)
-- [Contributor and agent guide](CLAUDE.md)
+- [Agent and maintainer guide](CLAUDE.md)
+
+## Building
+
+You need Rust 1.92, Node 22+ with pnpm 10, and [uv](https://docs.astral.sh/uv/) for the Python oracle. Full details are in [CONTRIBUTING.md](CONTRIBUTING.md#building-from-source).
+
+```bash
+cd forge && cargo test --workspace          # Forge kernel
+pnpm install && pnpm -r build && pnpm -r test   # TypeScript packages
+pnpm --filter @aicad/desktop dev            # desktop app
+```
+
+## Contributing and security
+
+- **Outside contributions are not accepted yet.** They open once the CLA bot is live; until then, outside pull requests are closed without review. See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports are welcome.
+- **Report security problems privately**, never in a public issue. See [SECURITY.md](SECURITY.md).

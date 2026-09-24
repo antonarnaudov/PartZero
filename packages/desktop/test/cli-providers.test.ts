@@ -704,7 +704,7 @@ describe("CLI workspace root (broker socket length, private ancestors, §5.4)", 
 
   it("keeps <userData>/cli-work when the socket fits, else this profile's folder in a private root, else stays and says why", () => {
     expect(brokerSocketFits("/Users/me/Library/Application Support/aicad/cli-work", "darwin")).toBe(true);
-    const long = `/var/folders/w5/w0kv7_9j1d92sn_hhzdc13v00000gn/T/aicad-e2e-providers-AbCdEf/user-data`;
+    const long = `/var/folders/xx/xxxxxxxxxxxxxxxxxxxxxxxxxxxx0000gn/T/aicad-e2e-providers-AbCdEf/user-data`;
     expect(brokerSocketFits(join(long, "cli-work"), "darwin")).toBe(false);
     expect(brokerSocketFits(join(long, "cli-work"), "win32")).toBe(true); // named pipes
     expect(cliWorkspaceRoot("/Users/me/Library/Application Support/aicad")).toEqual({ root: "/Users/me/Library/Application Support/aicad/cli-work", note: null });

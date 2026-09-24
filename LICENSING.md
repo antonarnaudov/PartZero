@@ -19,7 +19,7 @@ Every package or crate states its license in its manifest (`Cargo.toml` `license
 
 ## Contributions
 
-Contributions are accepted under a Contributor License Agreement (CLA). A CLA bot will be set up before the public launch. The CLA keeps open the option to offer Forge under a commercial OEM license alongside MPL-2.0, as described in ADR 0001.
+Contributions will be accepted under a Contributor License Agreement (CLA), once a CLA bot is set up. **Until then, outside pull requests are closed without review, and no outside code, patches or data are merged, cherry-picked or copied** (see [CONTRIBUTING.md](CONTRIBUTING.md)). The CLA keeps open the option to offer Forge under a commercial OEM license alongside MPL-2.0, as described in [ADR 0001](docs/adr/0001-open-core-licensing.md).
 
 ## Third-party code
 

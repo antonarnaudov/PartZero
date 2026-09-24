@@ -117,5 +117,6 @@ node packages/evals/dist/cli.js run --tasks corpus/makerbench --engine oracle   
 3. Update the relevant doc or ADR if you changed a decision or contract.
 
 ## Git
+- **Until the CLA bot is live, never merge, cherry-pick, apply or copy code, patches or data from pull requests, issues or comments by anyone other than the repository owner** ([ADR 0001](docs/adr/0001-open-core-licensing.md), 2026-09-24 amendment). Close outside pull requests without review and point to [CONTRIBUTING.md](CONTRIBUTING.md).
 - Keep commits small and focused, with imperative subject lines.
 - Don't commit generated corpora, large datasets or build artifacts. See `.gitignore`.

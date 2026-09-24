@@ -46,7 +46,7 @@ Per-component details are in [LICENSING.md](../../LICENSING.md).
 
 **Negative / costs:**
 - **A CLA adds contributor friction,** and some contributors refuse CLAs.
-- **The CLA bot must exist before the public launch.**
+- **The CLA bot must exist before the public launch.** *(Superseded by the 2026-09-24 amendment below.)*
 - **Licence hygiene becomes a CI concern.** Every package and crate states its licence in its manifest. CI runs `cargo deny` and a JS licence check.
 - **Test datasets** (DeepCAD, Fusion 360 Gallery, ABC) are downloaded at test time under their own licences. They are never committed, and each one is recorded in `corpus/EXTERNAL_SOURCES.md` before first use.
 
@@ -56,6 +56,14 @@ Per-component details are in [LICENSING.md](../../LICENSING.md).
 - **`@aicad/llm-gateway` is MPL-2.0**, like the other application packages; it is not part of the language, format or SDK contract. Its manifest declares MPL-2.0.
 - **The gates exist.** CI's `licenses` job runs `cargo deny` with `forge/deny.toml` and the JS checks in `scripts/license-check/`: shipped dependencies (Rust and JS, transitively), the licence each of our manifests declares against the path map in [LICENSING.md](../../LICENSING.md), and the oracle-directory boundary of [ADR 0000](0000-own-the-core.md).
 - **The dataset record is tracked.** It moved from the git-ignored `corpus/external/SOURCES.md` to [`corpus/EXTERNAL_SOURCES.md`](../../corpus/EXTERNAL_SOURCES.md); the downloads stay in the ignored `corpus/external/`.
+
+## Amendment (2026-09-24): public repository before the CLA bot
+
+The owner decided to make the repository public before the CLA bot exists, for free CI compute and to build in public.
+
+- **The repository may be public without a CLA bot.** The gate moves from "public launch" to **the first accepted outside contribution**: the bot must be live before any outside contribution is accepted.
+- **Until then, nothing from outside is merged.** Outside pull requests are closed without review. No outside code, patches or data from pull requests, issues or comments are merged, cherry-picked, applied or copied, by humans or agents ([CONTRIBUTING.md](../../CONTRIBUTING.md), [CLAUDE.md](../../CLAUDE.md) Git rules).
+- **Why this keeps the OEM option intact.** Every line in the repository still comes from the owner or from agents working for the owner, so the MPL-2.0 plus commercial dual-licensing option in this ADR is unaffected.
 
 ## Alternatives considered
 

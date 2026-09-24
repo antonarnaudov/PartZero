@@ -1,6 +1,6 @@
 # Phase 0 audit: Linux verification and findings
 
-Repo: `/Users/antonarnaudov/Developer/AiNative3DCAD`. Date: 2026-09-23. The paths that are in flux were left out of scope: `forge-ssi`, `forge-core/.../implicit.rs`, `forge-ir` (v1), `packages/ir-types` and `corpus/v1`. No repository files were modified.
+Repo: PartZero (this repository). Date: 2026-09-23. The paths that are in flux were left out of scope: `forge-ssi`, `forge-core/.../implicit.rs`, `forge-ir` (v1), `packages/ir-types` and `corpus/v1`. No repository files were modified.
 Scratchpad (`$S`): `$SCRATCH (session scratchpad, not retained)`.
 
 **Summary.** Both Linux Phase 0 criteria **PASS**.

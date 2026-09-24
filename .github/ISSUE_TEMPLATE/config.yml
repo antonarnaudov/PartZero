@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/antonarnaudov/PartZero/security/advisories/new
+    about: Report security problems privately through GitHub Security Advisories, never in a public issue. See SECURITY.md.
+  - name: Contribution policy
+    url: https://github.com/antonarnaudov/PartZero/blob/main/CONTRIBUTING.md
+    about: Outside pull requests aren't accepted until the CLA bot is set up. Bug reports are welcome.
