@@ -1,0 +1,142 @@
+packages/agent/src/cli-main.ts
+  s_59c0dd2af30db2::t_ffc135e1b3b7dd 6-10,16-18,21,26-29,32-33,35,42-43,53,58-64,83-84,91,93-97,127-128,131-133,143-144,193-220,226,235,237-248,250-272,276-278,287-297
+  s_59c0dd2af30db2::t_977616a4284e56 221-225,227-234,236
+  s_59c0dd2af30db2::t_af759c6beefd17 329-330,354-358,366-367,376-377,420,424,433-456,465,467
+  s_59c0dd2af30db2::t_2e27a7a5209acf 249,273-275,279-285
+  s_59c0dd2af30db2::t_4c623cd0aa9106 286
+  s_59c0dd2af30db2::t_393f0673483688 298
+packages/agent/src/index.ts
+  s_59c0dd2af30db2::t_3d460682350ea7 9-10,20-26,28-44,46
+  s_59c0dd2af30db2::t_9b2221db7f8361 27
+packages/agent/test/cli-runtime.test.ts
+  s_59c0dd2af30db2::t_9f1674e6724082 222
+  s_59c0dd2af30db2::t_616c3043db46eb 9-12,245-268,310-312,314-470
+  s_59c0dd2af30db2::t_bc9d4b29ea0096 13,37,274,313
+  s_59c0dd2af30db2::t_988af7ed1a5341 1-8,14-36,38-221,223-228,471-507
+  s_59c0dd2af30db2::t_8148d0ea8bdf85 229-244,269-273,275-309
+packages/evals/test/billing.test.ts
+  s_59c0dd2af30db2::t_932903b2e76606 1-18,20-26,28-29
+  s_59c0dd2af30db2::t_3a9ea6ea962494 19,27
+packages/evals/src/pipeline.ts
+  s_59c0dd2af30db2::t_38429ef0f37872 55-56,195
+packages/agent/src/trace.ts
+  s_59c0dd2af30db2::t_81be259a332b98 5,22-27,39-41,95,122-127,130,132,137,169-173,175
+  s_59c0dd2af30db2::t_5d2a64dd878a54 96,128-129,131,133-136,157-160
+packages/agent/src/solver.ts
+  s_59c0dd2af30db2::t_927a62df21c0b4 87
+  s_59c0dd2af30db2::t_f2c8f0dd7ee64c 6-9,11,44-47,50,88,95
+packages/agent/src/runtime.ts
+  s_59c0dd2af30db2::t_ec7cd2928ccbf6 17-20,74-75,78-83,115-116
+  s_59c0dd2af30db2::t_b50cfdfb23df90 1-16,21-73,76-77,84-114,117-126,135-195,197-200
+  s_59c0dd2af30db2::t_b8a53074bb5dd0 196
+  s_59c0dd2af30db2::t_b8d06fa94134a8 127-134
+packages/agent/test/scrub.ts
+  s_59c0dd2af30db2::t_45ba6f0df560f6 1-67
+packages/agent/test/cli.test.ts
+  s_59c0dd2af30db2::t_0377b3dc1bc75f 23-24
+  s_59c0dd2af30db2::t_f9babd967fc6bb 119
+  s_59c0dd2af30db2::t_34cedce7ec3c10 110
+  s_59c0dd2af30db2::t_7871bf45ee1bb2 1,4,17-22,25-28,36,60,78
+  s_59c0dd2af30db2::t_677827691efe02 118
+packages/agent/test/fixtures/cli/claude/runtime-nudge-2.1.260.jsonl
+  s_59c0dd2af30db2::t_8cf7240b4cdcaa 1-18
+packages/agent/src/run-context.ts
+  s_59c0dd2af30db2::t_bca55d6dd668fe 75-79,87-89
+  s_59c0dd2af30db2::t_16cd63cec38347 5,7,80-85,91-102,105-106,144-150,171-172,174-180
+  s_59c0dd2af30db2::t_5d2a64dd878a54 103-104
+  s_59c0dd2af30db2::t_223ceef5a6ddf9 86,90
+packages/agent/test/cli-harness.ts
+  s_59c0dd2af30db2::t_fd17a8005cfbaa 1-26,30-31,36-66,78-140,145-183
+  s_59c0dd2af30db2::t_82c805b21e1915 32-33,141-144
+  s_59c0dd2af30db2::t_9ca2fd13cd1a6b 27-29
+  s_59c0dd2af30db2::t_492d568c791bb9 34-35
+  s_59c0dd2af30db2::t_bc9d4b29ea0096 67-77
+packages/agent/test/runtime.test.ts
+  s_59c0dd2af30db2::t_5bd628efd1ce28 346,350
+  s_59c0dd2af30db2::t_f227cdef3f4745 121,174-175
+  s_59c0dd2af30db2::t_e82c1804aa7168 19,208,210-211,216,218-255,320-345,347-349,351-352
+  s_59c0dd2af30db2::t_b9e7d86d24ae02 125,188
+  s_59c0dd2af30db2::t_98907df74fa1eb 1-18,20-120,122-124,126-173,176-187,189-207,209,212-215,217,256-319,353-390
+packages/agent/tsconfig.json
+  s_59c0dd2af30db2::t_45671b12365510 7,11
+  s_59c0dd2af30db2::t_47279b94227187 8-10
+packages/agent/test/fake-cli/fake-claude.mjs
+  s_59c0dd2af30db2::t_492d568c791bb9 281
+  s_59c0dd2af30db2::t_82c805b21e1915 332-342,344,354-361
+  s_59c0dd2af30db2::t_a976772ff5cce9 14-16,230,284-286,292-329
+  s_59c0dd2af30db2::t_9ca2fd13cd1a6b 287-291
+  s_59c0dd2af30db2::t_baf746d821220f 1-13,17-229,231-280,282-283,330-331,343,345-353,362-369
+packages/agent/test/fixtures/cli/claude/runtime-build-2.1.260.jsonl
+  s_59c0dd2af30db2::t_8bd47d9bcbe754 1-39
+packages/agent/src/bench.ts
+  s_59c0dd2af30db2::t_acd45b1d60e8fa 48-57,88-89,96-103,106,111,116-117
+packages/agent/test/fake-runtime.ts
+  s_59c0dd2af30db2::t_e82c1804aa7168 18-19,85
+  s_59c0dd2af30db2::t_370170e866d83a 1-17,20-84,86-135
+packages/agent/package.json
+  s_59c0dd2af30db2::t_3d460682350ea7 18-21,33-34
+  s_59c0dd2af30db2::t_47279b94227187 46
+packages/agent/src/agent.ts
+  s_59c0dd2af30db2::t_03ab0d60de7437 839-851,1199-1209
+  s_59c0dd2af30db2::t_927a62df21c0b4 100,215-216,515,1156-1160,1236
+  s_59c0dd2af30db2::t_580ab61fbf528f 41,52,311-313,414-419,434-437,460-461,463-464,468-475,481,766,815,833,856,925
+  s_59c0dd2af30db2::t_ebe414d55282ca 677,694-696,727-765,767-814,816-832,834-838,852-855,857-924,926-939,942
+  s_59c0dd2af30db2::t_e3378cd9a6a6b2 31-37,39-40,42-51,53,65,79,82-99,143-144,176-184,213-214,217-218
+  s_59c0dd2af30db2::t_4ecbe3c3f79618 1161-1168,1198,1235,1238
+  s_59c0dd2af30db2::t_0cc1be6f2af9d0 411-412,542,554-576,629-634,658-662,664-665,667-670
+  s_59c0dd2af30db2::t_c166f03731a29a 308-310,314-323,348-353,383,389-410,413,420-433,438-459,462,465-467,476-480,482-514
+  s_59c0dd2af30db2::t_139f6f3afcb2e5 516
+packages/agent/test/fixtures/cli/claude/runtime-build-2.1.260.engine.json
+  s_59c0dd2af30db2::t_8bd47d9bcbe754 1-143
+packages/agent/src/spec-writer.ts
+  s_59c0dd2af30db2::t_b495d1ec3cd846 27-28,114-148,150-152,154-176,178-185,188-190,193-213,255
+  s_59c0dd2af30db2::t_bca55d6dd668fe 149,153,177
+  s_59c0dd2af30db2::t_f81ced36054eae 186-187,191-192
+packages/agent/src/cli-runtime.ts
+  s_59c0dd2af30db2::t_b8d06fa94134a8 47,76
+  s_59c0dd2af30db2::t_9331344e440227 1-12,19-20,24-28,30-39,41-46,48-67,74-75,78-83,93-97,100-102,109-110,118-127,147-157,160,165-166,168-178,181,185,191-224,226-237,239,241-245,247-260,262-272,274-277,279-292,295,299-303,305-306,314-319,325-343,354-356,361-366,368-392,394-431,433-446,448-480,482-488,491-500,572-574,576-584,586-592,596,598,603-606,609-610,612-629,652-654,679-744,751,754,757,759-765,767-768,770-771,774-781,783,785-789,791-806,809,811,818-840,941-999
+  s_59c0dd2af30db2::t_142886f7a8f707 13-18,23,29,40,68-73,77,84-92,98-99,103-108,111-115,117,128-146
+  s_59c0dd2af30db2::t_9d038a5af8d70e 21-22,559-571
+  s_59c0dd2af30db2::t_2fb242089a6c94 116
+  s_59c0dd2af30db2::t_057aeefb2a7249 158-159,161-164,167,179-180,182-184,186-190,225,238,240,246,261,273,278,293-294,296-298,304,307-313,320-324,344-353,357-360,367,393,432,447,481,489-490,501-558,575,585,593-595,597,599-602,607-608,611,630-651,655-678,745-750,752-753,755-756,758,766,769,772-773,782,784,790,807-808,810,812-817,841-940
+packages/evals/src/report.ts
+  s_59c0dd2af30db2::t_38429ef0f37872 45-49
+packages/agent/src/models.ts
+  s_59c0dd2af30db2::t_93020999deede4 7,23-26,60-62
+packages/agent/vitest.config.ts
+  s_59c0dd2af30db2::t_901dc5e10043ad 4,9-20
+packages/agent/test/live/cli-smoke.live.test.ts
+  s_59c0dd2af30db2::t_896e567a6bf0b6 1-9,12-164,196-212
+  s_59c0dd2af30db2::t_dedb6b135ade4b 10-11,165-195
+packages/evals/src/solver.ts
+  s_59c0dd2af30db2::t_38429ef0f37872 20-24
+packages/agent/test/cli-main-providers.test.ts
+  s_59c0dd2af30db2::t_f79d018c7a89d1 13,29
+  s_59c0dd2af30db2::t_01c39d8a6d8f62 1-12,14-28,30-109
+packages/agent/test/cli-replay.test.ts
+  s_59c0dd2af30db2::t_1ab1cb9fc33180 79-83,106-108,118-125
+  s_59c0dd2af30db2::t_91dda02392e5bf 86,105
+  s_59c0dd2af30db2::t_a0ff9aa1b87d1a 74
+  s_59c0dd2af30db2::t_9ca2fd13cd1a6b 1-13,15-26,28-60,73,75-78,126
+  s_59c0dd2af30db2::t_bc9d4b29ea0096 14,27
+  s_59c0dd2af30db2::t_0feb0bc4168118 67-72,84-85,87-104,109-117
+  s_59c0dd2af30db2::t_8a65a4030f53b7 61-66
+packages/agent/test/makerbench.test.ts
+  s_59c0dd2af30db2::t_6636aa563c9dee 102,104-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "65a3ee2d8b71406feee78a2bb3cb0ba4969e5666",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
