@@ -1,0 +1,143 @@
+{
+ "schema": "aicad.evals.fixtures/0",
+ "task": "live-nema17-thicker",
+ "engine": "forge 0.0.1",
+ "entries": [
+  {
+   "label": "live-1",
+   "ir_sha256": "5980cccf41f6d0176f2b703014e925a032bc86b6d4205ce1be6ae570baf529c5",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "forge 0.0.1",
+    "document": "nema17_plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2083.5504778401373,
+        "loops": 6,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 10417.752389200683,
+        "area": 5726.30444801926,
+        "centroid": [
+         -4.626003695661502e-16,
+         1.827690680714182e-16,
+         2.5
+        ],
+        "bbox_min": [
+         -25,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         25,
+         25,
+         5
+        ],
+        "faces": 11,
+        "edges": 22,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 10,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "live-2",
+   "ir_sha256": "29920aad11bbe25be37bcc14ad397fb83f8bb420d575d38644ca1afb5fbe8c22",
+   "report": {
+    "schema": "aicad.metrics/0",
+    "engine": "forge 0.0.1",
+    "document": "nema17_plate",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "outline",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 2083.5504778401373,
+        "loops": 6,
+        "outer_curves": [
+         "bottom",
+         "left",
+         "right",
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "part": "plate",
+      "feature": "plate",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "volume": 14584.853344880956,
+        "area": 6349.985844954855,
+        "centroid": [
+         -9.597416966408465e-17,
+         8.431495037438322e-17,
+         3.5
+        ],
+        "bbox_min": [
+         -25,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         25,
+         25,
+         7
+        ],
+        "faces": 11,
+        "edges": 22,
+        "face_types": {
+         "cylinder": 5,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 10,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

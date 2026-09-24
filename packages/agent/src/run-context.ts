@@ -2,8 +2,9 @@
  * Shared plumbing for one agent run: the gateway task (USD cap + ledger), the models per role, the
  * trace, and `callModel`, which turns gateway failures into typed stops.
  */
-import { BudgetExceededError, GatewayError, type ChatRequest, type ChatResponse, type LLMGateway, type Task } from "@aicad/llm-gateway";
+import { BudgetExceededError, GatewayError, type ChatRequest, type ChatResponse, type CliLimits, type LLMGateway, type PlanUsage, type Task } from "@aicad/llm-gateway";
 import type { AgentModels, AgentRole } from "./models.js";
+import { CLI_COMPLETION_DESIGNER_WALL_MS, type AgentRuntime, type CliModeOption, type RuntimePhase, type RuntimePhaseOutcome, type RuntimeTurnRecord } from "./runtime.js";
 import type { AgentStopReason, TraceRecorder } from "./trace.js";
 
 export interface AgentLimits {
@@ -71,8 +72,38 @@ export interface RunContext {
   now: () => number;
   /** Aborts the run: checked before every model call and passed to the provider request. */
   signal?: AbortSignal | undefined;
-  /** Runs before every model call of every phase (the orchestrator's 80 % budget gate). */
-  beforeCall?: ((role: AgentRole) => Promise<void>) | undefined;
+  /**
+   * Runs before every model call of every phase, and before every tool call of a runtime phase (the
+   * orchestrator's 80 % budget gate). `wait` wraps a wait for the user (runtime: the broker's `userWait`).
+   */
+  beforeCall?: ((role: AgentRole, wait?: UserWait) => Promise<void>) | undefined;
+  /** CLI completion-mode limits over `CLI_PHASE_LIMITS.completion` (a designer turn also gets a 300 s wall). */
+  cliCompletionLimits?: Partial<CliLimits> | undefined;
+  /** Plan usage a CLI reported (Claude `rate_limit_event`), from any call or phase. */
+  onPlanUsage?: ((usage: PlanUsage) => void) | undefined;
+  /** Agent-runtime mode (ADR 0014): set when the host injected a runtime. */
+  runtime?: RuntimeContext | undefined;
+}
+
+/** Wraps a wait for the user so a runtime phase's broker does not count it against its deadline. */
+export type UserWait = <T>(wait: Promise<T>) => Promise<T>;
+
+/** What a runtime phase needs from the orchestrator (accounting and limits), shared by every role. */
+export interface RuntimeContext {
+  runtime: AgentRuntime;
+  cliMode: CliModeOption;
+  /** `CLI_PHASE_LIMITS[phase]` with the caller's overrides and the remaining budget as the CLI-side backstop. */
+  limits(phase: RuntimePhase): CliLimits;
+  /** The run's orchestrator tag for the broker's own texts (the spec writer gets its own). */
+  orchTag?: string | undefined;
+  /** Interactive runs: the budget checkpoint may wait for the user during any tool call. */
+  mayWaitForUser: boolean;
+  /** One model turn inside a phase: traced and added to the unsettled estimate the 80 % gate counts. */
+  onModelTurn(role: Exclude<AgentRole, "triage">, record: RuntimeTurnRecord): void;
+  /** A CLI result corrected the phase's per-turn estimates (`RuntimePhaseSpec.onCostCorrection`): the 80 % gate counts it. */
+  onCostCorrection(role: Exclude<AgentRole, "triage">, deltaUsd: number): void;
+  /** A finished phase: charge the task with the settled cost and reset the estimate. */
+  settle(role: Exclude<AgentRole, "triage">, outcome: RuntimePhaseOutcome): void;
 }
 
 /** Throw the `cancelled` stop when the run's signal has been aborted. */
@@ -110,6 +141,13 @@ export async function callModel(rc: RunContext, role: AgentRole, request: Omit<C
   const ceiling = Math.max(1, Math.min(m.maxOutputTokens ?? profile.defaultMaxOutputTokens, profile.maxOutputTokens));
   const out = affordableOutputTokens(rc, req, ceiling);
   req.maxOutputTokens = out.maxOutputTokens;
+  const cli = profile.cli !== undefined;
+  if (cli) {
+    // Completion mode (§3.1): one fresh CLI invocation per call. A designer turn gets a longer wall clock.
+    const limits: Record<string, number> = { ...(role === "designer" ? { wallMs: CLI_COMPLETION_DESIGNER_WALL_MS } : {}) };
+    for (const [k, v] of Object.entries(rc.cliCompletionLimits ?? {})) if (typeof v === "number") limits[k] = v;
+    if (Object.keys(limits).length > 0) req.providerOptions = { ...req.providerOptions, cli: { limits } };
+  }
   if (out.clamped) rc.trace.note(`${role}: output ceiling ${ceiling} → ${out.maxOutputTokens} tokens to stay within the $${rc.task.budget.capUsd.toFixed(2)} cap`);
   const t0 = rc.now();
   let res: ChatResponse;
@@ -130,7 +168,16 @@ export async function callModel(rc: RunContext, role: AgentRole, request: Omit<C
     latencyMs: Math.round(rc.now() - t0),
     stopReason: res.stopReason,
     toolCalls: res.message.content.flatMap((b) => (b.type === "tool_use" ? [b.name] : [])),
+    mode: cli ? "cli-completion" : "gateway",
+    ...(res.billing !== undefined ? { billing: res.billing } : {}),
   });
+  if (res.planUsage !== undefined) {
+    try {
+      rc.onPlanUsage?.(res.planUsage);
+    } catch {
+      // an observer must not break the run
+    }
+  }
   if (res.stopReason === "refusal") {
     throw new AgentStop("refusal", `${role} refused${res.refusal?.category ? ` (${res.refusal.category})` : ""}${res.refusal?.explanation ? `: ${res.refusal.explanation}` : ""}; not retried`);
   }

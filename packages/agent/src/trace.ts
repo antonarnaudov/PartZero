@@ -2,7 +2,7 @@
  * The agent's trace: every state transition, model call (with cost, tokens, latency) and tool call,
  * plus a summary for reports (cost per role, turns, repairs, replans, stop reason).
  */
-import type { StopReason as ModelStopReason, Usage } from "@aicad/llm-gateway";
+import type { Billing, StopReason as ModelStopReason, Usage } from "@aicad/llm-gateway";
 import type { AgentRole } from "./models.js";
 
 export type AgentState = "TRIAGE" | "ASK" | "CLARIFY" | "SPEC" | "BUILD" | "REPAIR" | "REPLAN" | "PROPOSE" | "DONE";
@@ -19,7 +19,12 @@ export type AgentStopReason =
   | "engine_unavailable"
   | "model_error"
   /** The caller aborted the run (`AgentOptions.signal`), e.g. the user pressed Stop. */
-  | "cancelled";
+  | "cancelled"
+  /** A CLI agent exposed or called a tool outside our CAD tools (ADR 0014 tripwires). */
+  | "lockdown_violation";
+
+/** How a model call ran (ADR 0014): an API/local model through the gateway, or a CLI agent. */
+export type LlmCallMode = "gateway" | "cli-completion" | "cli-runtime";
 
 export interface LlmCallRecord {
   role: AgentRole;
@@ -31,6 +36,9 @@ export interface LlmCallRecord {
   latencyMs: number;
   stopReason: ModelStopReason;
   toolCalls: string[];
+  /** Absent for gateway calls recorded before ADR 0014. */
+  mode?: LlmCallMode;
+  billing?: Billing;
 }
 
 export interface ToolCallRecord {
@@ -84,6 +92,8 @@ export class TraceRecorder {
   readonly #start: number;
   readonly #now: () => number;
   readonly #onEvent: ((e: TraceEvent) => void) | undefined;
+  readonly #adjust: Record<AgentRole, number> = { triage: 0, designer: 0, spec_writer: 0 };
+  readonly #adjustTokens = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
 
   constructor(now: () => number = () => performance.now(), onEvent?: (e: TraceEvent) => void) {
     this.#now = now;
@@ -109,7 +119,22 @@ export class TraceRecorder {
 
   llm(r: LlmCallRecord): void {
     this.llmCalls.push(r);
-    this.#push("llm", `${r.role} ${r.model} $${r.costUsd.toFixed(4)} in ${r.usage.inputTokens}+${r.usage.cacheReadTokens}c out ${r.usage.outputTokens} ${r.stopReason}${r.toolCalls.length ? ` → ${r.toolCalls.join(", ")}` : ""}`);
+    const how = r.mode !== undefined && r.mode !== "gateway" ? ` [${r.mode}${r.billing === "subscription" ? ", plan" : ""}]` : "";
+    this.#push("llm", `${r.role} ${r.model} $${r.costUsd.toFixed(4)} in ${r.usage.inputTokens}+${r.usage.cacheReadTokens}c out ${r.usage.outputTokens} ${r.stopReason}${r.toolCalls.length ? ` → ${r.toolCalls.join(", ")}` : ""}${how}`);
+  }
+
+  /**
+   * A CLI runtime phase settled at a different amount than the sum of its per-turn estimates (the
+   * CLI reported its own total): the difference is added to the role's cost in the summary, and
+   * `tokens` (the settled usage minus the per-turn records' usage) to the summary's token counts.
+   */
+  settle(role: AgentRole, deltaUsd: number, text: string, tokens?: Partial<Record<"inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheWriteTokens", number>>): void {
+    if (Number.isFinite(deltaUsd) && deltaUsd !== 0) this.#adjust[role] += deltaUsd;
+    for (const k of ["inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens"] as const) {
+      const d = tokens?.[k];
+      if (d !== undefined && Number.isFinite(d)) this.#adjustTokens[k] += d;
+    }
+    this.#push("note", text);
   }
 
   tool(r: ToolCallRecord, text: string): void {
@@ -129,10 +154,10 @@ export class TraceRecorder {
   summary(): TraceSummary {
     const costByRole: Record<AgentRole, number> = { triage: 0, designer: 0, spec_writer: 0 };
     const tools: Record<string, number> = {};
-    let inputTokens = 0;
-    let outputTokens = 0;
-    let cacheRead = 0;
-    let cacheWrite = 0;
+    let inputTokens = this.#adjustTokens.inputTokens;
+    let outputTokens = this.#adjustTokens.outputTokens;
+    let cacheRead = this.#adjustTokens.cacheReadTokens;
+    let cacheWrite = this.#adjustTokens.cacheWriteTokens;
     for (const c of this.llmCalls) {
       costByRole[c.role] += c.costUsd;
       inputTokens += c.usage.inputTokens;
@@ -141,8 +166,13 @@ export class TraceRecorder {
       cacheWrite += c.usage.cacheWriteTokens;
     }
     for (const t of this.toolCalls) tools[t.name] = (tools[t.name] ?? 0) + 1;
+    let adjust = 0;
+    for (const role of Object.keys(costByRole) as AgentRole[]) {
+      costByRole[role] += this.#adjust[role];
+      adjust += this.#adjust[role];
+    }
     const s: TraceSummary = {
-      costUsd: this.llmCalls.reduce((n, c) => n + c.costUsd, 0),
+      costUsd: this.llmCalls.reduce((n, c) => n + c.costUsd, 0) + adjust,
       costByRole,
       latencyMs: this.elapsed(),
       turns: this.llmCalls.filter((c) => c.role === "designer").length,

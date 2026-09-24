@@ -1,7 +1,7 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { RecordingTransport } from "@aicad/llm-gateway";
 import { cliMain, ScriptedTransport, scriptedGateway, type CliDeps, type Scripts } from "../src/index.js";
 import { fixtureEngine } from "./helpers.js";
@@ -14,6 +14,18 @@ function io() {
   return { io: { stdout: (t: string) => out.push(t), stderr: (t: string) => err.push(t), cwd: process.cwd() }, out, err };
 }
 
+const dirs: string[] = [];
+afterEach(() => {
+  for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
+});
+
+/** A private temp dir, removed after the test. */
+function tempDir(prefix = "aicad-agent-cli-"): string {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  dirs.push(dir);
+  return dir;
+}
+
 function deps(scripts: Scripts): CliDeps {
   const transport = new ScriptedTransport(scripts);
   return { makeGateway: () => scriptedGateway(transport), makeEngine: () => fixtureEngine() };
@@ -21,7 +33,7 @@ function deps(scripts: Scripts): CliDeps {
 
 describe("aicad-agent run", () => {
   it("prints the final CadScript and a trace summary", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "aicad-agent-cli-"));
+    const dir = tempDir();
     const { io: cio, out, err } = io();
     const code = await cliMain(
       ["run", "--prompt", "Gasket 90 x 70 x 1.5 mm, 8 mm band, M3 holes in the corners.", "--engine", "fixture", "--process", "laser", "--out", join(dir, "gasket.cad.ts"), "--trace", join(dir, "trace.json")],
@@ -45,7 +57,7 @@ describe("aicad-agent run", () => {
   });
 
   it("edits a context file and exits 1 when the run stops", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "aicad-agent-cli-"));
+    const dir = tempDir();
     writeFileSync(join(dir, "plate.cad.ts"), PLATE_OK);
     const ok = io();
     expect(
@@ -63,7 +75,7 @@ describe("aicad-agent run", () => {
   });
 
   it("replays a recorded trajectory offline (no keys, no scripts)", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "aicad-agent-cli-"));
+    const dir = tempDir();
     const recorder = new RecordingTransport(
       new ScriptedTransport({ triage: [triage("design")], spec_writer: specTurns(WASHER_TESTS, WASHER_REQS), designer: [apply({ source: WASHER }), propose("Washer.")] }),
     );
@@ -95,7 +107,7 @@ describe("aicad-agent run", () => {
 
 describe("aicad-agent bench", () => {
   it("runs the bake-off and writes comparison.md", async () => {
-    const out = mkdtempSync(join(tmpdir(), "aicad-bench-cli-"));
+    const out = tempDir("aicad-bench-cli-");
     const { io: cio, out: stdout } = io();
     const code = await cliMain(
       ["bench", "--tasks", CORPUS_DIR, "--only", "t1-m3-washer", "--models", "claude-opus-5-5", "--engine", "fixture", "--out", out, "--concurrency", "1"],
@@ -103,8 +115,8 @@ describe("aicad-agent bench", () => {
       deps({ triage: [triage("design")], spec_writer: specTurns(WASHER_TESTS, WASHER_REQS), designer: [apply({ source: WASHER }), propose("Washer.")] }),
     );
     expect(code).toBe(0);
-    expect(stdout.join("")).toContain("| `claude-opus-5-5` | 100.0% (1/1) | 1/1 |");
-    expect(readFileSync(join(out, "comparison.md"), "utf8")).toContain("| Designer model | pass@1 |");
+    expect(stdout.join("")).toContain("| `claude-opus-5-5` | gateway | 100.0% (1/1) | 1/1 |");
+    expect(readFileSync(join(out, "comparison.md"), "utf8")).toContain("| Designer model | Mode | pass@1 |");
   });
 
   it("refuses to start without the provider key when using real transports", async () => {

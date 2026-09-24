@@ -4,7 +4,7 @@
  * then uses the same model (one model family per run), and triage the provider's small model, so
  * a run needs exactly one provider key.
  */
-import type { LLMGateway, ReasoningEffort } from "@aicad/llm-gateway";
+import { smallModelForProfile, type LLMGateway, type ReasoningEffort } from "@aicad/llm-gateway";
 
 export type AgentRole = "triage" | "designer" | "spec_writer";
 export const AGENT_ROLES: readonly AgentRole[] = ["triage", "designer", "spec_writer"];
@@ -20,7 +20,10 @@ export type AgentModels = Record<AgentRole, ModelChoice>;
 
 export type ModelOverrides = Partial<Record<AgentRole, string | ModelChoice>>;
 
-/** The small, fast model per provider (triage). */
+/**
+ * @deprecated The gateway's `smallModelFor()` / `smallModelForProfile()` is the one table (CLI
+ * providers included, docs/CLI-PROVIDERS.md §9.3). Kept for API compatibility: the API providers only.
+ */
 export const SMALL_MODEL_BY_PROVIDER: Readonly<Record<string, string>> = {
   anthropic: "claude-haiku-4-5",
   openai: "gpt-6-luna",
@@ -54,8 +57,9 @@ export function resolveModels(gateway: LLMGateway, overrides: ModelOverrides = {
   let triage: ModelChoice;
   if (overrides.triage !== undefined) triage = choice(overrides.triage);
   else if (designerOverridden) {
-    const small = SMALL_MODEL_BY_PROVIDER[gateway.profile(designer.model).provider];
-    triage = { model: small !== undefined && gateway.registry.has(small) ? small : designer.model };
+    // One table for every host (§9.3): API and CLI providers have a small model; local ones use the designer.
+    const small = smallModelForProfile(gateway.profile(designer.model));
+    triage = { model: small !== null && gateway.registry.has(small) ? small : designer.model };
   } else triage = fromRouter("triage");
 
   const out: AgentModels = { triage, designer, spec_writer: spec };

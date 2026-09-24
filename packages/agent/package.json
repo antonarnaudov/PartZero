@@ -15,6 +15,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./cli-runtime": {
+      "types": "./dist/cli-runtime.d.ts",
+      "import": "./dist/cli-runtime.js"
     }
   },
   "files": [
@@ -26,7 +30,8 @@
     "test": "vitest run",
     "test:live": "vitest run test/live",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "fixtures": "AICAD_RECORD_FIXTURES=oracle vitest run test/record-fixtures.test.ts"
+    "fixtures": "AICAD_RECORD_FIXTURES=oracle vitest run test/record-fixtures.test.ts",
+    "test:live:cli": "vitest run test/live/cli-smoke.live.test.ts"
   },
   "dependencies": {
     "@aicad/agent-tools": "workspace:*",
@@ -38,6 +43,7 @@
     "zod": "^4.6.0"
   },
   "devDependencies": {
+    "@aicad/mcp-server": "workspace:*",
     "@types/node": "^22.15.0",
     "vitest": "^4.1.0"
   },

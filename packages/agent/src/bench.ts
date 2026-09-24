@@ -45,6 +45,16 @@ export interface ComparisonRow {
   median_turns: number;
   proposed: number;
   stopped: Record<string, number>;
+  /** How the designer ran (ADR 0014): gateway, cli-completion, cli-runtime, or `mixed` across tasks. */
+  mode: AgentRunRecord["mode"] | "mixed" | "none";
+  /** Who paid: `subscription` costs are notional (the CLI plan's API list-price equivalent). */
+  billing: AgentRunRecord["billing"] | "mixed" | "none";
+}
+
+function uniform<T extends string>(values: readonly T[]): T | "mixed" | "none" {
+  const set = new Set(values);
+  if (set.size === 0) return "none";
+  return set.size === 1 ? values[0]! : "mixed";
 }
 
 function median(values: readonly number[]): number {
@@ -75,26 +85,36 @@ export function comparisonRows(runs: readonly ModelRun[]): ComparisonRow[] {
       median_turns: median(recs.map((r) => r.turns)),
       proposed: recs.filter((r) => r.status === "proposed").length,
       stopped,
+      mode: uniform(recs.map((r) => r.mode)),
+      billing: uniform(recs.map((r) => r.billing)),
     };
   });
 }
 
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
 
-/** Markdown comparison: pass@1 per tier, validity, hidden tests, median cost, p50 latency, turns. */
+/** A cost cell: subscription (CLI plan) amounts are notional, so they read "≈$0.042 (plan)" (§13.4). */
+function costCell(usd: number, digits: number, billing: ComparisonRow["billing"]): string {
+  if (billing === "subscription") return `≈$${usd.toFixed(digits)} (plan)`;
+  if (billing === "local") return "local";
+  return `$${usd.toFixed(digits)}${billing === "mixed" ? " (mixed)" : ""}`;
+}
+
+/** Markdown comparison: pass@1 per tier, validity, hidden tests, median cost, p50 latency, turns, mode. */
 export function comparisonTable(rows: readonly ComparisonRow[]): string {
   const tiers = TIERS.filter((t) => rows.some((r) => r.by_tier[t]));
-  const head = ["Designer model", "pass@1", ...tiers.map((t) => `${t} pass@1`), "Validity", "Hidden tests", "Median cost", "Total cost", "p50 latency", "Median turns", "Proposed", "Stops"];
+  const head = ["Designer model", "Mode", "pass@1", ...tiers.map((t) => `${t} pass@1`), "Validity", "Hidden tests", "Median cost", "Total cost", "p50 latency", "Median turns", "Proposed", "Stops"];
   const lines = [`| ${head.join(" | ")} |`, `|${head.map(() => "---").join("|")}|`];
   for (const r of rows) {
     const cells = [
       `\`${r.model}\``,
+      r.mode === "none" ? "–" : r.mode,
       `${pct(r.pass_at_1)} (${Math.round(r.pass_at_1 * r.tasks)}/${r.tasks})`,
       ...tiers.map((t) => (r.by_tier[t] ? `${r.by_tier[t]!.passed}/${r.by_tier[t]!.tasks}` : "–")),
       pct(r.validity_rate),
       pct(r.test_pass_rate),
-      `$${r.median_cost_usd.toFixed(3)}`,
-      `$${r.total_cost_usd.toFixed(2)}`,
+      costCell(r.median_cost_usd, 3, r.billing),
+      costCell(r.total_cost_usd, 2, r.billing),
       `${(r.p50_latency_ms / 1000).toFixed(1)} s`,
       String(r.median_turns),
       `${r.proposed}/${r.tasks}`,

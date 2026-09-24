@@ -52,6 +52,8 @@ export interface TaskResult {
   /** Solver, engine or harness error. */
   error?: { code: string; message: string };
   cost_usd?: number;
+  /** Who paid `cost_usd` (the solver's `billing`); `subscription` amounts are notional. Absent = metered. */
+  billing?: "metered" | "subscription" | "local";
   /** Solver latency (solver-reported, else measured wall time). */
   latency_ms: number;
   engine_ms?: number;
@@ -190,7 +192,7 @@ export async function runTask(task: LoadedTask, solver: Solver, engine: Engine):
     return failed("solver", { error: errorInfo(e) }, Math.round(performance.now() - t0));
   }
   const latency = out.latencyMs ?? Math.round(performance.now() - t0);
-  const cost = out.costUsd !== undefined ? { cost_usd: out.costUsd } : {};
+  const cost = { ...(out.costUsd !== undefined ? { cost_usd: out.costUsd } : {}), ...(out.billing !== undefined && out.billing !== "metered" ? { billing: out.billing } : {}) };
 
   // 2. Compile + 3. kernel.
   const r = await evaluateSource(out.cadscript, `${task.id}.cad.ts`, engine, task.id);

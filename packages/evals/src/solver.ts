@@ -17,6 +17,11 @@ export interface SolverOutput {
   cadscript: string;
   /** Provider cost of producing it, USD. */
   costUsd?: number;
+  /**
+   * Who paid `costUsd` (ADR 0014): `metered` (API keys), `subscription` (a CLI agent on the user's
+   * plan: the amount is notional, the API list-price equivalent) or `local`. Absent = metered.
+   */
+  billing?: "metered" | "subscription" | "local";
   /** Solver-reported latency; the pipeline measures wall time when absent. */
   latencyMs?: number;
   /** Anything worth keeping for debugging (messages, tool calls, clarifying questions). */

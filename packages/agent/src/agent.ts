@@ -28,8 +28,29 @@
  *
  * Context: tools (sorted) → system (role prompt + generated CadScript reference + conventions,
  * cache breakpoint) → task header → append-only turns. Tool results are short deltas.
+ *
+ * CLI agents (ADR 0014, docs/CLI-PROVIDERS.md §3): a CLI profile runs TRIAGE and CLARIFY in
+ * completion mode (one stateless CLI invocation per gateway call). SPEC, BUILD and ASK run in
+ * agent-runtime mode when the host injected an {@link AgentRuntime} (§3.4): one fresh CLI process
+ * per phase drives the loop, and every tool call comes back through the broker to the same
+ * `#execute` path (ladder, REPAIR/REPLAN notes, stop rules, PROPOSE gate, budget gate). Notes are
+ * appended to the tool result there, because a CLI cannot take a user message mid-turn.
  */
-import { Conversation, type LLMGateway, type Message, type SystemBlock, type TextBlock, type ToolResultBlock, type ToolUseBlock } from "@aicad/llm-gateway";
+import {
+  Conversation,
+  emptyUsage,
+  type Billing,
+  type CliLimits,
+  type LLMGateway,
+  type Message,
+  type PlanUsage,
+  type SystemBlock,
+  type TextBlock,
+  type ToolDef,
+  type ToolResultBlock,
+  type ToolUseBlock,
+  type Usage,
+} from "@aicad/llm-gateway";
 import {
   capList,
   clip,
@@ -41,6 +62,7 @@ import {
   irSummary,
   jsonQuote,
   oneLine,
+  READ_ONLY_TOOLS,
   summarizeTests,
   verificationLine,
   type Checkpoint,
@@ -54,12 +76,28 @@ import {
 } from "@aicad/agent-tools";
 import { describeTest, type Engine, type HiddenTest } from "@aicad/evals";
 import type { EvalReport, IrDocument } from "@aicad/ir-types";
-import { resolveModels, type AgentModels, type ModelOverrides } from "./models.js";
+import { resolveModels, type AgentModels, type AgentRole, type ModelOverrides } from "./models.js";
 import { loadPrompt, type PromptInfo } from "./prompts.js";
 import { cadscriptReference } from "./reference.js";
-import { AgentStop, callModel, DEFAULT_LIMITS, responseText, throwIfCancelled, type AgentLimits, type RunContext } from "./run-context.js";
-import { clarificationsBlock, processLine, runSpecWriter, type Clarification } from "./spec-writer.js";
-import { TraceRecorder, type AgentState, type AgentStopReason, type TraceEvent, type TraceSummary } from "./trace.js";
+import { AgentStop, callModel, DEFAULT_LIMITS, responseText, throwIfCancelled, type AgentLimits, type RunContext, type RuntimeContext, type UserWait } from "./run-context.js";
+import {
+  CLI_PHASE_LIMITS,
+  CLI_QUESTION_WAIT_MS,
+  resolvePhaseMode,
+  RuntimeUnsupportedError,
+  type AgentRuntime,
+  type CliModeOption,
+  type ModePhase,
+  type PhaseMode,
+  type RuntimeCallControl,
+  type RuntimePhase,
+  type RuntimePhaseOutcome,
+  type RuntimeToolCall,
+  type RuntimeToolResult,
+  type TurnEndDecision,
+} from "./runtime.js";
+import { clarificationsBlock, processLine, runSpecWriter, runSpecWriterRuntime, type Clarification } from "./spec-writer.js";
+import { TraceRecorder, type AgentState, type AgentStopReason, type LlmCallMode, type TraceEvent, type TraceSummary } from "./trace.js";
 import { fallbackTriage, runTriage, type TriageKind, type TriageResult } from "./triage.js";
 import { dataBlock, fenceFor, orchestratorTag, runNonce } from "./untrusted.js";
 
@@ -102,6 +140,8 @@ export interface AgentHooks {
   visualJudge?(input: { source: string; ir: IrDocument | null; report: EvalReport | null; spec: DesignSpec | undefined }): Promise<JudgeVerdict>;
   /** Interactive mode: at the budget checkpoint (80 %), return true to continue up to the hard cap. */
   onBudgetCheckpoint?(info: { spentUsd: number; capUsd: number }): Promise<boolean> | boolean;
+  /** Plan usage a CLI agent reported (Claude `rate_limit_event`: five-hour and seven-day windows). */
+  onPlanUsage?(usage: PlanUsage): void;
 }
 
 export interface AgentOptions {
@@ -133,6 +173,15 @@ export interface AgentOptions {
    * the best verified state, like any other stop.
    */
   signal?: AbortSignal;
+  /**
+   * Runs SPEC/BUILD/ASK inside a CLI agent (Node hosts inject `CliAgentRuntime` from
+   * `@aicad/agent/cli-runtime`). Absent → completion mode for CLI profiles (§3.4).
+   */
+  runtime?: AgentRuntime;
+  /** Default "auto": runtime mode for the tool loops when supported, else completion (§3.4). */
+  cliMode?: CliModeOption;
+  /** Per-phase overrides of `CLI_PHASE_LIMITS` (`completion` applies to every completion-mode call). */
+  cliLimits?: Partial<Record<"completion" | RuntimePhase, Partial<CliLimits>>>;
 }
 
 export type AgentStatus = "proposed" | "answered" | "stopped" | "failed";
@@ -161,6 +210,12 @@ export interface AgentResult {
   trace: TraceSummary;
   events: TraceEvent[];
   conversations: { triage?: Message[]; clarify?: Message[]; spec_writer?: Message[]; designer?: Message[] };
+  /** Who paid for the designer's model: `subscription` costs are notional (the CLI plan's list-price equivalent). */
+  billing: Billing;
+  /** (additive) How the designer's model calls ran: runtime if any ran inside a CLI agent, else CLI completion, else the gateway. */
+  mode: LlmCallMode;
+  /** The last plan usage a CLI reported during the run. */
+  planUsage?: PlanUsage;
 }
 
 export class Agent {
@@ -250,6 +305,22 @@ class AgentRun {
   #budgetCheckpointDone = false;
   #stop: { reason: AgentStopReason; message: string } | undefined;
 
+  // Agent-runtime state (ADR 0014).
+  /** Per-turn estimates of the running CLI phase, not yet charged to the task (the 80 % gate counts them). */
+  #unsettledUsd = 0;
+  /** What the running phase's per-turn trace records add up to (the settle note reconciles the trace to the CLI's totals). */
+  #phaseRecordUsd = 0;
+  #phaseRecordUsage: Usage = emptyUsage();
+  #planUsage: PlanUsage | undefined;
+  /** Consecutive CLI turn ends without a proposal (the runtime's nudge counter). */
+  #rtNudges = 0;
+  #rtCallsSinceTurnEnd = 0;
+  #rtLastStop: string | null = null;
+  #rtPhases = 0;
+  /** Set while a runtime tool call runs: wraps waits for the user (broker deadline, wall clock). */
+  #userWait: UserWait | undefined;
+  #questionTimedOut = false;
+
   constructor(options: AgentOptions, request: AgentRequest) {
     this.#o = options;
     this.#req = request;
@@ -274,8 +345,12 @@ class AgentRun {
       limits: this.#limits,
       now: this.#now,
       signal: o.signal,
-      // The 80 % gate runs before every model call of every phase (SPEC included).
-      beforeCall: () => this.#budgetGate(),
+      // The 80 % gate runs before every model call of every phase (SPEC included), and before every
+      // tool call of a runtime phase.
+      beforeCall: (_role, wait) => this.#budgetGate(wait),
+      cliCompletionLimits: o.cliLimits?.completion,
+      onPlanUsage: (u) => this.#onPlanUsage(u),
+      runtime: o.runtime ? this.#runtimeContext(o.runtime) : undefined,
     };
     const variant = (role: "designer" | "spec_writer" | "triage") => o.gateway.profile(this.#models[role].model).promptVariant;
     const load = (role: "designer" | "spec_writer" | "triage") =>
@@ -305,9 +380,138 @@ class AgentRun {
       }
     } catch (e) {
       if (e instanceof AgentStop) this.#stopWith(e.reason, e.message);
+      else if (e instanceof RuntimeUnsupportedError) this.#stopWith("model_error", e.message);
       else this.#stopWith("model_error", `internal error: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`);
     }
     return this.#finish();
+  }
+
+  // ── CLI agents: mode selection, runtime accounting (ADR 0014) ──
+
+  /** §3.4: how `role` runs `phase` (gateway / CLI completion / CLI runtime). */
+  #modeFor(role: AgentRole, phase: ModePhase): PhaseMode {
+    return resolvePhaseMode(this.#o.gateway.profile(this.#models[role].model), phase, { cliMode: this.#o.cliMode, runtime: this.#o.runtime });
+  }
+
+  #onPlanUsage(usage: PlanUsage): void {
+    this.#planUsage = usage;
+    try {
+      this.#o.hooks?.onPlanUsage?.(usage);
+    } catch {
+      // A failing observer must not break the run.
+    }
+  }
+
+  #runtimeContext(runtime: AgentRuntime): RuntimeContext {
+    return {
+      runtime,
+      cliMode: this.#o.cliMode ?? "auto",
+      limits: (phase) => this.#phaseLimits(phase),
+      orchTag: this.#orch,
+      // `ask_user` has its own allowance at the broker; the budget checkpoint may also wait for the user.
+      mayWaitForUser: this.#o.mode === "interactive" && this.#o.hooks?.onBudgetCheckpoint !== undefined,
+      onModelTurn: (role, r) => {
+        const cost = Number.isFinite(r.costUsd) && r.costUsd > 0 ? r.costUsd : 0;
+        this.#unsettledUsd += cost;
+        this.#phaseRecordUsd += cost;
+        if (r.usage) {
+          for (const k of ["inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens"] as const) this.#phaseRecordUsage[k] += r.usage[k];
+        }
+        this.#rtLastStop = r.stopReason;
+        const profile = this.#o.gateway.profile(this.#models[role].model);
+        this.#trace.llm({
+          role,
+          phase: this.#trace.state,
+          model: this.#models[role].model,
+          costUsd: r.costUsd,
+          usage: r.usage ?? { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, cacheWrite1hTokens: 0, reasoningTokens: 0 },
+          latencyMs: r.latencyMs,
+          stopReason: r.stopReason ?? "end_turn",
+          toolCalls: r.toolCalls,
+          mode: "cli-runtime",
+          billing: profile.billing,
+        });
+      },
+      onCostCorrection: (_role, deltaUsd) => {
+        // A CLI result reported the process's cost so far: thinking and side calls are not in the per-turn usage.
+        if (Number.isFinite(deltaUsd)) this.#unsettledUsd = Math.max(0, this.#unsettledUsd + deltaUsd);
+      },
+      settle: (role, outcome) => this.#settle(role, outcome),
+    };
+  }
+
+  /** `CLI_PHASE_LIMITS[phase]` ⊕ `cliLimits[phase]`, with the remaining hard cap as the CLI-side budget backstop. */
+  #phaseLimits(phase: RuntimePhase): CliLimits {
+    const base = { ...CLI_PHASE_LIMITS[phase] };
+    // BUILD: the designer's turn limit plus 2 turns of slack for closing.
+    if (phase === "BUILD") base.maxTurns = this.#limits.maxTurns + 2;
+    const limits: CliLimits = { ...base, ...(this.#o.cliLimits?.[phase] ?? {}) };
+    if (limits.maxBudgetUsd === undefined) {
+      const b = this.#rc.task.budget;
+      const remaining = b.capUsd - b.spentUsd - b.reservedUsd - this.#unsettledUsd;
+      if (Number.isFinite(remaining) && remaining > 0) limits.maxBudgetUsd = Math.round(remaining * 10_000) / 10_000;
+    }
+    return limits;
+  }
+
+  /** A finished runtime phase: charge the settled cost once, trace the difference to the estimates, reset. */
+  #settle(role: Exclude<AgentRole, "triage">, outcome: RuntimePhaseOutcome): void {
+    this.#rtPhases++;
+    const estimate = this.#phaseRecordUsd;
+    const recorded = this.#phaseRecordUsage;
+    this.#unsettledUsd = 0;
+    this.#phaseRecordUsd = 0;
+    this.#phaseRecordUsage = emptyUsage();
+    const model = this.#models[role].model;
+    this.#rc.task.chargeExternal({ model, responseId: outcome.sessionId ?? `cli-runtime-${this.#nonce}-${this.#rtPhases}`, costUsd: outcome.costUsd, billing: outcome.billing });
+    const plan = outcome.billing === "subscription" ? " notional (your plan)" : "";
+    // The trace's token totals follow the settled usage too (Claude's per-message usage is a start-of-message snapshot).
+    const u = outcome.usage;
+    const tokens = {
+      inputTokens: u.inputTokens - recorded.inputTokens,
+      outputTokens: u.outputTokens - recorded.outputTokens,
+      cacheReadTokens: u.cacheReadTokens - recorded.cacheReadTokens,
+      cacheWriteTokens: u.cacheWriteTokens - recorded.cacheWriteTokens,
+    };
+    this.#trace.settle(
+      role,
+      outcome.costUsd - estimate,
+      `${role} CLI phase (${outcome.cli.provider} ${outcome.cli.version}, lockdown ${outcome.cli.lockdown}): $${outcome.costUsd.toFixed(4)}${plan} [${outcome.costSource}], estimated $${estimate.toFixed(4)}; ` +
+        `${outcome.turns} turns, ${outcome.toolCalls} tool calls, ended by ${outcome.endedBy}${outcome.closeReason ? ` (${outcome.closeReason})` : ""}${outcome.failure ? `; ${outcome.failure.code}: ${oneLine(outcome.failure.message, 200)}` : ""}`,
+      tokens,
+    );
+    for (const w of outcome.warnings ?? []) this.#trace.note(`${role} CLI: ${oneLine(w, 300)}`);
+    if (outcome.planUsage) this.#planUsage = outcome.planUsage;
+  }
+
+  /** Registry definitions with `readOnly` set (the MCP host needs it for the tool hints and read scopes). */
+  #toolDefs(names?: readonly string[]): ToolDef[] {
+    const keep = names ? new Set(names) : null;
+    return this.#registry
+      .defs()
+      .filter((d) => keep === null || keep.has(d.name))
+      .map((d) => ({ ...d, readOnly: this.#registry.get(d.name)?.readOnly === true }));
+  }
+
+  /** A wait for the user inside a runtime tool call: excluded from the broker deadline, measured for the wall clock. */
+  #waitFor(control: RuntimeCallControl | undefined, sink: { ms: number }): UserWait {
+    return async <T>(p: Promise<T>): Promise<T> => {
+      const t0 = Date.now();
+      try {
+        return await (control ? control.userWait(p) : p);
+      } finally {
+        sink.ms += Date.now() - t0;
+      }
+    };
+  }
+
+  /** The reason a runtime broker closes with, once the run has ended or a stop is pending. */
+  #closeReason(): string | undefined {
+    if (this.#proposal) return "proposed";
+    if (this.#answer !== undefined) return "answered";
+    if (this.#pendingStop) return this.#pendingStop.reason;
+    if (this.#stop) return this.#stop.reason;
+    return this.#ended ? "ended" : undefined;
   }
 
   // ── Phases ──
@@ -335,7 +539,7 @@ class AgentRun {
       session: this.#session,
       readOnly,
       askUser: async (qs) => {
-        const answers = await answer(qs);
+        const answers = await this.#answerQuestions(answer, qs);
         throwIfCancelled(this.#rc);
         qs.forEach((q, i) => {
           const a = answers[i];
@@ -345,6 +549,29 @@ class AgentRun {
         return answers;
       },
     };
+  }
+
+  /**
+   * The user's answers. In a runtime phase the wait goes through the broker's `userWait` (its deadline
+   * pauses) and is capped at `CLI_QUESTION_WAIT_MS`: past that the designer's defaults apply, with a note.
+   */
+  async #answerQuestions(answer: NonNullable<AgentOptions["askUser"]>, qs: readonly UserQuestion[]): Promise<string[]> {
+    const wait = this.#userWait;
+    if (wait === undefined) return answer(qs);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const cap = new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), CLI_QUESTION_WAIT_MS);
+    });
+    try {
+      const got = await wait(Promise.race([Promise.resolve(answer(qs)), cap]));
+      if (got === null) {
+        this.#questionTimedOut = true;
+        return [];
+      }
+      return got;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   #taskLines(): string[] {
@@ -399,12 +626,12 @@ class AgentRun {
       ...(this.#o.promptVersion ? { version: this.#o.promptVersion } : {}),
       ...(this.#o.promptsDir ? { dir: this.#o.promptsDir } : {}),
     });
-    const out = await runSpecWriter(this.#rc, this.#prompts.spec_writer, this.#session, {
-      prompt: this.#req.prompt,
-      process: this.#req.process,
-      clarifications: this.#clarifications,
-      nonce: this.#nonce,
-    });
+    const input = { prompt: this.#req.prompt, process: this.#req.process, clarifications: this.#clarifications, nonce: this.#nonce };
+    const runtime = this.#modeFor("spec_writer", "SPEC") === "runtime" ? this.#rc.runtime : undefined;
+    if (runtime) await this.#budgetGate();
+    const out = runtime
+      ? await runSpecWriterRuntime(this.#rc, runtime, this.#prompts.spec_writer, this.#session, input)
+      : await runSpecWriter(this.#rc, this.#prompts.spec_writer, this.#session, input);
     this.#conversations.spec_writer = out.messages;
     this.#trace.note(out.spec ? `spec frozen: ${out.spec.requirements.length} requirements, ${out.spec.tests.length} tests` : `spec: ${out.note ?? "none"}`);
     if (out.note) this.#trace.note(out.note);
@@ -428,18 +655,26 @@ class AgentRun {
     return lines.join("\n\n");
   }
 
-  async #budgetGate(): Promise<void> {
+  /**
+   * The 80 % checkpoint. Spend includes the running CLI phase's unsettled estimates (§8.4). `wait`
+   * wraps the user's answer in a runtime tool call (the broker's deadline pauses while they decide).
+   */
+  async #budgetGate(wait?: UserWait): Promise<void> {
     const budget = this.#rc.task.budget;
-    if (this.#budgetCheckpointDone || budget.spentUsd < this.#limits.budgetStopFraction * budget.capUsd) return;
+    const spent = budget.spentUsd + this.#unsettledUsd;
+    if (this.#budgetCheckpointDone || spent < this.#limits.budgetStopFraction * budget.capUsd) return;
     this.#budgetCheckpointDone = true;
-    const info = { spentUsd: budget.spentUsd, capUsd: budget.capUsd };
-    const cont = this.#o.mode === "interactive" && this.#o.hooks?.onBudgetCheckpoint ? await this.#o.hooks.onBudgetCheckpoint(info) : false;
+    const info = { spentUsd: spent, capUsd: budget.capUsd };
+    const hook = this.#o.mode === "interactive" ? this.#o.hooks?.onBudgetCheckpoint : undefined;
+    const ask = async (): Promise<boolean> => (hook ? await hook(info) : false);
+    const cont = hook ? await (wait ? wait(ask()) : ask()) : false;
     if (!cont) throw new AgentStop("budget", `spent $${info.spentUsd.toFixed(4)} of the $${info.capUsd.toFixed(2)} cap (≥ ${Math.round(this.#limits.budgetStopFraction * 100)}%)`);
     this.#trace.note("budget checkpoint: continuing to the hard cap");
   }
 
   async #build(kind: TriageKind): Promise<void> {
     this.#trace.enter("BUILD", kind);
+    if (this.#modeFor("designer", "BUILD") === "runtime") return this.#buildRuntime(kind);
     const convo = new Conversation().appendUser(this.#buildHeader(kind));
     this.#designer = convo;
     const tools = this.#registry.defs();
@@ -456,15 +691,9 @@ class AgentRun {
         if (calls.length === 0) {
           nudges++;
           if (nudges > this.#limits.maxNudges) {
-            if (this.#session.verification.ok) {
-              // Held to the same gates as an explicit propose: spec tests, L5, known issues.
-              this.#trace.note("no tool call after nudges; the model verifies → implicit proposal");
-              const verdict = await this.#onPropose({ summary: responseText(res) || "(no summary)", assumptions: [], known_issues: ["The designer stopped without calling propose."] }, { implicit: true });
-              if (this.#ended) break;
-              const why = (verdict.text.split("\n")[0] ?? "").replace(this.#orch, "").replace(/^\s*Not accepted:?\s*/, "");
-              throw new AgentStop("no_progress", `${nudges} designer turns without a tool call, and the model is not accepted as it is: ${why}`);
-            }
-            throw new AgentStop("no_progress", `${nudges} designer turns without a tool call`);
+            const stop = await this.#implicitProposal(responseText(res), nudges);
+            if (this.#ended) break;
+            throw stop;
           }
           convo.appendUser(
             res.stopReason === "max_tokens"
@@ -495,8 +724,222 @@ class AgentRun {
     }
   }
 
+  /**
+   * The designer stopped calling tools after the nudges. A verifying model is held to the same gates
+   * as an explicit propose (spec tests, L5, known issues); returns the stop when it is not accepted.
+   */
+  async #implicitProposal(finalText: string, nudges: number): Promise<AgentStop> {
+    if (this.#session.verification.ok) {
+      this.#trace.note("no tool call after nudges; the model verifies → implicit proposal");
+      const verdict = await this.#onPropose({ summary: finalText || "(no summary)", assumptions: [], known_issues: ["The designer stopped without calling propose."] }, { implicit: true });
+      const why = (verdict.text.split("\n")[0] ?? "").replace(this.#orch, "").replace(/^\s*Not accepted:?\s*/, "");
+      return new AgentStop("no_progress", `${nudges} designer turns without a tool call, and the model is not accepted as it is: ${why}`);
+    }
+    return new AgentStop("no_progress", `${nudges} designer turns without a tool call`);
+  }
+
+  // ── BUILD and ASK in agent-runtime mode (§3.3, §8.4) ──
+
+  async #buildRuntime(kind: TriageKind): Promise<void> {
+    const rt = this.#rc.runtime!;
+    await this.#budgetGate();
+    this.#rtNudges = 0;
+    this.#rtCallsSinceTurnEnd = 0;
+    const choice = this.#models.designer;
+    const outcome = await rt.runtime.runPhase({
+      phase: "BUILD",
+      role: "designer",
+      profile: this.#o.gateway.profile(choice.model),
+      choice,
+      system: this.#system.map((b) => b.text).join("\n\n"),
+      prompt: this.#buildHeader(kind),
+      scope: "design",
+      tools: this.#toolDefs(),
+      limits: rt.limits("BUILD"),
+      signal: this.#o.signal,
+      orchTag: this.#orch,
+      mayWaitForUser: rt.mayWaitForUser,
+      handleToolCall: (c, control) => this.#runtimeCall(c, control),
+      onTurnEnd: (i) => this.#runtimeTurnEnd(i),
+      onModelTurn: (r) => rt.onModelTurn("designer", r),
+      onPlanUsage: (u) => this.#onPlanUsage(u),
+      onCostCorrection: (d) => rt.onCostCorrection("designer", d),
+    });
+    rt.settle("designer", outcome);
+    this.#conversations.designer = outcome.transcript;
+    await this.#afterRuntimePhase(outcome, "designer");
+  }
+
+  /**
+   * One broker call (§3.3 pseudo-code): the task-ended check, the 80 % gate, then the SAME `#execute`
+   * path as the API loop. Orchestrator notes are appended to the result; `close` is set once the run
+   * has ended (proposal accepted) or a stop is pending, and the broker closes after delivering it.
+   */
+  async #runtimeCall(c: RuntimeToolCall, control?: RuntimeCallControl): Promise<RuntimeToolResult> {
+    if (this.#ended || this.#pendingStop || this.#o.signal?.aborted) {
+      return { text: `${this.#orch} Not executed: the task has ended.`, isError: true, close: this.#closeReason() ?? "cancelled" };
+    }
+    this.#rtCallsSinceTurnEnd++;
+    const waited = { ms: 0 };
+    const wait = this.#waitFor(control, waited);
+    const withWait = (r: RuntimeToolResult): RuntimeToolResult => (waited.ms > 0 ? { ...r, userWaitMs: waited.ms } : r);
+    try {
+      await this.#budgetGate(wait);
+    } catch (e) {
+      if (!(e instanceof AgentStop)) throw e;
+      this.#pendingStop = e;
+      return withWait({ text: `${this.#orch} Not executed: the task has ended (${e.reason}).`, isError: true, close: e.reason });
+    }
+    const notes: string[] = [];
+    const call: ToolUseBlock = { type: "tool_use", id: c.toolUseId ?? `rt_${c.seq}`, name: c.name, input: c.input };
+    let out: ToolOutput;
+    this.#userWait = wait;
+    this.#questionTimedOut = false;
+    try {
+      out = await this.#execute(call, notes);
+    } catch (e) {
+      // The registry turns tool failures into results; anything thrown here ends the run.
+      this.#pendingStop = e instanceof AgentStop ? e : new AgentStop("model_error", `internal error in ${c.name}: ${e instanceof Error ? e.message : String(e)}`);
+      return withWait({ text: `${this.#orch} Not executed: the task has ended (${this.#pendingStop.reason}).`, isError: true, close: this.#pendingStop.reason });
+    } finally {
+      this.#userWait = undefined;
+    }
+    if (this.#questionTimedOut) notes.push(`${this.#orch} The user did not answer within ${Math.round(CLI_QUESTION_WAIT_MS / 60_000)} minutes: continue with your defaults and list them as assumptions when you propose.`);
+    if (this.#o.signal?.aborted && !this.#ended) this.#pendingStop ??= new AgentStop("cancelled", "stopped by the user");
+    const text = notes.length > 0 ? `${out.text}\n\n${notes.join("\n\n")}` : out.text;
+    const close = this.#closeReason();
+    return withWait({ text, isError: out.isError === true, ...(close ? { close } : {}) });
+  }
+
+  /** The CLI ended a turn while the broker is open: the API loop's nudge rules, then the implicit-proposal gate. */
+  async #runtimeTurnEnd(info: { finalText: string; turns: number; stopReason?: string | null }): Promise<TurnEndDecision> {
+    if (this.#ended || this.#pendingStop) return { action: "finish" };
+    if (this.#o.signal?.aborted) {
+      this.#pendingStop = new AgentStop("cancelled", "stopped by the user");
+      return { action: "finish" };
+    }
+    // A CLI turn that called tools did work: like an API turn with tool calls, it resets the count.
+    if (this.#rtCallsSinceTurnEnd > 0) this.#rtNudges = 0;
+    this.#rtCallsSinceTurnEnd = 0;
+    this.#rtNudges++;
+    if (this.#rtNudges > this.#limits.maxNudges) {
+      const stop = await this.#implicitProposal(info.finalText, this.#rtNudges);
+      if (!this.#ended) this.#pendingStop = stop;
+      return { action: "finish" };
+    }
+    return {
+      action: "continue",
+      message:
+        (info.stopReason ?? this.#rtLastStop) === "max_tokens"
+          ? `${this.#orch} Your reply hit the output limit. Continue with smaller steps: patch one or two features per apply_cadscript call.`
+          : `${this.#orch} No tool call in your last turn. Continue with apply_cadscript, or call propose if the model is done.`,
+    };
+  }
+
+  /**
+   * A CLI broke its lockdown (§5.6): the stop overrides every other ending, and voids a proposal or answer
+   * accepted earlier in the phase. The host has already seen `stop: proposed` (and the CLI's drafts): the note and
+   * the later `stop: lockdown_violation` event supersede it, and `#finish` hands back the starting model.
+   */
+  #lockdownStop(role: Exclude<AgentRole, "triage">, detail: string | undefined): AgentStop {
+    const voided = this.#proposal !== undefined ? "proposal" : this.#answer !== undefined ? "answer" : null;
+    this.#proposal = undefined;
+    this.#answer = undefined;
+    if (voided !== null) this.#trace.note(`lockdown violation: the ${voided} accepted earlier in this phase is void; nothing this CLI did is kept`);
+    return new AgentStop("lockdown_violation", `${role} CLI: ${detail ?? "lockdown violation"}${voided !== null ? ` (the accepted ${voided} is void)` : ""}`);
+  }
+
+  /** §8.4 "Mapping endedBy to stops". Security first: a lockdown violation voids even an accepted proposal. */
+  async #afterRuntimePhase(outcome: RuntimePhaseOutcome, role: "designer"): Promise<void> {
+    const failure = outcome.failure;
+    const detail = failure ? `${failure.code}: ${failure.message}` : outcome.endedBy;
+    if (outcome.endedBy === "lockdown_violation") throw this.#lockdownStop(role, failure?.message);
+    if (this.#ended) return;
+    if (this.#pendingStop) throw this.#pendingStop;
+    if (this.#o.signal?.aborted || outcome.endedBy === "cancelled") throw new AgentStop("cancelled", "stopped by the user");
+    switch (outcome.endedBy) {
+      case "refusal":
+        throw new AgentStop("refusal", `${role} refused; not retried`);
+      case "max_turns":
+        throw new AgentStop("max_turns", `${outcome.turns} ${role} turns without a proposal`);
+      case "closed":
+        // Closed by the broker itself, not by one of our stops.
+        if (outcome.closeReason === "call_limit") throw new AgentStop("max_turns", `the ${role} reached the broker's call limit (${outcome.toolCalls} tool calls)`);
+        throw new AgentStop("model_error", `the CAD tool broker closed (${outcome.closeReason ?? "unknown"})`);
+      case "timeout":
+      case "stalled":
+      case "cli_error":
+        if (failure?.code === "budget") throw new AgentStop("budget", `${role} CLI: ${failure.message}`);
+        if (failure?.code === "max_turns") throw new AgentStop("max_turns", `${role} CLI: ${failure.message}`);
+        throw new AgentStop("model_error", `${role} CLI run failed (${detail})`);
+      case "cli_end": {
+        // The CLI ended on its own with the broker open: the last step of the nudge logic.
+        const stop = await this.#implicitProposal(outcome.finalText, Math.max(this.#rtNudges, 1));
+        if (!this.#ended) throw stop;
+        return;
+      }
+      default:
+        throw new AgentStop("model_error", `${role} CLI phase ended unexpectedly (${outcome.endedBy})`);
+    }
+  }
+
+  async #askRuntime(): Promise<void> {
+    const rt = this.#rc.runtime!;
+    await this.#budgetGate();
+    const choice = this.#models.designer;
+    let answer: string | undefined;
+    const outcome = await rt.runtime.runPhase({
+      phase: "ASK",
+      role: "designer",
+      profile: this.#o.gateway.profile(choice.model),
+      choice,
+      system: this.#system.map((b) => b.text).join("\n\n"),
+      prompt: [...this.#taskLines(), `${this.#orch} This is a question: do not change the design. Use get_code / ir_summary / measure as needed, then reply with the answer as plain text.`].join("\n\n"),
+      scope: "read",
+      tools: this.#toolDefs(READ_ONLY_TOOLS),
+      limits: rt.limits("ASK"),
+      signal: this.#o.signal,
+      orchTag: this.#orch,
+      mayWaitForUser: rt.mayWaitForUser,
+      handleToolCall: async (c, control) => {
+        if (this.#pendingStop || this.#o.signal?.aborted) return { text: `${this.#orch} Not executed: the task has ended.`, isError: true, close: this.#closeReason() ?? "cancelled" };
+        const waited = { ms: 0 };
+        try {
+          await this.#budgetGate(this.#waitFor(control, waited));
+        } catch (e) {
+          if (!(e instanceof AgentStop)) throw e;
+          this.#pendingStop = e;
+          return { text: `${this.#orch} Not executed: the task has ended (${e.reason}).`, isError: true, close: e.reason };
+        }
+        const t0 = this.#now();
+        const out = await this.#registry.execute({ id: c.toolUseId ?? `rt_${c.seq}`, name: c.name, input: c.input }, this.#toolCtx(true));
+        this.#trace.tool({ name: c.name, ok: !out.isError, ms: Math.round(this.#now() - t0), phase: "ASK" }, out.text.split("\n")[0] ?? "");
+        return { text: out.text, isError: out.isError === true, ...(waited.ms > 0 ? { userWaitMs: waited.ms } : {}) };
+      },
+      onTurnEnd: (i) => {
+        answer = i.finalText;
+        return { action: "finish" };
+      },
+      onModelTurn: (r) => rt.onModelTurn("designer", r),
+      onPlanUsage: (u) => this.#onPlanUsage(u),
+      onCostCorrection: (d) => rt.onCostCorrection("designer", d),
+    });
+    rt.settle("designer", outcome);
+    this.#conversations.designer = outcome.transcript;
+    const text = (answer ?? outcome.finalText).trim();
+    if (outcome.endedBy !== "lockdown_violation" && !this.#pendingStop && text.length > 0 && (outcome.endedBy === "cli_end" || outcome.endedBy === "closed")) {
+      this.#answer = text;
+      this.#ended = true;
+      this.#trace.stop("answered", text.slice(0, 120));
+      return;
+    }
+    await this.#afterRuntimePhase(outcome, "designer");
+    throw new AgentStop("no_progress", "the CLI gave no answer");
+  }
+
   async #ask(): Promise<void> {
     this.#trace.enter("ASK");
+    if (this.#modeFor("designer", "ASK") === "runtime") return this.#askRuntime();
     const convo = new Conversation().appendUser(
       [...this.#taskLines(), `${this.#orch} This is a question: do not change the design. Use get_code / ir_summary / measure as needed, then reply with the answer as plain text.`].join("\n\n"),
     );
@@ -710,6 +1153,19 @@ class AgentRun {
     return { text: [...prelude, `${this.#orch} Proposal accepted${failing.length ? ` with ${failing.length} failing spec test(s) listed as known issues` : ""}. The task is complete.`].join("\n") };
   }
 
+  #designerMode(): LlmCallMode {
+    const modes = new Set(this.#trace.llmCalls.filter((c) => c.role === "designer").map((c) => c.mode ?? "gateway"));
+    return modes.has("cli-runtime") ? "cli-runtime" : modes.has("cli-completion") ? "cli-completion" : "gateway";
+  }
+
+  #designerBilling(): Billing {
+    try {
+      return this.#o.gateway.profile((this.#models as AgentModels | undefined)?.designer.model ?? "").billing;
+    } catch {
+      return "metered";
+    }
+  }
+
   #accept(proposal: Proposal): void {
     this.#proposal = proposal;
     this.#ended = true;
@@ -739,9 +1195,18 @@ class AgentRun {
     } else {
       stopReason = this.#stop?.reason ?? "no_progress";
       message = this.#stop?.message ?? "stopped";
-      status = stopReason === "model_error" || stopReason === "engine_unavailable" ? "failed" : "stopped";
-      // Hand back the best verified state, not a broken last attempt.
-      if (s && !s.verification.ok) {
+      status = stopReason === "model_error" || stopReason === "engine_unavailable" || stopReason === "lockdown_violation" ? "failed" : "stopped";
+      const start = s?.checkpoints[0];
+      if (s && stopReason === "lockdown_violation") {
+        // Nothing a CLI that broke its lockdown did is handed back, verified or not: the starting model (the
+        // edits went through our validated tools, but the run is untrusted). The draft resets the host's preview.
+        if (start && s.source !== start.state.source) {
+          s.rollback(start.id);
+          this.#trace.note(`final state: rolled back to the starting model (${start.id}); the CLI's changes are discarded`);
+          this.#emitDraft("rollback");
+        }
+      } else if (s && !s.verification.ok) {
+        // Hand back the best verified state, not a broken last attempt.
         const fallback = this.#best?.cp ?? this.#lastGood;
         if (fallback) {
           s.rollback(fallback.id);
@@ -767,7 +1232,10 @@ class AgentRun {
       trace: this.#trace.summary(),
       events: this.#trace.events,
       conversations: this.#conversations,
+      billing: this.#designerBilling(),
+      mode: this.#designerMode(),
     };
+    if (this.#planUsage) result.planUsage = this.#planUsage;
     if (this.#answer !== undefined) result.answer = this.#answer;
     if (s?.spec) result.spec = s.spec;
     if (tests) result.tests = tests;

@@ -99,9 +99,13 @@ describe("bake-off", () => {
     // Sonnet 5 costs half of Opus 5.5 per token on the designer/spec calls.
     expect(rows[1]!.median_cost_usd).toBeLessThan(rows[0]!.median_cost_usd);
     expect(table.split("\n")[0]).toBe(
-      "| Designer model | pass@1 | T1 pass@1 | Validity | Hidden tests | Median cost | Total cost | p50 latency | Median turns | Proposed | Stops |",
+      "| Designer model | Mode | pass@1 | T1 pass@1 | Validity | Hidden tests | Median cost | Total cost | p50 latency | Median turns | Proposed | Stops |",
     );
-    expect(table).toContain("| `claude-opus-5-5` | 100.0% (3/3) | 3/3 | 100.0% | 100.0% |");
+    expect(table).toContain("| `claude-opus-5-5` | gateway | 100.0% (3/3) | 3/3 | 100.0% | 100.0% | $");
+    expect(rows.map((r) => [r.mode, r.billing])).toEqual([
+      ["gateway", "metered"],
+      ["gateway", "metered"],
+    ]);
     for (const f of ["comparison.md", "comparison.json", "claude-opus-5-5/results.json", "claude-sonnet-5/report.md", "claude-sonnet-5/agent-runs.json"]) {
       expect(existsSync(join(out, f)), f).toBe(true);
     }

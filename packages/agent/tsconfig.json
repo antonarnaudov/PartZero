@@ -4,7 +4,11 @@
     "rootDir": ".",
     "noEmit": true,
     "resolveJsonModule": true,
-    "types": ["node"]
+    "types": ["node"],
+    // Test-only: the CLI runtime tests start the real MCP broker. @aicad/mcp-server is a devDependency
+    // (hosts inject the MCP host at runtime; the declared dependency orders its build before this
+    // package's typecheck and tests); its types come from that package's build.
+    "paths": { "@aicad/mcp-server": ["../mcp-server/dist/index.d.ts"] }
   },
   "include": ["src", "test", "vitest.config.ts"]
 }

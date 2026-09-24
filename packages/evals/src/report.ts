@@ -42,7 +42,11 @@ export function renderReport(result: SuiteResult): string {
     `- **pass@1:** ${pct(s.pass_at_1)} (${s.passed}/${s.tasks}) · **validity:** ${pct(s.validity_rate)} · **hidden tests:** ${pct(s.test_pass_rate)} (${s.tests_passed}/${s.tests_total})`,
   );
   if (s.cost_usd.n > 0) {
-    lines.push(`- **Cost:** total ${usd(s.cost_usd.total)}, median ${usd(s.cost_usd.p50)}, p90 ${usd(s.cost_usd.p90)} per task`);
+    // Subscription (CLI plan) costs are notional: the API list-price equivalent, not money spent (ADR 0014).
+    const costed = result.tasks.filter((t) => t.cost_usd !== undefined);
+    const plan = costed.length > 0 && costed.every((t) => t.billing === "subscription");
+    const label = plan ? "Cost (notional, the solver's CLI plan; not billed per token)" : "Cost";
+    lines.push(`- **${label}:** total ${plan ? "≈" : ""}${usd(s.cost_usd.total)}, median ${usd(s.cost_usd.p50)}, p90 ${usd(s.cost_usd.p90)} per task`);
   }
   lines.push(`- **Solver latency:** p50 ${fmtNum(s.latency_ms.p50)} ms, p90 ${fmtNum(s.latency_ms.p90)} ms`);
   lines.push("");
