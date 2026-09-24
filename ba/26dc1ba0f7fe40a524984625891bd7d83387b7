@@ -1,0 +1,27 @@
+packages/desktop/electron-builder.config.cjs
+  s_59c0dd2af30db2::t_fe63eb76b33f58 20-22,26-27
+scripts/alpha0-mac.sh
+  s_59c0dd2af30db2::t_4937dd053e0881 122,158-168
+packages/desktop/electron-builder.alpha-local.cjs
+  s_59c0dd2af30db2::t_fe63eb76b33f58 23,26,32-34
+packages/desktop/scripts/check-bundle-edition.cjs
+  s_59c0dd2af30db2::t_435f068898d376 1-36
+packages/desktop/test/packaging.test.ts
+  s_59c0dd2af30db2::t_e424df4b286e92 90-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ba26dc1ba0f7fe40a524984625891bd7d83387b7",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
