@@ -1,0 +1,24 @@
+packages/desktop/test/slicer-gate.test.ts
+  s_59c0dd2af30db2::t_5ce3893725812d 1-50
+packages/desktop/electron-builder.config.cjs
+  s_59c0dd2af30db2::t_6de3dd1532da9b 36
+  s_59c0dd2af30db2::t_5ce3893725812d 37-38
+packages/desktop/scripts/slicer-gate-after-pack.cjs
+  s_59c0dd2af30db2::t_6de3dd1532da9b 1-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0520ff2c1e204fbcddbeb47805449867cbd167eb",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
