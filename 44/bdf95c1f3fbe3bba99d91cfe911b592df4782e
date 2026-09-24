@@ -1,0 +1,48 @@
+packages/desktop/scripts/bundle.mjs
+  s_59c0dd2af30db2::t_6f2590c2977e4f 23
+  s_59c0dd2af30db2::t_4e5ca618d9766d 1-22,24-147,149-169
+  s_59c0dd2af30db2::t_0e49a8e04114e7 148
+packages/desktop/src/agent/engine.ts
+  s_59c0dd2af30db2::t_5fde95fd488458 9,13,15-16,19-20,24-31,36-40,44
+packages/desktop/src/agent/setup.ts
+  s_59c0dd2af30db2::t_901e1ce27dd5a6 204-205
+packages/desktop/src/bundle-paths.ts
+  s_59c0dd2af30db2::t_bd452d7c0b0fc2 1-43
+packages/desktop/src/agent/runner.ts
+  s_59c0dd2af30db2::t_5fde95fd488458 75,110-111,796-798
+  s_59c0dd2af30db2::t_d277bb390fb37a 28-29,77,94,107,284,326,362
+packages/desktop/electron-builder.config.cjs
+  s_59c0dd2af30db2::t_0e49a8e04114e7 2-3,6-12,15-17,25-29,36
+packages/desktop/src/agent/optional-modules.ts
+  s_59c0dd2af30db2::t_c54defde4b3d91 1-76
+packages/desktop/src/agent/host.ts
+  s_59c0dd2af30db2::t_901e1ce27dd5a6 87-88,273
+packages/desktop/src/agent/protocol.ts
+  s_59c0dd2af30db2::t_901e1ce27dd5a6 339-343
+packages/app/vite.config.ts
+  s_59c0dd2af30db2::t_3774b345e77be7 167-176,225,228,234
+packages/desktop/package.json
+  s_59c0dd2af30db2::t_c30aab2ab3e205 25,28,33-35,40
+  s_59c0dd2af30db2::t_25bc2d21006bbc 29
+  s_59c0dd2af30db2::t_f5f970433bd345 18,22-23
+packages/desktop/.gitignore
+  s_59c0dd2af30db2::t_c7cce1d7ad21bd 7-8
+pnpm-lock.yaml
+  s_59c0dd2af30db2::t_de3319eec97f1f 152,159-164,177,179-182,195-197
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "44bdf95c1f3fbe3bba99d91cfe911b592df4782e",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
