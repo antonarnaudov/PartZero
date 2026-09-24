@@ -3,7 +3,9 @@
   "private": true,
   "license": "MPL-2.0",
   "packageManager": "pnpm@10.11.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
@@ -13,5 +15,10 @@
   "devDependencies": {
     "turbo": "^2.5.0",
     "typescript": "^5.9.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "dompurify": "^3.4.13"
+    }
   }
 }
