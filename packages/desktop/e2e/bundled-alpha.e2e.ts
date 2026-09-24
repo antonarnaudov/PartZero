@@ -7,10 +7,13 @@
  * - The app is PartZero: its name, window title and log files (`main.log`, `agent.log`) come from the bundle's build
  *   info; the renderer loads app://, cross-origin isolated, and Forge evaluates the starting document (any shape).
  * - Settings: Claude Code detected and used by default, and no API-key entry anywhere.
- * - `--self-test` on the bundle: every check passes, with the bundled prompts and the bundled MCP shim run end to end.
+ * - Open in Bambu Studio (W5) in the bundle: the checked, centred 3MF lands in the profile's Prints folder and is handed
+ *   to a FAKE Bambu Studio through a fake `open` (the test never launches the real one).
+ * - `--self-test` on the bundle: every check passes, with the bundled prompts and the bundled MCP shim run end to end,
+ *   and it finds Bambu Studio the way Open in Bambu Studio does.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -40,8 +43,25 @@ function profile(root: string, name: string): string {
   return dir;
 }
 
+/** A fake BambuStudio.app (only its Info.plist) in `<root>/Applications`, and an `open` that records its arguments. */
+function fakeSlicer(dir: string): { apps: string; app: string; openBin: string; openLog: string } {
+  const apps = join(dir, "Applications");
+  const app = join(apps, "BambuStudio.app");
+  mkdirSync(join(app, "Contents"), { recursive: true });
+  writeFileSync(
+    join(app, "Contents", "Info.plist"),
+    '<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0">\n<dict>\n  <key>CFBundleIdentifier</key>\n  <string>com.bambulab.bambu-studio</string>\n  <key>CFBundleShortVersionString</key>\n  <string>02.06.00.51</string>\n</dict>\n</plist>\n',
+  );
+  const openLog = join(dir, "open-args.txt");
+  const openBin = join(dir, "fake-open");
+  writeFileSync(openBin, `#!/bin/sh\nfor a in "$@"; do printf '%s\\n' "$a"; done > "${openLog}"\nexit 0\n`);
+  chmodSync(openBin, 0o755);
+  return { apps, app, openBin, openLog };
+}
+
 let root: string;
 let fake: FakeClaude;
+let slicer: ReturnType<typeof fakeSlicer>;
 let userData: string;
 let app: ElectronApplication;
 let page: Page;
@@ -54,10 +74,18 @@ test.beforeAll(async () => {
   expect(b.status, b.stderr).toBe(0);
   root = mkdtempSync(join(tmpdir(), "aicad-e2e-alpha-"));
   fake = makeFakeClaude(join(root, "fake"));
+  slicer = fakeSlicer(join(root, "slicer"));
   userData = profile(root, "user-data");
   app = await electron.launch({
     args: [bundleDir, "--use-mock-keychain"],
-    env: keylessEnv({ AICAD_USER_DATA_DIR: userData, AICAD_CLI_DIRS: fake.binDir, AICAD_SIMULATE_PACKAGED: "1", AICAD_ALLOW_DEBUGGER: "1" }),
+    env: keylessEnv({
+      AICAD_USER_DATA_DIR: userData,
+      AICAD_CLI_DIRS: fake.binDir,
+      AICAD_SIMULATE_PACKAGED: "1",
+      AICAD_ALLOW_DEBUGGER: "1",
+      AICAD_SLICER_DIRS: slicer.apps,
+      AICAD_OPEN_BIN: slicer.openBin,
+    }),
   });
   page = await app.firstWindow();
   page.on("pageerror", (e) => pageErrors.push(e.message));
@@ -109,11 +137,29 @@ test("Settings: Claude Code detected and used by default, and no API-key entry",
   await expect(dialog).toBeHidden();
 });
 
+test("Open in Bambu Studio in the bundle: the checked, centred 3MF and its receipt in Prints, handed to Bambu Studio", async () => {
+  await page.getByRole("button", { name: "New from template" }).click();
+  await page.getByLabel("Search templates").fill("nema 17");
+  await page.locator('[data-template="t1-nema17-plate"]').click();
+  await expect(page.getByTestId("problems-count")).toHaveText("0");
+  await page.getByTestId("open-in-slicer").click();
+  const toast = page.getByTestId("toasts").locator(".toast").last();
+  await expect(toast).toContainText(/Sent t1-nema17-plate-[0-9a-f]{8}\.3mf to Bambu Studio\./);
+  const prints = join(userData, "Prints");
+  const threeMf = readdirSync(prints).find((f) => f.endsWith(".3mf"))!;
+  const receipt = JSON.parse(readFileSync(join(prints, threeMf.replace(/\.3mf$/, ".receipt.json")), "utf8"));
+  expect(receipt).toMatchObject({ schema: "partzero.receipt/1", app: { name: "PartZero" }, printer: { id: "builtin:bambu-p2s-0.4" }, checks: { report: "ok", valid: true, watertight: true, bodies: 1 } });
+  expect((receipt.bbox.onBed.min[0] + receipt.bbox.onBed.max[0]) / 2).toBeCloseTo(128, 6);
+  expect((receipt.bbox.onBed.min[1] + receipt.bbox.onBed.max[1]) / 2).toBeCloseTo(128, 6);
+  expect(receipt.bbox.onBed.min[2]).toBe(0);
+  expect(readFileSync(slicer.openLog, "utf8").split("\n").filter(Boolean)).toEqual(["-a", slicer.app, join(prints, threeMf)]);
+});
+
 test("--self-test on the bundle passes: aicad, worker (CadScript, forge-web v0/v1, prompts, MCP shim), renderer, Claude Code", () => {
   const r = spawnSync(electronBinary, [bundleDir, "--self-test"], {
     encoding: "utf8",
     timeout: 180_000,
-    env: keylessEnv({ AICAD_USER_DATA_DIR: profile(root, "self-test-real-profile"), AICAD_CLI_DIRS: fake.binDir, AICAD_SIMULATE_PACKAGED: "1" }),
+    env: keylessEnv({ AICAD_USER_DATA_DIR: profile(root, "self-test-real-profile"), AICAD_CLI_DIRS: fake.binDir, AICAD_SIMULATE_PACKAGED: "1", AICAD_SLICER_DIRS: slicer.apps }),
   });
   let report: SelfTestReport;
   try {
@@ -136,6 +182,8 @@ test("--self-test on the bundle passes: aicad, worker (CadScript, forge-web v0/v
   expect([w.cadscript.ok, w.v0.ok, w.v1.ok, w.cliRuntime.ok]).toEqual([true, true, true, true]);
   expect(report.renderer).toMatchObject({ ok: true, snapshot: { url: "app://aicad/index.html", crossOriginIsolated: true, engine: "forge-web · wasm", problems: "0", status: expect.stringMatching(/^Up to date/) } });
   expect(report.claudeCode).toMatchObject({ ok: true, version: "2.1.260", auth: "logged_in", autoDefault: "Claude Code" });
+  // The same detection as Open in Bambu Studio (slicer.ts), in the test profile's own folders only.
+  expect(report.slicer).toMatchObject({ found: true, path: slicer.app, version: "02.06.00.51", source: "applications" });
 });
 
 test("--self-test that cannot finish in time still prints a failing report and exits (watchdog)", () => {

@@ -14,6 +14,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from "@playwright/test";
 import type { PrintProfileView, SlicerInfo } from "@aicad/app/bridge";
+import { appDir } from "./app-dir.js";
 
 const desktopRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -51,7 +52,7 @@ test.beforeAll(async () => {
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined && !/_API_KEY$/.test(k)) env[k] = v;
   launchEnv = { ...env, AICAD_SKIP_CLOSE_PROMPT: "1", AICAD_AGENT_DOTENV: "off", AICAD_SLICER_DIRS: apps, AICAD_OPEN_BIN: openBin };
   app = await electron.launch({
-    args: [desktopRoot, "--use-mock-keychain"],
+    args: [appDir, "--use-mock-keychain"],
     env: { ...launchEnv, AICAD_USER_DATA_DIR: userData },
   });
   page = await app.firstWindow();
@@ -143,7 +144,7 @@ test("Settings → Printing stays reachable when the agent settings fail to load
   // A fresh app whose agent settings call fails (e.g. provider detection broke on first launch):
   // the Bambu Studio path that the a8 toast points to must still be there.
   const other = await electron.launch({
-    args: [desktopRoot, "--use-mock-keychain"],
+    args: [appDir, "--use-mock-keychain"],
     env: { ...launchEnv, AICAD_USER_DATA_DIR: join(root, "profile-no-agent") },
   });
   try {

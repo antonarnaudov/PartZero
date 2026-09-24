@@ -16,6 +16,7 @@ import { DEV_BUILD_INFO, loginShellProviders, mcpShimExecutable, parseBuildInfo,
 import { bundledMcpShimPath, bundledPromptsDir, bundledWasmPath, unpackedPath } from "../src/bundle-paths.js";
 import { formatConsoleArgs, logFor, RotatingLog } from "../src/log-file.js";
 import { abortedSelfTestReport, claudeCodeCheck, describeRenderer, detectBambuStudio, rendererReady, SELF_TEST_EXIT, selfTestVerdict, type RendererSnapshot, type SelfTestReport } from "../src/self-test.js";
+import { defaultSlicerSystem, type SlicerSystem } from "../src/slicer.js";
 import { ensureUserFolder, userFolders } from "../src/user-folders.js";
 import { tempDirs } from "./temp-dirs.js";
 
@@ -346,16 +347,23 @@ describe("--self-test (electron-free parts)", () => {
     expect(SELF_TEST_EXIT).toEqual({ ok: 0, failed: 1, timedOut: 2 });
   });
 
-  it("finds Bambu Studio where the user installed it and reads its version and bundle id", async () => {
-    const calls: string[][] = [];
-    const exec = async (file: string, args: readonly string[]): Promise<{ code: number; stdout: string }> => {
-      calls.push([file, ...args]);
-      return { code: 0, stdout: args[1] === "CFBundleIdentifier" ? "com.bambulab.bambu-studio\n" : "02.06.00.51\n" };
-    };
-    const found = await detectBambuStudio({ home: "/Users/me", exists: (p) => p === join("/Users/me", "Applications", "BambuStudio.app", "Contents", "Info.plist"), exec });
-    expect(found).toEqual({ found: true, name: "Bambu Studio", path: join("/Users/me", "Applications", "BambuStudio.app"), bundleId: "com.bambulab.bambu-studio", version: "02.06.00.51" });
-    expect(calls[0]).toEqual(["/usr/bin/plutil", "-extract", "CFBundleIdentifier", "raw", "-o", "-", join("/Users/me", "Applications", "BambuStudio.app", "Contents", "Info.plist")]);
-    expect(await detectBambuStudio({ home: "/Users/me", exists: () => false, exec })).toMatchObject({ found: false, path: null });
+  it("finds Bambu Studio the way Open in Bambu Studio does (slicer.ts), and says why when it does not", async () => {
+    const app = join("/Users/me", "Applications", "BambuStudio.app");
+    const plist = `<plist><dict><key>CFBundleIdentifier</key><string>com.bambulab.bambu-studio</string><key>CFBundleShortVersionString</key><string>02.06.00.51</string></dict></plist>`;
+    const system = (dirs: string[]): SlicerSystem => ({
+      ...defaultSlicerSystem({ searchDirs: dirs }),
+      platform: "darwin",
+      useLaunchServices: false,
+      isDir: (p) => p === app,
+      readText: (p) => (p === join(app, "Contents", "Info.plist") ? plist : null),
+    });
+    const found = await detectBambuStudio({ system: system(["/Applications", join("/Users/me", "Applications")]) });
+    expect(found).toEqual({ found: true, name: "Bambu Studio", path: app, bundleId: "com.bambulab.bambu-studio", version: "02.06.00.51", source: "user-applications", reason: null });
+    // The path set in Settings > Printing is the only place looked at, as in the app.
+    expect(await detectBambuStudio({ system: system(["/Applications"]), customPath: app })).toMatchObject({ found: true, source: "settings" });
+    const missing = await detectBambuStudio({ system: system(["/Applications"]), customPath: "/nowhere/BambuStudio.app" });
+    expect(missing).toMatchObject({ found: false, path: null, reason: expect.stringContaining("/nowhere/BambuStudio.app") });
+    expect(await detectBambuStudio({ system: system(["/Applications"]) })).toMatchObject({ found: false, path: null, reason: expect.stringContaining("isn't installed") });
   });
 
   it("summarizes v0 (last body feature) and v1 (final part bodies) reports", () => {

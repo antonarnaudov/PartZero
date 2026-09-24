@@ -10,14 +10,12 @@
  *
  * This module holds the electron-free parts (unit-tested); `main.ts` drives the app and the processes.
  */
-import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
-import type { AgentSettingsView, CliProviderStatus } from "@aicad/app/bridge";
+import type { AgentSettingsView, CliProviderStatus, SlicerInfo } from "@aicad/app/bridge";
 import type { WorkerSelfTestReport } from "./agent/self-test.js";
 import type { BuildInfo } from "./build-info.js";
 import type { ForgeSelfCheck } from "./forge-cli.js";
+import { defaultSlicerSystem, detectSlicer, type SlicerSystem } from "./slicer.js";
 import { userFolders } from "./user-folders.js";
 
 export const SELF_TEST_SWITCH = "--self-test";
@@ -143,6 +141,10 @@ export interface SlicerCheck {
   path: string | null;
   bundleId: string | null;
   version: string | null;
+  /** Where it was found (slicer.ts: `settings`, `applications`, `user-applications`, `launch-services`). */
+  source?: SlicerInfo["source"];
+  /** Why it was not found, as Open in Bambu Studio would say it. */
+  reason?: string | null;
 }
 
 export interface SelfTestReport {
@@ -233,7 +235,7 @@ export function selfTestVerdict(r: Omit<SelfTestReport, "ok" | "failures" | "war
     warnings.push(`the renderer evaluates with ${r.renderer.snapshot.engine ?? "?"}, not ${RENDERER_WASM_ENGINE}: the WASM engine did not start in the page`);
   }
   if (!r.claudeCode.ok) failures.push(`Claude Code: ${r.claudeCode.detail}`);
-  if (!r.slicer.found) warnings.push("Bambu Studio was not found in /Applications or ~/Applications: Open in Bambu Studio falls back to a plain export");
+  if (!r.slicer.found) warnings.push(`${r.slicer.reason ?? "Bambu Studio was not found"}: Open in Bambu Studio falls back to a plain export`);
   if (r.app.packaged && r.app.commit === null) warnings.push("the build has no commit (it was not bundled from a git checkout)");
   if (r.app.dirty) warnings.push("the build was bundled from a working tree with uncommitted changes");
   return { ok: failures.length === 0, failures, warnings };
@@ -261,37 +263,16 @@ export function abortedSelfTestReport(reason: string, app: SelfTestReport["app"]
   };
 }
 
-type Exec = (file: string, args: readonly string[], timeoutMs: number) => Promise<{ code: number | null; stdout: string }>;
-
-/** `execFile` without a shell, with a timeout and a size cap (ADR 0016 §2: a launched tool's output is capped). */
-export const execCapped: Exec = (file, args, timeoutMs) =>
-  new Promise((resolve) => {
-    execFile(file, [...args], { timeout: timeoutMs, maxBuffer: 256 * 1024, shell: false, windowsHide: true }, (error, stdout) => {
-      const exit = (error as { code?: unknown } | null)?.code;
-      resolve({ code: error === null ? 0 : typeof exit === "number" ? exit : null, stdout: String(stdout ?? "") });
-    });
-  });
-
 /**
- * Bambu Studio where the user installed it (ADR 0016 §3: we launch the installed slicer; we never bundle it):
- * `/Applications`, then `~/Applications`; the version and bundle id from its Info.plist (read with `plutil`). W5's
- * `slicer:detect` adds the LaunchServices lookup and a path set in Settings.
+ * Bambu Studio as "Open in Bambu Studio" will find it (ADR 0016 §3: we launch the installed slicer; we never bundle
+ * it): the same detection as `slicer:detect` (slicer.ts), so the report cannot disagree with the app. That is the
+ * path set in Settings > Printing when there is one (the self-test copies the profile library for it), else
+ * `/Applications`, `~/Applications`, then LaunchServices; the version from its Info.plist.
  */
-export async function detectBambuStudio(o: { home?: string; exists?: (p: string) => boolean; exec?: Exec } = {}): Promise<SlicerCheck> {
-  const home = o.home ?? homedir();
-  const exists = o.exists ?? existsSync;
-  const exec = o.exec ?? execCapped;
-  const none: SlicerCheck = { found: false, name: "Bambu Studio", path: null, bundleId: null, version: null };
-  if (process.platform !== "darwin" && o.exists === undefined) return none;
-  const path = ["/Applications/BambuStudio.app", join(home, "Applications", "BambuStudio.app")].find((p) => exists(join(p, "Contents", "Info.plist")));
-  if (path === undefined) return none;
-  const plist = join(path, "Contents", "Info.plist");
-  const read = async (key: string): Promise<string | null> => {
-    const r = await exec("/usr/bin/plutil", ["-extract", key, "raw", "-o", "-", plist], 5_000);
-    const v = r.stdout.trim();
-    return r.code === 0 && v.length > 0 && v.length < 200 ? v : null;
-  };
-  return { found: true, name: "Bambu Studio", path, bundleId: await read("CFBundleIdentifier"), version: await read("CFBundleShortVersionString") };
+export async function detectBambuStudio(o: { system?: SlicerSystem; customPath?: string | null } = {}): Promise<SlicerCheck> {
+  const info = await detectSlicer(o.system ?? defaultSlicerSystem(), o.customPath ?? null);
+  if (!info.found) return { found: false, name: "Bambu Studio", path: null, bundleId: null, version: null, source: null, reason: info.reason ?? null };
+  return { found: true, name: "Bambu Studio", path: info.path, bundleId: info.bundleId, version: info.version, source: info.source, reason: null };
 }
 
 /** Where the report says the app keeps its files (the profile is the real one, not the throwaway self-test profile). */

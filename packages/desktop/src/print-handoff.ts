@@ -26,12 +26,12 @@
  * The receipt never contains the slicer's output: downstream results are advisory (ADR 0016 §2).
  */
 import { createHash } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { OpenInSlicerRequest, OpenInSlicerResult, PrintWarning, SlicerInfo } from "@aicad/app/bridge";
 import { forgeEval, forgeFailure, forgeInfo, forgePrintExport } from "./forge-cli.js";
 import { type MachineProfile, type MaterialProfile, type ProfileStore, writeFileAtomic } from "./profiles.js";
 import { detectSlicer, openInSlicer, type SlicerSystem } from "./slicer.js";
+import { ensureUserFolder } from "./user-folders.js";
 
 export const RECEIPT_SCHEMA = "partzero.receipt/1";
 export const PRODUCT_NAME = "PartZero";
@@ -261,7 +261,13 @@ export async function exportForPrinter(deps: PrintHandoffDeps, req: OpenInSlicer
   const warnings = summaryWarnings(summary);
   const sha256 = createHash("sha256").update(ex.data).digest("hex");
   const stem = `${printFileStem(docName)}-${sha256.slice(0, 8)}`;
-  mkdirSync(deps.printsDir, { recursive: true });
+  // Created on first use (ALPHA-0-PLAN D4), with `~/PartZero` itself; a Prints (or PartZero) that is a symlink or a
+  // file is refused rather than written through (user-folders.ts).
+  try {
+    ensureUserFolder(deps.printsDir, dirname(deps.printsDir));
+  } catch (e) {
+    return { status: "refused", code: "EXPORT_FAILED", message: `Not saved: ${e instanceof Error ? e.message : String(e)}.` };
+  }
   const file = join(deps.printsDir, `${stem}.3mf`);
   const receiptPath = join(deps.printsDir, `${stem}.receipt.json`);
   writeFileAtomic(file, ex.data);

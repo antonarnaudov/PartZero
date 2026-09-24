@@ -56,7 +56,8 @@ import {
   type RendererSnapshot,
   type SelfTestReport,
 } from "./self-test.js";
-import { defaultSlicerSystem } from "./slicer.js";
+import { defaultSlicerSystem, type SlicerSystem } from "./slicer.js";
+import { userFolders } from "./user-folders.js";
 import { mainWindowWebPreferences } from "./web-preferences.js";
 import { loadWindowState, MIN_SIZE, saveWindowState, type WindowState } from "./window-state.js";
 
@@ -299,11 +300,14 @@ function start(): void {
   const profile = overrides.userDataDir ?? join(app.getPath("appData"), productName);
   if (selfTest) {
     // A throwaway profile: the real one may be in use by a running instance, and a self-test must not change it. Its
-    // Settings file (a Claude Code path set there, lockdown blocks) is copied, so detection sees what the app sees.
+    // Settings files (a Claude Code path set there, lockdown blocks; the printer profile and a Bambu Studio path set in
+    // Settings > Printing) are copied, so detection sees what the app sees.
     selfTestRealProfile = profile;
     selfTestProfile = mkdtempSync(join(tmpdir(), "partzero-self-test-"));
-    const settings = join(profile, "agent-settings.json");
-    if (existsSync(settings)) copyFileSync(settings, join(selfTestProfile, "agent-settings.json"));
+    for (const name of ["agent-settings.json", "machine-profiles.json"]) {
+      const settings = join(profile, name);
+      if (existsSync(settings)) copyFileSync(settings, join(selfTestProfile, name));
+    }
     app.setPath("userData", selfTestProfile);
   } else {
     app.setPath("userData", profile);
@@ -376,6 +380,8 @@ function start(): void {
     // FDM, and the machine, material and clearance line, read at each start.
     const printProfiles = new ProfileStore(join(app.getPath("userData"), "machine-profiles.json"), (m) => console.warn(`[aicad] ${m}`));
     agent.host.setRunDefaults(() => ({ process: "fdm", conventions: agentConventionsLine(printProfiles.printer(), printProfiles.material()) }));
+    // A test profile searches only its own folders and never launches the user's real Bambu Studio (env.ts).
+    const printSlicer = defaultSlicerSystem({ searchDirs: overrides.slicerDirs, openBin: overrides.openBin });
     if (!selfTest) {
       // Warm the provider detection (CLI versions, lockdown, logins, Ollama; no model call) in the background, so
       // Settings and the first run do not wait for it.
@@ -384,13 +390,14 @@ function start(): void {
     }
     registerIpc({
       agent,
-      // "Open in Bambu Studio" (print-handoff.ts): prints go to ~/PartZero/Prints (ALPHA-0-PLAN D4).
+      // "Open in Bambu Studio" (print-handoff.ts): prints go to ~/PartZero/Prints (ALPHA-0-PLAN D4), created on first
+      // export (user-folders.ts), never at startup.
       print: {
         forgeBin,
-        printsDir: overrides.printsDir ?? join(app.getPath("home"), "PartZero", "Prints"),
+        printsDir: overrides.printsDir ?? userFolders(app.getPath("home")).prints,
         appVersion: app.getVersion(),
         profiles: printProfiles,
-        slicer: defaultSlicerSystem({ searchDirs: overrides.slicerDirs, openBin: overrides.openBin }),
+        slicer: printSlicer,
         revealInFolder: (path) => shell.showItemInFolder(path),
       },
       window: () => mainWindow,
@@ -415,7 +422,7 @@ function start(): void {
     rebuildMenu();
     mainWindow = createWindow({ hidden: selfTest });
     if (selfTest) {
-      runSelfTest(mainWindow, forgeBin, { mcpShimPath, mcpServerDir: mcpShimPath ? null : workspaceMcpServerDir(repoRoot), exePath: shimExe, workspaceRoot: agent.workspaceRoot }).catch((e: unknown) =>
+      runSelfTest(mainWindow, forgeBin, { mcpShimPath, mcpServerDir: mcpShimPath ? null : workspaceMcpServerDir(repoRoot), exePath: shimExe, workspaceRoot: agent.workspaceRoot }, { system: printSlicer, customPath: printProfiles.read().slicerPath }).catch((e: unknown) =>
         abortSelfTest(`the self-test failed: ${message(e)}`, SELF_TEST_EXIT.failed),
       );
       return;
@@ -529,7 +536,7 @@ function selfTestPaths(): SelfTestReport["paths"] {
   return reportPaths({ profile: selfTestRealProfile, logs });
 }
 
-async function runSelfTest(win: BrowserWindow, forgeBin: string, worker: WorkerProbeOptions): Promise<void> {
+async function runSelfTest(win: BrowserWindow, forgeBin: string, worker: WorkerProbeOptions, slicerLookup: { system: SlicerSystem; customPath: string | null }): Promise<void> {
   const setup = agent!;
   const [renderer, workerCheck, forgeCli, claudeCode, slicer] = await Promise.all([
     probeRenderer(win, 120_000),
@@ -539,7 +546,8 @@ async function runSelfTest(win: BrowserWindow, forgeBin: string, worker: WorkerP
       (view) => claudeCodeCheck(view),
       (e: unknown) => claudeCodeCheck(null, `detection failed: ${message(e)}`),
     ),
-    detectBambuStudio().catch(() => ({ found: false, name: "Bambu Studio" as const, path: null, bundleId: null, version: null })),
+    // The same detection as Open in Bambu Studio (slicer.ts), with the path set in Settings > Printing.
+    detectBambuStudio(slicerLookup).catch((e: unknown) => ({ found: false, name: "Bambu Studio" as const, path: null, bundleId: null, version: null, reason: `detection failed: ${message(e)}` })),
   ]);
   const body: Omit<SelfTestReport, "ok" | "failures" | "warnings" | "schema"> = {
     app: selfTestAppInfo(),

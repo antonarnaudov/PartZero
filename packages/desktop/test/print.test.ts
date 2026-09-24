@@ -403,6 +403,22 @@ describe.skipIf(!haveForge || !posix)("the handoff with the real aicad", () => {
     expect(JSON.parse(readFileSync(upgraded.receipt, "utf8")).geometryHash).toBe(receipt.geometryHash);
   });
 
+  it("creates ~/PartZero/Prints on first export, and refuses a Prints folder that is a symlink (user-folders.ts)", async () => {
+    const root = tmp();
+    const deps = handoff(root);
+    expect(existsSync(join(root, "PartZero"))).toBe(false);
+    const first = await exportForPrinter(deps, { irJson: corpus("extrude_box"), docName: "box" });
+    expect("file" in first).toBe(true);
+    expect(readdirSync(deps.printsDir)).toHaveLength(2);
+    // A Prints that points elsewhere is not written through.
+    const other = tmp();
+    const linked = { ...deps, printsDir: join(other, "PartZero", "Prints") };
+    mkdirSync(join(other, "PartZero"));
+    symlinkSync(root, linked.printsDir);
+    const refused = await exportForPrinter(linked, { irJson: corpus("extrude_box"), docName: "box" });
+    expect(refused).toMatchObject({ status: "refused", code: "EXPORT_FAILED", message: expect.stringContaining("is not a folder") });
+  });
+
   it("still saves the file when Bambu Studio is missing, and says how to fix it", async () => {
     const root = tmp();
     const deps = handoff(root);
