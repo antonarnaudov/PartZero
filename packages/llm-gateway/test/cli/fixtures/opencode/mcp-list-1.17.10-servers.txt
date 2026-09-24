@@ -1,0 +1,15 @@
+┌  MCP Servers
+│
+●  ✗ usersrv [90mfailed
+│      MCP error -32000: Connection closed
+│      [90m/usr/bin/true
+│
+●  ○ off.srv [90mdisabled
+│      [90m/usr/bin/true
+│
+●  ✗ remote1 [90mfailed
+│      SSE error: Unable to connect. Is the computer able to access the url?
+│      [90mhttp://127.0.0.1:9/mcp
+│
+└  3 server(s)
+

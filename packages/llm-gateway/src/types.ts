@@ -9,7 +9,42 @@
  *   (Claude Opus 5.5 / Fable 5.1), so the main loop never depends on it.
  */
 
-export type Provider = "anthropic" | "openai" | "google" | "openai-compat";
+/** Vendor APIs reached with keys through official SDKs (ADR 0009). */
+export type ApiProvider = "anthropic" | "openai" | "google" | "openai-compat";
+/** Local model servers (ADR 0014). Local profiles currently route through `openai-compat` (see `BUILTIN_LOCAL_PROFILES`). */
+export type LocalProvider = "ollama";
+/** CLI coding agents run headless on the user's own login (ADR 0014, docs/CLI-PROVIDERS.md). Node-only: `@aicad/llm-gateway/cli`. */
+export type CliProviderId = "claude-cli" | "gemini-cli" | "codex-cli" | "opencode" | "cursor-agent";
+export type Provider = ApiProvider | LocalProvider | CliProviderId;
+
+export type ProviderKind = "api" | "cli" | "local";
+export const PROVIDER_KINDS: Readonly<Record<Provider, ProviderKind>> = {
+  anthropic: "api",
+  openai: "api",
+  google: "api",
+  "openai-compat": "api",
+  ollama: "local",
+  "claude-cli": "cli",
+  "gemini-cli": "cli",
+  "codex-cli": "cli",
+  opencode: "cli",
+  "cursor-agent": "cli",
+};
+export const CLI_PROVIDER_IDS: readonly CliProviderId[] = ["claude-cli", "gemini-cli", "codex-cli", "opencode", "cursor-agent"];
+
+export function providerKind(p: Provider): ProviderKind {
+  return PROVIDER_KINDS[p];
+}
+
+export function isCliProvider(p: string): p is CliProviderId {
+  return (CLI_PROVIDER_IDS as readonly string[]).includes(p);
+}
+
+/** Who pays for a call: a metered key, the user's CLI subscription (notional cost), or local compute. */
+export type Billing = "metered" | "subscription" | "local";
+
+/** How a CLI returns the turn envelope in completion mode (docs/CLI-PROVIDERS.md §3.2.2). */
+export type EnvelopeVia = "json-schema" | "mcp-submit" | "text-json";
 
 /** A model reference is a profile id from the {@link ProfileRegistry} (for example `claude-opus-5-5`). */
 export type ModelRef = string;
@@ -126,6 +161,8 @@ export interface ToolDef {
   inputSchema: Record<string, unknown>;
   /** Ask the provider to guarantee schema-valid arguments (Anthropic/OpenAI `strict`, Gemini `VALIDATED` mode). */
   strict?: boolean;
+  /** Tool never changes the design. MCP readOnlyHint; adapters never send it to a provider. */
+  readOnly?: boolean;
 }
 
 export interface CacheOptions {
@@ -165,6 +202,8 @@ export interface ProviderOptions {
   openai?: { extra?: Record<string, unknown> };
   google?: { extra?: Record<string, unknown> };
   "openai-compat"?: { extra?: Record<string, unknown> };
+  /** CLI providers (completion mode): per-call limits over the defaults (maxTurns 3, wall 180 s, stall 120 s). */
+  cli?: { limits?: { maxTurns?: number; wallMs?: number; stallMs?: number; maxBudgetUsd?: number } };
 }
 
 export interface ChatRequest {
@@ -230,6 +269,40 @@ export interface ChatResponse {
   warnings: string[];
   /** Untouched provider response (or the accumulated final object for streams). */
   providerRaw: unknown;
+  /** From the profile (a CLI logged in with an API key is `metered`). Subscription costs are notional. */
+  billing: Billing;
+  /** Plan usage windows reported by a CLI (Claude `rate_limit_event`). */
+  planUsage?: PlanUsage;
+  /** CLI calls only. */
+  cli?: CliCallInfo;
+}
+
+export interface CliCallInfo {
+  provider: CliProviderId;
+  version: string;
+  sessionId: string | null;
+  /** CLI-internal model round trips. */
+  turns: number | null;
+  /** Actual models (may differ from the requested alias). */
+  modelsUsed: string[];
+  envelopeVia: EnvelopeVia | null;
+  durationMs: number;
+}
+
+export interface PlanUsage {
+  provider: CliProviderId;
+  status: "allowed" | "allowed_warning" | "rejected" | "unknown";
+  windows: PlanWindow[];
+  overage: { status: string; inUse: boolean } | null;
+  /** ISO timestamp. */
+  observedAt: string;
+}
+
+/** `utilization` is 0..1. */
+export interface PlanWindow {
+  id: string;
+  utilization: number | null;
+  resetsAt: string | null;
 }
 
 /** Normalized streaming events. `index` is the block's position in the final `message.content`. */

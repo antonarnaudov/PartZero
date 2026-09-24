@@ -11,7 +11,11 @@ export type TransportOperation =
   | "anthropic.messages.create"
   | "openai.responses.create"
   | "google.models.generateContent"
-  | "openai-compat.chat.completions.create";
+  | "openai-compat.chat.completions.create"
+  /** One stateless CLI invocation (`@aicad/llm-gateway/cli`); payload is a `CliTurnPayload`. */
+  | "cli.turn"
+  /** Reserved for a native Ollama `/api/chat` adapter (docs/CLI-PROVIDERS.md §10). */
+  | "ollama.chat";
 
 export interface TransportCall {
   provider: Provider;

@@ -1,0 +1,49 @@
+Run Codex non-interactively
+
+Usage: codex exec [OPTIONS] [PROMPT] [COMMAND]
+
+Commands:
+  resume  Resume a previous session by id or pick the most recent with --last
+  help    Print this message or the help of the given subcommand(s)
+
+Arguments:
+  [PROMPT]
+          Initial instructions for the agent. If not provided as an argument (or if `-` is used), instructions are read from stdin
+
+Options:
+  -c, --config <key=value>
+          Override a configuration value that would otherwise be loaded from `~/.codex/config.toml`
+  -i, --image <FILE>...
+          Optional image(s) to attach to the initial prompt
+  -m, --model <MODEL>
+          Model the agent should use
+  -s, --sandbox <SANDBOX_MODE>
+          Select the sandbox policy to use when executing model-generated shell commands
+
+          [possible values: read-only, workspace-write, danger-full-access]
+  -p, --profile <CONFIG_PROFILE>
+          Configuration profile from config.toml to specify default options
+      --full-auto
+          Convenience alias for low-friction sandboxed automatic execution
+  -C, --cd <DIR>
+          Tell the agent to use the specified directory as its working root
+      --skip-git-repo-check
+          Allow running Codex outside a Git repository
+      --output-schema <FILE>
+          Path to a JSON Schema file describing the model's final response shape
+      --json
+          Print events to stdout as JSONL
+      --ephemeral
+          Do not persist the session to disk
+      --ignore-user-config
+          Do not load the user's config.toml
+      --ignore-rules
+          Do not load AGENTS.md and project rules
+      --strict-config
+          Fail on unknown configuration keys
+  -o, --output-last-message <FILE>
+          Specifies file where the last message from the agent should be written
+  -h, --help
+          Print help (see a summary with '-h')
+  -V, --version
+          Print version

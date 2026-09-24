@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"0199a213-81c0-7800-8aa1-bbab2a035a53"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"**Classifying the request**"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"{\"text\":\"\",\"tool_calls\":[{\"name\":\"classify\",\"arguments\":{\"kind\":\"quick_edit\"}}]}"}}
+{"type":"turn.completed","usage":{"input_tokens":2400,"cached_input_tokens":1024,"output_tokens":120,"reasoning_output_tokens":64}}

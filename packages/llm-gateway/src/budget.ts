@@ -1,4 +1,5 @@
 import { BudgetExceededError, GatewayError } from "./errors.js";
+import type { Billing } from "./types.js";
 
 export interface LedgerEntry {
   taskId: string;
@@ -7,6 +8,10 @@ export interface LedgerEntry {
   costUsd: number;
   projectedUsd: number;
   at: string;
+  /** Who paid (ADR 0014). Subscription amounts are notional (API list price). */
+  billing?: Billing;
+  /** `call`: a gateway call; `external`: charged after the fact (CLI runtime phases). */
+  source?: "call" | "external";
 }
 
 export interface Reservation {
@@ -65,6 +70,19 @@ export class BudgetGuard {
     this.#reserved.delete(reservation.id);
     this.#spentUsd += entry.costUsd;
     this.ledger.push({ ...entry, taskId: this.taskId, projectedUsd: reservation.projectedUsd, at: new Date().toISOString() });
+  }
+
+  /**
+   * Record an already-incurred cost without a reservation (CLI runtime phases, where the CLI owns the model loop and
+   * the cost is only known afterwards). Never throws, even when it pushes the task over its cap: the caller's budget
+   * gate decides what to do next. Non-finite or negative amounts are recorded as 0.
+   */
+  charge(entry: { model: string; responseId: string; costUsd: number; billing?: Billing }): void {
+    const costUsd = Number.isFinite(entry.costUsd) && entry.costUsd > 0 ? entry.costUsd : 0;
+    this.#spentUsd += costUsd;
+    const row: LedgerEntry = { taskId: this.taskId, model: entry.model, responseId: entry.responseId, costUsd, projectedUsd: 0, at: new Date().toISOString(), source: "external" };
+    if (entry.billing !== undefined) row.billing = entry.billing;
+    this.ledger.push(row);
   }
 
   /** Drop a reservation for a call that failed before producing billable output. */

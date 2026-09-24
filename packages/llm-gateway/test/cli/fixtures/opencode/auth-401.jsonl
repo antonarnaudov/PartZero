@@ -1,0 +1,2 @@
+{"type":"step_start","timestamp":1790200000000,"sessionID":"ses_7a1b2c3d4e5fAbCdEf","part":{"id":"prt_1","sessionID":"ses_7a1b2c3d4e5fAbCdEf","messageID":"msg_1","type":"step-start"}}
+{"type":"error","timestamp":1790200000300,"sessionID":"ses_7a1b2c3d4e5fAbCdEf","error":{"name":"APIError","data":{"message":"Unauthorized: invalid credentials","statusCode":401,"isRetryable":false}}}

@@ -11,6 +11,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./cli": {
+      "types": "./dist/cli/index.d.ts",
+      "import": "./dist/cli/index.js"
     }
   },
   "files": [
@@ -20,6 +24,7 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:live": "vitest run test/live",
+    "test:live:cli": "vitest run test/cli-live",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -83,6 +83,7 @@ export function finalizeResponse(ctx: AdapterContext, built: BuiltRequest, parse
     costSource: providerCost === undefined ? "profile" : "provider",
     warnings: [...built.warnings, ...(parsed.warnings ?? [])],
     providerRaw: parsed.providerRaw,
+    billing: ctx.profile.billing,
   };
   if (parsed.refusal !== undefined) response.refusal = parsed.refusal;
   return response;

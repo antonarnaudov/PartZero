@@ -18,6 +18,14 @@ export type GatewayErrorCode =
   | "budget_exceeded"
   | "replay_mismatch"
   | "config"
+  /** CLI providers (ADR 0014): the CLI's reply could not be turned into a valid turn. */
+  | "bad_output"
+  /** CLI providers: the user's plan quota is used up until `details.resetsAt`. */
+  | "quota_exhausted"
+  /** CLI providers: the CLI exposed or used a tool outside our lockdown; the run was killed. */
+  | "lockdown_violation"
+  | "not_installed"
+  | "not_logged_in"
   | "unknown";
 
 /** Machine-readable error thrown by the gateway. Provider SDK errors are wrapped with `cause`. */

@@ -12,16 +12,19 @@ import { ProfileRegistry, type ModelProfile, type ProfileOverride } from "./prof
 import { DEFAULT_ROUTING, Router, type Role, type RoutingWarning } from "./router.js";
 import { AnthropicSdkTransport, GoogleSdkTransport, OpenAISdkTransport } from "./transport/sdk.js";
 import type { ProviderTransport, TransportCall } from "./transport/transport.js";
-import type { ChatRequest, ChatResponse, Provider, StreamEvent, Usage } from "./types.js";
+import { providerKind, type Billing, type ChatRequest, type ChatResponse, type Provider, type StreamEvent, type Usage } from "./types.js";
 
 export interface GatewayOptions {
   /** JSON config (profile overrides, routing, provider client settings). */
   config?: GatewayConfig;
   /** Base profiles (default: built-ins). Config overrides apply on top. */
   profiles?: readonly ModelProfile[];
-  /** Inject transports per provider (tests: ReplayTransport; capture: RecordingTransport). Default: official SDKs. */
+  /**
+   * Inject transports per provider (tests: ReplayTransport; capture: RecordingTransport). Default: official SDKs.
+   * CLI providers have no default: inject `cliGatewayParts(...).transports` from `@aicad/llm-gateway/cli` (Node only).
+   */
   transports?: Partial<Record<Provider, ProviderTransport>>;
-  /** Replace adapters (rarely needed). */
+  /** Replace adapters (rarely needed). CLI providers need `cliGatewayParts(...).adapters`. */
   adapters?: Partial<Record<Provider, ProviderAdapter>>;
   /** Clock for dated pricing and ledger timestamps. */
   clock?: () => Date;
@@ -122,6 +125,25 @@ export class Task {
   get ledger(): readonly LedgerEntry[] {
     return this.budget.ledger;
   }
+
+  /**
+   * Charge a cost that was incurred outside a gateway call (a CLI runtime phase settles the CLI-reported total, or the
+   * sum of its per-turn estimates). Recorded in this task's budget and the gateway ledger. Never throws.
+   */
+  chargeExternal(entry: { model: string; responseId: string; costUsd: number; billing: Billing }): void {
+    this.budget.charge(entry);
+    const charged = this.budget.ledger.at(-1);
+    this.#gateway.ledger.push({
+      taskId: this.id,
+      model: entry.model,
+      responseId: entry.responseId,
+      costUsd: charged?.costUsd ?? 0,
+      projectedUsd: 0,
+      at: new Date().toISOString(),
+      billing: entry.billing,
+      source: "external",
+    });
+  }
 }
 
 function withTask(request: ChatRequest, taskId: string): ChatRequest {
@@ -134,7 +156,7 @@ export class LLMGateway {
   /** Every settled call, across tasks. */
   readonly ledger: LedgerEntry[] = [];
   readonly #config: ReturnType<typeof parseGatewayConfig>;
-  readonly #adapters: Record<Provider, ProviderAdapter>;
+  readonly #adapters: Partial<Record<Provider, ProviderAdapter>>;
   readonly #injected: Partial<Record<Provider, ProviderTransport>>;
   readonly #transports = new Map<string, ProviderTransport>();
   readonly #clock: () => Date;
@@ -146,6 +168,7 @@ export class LLMGateway {
     if (this.#config.profiles !== undefined) this.registry.applyOverrides(this.#config.profiles as Record<string, ProfileOverride>);
     this.router = new Router(this.registry, this.#config.routing ?? DEFAULT_ROUTING, options.onRoutingWarning);
     this.#adapters = {
+      ...options.adapters,
       anthropic: options.adapters?.anthropic ?? new AnthropicAdapter(),
       openai: options.adapters?.openai ?? new OpenAIAdapter(),
       google: options.adapters?.google ?? new GoogleAdapter(),
@@ -213,6 +236,7 @@ export class LLMGateway {
     const base = this.registry.get(request.model);
     const profile = this.#effectiveProfile(base);
     const adapter = this.#adapters[profile.provider];
+    if (adapter === undefined) throw missingProviderPart(profile.provider, "adapter");
     const now = this.#clock();
     const ctx: AdapterContext = { profile, request, maxOutputTokens: resolveMaxOutputTokens(request, profile), now };
     const built = adapter.buildRequest(ctx);
@@ -273,7 +297,7 @@ export class LLMGateway {
   }
 
   #settle(p: Prepared, response: ChatResponse): void {
-    const entry = { model: response.model, responseId: response.id, costUsd: response.costUsd };
+    const entry = { model: response.model, responseId: response.id, costUsd: response.costUsd, billing: response.billing, source: "call" as const };
     if (p.reservation !== undefined) p.budget?.settle(p.reservation, entry);
     this.ledger.push({
       ...entry,
@@ -302,6 +326,13 @@ export class LLMGateway {
     let key: string = profile.provider;
     let make: () => ProviderTransport;
     switch (profile.provider) {
+      case "ollama":
+      case "claude-cli":
+      case "gemini-cli":
+      case "codex-cli":
+      case "opencode":
+      case "cursor-agent":
+        throw missingProviderPart(profile.provider, "transport");
       case "anthropic":
         make = () => new AnthropicSdkTransport(clientOpts(providers.anthropic));
         break;
@@ -335,6 +366,17 @@ export class LLMGateway {
     }
     return t;
   }
+}
+
+/** CLI providers (and native Ollama) are not built in: the host injects them (Node only). */
+function missingProviderPart(provider: Provider, part: "adapter" | "transport"): GatewayError {
+  const hint =
+    providerKind(provider) === "cli"
+      ? "inject cliGatewayParts(...) from @aicad/llm-gateway/cli (Node only)"
+      : provider === "ollama"
+        ? "local profiles route through openai-compat (BUILTIN_LOCAL_PROFILES); a native ollama adapter is not built in"
+        : "inject one through GatewayOptions";
+  return new GatewayError("config", `provider ${provider} needs an ${part}: ${hint}`, { provider });
 }
 
 interface Prepared {

@@ -1,0 +1,2 @@
+{"type":"step_start","timestamp":1790200000000,"sessionID":"ses_8a1b2c3d4e5fAbCdEf","part":{"id":"prt_1","sessionID":"ses_8a1b2c3d4e5fAbCdEf","messageID":"msg_1","type":"step-start"}}
+{"type":"tool_use","timestamp":1790200000300,"sessionID":"ses_8a1b2c3d4e5fAbCdEf","part":{"id":"prt_2","sessionID":"ses_8a1b2c3d4e5fAbCdEf","messageID":"msg_1","type":"tool","callID":"call_x","tool":"bash","state":{"status":"error","input":{"command":"ls"},"error":"permission denied"}}}

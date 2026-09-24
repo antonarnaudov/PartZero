@@ -1,4 +1,6 @@
-import type { ModelProfile } from "./profile.js";
+import type { DiscoveredModel } from "./cli/provider.js";
+import { profileKind, type ModelProfile } from "./profile.js";
+import type { Billing, CliProviderId, ModelRef, Provider, ReasoningEffort } from "./types.js";
 
 /**
  * Built-in model profiles, as of 2026-09-23.
@@ -37,6 +39,7 @@ export const BUILTIN_PROFILES: readonly ModelProfile[] = [
   {
     id: "claude-opus-5-5",
     provider: "anthropic",
+    billing: "metered",
     apiModelId: "claude-opus-5-5",
     vendor: "anthropic",
     family: "claude-opus",
@@ -116,6 +119,7 @@ export const BUILTIN_PROFILES: readonly ModelProfile[] = [
   {
     id: "claude-fable-5-1",
     provider: "anthropic",
+    billing: "metered",
     apiModelId: "claude-fable-5-1",
     vendor: "anthropic",
     family: "claude-fable",
@@ -188,6 +192,7 @@ export const BUILTIN_PROFILES: readonly ModelProfile[] = [
   {
     id: "claude-opus-5",
     provider: "anthropic",
+    billing: "metered",
     apiModelId: "claude-opus-5",
     vendor: "anthropic",
     family: "claude-opus",
@@ -259,6 +264,7 @@ export const BUILTIN_PROFILES: readonly ModelProfile[] = [
   {
     id: "claude-sonnet-5",
     provider: "anthropic",
+    billing: "metered",
     apiModelId: "claude-sonnet-5",
     vendor: "anthropic",
     family: "claude-sonnet",
@@ -328,6 +334,7 @@ export const BUILTIN_PROFILES: readonly ModelProfile[] = [
   {
     id: "claude-haiku-4-5",
     provider: "anthropic",
+    billing: "metered",
     apiModelId: "claude-haiku-4-5",
     vendor: "anthropic",
     family: "claude-haiku",
@@ -482,6 +489,7 @@ export const BUILTIN_PROFILES: readonly ModelProfile[] = [
   {
     id: "gpt-oss-120b",
     provider: "openai-compat",
+    billing: "metered",
     apiModelId: "openai/gpt-oss-120b",
     vendor: "openai",
     family: "gpt-oss",
@@ -561,6 +569,7 @@ function openaiGpt6(
   return {
     id,
     provider: "openai",
+    billing: "metered",
     apiModelId: id,
     vendor: "openai",
     family: "gpt-6",
@@ -665,6 +674,7 @@ function gemini(
   return {
     id,
     provider: "google",
+    billing: "metered",
     apiModelId: id,
     vendor: "google",
     family: opts.family,
@@ -752,4 +762,378 @@ function gemini(
       asOf: AS_OF,
     },
   };
+}
+
+// ================================================================================================= CLI agents (ADR 0014)
+
+/**
+ * CLI profiles (docs/CLI-PROVIDERS.md §9.1): static aliases that each CLI resolves itself (`--model opus`). Pricing is
+ * the NOTIONAL list price of the matching API model (subscription runs are not billed per token; the number feeds the
+ * budget guard and the "plan usage" display), or zeros where no API equivalent exists. Context windows and limits are
+ * copied from the matching API profile, else a conservative 128k / 16k.
+ *
+ * Not part of `BUILTIN_PROFILES` (the default registry): Node hosts that inject `cliGatewayParts` register them, e.g.
+ * `new LLMGateway({ profiles: [...BUILTIN_PROFILES, ...BUILTIN_CLI_PROFILES, ...BUILTIN_LOCAL_PROFILES], ... })`.
+ */
+const CLI_AS_OF = "2026-09-24";
+const ALL_EFFORTS: ReasoningEffort[] = ["low", "medium", "high", "xhigh", "max"];
+const IMAGE_FORMATS: ModelProfile["capabilities"]["images"]["formats"] = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+
+function apiProfile(id: string): ModelProfile {
+  const p = BUILTIN_PROFILES.find((x) => x.id === id);
+  if (p === undefined) throw new Error(`builtin-profiles: no API profile ${id}`);
+  return p;
+}
+
+const CLI_LABEL: Record<CliProviderId, string> = {
+  "claude-cli": "Claude Code",
+  "gemini-cli": "Gemini CLI",
+  "codex-cli": "Codex CLI",
+  opencode: "opencode",
+  "cursor-agent": "Cursor Agent",
+};
+const CLI_AGENT: Record<CliProviderId, "claude" | "gemini" | "codex" | "opencode" | "cursor"> = {
+  "claude-cli": "claude",
+  "gemini-cli": "gemini",
+  "codex-cli": "codex",
+  opencode: "opencode",
+  "cursor-agent": "cursor",
+};
+
+interface CliProfileSpec {
+  provider: CliProviderId;
+  alias: string;
+  modelArg: string | null;
+  model: string;
+  vendor: string;
+  family: string;
+  /** API profile the limits and notional pricing are copied from (null: 128k / 16k, zero pricing). */
+  base: string | null;
+  notionalPricing: boolean;
+  modes: Array<"completion" | "runtime">;
+  envelopeVia: "json-schema" | "mcp-submit" | "text-json";
+  efforts: ReasoningEffort[];
+  effortArg?: Partial<Record<ReasoningEffort, string>>;
+  vision: boolean;
+  promptVariant?: string;
+  billing?: Billing;
+  quirks: string[];
+  sources: string[];
+  verified: string[];
+  unverified: string[];
+  discoveredAt?: string;
+}
+
+const CLI_COMMON_QUIRKS = [
+  "Runs the user's installed CLI on their own login: every call is one fresh, locked-down invocation (built-in tools off, empty temp workspace, allowlisted env).",
+  "Completion mode returns one turn envelope {text, tool_calls}; the orchestrator runs the tools (docs/CLI-PROVIDERS.md §3.2).",
+  "Pricing is notional (API list price) for budget and display; the user's plan limits are the real cap.",
+];
+
+export function cliProfile(spec: CliProfileSpec): ModelProfile {
+  const base = spec.base === null ? null : apiProfile(spec.base);
+  const label = CLI_LABEL[spec.provider];
+  const pricing: ModelProfile["pricing"] =
+    spec.notionalPricing && base !== null
+      ? { ...base.pricing, source: `notional: ${spec.vendor} API list price of ${base.id}; subscription runs are not billed per token` }
+      : { inputPerMTok: 0, outputPerMTok: 0, cacheReadPerMTok: 0, cacheWritePerMTok: 0, source: "no API equivalent on this login (request quotas): notional 0" };
+  const effortArg = spec.effortArg ?? Object.fromEntries(spec.efforts.map((e) => [e, e]));
+  const profile: ModelProfile = {
+    id: `${spec.provider}:${spec.alias}`,
+    provider: spec.provider,
+    apiModelId: spec.modelArg ?? "default",
+    vendor: spec.vendor,
+    family: spec.family,
+    displayName: `${spec.model} (${label}, your plan)`,
+    contextWindow: base?.contextWindow ?? 128_000,
+    maxOutputTokens: base?.maxOutputTokens ?? 16_000,
+    defaultMaxOutputTokens: Math.min(base?.defaultMaxOutputTokens ?? 16_000, 32_000),
+    pricing,
+    capabilities: {
+      vision: spec.vision,
+      tools: true,
+      strictTools: false,
+      strictToolsVia: "none",
+      forcedToolChoice: false,
+      parallelToolCalls: true,
+      parallelToolCallsToggle: true,
+      toolResultImages: "none",
+      images: {
+        formats: spec.vision ? (base?.capabilities.images.formats ?? IMAGE_FORMATS) : [],
+        urlSource: false,
+        estimatedTokensPerImage: base?.capabilities.images.estimatedTokensPerImage ?? 1_600,
+      },
+      caching: { style: "cli-managed", maxBreakpoints: 0, ttls: [] },
+      alwaysStream: false,
+      eagerInputStreaming: false,
+      samplingParams: false,
+    },
+    reasoning: { style: spec.efforts.length > 0 ? "cli-effort-flag" : "none", efforts: spec.efforts, canDisable: false, summaries: false, replay: "none" },
+    promptVariant: spec.promptVariant ?? base?.promptVariant ?? "generic",
+    toolSchemaStyle: "cli-envelope",
+    quirks: [...CLI_COMMON_QUIRKS, ...spec.quirks],
+    dataRetention: `Your ${spec.vendor} plan's terms apply (consumer data handling, not API zero data retention).`,
+    verification: { sources: ["docs/CLI-PROVIDERS.md §4, §9.1", ...spec.sources], verified: spec.verified, unverified: spec.unverified, asOf: CLI_AS_OF },
+    billing: spec.billing ?? "subscription",
+    cli: {
+      agent: CLI_AGENT[spec.provider],
+      modelArg: spec.modelArg,
+      modes: spec.modes,
+      envelopeVia: spec.envelopeVia,
+      ...(spec.efforts.length > 0 ? { effortArg } : {}),
+      ...(spec.discoveredAt === undefined ? {} : { discoveredAt: spec.discoveredAt }),
+    },
+  };
+  return profile;
+}
+
+const claudeCli = (alias: string, model: string, family: string, base: string, efforts: ReasoningEffort[], extra: string[] = []): ModelProfile =>
+  cliProfile({
+    provider: "claude-cli",
+    alias,
+    modelArg: alias,
+    model,
+    vendor: "anthropic",
+    family,
+    base,
+    notionalPricing: true,
+    modes: ["completion", "runtime"],
+    envelopeVia: "json-schema",
+    efforts,
+    vision: true,
+    quirks: [
+      "Notional cost is Claude Code's own total_cost_usd (list basis); plan usage comes from rate_limit_event (5-hour and 7-day windows).",
+      ...extra,
+    ],
+    sources: ["claude --help 2.1.260", "live claude -p runs 2026-09-24 (test/cli/fixtures/claude)"],
+    verified: ["cli.modelArg", "cli.envelopeVia", "capabilities.tools"],
+    unverified: ["contextWindow / maxOutputTokens (copied from the API profile)", "pricing (notional)", "capabilities.vision (stream-json image input, from the SDK docs)"],
+  });
+
+const geminiCli = (alias: string, model: string, family: string, base: string, modes: Array<"completion" | "runtime">): ModelProfile =>
+  cliProfile({
+    provider: "gemini-cli",
+    alias,
+    modelArg: alias,
+    model,
+    vendor: "google",
+    family,
+    base,
+    notionalPricing: false,
+    modes,
+    envelopeVia: "mcp-submit",
+    efforts: [],
+    vision: true,
+    quirks: ["No JSON-schema output: the envelope comes back through the submit_turn MCP tool.", "Auto routing and quota fallback can switch models; the actual model is recorded."],
+    sources: ["gemini --help 0.49.0", "research pass (offline, --fake-responses)"],
+    verified: ["cli.modelArg", "cli.envelopeVia"],
+    unverified: ["contextWindow (copied from the API profile)", "capabilities.vision (@path images)"],
+  });
+
+const codexCli = (alias: string, modelArg: string | null, model: string, base: string, notional: boolean, modes: Array<"completion" | "runtime">): ModelProfile =>
+  cliProfile({
+    provider: "codex-cli",
+    alias,
+    modelArg,
+    model,
+    vendor: "openai",
+    family: "gpt-6",
+    base,
+    notionalPricing: notional,
+    modes,
+    envelopeVia: "json-schema",
+    efforts: ["low", "medium", "high", "xhigh"],
+    vision: true,
+    quirks: ["Built from the Codex source and docs only: lockdown level 'static' until verified with a ChatGPT plan.", "--output-schema is strict: tool schemas are rewritten to OpenAI strict form."],
+    sources: ["codex-rs exec/src/cli.rs, exec_events.rs (0.156.1)"],
+    verified: ["cli.envelopeVia"],
+    unverified: ["cli.modelArg", "contextWindow (copied from the API profile)", "pricing (notional)"],
+  });
+
+export const BUILTIN_CLI_PROFILES: readonly ModelProfile[] = [
+  claudeCli("opus", "Claude Opus", "claude-opus", "claude-opus-5-5", ALL_EFFORTS),
+  claudeCli("sonnet", "Claude Sonnet", "claude-sonnet", "claude-sonnet-5", ALL_EFFORTS),
+  claudeCli("haiku", "Claude Haiku", "claude-haiku", "claude-haiku-4-5", [], ["The alias runs as claude-haiku-4-5-20251001 (seen live); no --effort control."]),
+  claudeCli("fable", "Claude Fable", "claude-fable", "claude-fable-5-1", ALL_EFFORTS),
+  geminiCli("pro", "Gemini Pro", "gemini-pro", "gemini-3.1-pro-preview", ["completion", "runtime"]),
+  geminiCli("flash", "Gemini Flash", "gemini-flash", "gemini-3.8-flash", ["completion", "runtime"]),
+  geminiCli("flash-lite", "Gemini Flash-Lite", "gemini-flash", "gemini-3.5-flash-lite", ["completion"]),
+  geminiCli("auto", "Gemini (auto routing)", "gemini-auto", "gemini-3.1-pro-preview", ["completion", "runtime"]),
+  codexCli("default", null, "Codex default model", "gpt-6-sol", false, ["completion", "runtime"]),
+  codexCli("gpt-6-sol", "gpt-6-sol", "GPT-6 Sol", "gpt-6-sol", true, ["completion", "runtime"]),
+  codexCli("gpt-6-luna", "gpt-6-luna", "GPT-6 Luna", "gpt-6-luna", true, ["completion"]),
+  cliProfile({
+    provider: "cursor-agent",
+    alias: "auto",
+    modelArg: null,
+    model: "Cursor (auto)",
+    vendor: "cursor",
+    family: "cursor-auto",
+    base: null,
+    notionalPricing: false,
+    modes: ["completion"],
+    envelopeVia: "text-json",
+    efforts: [],
+    vision: false,
+    quirks: ["BLOCKED: web search cannot be switched off in headless runs, so the lockdown refuses every Cursor build (docs/CLI-PROVIDERS.md §4.6)."],
+    sources: ["cursor-agent --help 2026.01.28"],
+    verified: ["cli.envelopeVia"],
+    unverified: ["everything else: no verified build exists"],
+  }),
+];
+
+/**
+ * A profile for a model found by CLI discovery (Codex `debug models`, opencode `models --verbose`, Cursor `models`).
+ * Id `<provider>:<modelArg>`; limits from `base` when given (e.g. the API profile of the same model).
+ */
+export function profileFromDiscovery(provider: CliProviderId, m: DiscoveredModel, base?: ModelProfile, now: Date = new Date()): ModelProfile {
+  const envelopeVia = provider === "claude-cli" || provider === "codex-cli" ? "json-schema" : provider === "cursor-agent" ? "text-json" : "mcp-submit";
+  const p = cliProfile({
+    provider,
+    alias: m.modelArg,
+    modelArg: m.modelArg,
+    model: m.displayName,
+    vendor: m.vendor,
+    family: m.family,
+    base: null,
+    notionalPricing: false,
+    modes: provider === "cursor-agent" ? ["completion"] : ["completion", "runtime"],
+    envelopeVia,
+    efforts: [],
+    vision: m.vision,
+    billing: m.billing === "local" ? "subscription" : m.billing,
+    quirks: ["Discovered from the CLI's model list; limits are conservative unless an API profile matched."],
+    sources: [`${CLI_LABEL[provider]} model discovery`],
+    verified: ["cli.modelArg (listed by the CLI)"],
+    unverified: ["contextWindow", "pricing (0 unless an API profile matched)"],
+    discoveredAt: now.toISOString(),
+  });
+  if (base !== undefined) {
+    p.contextWindow = base.contextWindow;
+    p.maxOutputTokens = base.maxOutputTokens;
+    p.defaultMaxOutputTokens = Math.min(base.defaultMaxOutputTokens, 32_000);
+    p.pricing = { ...base.pricing, source: `notional: API list price of ${base.id}` };
+  } else if (m.contextWindow !== null && m.contextWindow > 0) {
+    p.contextWindow = Math.floor(m.contextWindow);
+    p.maxOutputTokens = Math.min(p.maxOutputTokens, p.contextWindow);
+    p.defaultMaxOutputTokens = Math.min(p.defaultMaxOutputTokens, p.maxOutputTokens);
+  }
+  return p;
+}
+
+// ================================================================================================= local models (Ollama)
+
+export const DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434";
+
+/** What `/api/show` tells us about a local model. */
+export interface OllamaModelInfo {
+  tag: string;
+  family: string | null;
+  parameterSize: string | null;
+  tools: boolean;
+  vision: boolean;
+  thinking: boolean;
+  contextLength: number | null;
+}
+
+const OLLAMA_VENDOR: Record<string, string> = { qwen3: "alibaba", qwen2: "alibaba", qwen3moe: "alibaba", llama: "meta", gemma3: "google", mistral: "mistral", gptoss: "openai", "gpt-oss": "openai", deepseek2: "deepseek" };
+
+/**
+ * An `ollama:<tag>` profile. Local profiles reach the server through its OpenAI-compatible `/v1` endpoint (the
+ * `openai-compat` adapter), which cannot set `num_ctx` per request: the server must provide at least `local.numCtx`
+ * (set `OLLAMA_CONTEXT_LENGTH`), or long prompts are silently truncated (the default is 4k below 24 GiB of VRAM).
+ */
+export function ollamaProfile(m: OllamaModelInfo, baseURL: string = DEFAULT_OLLAMA_URL, discovered = true): ModelProfile {
+  const root = baseURL.replace(/\/+$/, "");
+  const numCtx = Math.min(32_768, m.contextLength ?? 8_192);
+  const maxOut = Math.min(16_384, numCtx);
+  const family = m.family ?? m.tag.split(":")[0] ?? m.tag;
+  return {
+    id: `ollama:${m.tag}`,
+    provider: "openai-compat",
+    apiModelId: m.tag,
+    vendor: OLLAMA_VENDOR[family] ?? "local",
+    family,
+    displayName: `${m.tag} (Ollama, local)`,
+    contextWindow: numCtx,
+    maxOutputTokens: maxOut,
+    defaultMaxOutputTokens: Math.min(8_192, maxOut),
+    pricing: { inputPerMTok: 0, outputPerMTok: 0, cacheReadPerMTok: 0, cacheWritePerMTok: 0, source: "local compute: no per-token price" },
+    capabilities: {
+      vision: m.vision,
+      tools: m.tools,
+      strictTools: false,
+      strictToolsVia: "none",
+      forcedToolChoice: false,
+      parallelToolCalls: true,
+      parallelToolCallsToggle: false,
+      toolResultImages: "none",
+      images: { formats: m.vision ? ["image/png", "image/jpeg"] : [], urlSource: false, estimatedTokensPerImage: m.vision ? 1_000 : 1 },
+      caching: { style: "none", maxBreakpoints: 0, ttls: [] },
+      alwaysStream: false,
+      eagerInputStreaming: false,
+      samplingParams: true,
+    },
+    reasoning: m.thinking
+      ? { style: "compat-reasoning-effort", efforts: ["low", "medium", "high"], canDisable: true, summaries: false, replay: "none" }
+      : { style: "none", efforts: [], canDisable: false, summaries: false, replay: "none" },
+    promptVariant: "generic",
+    toolSchemaStyle: "openai-compat",
+    quirks: [
+      `The /v1 endpoint cannot set num_ctx: start Ollama with OLLAMA_CONTEXT_LENGTH >= ${numCtx}, or prompts are silently truncated (default 4k below 24 GiB VRAM).`,
+      "Only models whose /api/show capabilities include tools are offered for agent roles; vision gates the judge.",
+      "The app never pulls models: run `ollama pull <tag>` yourself (disk space is your call).",
+    ],
+    dataRetention: "Local: prompts never leave this machine (unless the Ollama URL points elsewhere).",
+    compat: {
+      baseURL: `${root}/v1`,
+      maxTokensParam: "max_tokens",
+      reasoningFields: ["reasoning", "reasoning_content"],
+      replayReasoningFields: false,
+      providerReportsCost: false,
+      streamUsage: true,
+    },
+    local: { baseURL: root, tag: m.tag, numCtx, keepAlive: "10m", think: m.thinking },
+    billing: "local",
+    verification: {
+      sources: ["docs/CLI-PROVIDERS.md §10", discovered ? "Ollama /api/show" : "ollama.com/library (tag names)"],
+      verified: discovered ? ["capabilities.tools", "capabilities.vision", "local.tag"] : ["local.tag"],
+      unverified: discovered ? ["contextWindow (capped at 32k for local memory)"] : ["capabilities (confirmed by /api/show once pulled)", "contextWindow"],
+      asOf: CLI_AS_OF,
+    },
+  };
+}
+
+/**
+ * Default local profiles: tool-capable models from the Ollama library, offered before discovery ran. They work only
+ * once pulled (`ollama pull <tag>`); discovery replaces them with what `/api/show` reports.
+ */
+export const BUILTIN_LOCAL_PROFILES: readonly ModelProfile[] = [
+  ollamaProfile({ tag: "qwen3:8b", family: "qwen3", parameterSize: "8.2B", tools: true, vision: false, thinking: true, contextLength: 40_960 }, DEFAULT_OLLAMA_URL, false),
+  ollamaProfile({ tag: "gpt-oss:20b", family: "gpt-oss", parameterSize: "20.9B", tools: true, vision: false, thinking: true, contextLength: 131_072 }, DEFAULT_OLLAMA_URL, false),
+  ollamaProfile({ tag: "qwen3-coder:30b", family: "qwen3moe", parameterSize: "30.5B", tools: true, vision: false, thinking: false, contextLength: 262_144 }, DEFAULT_OLLAMA_URL, false),
+];
+
+// ================================================================================================= small models
+
+const SMALL_MODEL: Partial<Record<Provider, ModelRef>> = {
+  anthropic: "claude-haiku-4-5",
+  openai: "gpt-6-luna",
+  google: "gemini-3.5-flash-lite",
+  "claude-cli": "claude-cli:haiku",
+  "gemini-cli": "gemini-cli:flash-lite",
+  "codex-cli": "codex-cli:gpt-6-luna",
+};
+
+/** The small, fast model per provider (triage), or null to use the designer (§9.3). One table for every host. */
+export function smallModelFor(provider: Provider): ModelRef | null {
+  return SMALL_MODEL[provider] ?? null;
+}
+
+/**
+ * (additive) {@link smallModelFor} by profile: a local profile (an `ollama:<tag>` profile routes through
+ * `openai-compat`) never gets a hosted small model, whatever its transport provider; it uses the designer.
+ */
+export function smallModelForProfile(p: Pick<ModelProfile, "provider" | "local" | "billing">): ModelRef | null {
+  return profileKind(p) === "local" ? null : smallModelFor(p.provider);
 }

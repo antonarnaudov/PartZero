@@ -1,0 +1,9 @@
+{"type":"thread.started","thread_id":"0199a213-81c0-7800-8aa1-bbab2a035a54"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"item_0","type":"mcp_tool_call","server":"cad","tool":"get_code","arguments":{},"result":null,"error":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_0","type":"mcp_tool_call","server":"cad","tool":"get_code","arguments":{},"result":{"content":[{"type":"text","text":"export default part(...)"}],"structured_content":null},"error":null,"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Read the code."}}
+{"type":"turn.completed","usage":{"input_tokens":3000,"cached_input_tokens":0,"output_tokens":40,"reasoning_output_tokens":0}}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"Done."}}
+{"type":"turn.completed","usage":{"input_tokens":5200,"cached_input_tokens":2900,"output_tokens":55,"reasoning_output_tokens":0}}

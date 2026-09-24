@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { GatewayError } from "./errors.js";
-import type { ModelRef } from "./types.js";
+import { PROVIDER_KINDS, type ModelRef, type ProviderKind } from "./types.js";
 
 /**
  * Model profiles are DATA. Everything provider- or model-specific that an adapter needs to decide lives here, so a new
@@ -10,7 +10,27 @@ import type { ModelRef } from "./types.js";
 
 const effort = z.enum(["low", "medium", "high", "xhigh", "max"]);
 const ttl = z.enum(["5m", "1h"]);
-const provider = z.enum(["anthropic", "openai", "google", "openai-compat"]);
+const provider = z.enum([
+  "anthropic",
+  "openai",
+  "google",
+  "openai-compat",
+  "ollama",
+  "claude-cli",
+  "gemini-cli",
+  "codex-cli",
+  "opencode",
+  "cursor-agent",
+]);
+const cliAgent = z.enum(["claude", "gemini", "codex", "opencode", "cursor"]);
+/** CLI provider id -> the `cli.agent` it must declare. */
+const CLI_AGENT_OF: Readonly<Record<string, string>> = {
+  "claude-cli": "claude",
+  "gemini-cli": "gemini",
+  "codex-cli": "codex",
+  opencode: "opencode",
+  "cursor-agent": "cursor",
+};
 const imageMediaType = z.enum(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
 const priceTable = z.object({
@@ -51,6 +71,10 @@ export const reasoningStyle = z.enum([
   "compat-reasoning-effort",
   /** OpenRouter `reasoning: {effort}`. */
   "compat-openrouter",
+  /** CLI providers: the unified effort maps to a CLI flag through `cli.effortArg` (`--effort`, `model_reasoning_effort`, `--variant`). */
+  "cli-effort-flag",
+  /** Native Ollama `think` flag (reserved for a native adapter). */
+  "ollama-think",
   "none",
 ]);
 
@@ -93,7 +117,8 @@ export const modelProfileSchema = z.object({
       estimatedTokensPerImage: z.number().int().positive(),
     }),
     caching: z.object({
-      style: z.enum(["anthropic-breakpoints", "openai-explicit", "openai-implicit", "google-implicit", "none"]),
+      /** `cli-managed`: the CLI places its own cache breakpoints; the gateway has no control. */
+      style: z.enum(["anthropic-breakpoints", "openai-explicit", "openai-implicit", "google-implicit", "cli-managed", "none"]),
       minCacheableTokens: z.number().int().positive().optional(),
       maxBreakpoints: z.number().int().nonnegative(),
       ttls: z.array(ttl),
@@ -123,8 +148,8 @@ export const modelProfileSchema = z.object({
   }),
   /** Which prompt variant (role prompts, DSL reference phrasing) the agent should load for this model. */
   promptVariant: z.string(),
-  /** How tool JSON Schemas are rewritten for this model. */
-  toolSchemaStyle: z.enum(["anthropic", "openai-strict", "google", "openai-compat"]),
+  /** How tool JSON Schemas are rewritten for this model (`cli-envelope`: tools travel inside the turn envelope schema). */
+  toolSchemaStyle: z.enum(["anthropic", "openai-strict", "google", "openai-compat", "cli-envelope", "ollama"]),
   /** Known quirks, one sentence each, with the doc they come from. */
   quirks: z.array(z.string()),
   dataRetention: z.string().optional(),
@@ -154,9 +179,74 @@ export const modelProfileSchema = z.object({
     unverified: z.array(z.string()),
     asOf: z.string(),
   }),
+  /**
+   * Who pays (ADR 0014): `metered` API keys; `subscription` = the user's CLI plan (pricing is notional);
+   * `local` = local compute (cost 0).
+   */
+  billing: z.enum(["metered", "subscription", "local"]).default("metered"),
+  /** CLI providers only (docs/CLI-PROVIDERS.md §7.3). */
+  cli: z
+    .object({
+      agent: cliAgent,
+      /**
+       * Value for the CLI's model flag (`--model=opus`, `--model=flash`, `--model=provider/model`); null = the CLI's
+       * default. Same rule as parse.ts `safeModel`: it may never start with "-" (argv flag injection).
+       */
+      modelArg: z
+        .string()
+        .regex(/^(?!-)[\w.:/@-]{1,128}$/, "cli.modelArg must match ^[\\w.:/@-]{1,128}$ and must not start with '-'")
+        .nullable(),
+      /** Unified effort -> CLI-native value (`--effort`, `model_reasoning_effort`, `--variant`). Never starts with "-". */
+      effortArg: z.partialRecord(effort, z.string().regex(/^(?!-)[\w.-]{1,32}$/, "cli.effortArg values are short words and must not start with '-'")).optional(),
+      modes: z.array(z.enum(["completion", "runtime"])).min(1),
+      envelopeVia: z.enum(["json-schema", "mcp-submit", "text-json"]),
+      /** Set for profiles created by model discovery. */
+      discoveredAt: z.string().optional(),
+    })
+    .optional(),
+  /** Local model servers (Ollama). Local profiles currently reach the server through its OpenAI-compatible `/v1`. */
+  local: z
+    .object({
+      /** Server root, default `http://127.0.0.1:11434`. */
+      baseURL: z.string(),
+      /** Model tag, e.g. `qwen3:8b`. */
+      tag: z.string(),
+      /** Context the server must provide. The `/v1` route cannot set it per request: see the profile quirks. */
+      numCtx: z.number().int().positive(),
+      keepAlive: z.string().optional(),
+      think: z.boolean().optional(),
+    })
+    .optional(),
+}).superRefine((p, ctx) => {
+  const kind = PROVIDER_KINDS[p.provider];
+  if (kind === "cli") {
+    if (p.cli === undefined) ctx.addIssue({ code: "custom", path: ["cli"], message: `provider ${p.provider} needs a 'cli' block` });
+    else if (CLI_AGENT_OF[p.provider] !== p.cli.agent) {
+      ctx.addIssue({ code: "custom", path: ["cli", "agent"], message: `provider ${p.provider} needs cli.agent '${CLI_AGENT_OF[p.provider]}'` });
+    }
+    if (p.billing === "local") ctx.addIssue({ code: "custom", path: ["billing"], message: "CLI profiles bill 'subscription' or 'metered'" });
+  } else if (p.cli !== undefined) {
+    ctx.addIssue({ code: "custom", path: ["cli"], message: `'cli' is only valid for CLI providers, not ${p.provider}` });
+  }
+  if (p.provider === "ollama" && p.local === undefined) ctx.addIssue({ code: "custom", path: ["local"], message: "provider ollama needs a 'local' block" });
+  if (p.local !== undefined && p.billing !== "local") ctx.addIssue({ code: "custom", path: ["billing"], message: "profiles with a 'local' block bill 'local'" });
+  if (p.local !== undefined && p.provider !== "ollama" && p.provider !== "openai-compat") {
+    ctx.addIssue({ code: "custom", path: ["local"], message: `'local' is only valid for ollama or openai-compat profiles, not ${p.provider}` });
+  }
 });
 
 export type ModelProfile = z.infer<typeof modelProfileSchema>;
+
+/**
+ * (additive) The kind of a PROFILE, for routing, small-model choice and start prechecks (`LOCAL_UNAVAILABLE`): `local`
+ * for any profile with a `local` block (Ollama profiles reach the server through `openai-compat`), for provider
+ * `ollama` and for `billing: "local"`; otherwise the provider's kind. Hosts must use this instead of testing
+ * `provider === "ollama"`, which built-in local profiles never are.
+ */
+export function profileKind(p: Pick<ModelProfile, "provider" | "local" | "billing">): ProviderKind {
+  if (p.local !== undefined || p.provider === "ollama" || p.billing === "local") return "local";
+  return PROVIDER_KINDS[p.provider];
+}
 export type Pricing = z.infer<typeof pricingSchema>;
 export type ReasoningStyle = z.infer<typeof reasoningStyle>;
 

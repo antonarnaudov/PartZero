@@ -1,0 +1,4 @@
+{"type":"init","timestamp":"2026-09-24T00:00:00.000Z","session_id":"11111111-2222-4333-8444-555555555557","model":"gemini-3.8-flash"}
+{"type":"tool_use","timestamp":"2026-09-24T00:00:01.000Z","tool_name":"run_shell_command","tool_id":"run_shell_command-1","parameters":{"command":"ls ~"}}
+{"type":"tool_result","timestamp":"2026-09-24T00:00:01.100Z","tool_id":"run_shell_command-1","status":"error","error":{"type":"POLICY_DENIED","message":"denied by policy"}}
+{"type":"result","timestamp":"2026-09-24T00:00:02.000Z","status":"success","stats":{"total_tokens":10,"input_tokens":8,"output_tokens":2,"cached":0,"input":8,"duration_ms":2000,"tool_calls":1}}
