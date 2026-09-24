@@ -1,0 +1,35 @@
+packages/desktop/src/env.ts
+  s_59c0dd2af30db2::t_054cee3070d5ff 183-187,200,218,244
+packages/desktop/src/main.ts
+  s_59c0dd2af30db2::t_054cee3070d5ff 606-607
+  s_59c0dd2af30db2::t_14b282db1ef2d8 42,49,53,109-114,301,329-330,400-402,490-514,527-528,536-568,570-573,578-580,586,605
+scripts/alpha0-mac.sh
+  s_59c0dd2af30db2::t_57a960e471bea7 42-43
+  s_59c0dd2af30db2::t_c205864e99b527 24,35-36,117-119,121-122,124-145,158-159
+packages/desktop/src/self-test.ts
+  s_59c0dd2af30db2::t_5b4779a3025f2f 240-261
+  s_59c0dd2af30db2::t_b006cd97d46be1 23-31
+packages/desktop/test/hardening.test.ts
+  s_59c0dd2af30db2::t_146e6c0689eef8 90-92
+  s_59c0dd2af30db2::t_054cee3070d5ff 72
+packages/desktop/e2e/bundled-alpha.e2e.ts
+  s_59c0dd2af30db2::t_cdaea22f94c14c 140-151
+packages/desktop/test/packaging.test.ts
+  s_59c0dd2af30db2::t_c085f6a64828f3 18,309-317
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f46a5b2d13c222d91c00d0a3004ad7e22b20f04a",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
