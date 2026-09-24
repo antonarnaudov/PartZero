@@ -185,13 +185,40 @@ export interface OpenInSlicerRequest {
   docName: string;
 }
 
+/** Something about a print the slicer may treat differently from the model (it is still written). */
+export interface PrintWarning {
+  /** e.g. `EXPORT_BODY_FLOATING`: a body starts above the bed, and the slicer drops it onto the plate. */
+  code: string;
+  message: string;
+  details?: unknown;
+}
+
+export type OpenInSlicerRefusal =
+  /** Larger than the bed less its margin, or over an exclusion zone. */
+  | "EXPORT_BED_FIT"
+  /** Forge's check did not pass (an error, or a body that is not a valid solid). */
+  | "EXPORT_NOT_VALID"
+  /** A body's mesh is not watertight (a Forge problem, not the design's). */
+  | "EXPORT_NOT_WATERTIGHT"
+  /** Bodies stacked above each other: the slicer would drop them into each other. */
+  | "EXPORT_BODIES_OVERLAP"
+  /** The export failed, or Forge's record of it is missing or inconsistent. */
+  | "EXPORT_FAILED"
+  /** The `aicad` binary is older than the app (rebuild it). */
+  | "FORGE_OUTDATED"
+  | "FORGE_UNAVAILABLE";
+
 export type OpenInSlicerResult =
-  /** Written to `~/PartZero/Prints` and handed to the slicer. */
-  | { status: "opened"; file: string; receipt: string; slicer: SlicerInfo; bodies: number; bytes: number }
+  /**
+   * Written to `~/PartZero/Prints` and handed to the slicer by the OS (`open` succeeded; whether
+   * the slicer then loaded it is not observable). `alreadyRunning`: the slicer was running before,
+   * so it may open the file in a new window (null: not known).
+   */
+  | { status: "opened"; file: string; receipt: string; slicer: SlicerInfo; bodies: number; bytes: number; alreadyRunning: boolean | null; warnings: PrintWarning[] }
   /** Written, but not opened: no slicer, or its launch failed. `message` says why, `fix` what to do. */
-  | { status: "exported"; file: string; receipt: string; slicer: SlicerInfo; bodies: number; bytes: number; message: string; fix?: string }
-  /** Nothing written: the design is not checked or does not fit the printer. */
-  | { status: "refused"; code: "EXPORT_BED_FIT" | "EXPORT_NOT_VALID" | "EXPORT_FAILED" | "FORGE_UNAVAILABLE"; message: string; details?: unknown };
+  | { status: "exported"; file: string; receipt: string; slicer: SlicerInfo; bodies: number; bytes: number; warnings: PrintWarning[]; message: string; fix?: string }
+  /** Nothing written: the design is not checked, does not fit the printer, or would print wrong. */
+  | { status: "refused"; code: OpenInSlicerRefusal; message: string; details?: unknown };
 
 /** `window.aicad.print`: printer profile, slicer detection and the handoff. */
 export interface PrintBridge {

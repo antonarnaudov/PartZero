@@ -220,6 +220,46 @@ export async function forgePrintExport(bin: string, req: ForgePrintExportRequest
   });
 }
 
+/** The flags of `aicad export` the print handoff needs (W5); an older `aicad` rejects them. */
+export const PRINT_EXPORT_FLAGS = ["--bed", "--bed-margin", "--bed-exclude", "--title", "--application", "--summary"] as const;
+
+/**
+ * Why an `aicad` run failed, in words for a toast. An `aicad` built before the app (clap exits 2
+ * with `unexpected argument '--bed'`) is `FORGE_OUTDATED`, with the rebuild command; otherwise
+ * the first `error:` / `aicad:` line of stderr, not clap's closing "For more information, try
+ * '--help'." line.
+ */
+export function forgeFailure(r: { exitCode: number | null; stderr: string; error?: string }, bin: string): { code: "FORGE_OUTDATED" | "EXPORT_FAILED"; message: string } {
+  if (r.error) return { code: "EXPORT_FAILED", message: r.error };
+  const lines = r.stderr
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const unknown = r.exitCode === 2 ? /unexpected argument '(--?[\w-]+)/.exec(r.stderr) : null;
+  if (unknown) {
+    return {
+      code: "FORGE_OUTDATED",
+      message: `The Forge CLI at ${bin} is older than this app: it does not know ${unknown[1]}. Rebuild it with \`cargo build -p forge-cli\` in forge/ (with --release for a packaged build).`,
+    };
+  }
+  const line = lines.find((l) => /^(error|aicad):/i.test(l)) ?? lines.at(-1);
+  return { code: "EXPORT_FAILED", message: (line ?? `exit code ${String(r.exitCode)}`).slice(0, 500) };
+}
+
+/**
+ * Whether `bin` is new enough for the print handoff: `aicad export --help` lists every flag in
+ * {@link PRINT_EXPORT_FLAGS}. For the self-test (ALPHA-0-PLAN G1 #2) and diagnostics.
+ */
+export async function forgePrintCapability(bin: string, timeoutMs = 10_000): Promise<{ ok: boolean; missing: string[]; detail: string }> {
+  const r = await run(bin, ["export", "--help"], timeoutMs);
+  if (r.code !== 0) return { ok: false, missing: [...PRINT_EXPORT_FLAGS], detail: r.error ?? `aicad export --help exited with ${String(r.code)}` };
+  const help = r.stdout.toString("utf8");
+  const missing = PRINT_EXPORT_FLAGS.filter((f) => !new RegExp(`(^|[\\s,])${f}(?![\\w-])`, "m").test(help));
+  return missing.length === 0
+    ? { ok: true, missing, detail: `${bin} supports the print export` }
+    : { ok: false, missing, detail: `${bin} is older than this app (no ${missing.join(", ")}); rebuild it with \`cargo build -p forge-cli\`` };
+}
+
 export async function forgeExport(bin: string, req: ForgeExportRequest, timeoutMs = 300_000): Promise<ForgeExportResponse> {
   if (!MESH_FORMATS.includes(req.format)) throw new Error(`unsupported mesh format: ${String(req.format)}`);
   return withTempDoc(req.irJson, async (dir, docPath) => {

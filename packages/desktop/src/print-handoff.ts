@@ -9,10 +9,17 @@
  *    refuses a design that does not fit the bed less the margin (`EXPORT_BED_FIT`, nothing
  *    written), and centres the build on the bed with z-min = 0 through the 3MF build-item
  *    transform. `Title` is the document name, `Application` is `PartZero <version>`.
- * 3. **Save.** `<doc>-<hash8>.3mf`, where hash8 starts the SHA-256 of the 3MF bytes (the same design
- *    always gets the same name; a changed one never overwrites the last), and
- *    `<doc>-<hash8>.receipt.json`: what PartZero checked, against which profile. Both are written
- *    atomically. The folder is created on first use; there is no dialog (ALPHA-0-PLAN D4).
+ *    Its summary must then confirm what the receipt claims, or nothing is saved: as many bodies as
+ *    Forge checked, every mesh watertight (`EXPORT_NOT_WATERTIGHT`), a recorded placement, and no
+ *    bodies stacked above each other (`EXPORT_BODIES_OVERLAP`: the slicer drops each object onto
+ *    the plate, so they would print inside each other). A body that merely starts above the bed
+ *    is a warning (`EXPORT_BODY_FLOATING`), shown and kept in the receipt.
+ * 3. **Save.** `<doc>-<hash8>.3mf`, where hash8 starts the SHA-256 of the 3MF bytes: the same
+ *    design, document name and app version give the same file and name, and a changed design never
+ *    overwrites the last. `<doc>-<hash8>.receipt.json`: what PartZero checked, against which
+ *    profile, with the file's SHA-256 (integrity) and Forge's geometry hash (the determinism hash:
+ *    it ignores `Title` and `Application`, so it survives a rename or an app upgrade). Both are
+ *    written atomically. The folder is created on first use; there is no dialog (ALPHA-0-PLAN D4).
  * 4. **Hand off.** The slicer is found and launched by `slicer.ts`. When it is missing or does not
  *    start, the export still stands and the result says so (the UI offers Show in Finder).
  *
@@ -21,8 +28,8 @@
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import type { OpenInSlicerRequest, OpenInSlicerResult, SlicerInfo } from "@aicad/app/bridge";
-import { forgeEval, forgeInfo, forgePrintExport } from "./forge-cli.js";
+import type { OpenInSlicerRequest, OpenInSlicerResult, PrintWarning, SlicerInfo } from "@aicad/app/bridge";
+import { forgeEval, forgeFailure, forgeInfo, forgePrintExport } from "./forge-cli.js";
 import { type MachineProfile, type MaterialProfile, type ProfileStore, writeFileAtomic } from "./profiles.js";
 import { detectSlicer, openInSlicer, type SlicerSystem } from "./slicer.js";
 
@@ -91,6 +98,54 @@ interface Summary {
   placement?: { translation?: number[]; bbox?: unknown } | null;
   engine?: string;
   tessellation?: unknown;
+  /** `fnv1a64:<hex>` over the geometry and placement, without the metadata. */
+  geometryHash?: string | null;
+  warnings?: Array<{ code?: unknown; message?: unknown; details?: unknown }>;
+}
+
+/** The summary's layout warnings, as the bridge carries them. */
+function summaryWarnings(summary: Summary): PrintWarning[] {
+  return (Array.isArray(summary.warnings) ? summary.warnings : [])
+    .filter((w) => typeof w === "object" && w !== null && typeof w.code === "string")
+    .map((w) => ({ code: String(w.code), message: typeof w.message === "string" ? w.message : String(w.code), ...(w.details !== undefined ? { details: w.details } : {}) }));
+}
+
+type Refusal = Extract<OpenInSlicerResult, { status: "refused" }>;
+
+/**
+ * What the export summary must confirm before the file is saved: the receipt states these, so
+ * they are checked rather than assumed (NORTH-STAR "never silently wrong").
+ */
+function confirmSummary(summary: Summary | null, checkedBodies: number): Refusal | null {
+  const refuse = (code: Refusal["code"], message: string, details?: unknown): Refusal => ({ status: "refused", code, message, ...(details !== undefined ? { details } : {}) });
+  if (!summary || typeof summary !== "object" || !Array.isArray(summary.bodies)) {
+    return refuse("EXPORT_FAILED", "Not saved: Forge wrote the 3MF but no readable export summary, so its bodies, watertightness and placement can't be confirmed.");
+  }
+  if (summary.bodies.length !== checkedBodies) {
+    return refuse("EXPORT_FAILED", `Not saved: Forge checked ${checkedBodies} bod${checkedBodies === 1 ? "y" : "ies"} but exported ${summary.bodies.length}.`);
+  }
+  const leaky = summary.bodies.filter((b) => b.watertight !== true);
+  if (summary.watertight !== true || leaky.length > 0) {
+    const names = leaky.map((b) => `"${b.name ?? "?"}"`).join(", ") || "a body";
+    return refuse(
+      "EXPORT_NOT_WATERTIGHT",
+      `Not saved: the print mesh of ${names} is not watertight, so a slicer could print it wrong. This is a Forge problem, not your design.`,
+      { bodies: leaky.map((b) => b.name ?? null) },
+    );
+  }
+  const t = summary.placement?.translation;
+  if (!Array.isArray(t) || t.length !== 3 || !t.every((v) => typeof v === "number" && Number.isFinite(v))) {
+    return refuse("EXPORT_FAILED", "Not saved: Forge did not record where it placed the part on the bed.");
+  }
+  const stacked = summaryWarnings(summary).filter((w) => w.code === "EXPORT_BODIES_OVERLAP");
+  if (stacked.length > 0) {
+    return refuse(
+      "EXPORT_BODIES_OVERLAP",
+      `Not sent to Bambu Studio: ${stacked[0]!.message}. Lay the bodies out side by side, each in its print orientation (Export 3MF still writes the file as modelled).`,
+      stacked.map((w) => w.details),
+    );
+  }
+  return null;
 }
 
 function receipt(o: {
@@ -105,13 +160,17 @@ function receipt(o: {
   reportStatus: string;
   valid: boolean;
   summary: Summary;
+  warnings: PrintWarning[];
 }): unknown {
   const p = o.printer;
   const m = o.material;
   return {
     schema: RECEIPT_SCHEMA,
     file: o.file,
+    /** The file's bytes (integrity). They include the document name and app version. */
     sha256: o.sha256,
+    /** Forge's hash of the geometry and placement without the metadata (the determinism hash). */
+    geometryHash: o.summary.geometryHash ?? null,
     bytes: o.bytes,
     createdAt: o.createdAt,
     app: { name: PRODUCT_NAME, version: o.appVersion },
@@ -143,6 +202,7 @@ function receipt(o: {
       watertight: o.summary.watertight === true,
       bodies: o.summary.bodies?.length ?? 0,
       bedFit: { ok: true, usable: [p.bed.x - 2 * p.bedMargin, p.bed.y - 2 * p.bedMargin, p.bed.z] },
+      layoutWarnings: o.warnings,
     },
     tessellation: o.summary.tessellation ?? null,
     bbox: { model: o.summary.bbox ?? null, onBed: o.summary.placement?.bbox ?? null },
@@ -151,10 +211,10 @@ function receipt(o: {
   };
 }
 
-type Written = { file: string; receipt: string; bodies: number; bytes: number };
+type Written = { file: string; receipt: string; bodies: number; bytes: number; warnings: PrintWarning[] };
 
 /** Steps 1–3: check, export and save. */
-export async function exportForPrinter(deps: PrintHandoffDeps, req: OpenInSlicerRequest): Promise<Written | Extract<OpenInSlicerResult, { status: "refused" }>> {
+export async function exportForPrinter(deps: PrintHandoffDeps, req: OpenInSlicerRequest): Promise<Written | Refusal> {
   if (typeof req.irJson !== "string" || req.irJson.length === 0 || req.irJson.length > MAX_IR_BYTES) throw new Error("invalid IR document");
   const docName = typeof req.docName === "string" ? req.docName.slice(0, 200) : "";
   const info = await forgeInfo(deps.forgeBin);
@@ -193,8 +253,12 @@ export async function exportForPrinter(deps: PrintHandoffDeps, req: OpenInSlicer
     };
   }
   if (ex.exitCode !== 0 || !ex.data) {
-    return { status: "refused", code: "EXPORT_FAILED", message: `The export failed: ${ex.error ?? (ex.stderr.split("\n").pop() || `exit code ${String(ex.exitCode)}`)}` };
+    const f = forgeFailure(ex, deps.forgeBin);
+    return { status: "refused", code: f.code, message: f.code === "FORGE_OUTDATED" ? f.message : `The export failed: ${f.message}` };
   }
+  const unconfirmed = confirmSummary(ex.summary as Summary | null, checks.bodies.length);
+  if (unconfirmed) return unconfirmed;
+  const warnings = summaryWarnings(summary);
   const sha256 = createHash("sha256").update(ex.data).digest("hex");
   const stem = `${printFileStem(docName)}-${sha256.slice(0, 8)}`;
   mkdirSync(deps.printsDir, { recursive: true });
@@ -213,9 +277,10 @@ export async function exportForPrinter(deps: PrintHandoffDeps, req: OpenInSlicer
     reportStatus: checks.status,
     valid,
     summary,
+    warnings,
   });
   writeFileAtomic(receiptPath, `${JSON.stringify(r, null, 2)}\n`);
-  return { file, receipt: receiptPath, bodies: summary.bodies?.length ?? 0, bytes: ex.data.byteLength };
+  return { file, receipt: receiptPath, bodies: summary.bodies?.length ?? 0, bytes: ex.data.byteLength, warnings };
 }
 
 /** The slicer as currently configured (the Settings path, else the search). */
@@ -241,5 +306,5 @@ export async function openPrintInSlicer(deps: PrintHandoffDeps, req: OpenInSlice
   if (!opened.ok) {
     return { status: "exported", ...written, slicer, message: `Saved to ${deps.printsDir}. ${opened.message}`, fix: "Open the file in Bambu Studio yourself (Show in Finder)." };
   }
-  return { status: "opened", ...written, slicer };
+  return { status: "opened", ...written, slicer, alreadyRunning: opened.alreadyRunning };
 }

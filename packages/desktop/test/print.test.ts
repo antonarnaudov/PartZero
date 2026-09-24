@@ -8,7 +8,7 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, symlinkSyn
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { findRepoRoot, locateForgeBinary } from "../src/forge-cli.js";
+import { findRepoRoot, forgeFailure, forgePrintCapability, locateForgeBinary } from "../src/forge-cli.js";
 import { exportForPrinter, openPrintInSlicer, printFileStem, reportChecks, type PrintHandoffDeps } from "../src/print-handoff.js";
 import {
   agentConventionsLine,
@@ -20,21 +20,30 @@ import {
   ProfileStore,
   writeFileAtomic,
 } from "../src/profiles.js";
-import { BAMBU_STUDIO, defaultSlicerSystem, detectSlicer, execFileCapped, isInside, openInSlicer, plistStrings, type SlicerSystem } from "../src/slicer.js";
+import { BAMBU_STUDIO, defaultSlicerSystem, detectSlicer, execFileCapped, isInside, openInSlicer, plistStrings, slicerRunning, type SlicerSystem } from "../src/slicer.js";
 import { tempDirs } from "./temp-dirs.js";
 
 const tmp = tempDirs("aicad-print-test-");
 const posix = process.platform !== "win32";
 
 /** A fake `.app` bundle with an XML Info.plist. */
-function fakeApp(dir: string, name = "BambuStudio.app", bundleId: string = BAMBU_STUDIO.bundleId, version = "02.06.00.51"): string {
+function fakeApp(dir: string, name = "BambuStudio.app", bundleId: string = BAMBU_STUDIO.bundleId, version = "02.06.00.51", executable = "BambuStudio"): string {
   const app = join(dir, name);
   mkdirSync(join(app, "Contents", "MacOS"), { recursive: true });
   writeFileSync(
     join(app, "Contents", "Info.plist"),
-    `<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0">\n<dict>\n  <key>CFBundleIdentifier</key>\n  <string>${bundleId}</string>\n  <key>CFBundleShortVersionString</key>\n  <string>${version}</string>\n</dict>\n</plist>\n`,
+    `<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0">\n<dict>\n  <key>CFBundleExecutable</key>\n  <string>${executable}</string>\n  <key>CFBundleIdentifier</key>\n  <string>${bundleId}</string>\n  <key>CFBundleShortVersionString</key>\n  <string>${version}</string>\n</dict>\n</plist>\n`,
   );
   return app;
+}
+
+/** A fake `pgrep` that records its arguments and exits with `code` (0: running, 1: not). */
+function fakePgrep(dir: string, code: number): { bin: string; args: () => string[] | null } {
+  const log = join(dir, "pgrep-args.txt");
+  const bin = join(dir, "fake-pgrep");
+  writeFileSync(bin, `#!/bin/sh\nfor a in "$@"; do printf '%s\\n' "$a"; done > "${log}"\nexit ${code}\n`);
+  chmodSync(bin, 0o755);
+  return { bin, args: () => (existsSync(log) ? readFileSync(log, "utf8").split("\n").filter(Boolean) : null) };
 }
 
 /** A fake `open` that records its arguments (one per line) and exits with `code`. */
@@ -217,8 +226,40 @@ describe.skipIf(!posix)("launching Bambu Studio", () => {
     const open = fakeOpen(root);
     const sys = system({ searchDirs: [root], openBin: open.bin, exec: execFileCapped });
     const slicer = await detectSlicer(sys, null);
-    expect(await openInSlicer(sys, slicer, file, prints)).toEqual({ ok: true });
+    // A test system never asks about the user's real Bambu Studio: whether it runs is unknown.
+    expect(sys.pgrepBin).toBeNull();
+    expect(await openInSlicer(sys, slicer, file, prints)).toEqual({ ok: true, alreadyRunning: null });
     expect(open.args()).toEqual(["-a", app, file]);
+  });
+
+  it("says whether Bambu Studio was already running (it may then open a new window)", async () => {
+    const root = tmp();
+    const prints = join(root, "Prints");
+    mkdirSync(prints);
+    const file = join(prints, "knob-1a2b3c4d.3mf");
+    writeFileSync(file, "PK");
+    const app = fakeApp(root);
+    const open = fakeOpen(root);
+    for (const [code, want] of [
+      [0, true],
+      [1, false],
+      [3, null],
+    ] as const) {
+      mkdirSync(join(root, `pgrep-${code}`), { recursive: true });
+      const p = fakePgrep(join(root, `pgrep-${code}`), code);
+      const sys = system({ searchDirs: [root], openBin: open.bin, pgrepBin: p.bin, exec: execFileCapped });
+      const slicer = await detectSlicer(sys, null);
+      expect(await openInSlicer(sys, slicer, file, prints), `pgrep exit ${code}`).toEqual({ ok: true, alreadyRunning: want });
+      // Only this user's processes, matched by the bundle's executable name.
+      expect(p.args()).toEqual(["-x", "-U", String(process.getuid!()), "BambuStudio"]);
+    }
+    expect(open.args()).toEqual(["-a", app, file]);
+    // No executable name in the Info.plist, or no pgrep: unknown, and the launch goes ahead.
+    const bare = fakeApp(join(root, "bare"), "BambuStudio.app", BAMBU_STUDIO.bundleId, "02.06.00.51", "");
+    const p = fakePgrep(join(root, "bare"), 0);
+    expect(await slicerRunning(system({ searchDirs: [], pgrepBin: p.bin, exec: execFileCapped }), bare)).toBeNull();
+    expect(p.args()).toBeNull();
+    expect(await slicerRunning(system({ searchDirs: [], pgrepBin: null }), app)).toBeNull();
   });
 
   it("reports a failed launch with the reason", async () => {
@@ -324,7 +365,7 @@ describe.skipIf(!haveForge || !posix)("the handoff with the real aicad", () => {
     expect(r.file).toBe(join(deps.printsDir, `two-pucks-${sha.slice(0, 8)}.3mf`));
     expect(r.receipt).toBe(join(deps.printsDir, `two-pucks-${sha.slice(0, 8)}.receipt.json`));
     expect(bytes.subarray(0, 2).toString()).toBe("PK");
-    expect(r).toMatchObject({ bodies: 2, bytes: bytes.length, slicer: { found: true, path: app } });
+    expect(r).toMatchObject({ bodies: 2, bytes: bytes.length, slicer: { found: true, path: app }, alreadyRunning: null, warnings: [] });
     expect(open.args()).toEqual(["-a", app, r.file]);
     const receipt = JSON.parse(readFileSync(r.receipt, "utf8"));
     expect(receipt).toMatchObject({
@@ -338,8 +379,9 @@ describe.skipIf(!haveForge || !posix)("the handoff with the real aicad", () => {
       document: { name: "Two Pucks" },
       printer: { id: "builtin:bambu-p2s-0.4", bed: { x: 256, y: 256, z: 256 }, bedMargin: 10, unverified: expect.arrayContaining(["bed"]) },
       material: { id: "builtin:pla", clearances: { press: 0.05, slip: 0.2, running: 0.3, pressMetal: 0.05 }, clearanceSource: "default" },
-      checks: { report: "ok", valid: true, watertight: true, bodies: 2, bedFit: { ok: true, usable: [236, 236, 256] } },
+      checks: { report: "ok", valid: true, watertight: true, bodies: 2, bedFit: { ok: true, usable: [236, 236, 256] }, layoutWarnings: [] },
       tessellation: { deflection: 0.01, angular: 0.1 },
+      geometryHash: expect.stringMatching(/^fnv1a64:[0-9a-f]{16}$/),
     });
     // Centred on (128, 128) with z-min = 0.
     const onBed = receipt.bbox.onBed as { min: number[]; max: number[] };
@@ -348,12 +390,17 @@ describe.skipIf(!haveForge || !posix)("the handoff with the real aicad", () => {
     expect(onBed.min[2]).toBe(0);
     // Only what PartZero checked: no slicer output (ADR 0016 §2).
     expect(Object.keys(receipt).sort()).toEqual(
-      ["app", "bbox", "bytes", "checks", "createdAt", "document", "file", "forge", "material", "note", "placement", "printer", "schema", "sha256", "tessellation"].sort(),
+      ["app", "bbox", "bytes", "checks", "createdAt", "document", "file", "forge", "geometryHash", "material", "note", "placement", "printer", "schema", "sha256", "tessellation"].sort(),
     );
     // The same design gets the same name (and bytes) again.
     const again = await exportForPrinter(deps, { irJson: corpus("extrude_two_regions"), docName: "Two Pucks" });
     expect("file" in again && again.file).toBe(r.file);
     expect(readdirSync(deps.printsDir).sort()).toEqual([`two-pucks-${sha.slice(0, 8)}.3mf`, `two-pucks-${sha.slice(0, 8)}.receipt.json`]);
+    // Another app version changes the file (its Application metadata) but not the geometry hash.
+    const upgraded = await exportForPrinter({ ...deps, appVersion: "0.0.2" }, { irJson: corpus("extrude_two_regions"), docName: "Two Pucks" });
+    if (!("file" in upgraded)) throw new Error(upgraded.message);
+    expect(upgraded.file).not.toBe(r.file);
+    expect(JSON.parse(readFileSync(upgraded.receipt, "utf8")).geometryHash).toBe(receipt.geometryHash);
   });
 
   it("still saves the file when Bambu Studio is missing, and says how to fix it", async () => {
@@ -418,5 +465,170 @@ describe.skipIf(!haveForge || !posix)("the handoff with the real aicad", () => {
   it("says so when the Forge CLI is missing", async () => {
     const r = await openPrintInSlicer(handoff(tmp(), { forgeBin: "/nonexistent/aicad" }), { irJson: corpus("extrude_box"), docName: "box" });
     expect(r).toMatchObject({ status: "refused", code: "FORGE_UNAVAILABLE" });
+  });
+
+  it("refuses bodies stacked above each other and writes nothing", async () => {
+    const root = tmp();
+    const deps = handoff(root);
+    const r = await openPrintInSlicer(deps, { irJson: bars([-10, 10, 0, 5], [-10, 10, 10, 15]), docName: "box and lid" });
+    expect(r).toMatchObject({ status: "refused", code: "EXPORT_BODIES_OVERLAP" });
+    if (r.status !== "refused") return;
+    expect(r.message).toMatch(/stacked.*print inside each other.*side by side/);
+    expect(existsSync(deps.printsDir)).toBe(false);
+  });
+
+  it("saves a floating body with a warning in the result and the receipt", async () => {
+    const root = tmp();
+    fakeApp(join(root, "Applications"));
+    const open = fakeOpen(root);
+    const deps = handoff(root, { slicerDirs: [join(root, "Applications")], openBin: open.bin });
+    const r = await openPrintInSlicer(deps, { irJson: bars([-30, -10, 0, 5], [10, 30, 10, 15]), docName: "two bars" });
+    expect(r.status).toBe("opened");
+    if (r.status !== "opened") return;
+    expect(r.warnings).toEqual([expect.objectContaining({ code: "EXPORT_BODY_FLOATING", message: expect.stringMatching(/starts 10 mm above the bed/) })]);
+    const receipt = JSON.parse(readFileSync(r.receipt, "utf8"));
+    expect(receipt.checks.layoutWarnings).toEqual(r.warnings);
+  });
+});
+
+/** Two bars on the XZ plane, `[x0, x1, z0, z1]` each, extruded 10 mm symmetrically along Y. */
+function bars(a: number[], b: number[]): string {
+  const rect = (id: string, [x0, x1, z0, z1]: number[]) => [
+    { kind: "line", id: `${id}1`, start: [x0, z0], end: [x1, z0] },
+    { kind: "line", id: `${id}2`, start: [x1, z0], end: [x1, z1] },
+    { kind: "line", id: `${id}3`, start: [x1, z1], end: [x0, z1] },
+    { kind: "line", id: `${id}4`, start: [x0, z1], end: [x0, z0] },
+  ];
+  return JSON.stringify({
+    schema: "aicad.ir/0",
+    parts: [
+      {
+        id: "p",
+        name: "p",
+        features: [
+          { type: "sketch", id: "s", name: "bars", plane: "XZ", curves: [...rect("a", a!), ...rect("b", b!)] },
+          { type: "extrude", id: "e", name: "stack", sketch: "bars", distance: 10, direction: "symmetric" },
+        ],
+      },
+    ],
+  });
+}
+
+// ─── Forge's answers the handoff must not take on trust ─────────────────────────────────────
+
+describe("Forge CLI failures", () => {
+  it("names an aicad older than the app, with the rebuild command", () => {
+    // What the pre-W5 aicad prints for `export --bed=…` (clap), last line included.
+    const stderr = "error: unexpected argument '--bed' found\n\n  tip: to pass '--bed' as a value, use '-- --bed'\n\nUsage: aicad export [OPTIONS] --out <OUT> <FILE>\n\nFor more information, try '--help'.\n";
+    const f = forgeFailure({ exitCode: 2, stderr }, "/repo/forge/target/release/aicad");
+    expect(f.code).toBe("FORGE_OUTDATED");
+    expect(f.message).toContain("/repo/forge/target/release/aicad is older than this app");
+    expect(f.message).toContain("--bed");
+    expect(f.message).toContain("cargo build -p forge-cli");
+    expect(f.message).not.toContain("For more information");
+  });
+
+  it("shows the first error line, not the last line of stderr", () => {
+    expect(forgeFailure({ exitCode: 3, stderr: "aicad: cannot write /x/print.3mf: disk full\nsome trailing note\n" }, "aicad")).toEqual({
+      code: "EXPORT_FAILED",
+      message: "aicad: cannot write /x/print.3mf: disk full",
+    });
+    expect(forgeFailure({ exitCode: 1, stderr: "just one line" }, "aicad").message).toBe("just one line");
+    expect(forgeFailure({ exitCode: 9, stderr: "" }, "aicad").message).toBe("exit code 9");
+    expect(forgeFailure({ exitCode: null, stderr: "x", error: "aicad timed out after 5 ms" }, "aicad").message).toBe("aicad timed out after 5 ms");
+  });
+});
+
+/**
+ * A fake `aicad`: `eval` prints `report`, `export` writes a stub 3MF and `summary` (or none), or
+ * behaves like an aicad that predates `--bed`.
+ */
+function fakeAicad(dir: string, o: { report: unknown; summary?: unknown; old?: boolean }): string {
+  mkdirSync(dir, { recursive: true });
+  const report = join(dir, "report.json");
+  const summary = join(dir, "summary.json");
+  writeFileSync(report, JSON.stringify(o.report));
+  if (o.summary !== undefined) writeFileSync(summary, JSON.stringify(o.summary));
+  const bin = join(dir, "aicad");
+  const exportPart = o.old
+    ? `printf "error: unexpected argument '--bed' found\\n\\nFor more information, try '--help'.\\n" >&2; exit 2`
+    : `out=""; sum=""
+while [ $# -gt 0 ]; do case "$1" in --out) out="$2"; shift 2;; --summary=*) sum="\${1#--summary=}"; shift;; *) shift;; esac; done
+printf 'PK stub' > "$out"
+${o.summary !== undefined ? `cp "${summary}" "$sum"` : ":"}
+exit 0`;
+  writeFileSync(
+    bin,
+    `#!/bin/sh
+cmd="$1"; shift
+if [ "$cmd" = eval ]; then cat "${report}"; exit 0; fi
+if [ "$cmd" = export ] && [ "$1" = --help ]; then printf '%s\\n' ${o.old ? "'  --out <OUT>'" : "'  --out <OUT>' '  --bed <X,Y,Z>' '  --bed-margin <MM>' '  --bed-exclude <X0,Y0,X1,Y1>' '  --title <TITLE>' '  --application <APP>' '  --summary <PATH>'"}; exit 0; fi
+${exportPart}
+`,
+  );
+  chmodSync(bin, 0o755);
+  return bin;
+}
+
+const OK_REPORT = { schema: "aicad.metrics/0", status: "ok", features: [{ bodies: [{ valid: true }] }] };
+const GOOD_SUMMARY = {
+  schema: "aicad.export/1",
+  status: "ok",
+  bodies: [{ name: "p/e", watertight: true }],
+  watertight: true,
+  placement: { translation: [128, 128, 0], bbox: { min: [118, 118, 0], max: [138, 138, 5] } },
+  geometryHash: "fnv1a64:0123456789abcdef",
+  warnings: [],
+};
+
+describe.skipIf(!posix)("the handoff checks Forge's export summary", () => {
+  const run = (o: { report?: unknown; summary?: unknown; old?: boolean }) => {
+    const root = tmp();
+    const deps = handoff(root, { forgeBin: fakeAicad(join(root, "bin"), { report: OK_REPORT, ...o }) });
+    return { deps, result: openPrintInSlicer(deps, { irJson: "{}", docName: "part" }) };
+  };
+
+  it("saves what the summary confirms", async () => {
+    const { deps, result } = run({ summary: GOOD_SUMMARY });
+    const r = await result;
+    expect(r).toMatchObject({ status: "exported", bodies: 1, warnings: [] });
+    expect(existsSync(deps.printsDir)).toBe(true);
+  });
+
+  it("refuses an aicad that predates the print export, and says how to rebuild it", async () => {
+    const { deps, result } = run({ old: true });
+    const r = await result;
+    expect(r).toMatchObject({ status: "refused", code: "FORGE_OUTDATED" });
+    expect(r.status === "refused" && r.message).toMatch(/older than this app: it does not know --bed\. Rebuild it with `cargo build -p forge-cli`/);
+    expect(existsSync(deps.printsDir)).toBe(false);
+    expect(await forgePrintCapability(deps.forgeBin)).toMatchObject({ ok: false, missing: ["--bed", "--bed-margin", "--bed-exclude", "--title", "--application", "--summary"] });
+  });
+
+  it("refuses when the summary is missing, disagrees on the body count, or has no placement", async () => {
+    for (const [summary, why] of [
+      [undefined, /no readable export summary/],
+      [{ ...GOOD_SUMMARY, bodies: [...GOOD_SUMMARY.bodies, { name: "p/e#1", watertight: true }] }, /checked 1 body but exported 2/],
+      [{ ...GOOD_SUMMARY, placement: null }, /did not record where it placed/],
+    ] as const) {
+      const { deps, result } = run({ summary });
+      const r = await result;
+      expect(r, String(why)).toMatchObject({ status: "refused", code: "EXPORT_FAILED" });
+      expect(r.status === "refused" && r.message).toMatch(why);
+      expect(existsSync(deps.printsDir)).toBe(false);
+    }
+  });
+
+  it("refuses a mesh that is not watertight, naming the body", async () => {
+    const { deps, result } = run({ summary: { ...GOOD_SUMMARY, watertight: false, bodies: [{ name: "p/e", watertight: false }] } });
+    const r = await result;
+    expect(r).toMatchObject({ status: "refused", code: "EXPORT_NOT_WATERTIGHT", details: { bodies: ["p/e"] } });
+    expect(r.status === "refused" && r.message).toContain('"p/e" is not watertight');
+    expect(existsSync(deps.printsDir)).toBe(false);
+  });
+});
+
+describe.skipIf(!haveForge)("the real aicad", () => {
+  it("has every flag the print export needs", async () => {
+    expect(await forgePrintCapability(bin)).toMatchObject({ ok: true, missing: [] });
   });
 });
