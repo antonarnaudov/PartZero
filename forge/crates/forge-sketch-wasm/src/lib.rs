@@ -7,7 +7,7 @@
 //!
 //! Every method speaks JSON text through [`forge_sketch::session_json`] (natively tested there);
 //! this crate is only the binding layer. It is a separate module from `forge-wasm` for now (no
-//! wgpu, well under a megabyte): folding it into `forge-wasm` is `mod sketch_session;` with the
+//! wgpu; about 0.9 MB gzipped): folding it into `forge-wasm` is `mod sketch_session;` with the
 //! `web` module below as its contents (see `docs/fm/sketcher.md`).
 
 #[cfg(target_arch = "wasm32")]
