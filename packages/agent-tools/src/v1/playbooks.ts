@@ -222,8 +222,8 @@ export const PLAYBOOK_V1: Readonly<Record<string, string>> = {
   SHELL_FACE_NOT_ON_BODY: "Open faces must belong to the shelled body: pick faces of that body.",
   SHELL_FAILED: "The shell could not be built: try a thinner wall, or shell before adding small features.",
   SHELL_CLOSED_VOID: "Informational: with no open face the body is hollow inside (2 shells); give open faces to make a cup.",
-  DRAFT_FACE_UNSUPPORTED: "Draft applies to planar faces only: narrow the face query to planes.",
-  DRAFT_FAILED: "The draft could not be built: reduce the angle or draft fewer faces.",
+  DRAFT_FACE_UNSUPPORTED: "Draft applies to planar faces only, walls square to the neutral plane (not caps, not round faces): narrow the face query to such planes (.planes(), .parallel(Z) for an XY neutral plane).",
+  DRAFT_FAILED: "The draft could not be built: Forge drafts walls whose neighbours are planar, so draft before filleting their corners or cutting round holes through them; otherwise reduce the angle (an edge collapsed) or draft fewer faces.",
   // ── Patterns ──
   PATTERN_ALL_INSTANCES_FAILED: "Every pattern instance failed: check spacing/direction/axis so the copies land on the body.",
   PATTERN_INSTANCE_SKIPPED: "One pattern instance was skipped (it missed the body or failed): adjust the count/spacing, or skip it explicitly with skip: [[i]].",
@@ -1748,8 +1748,17 @@ function computeHint(code: string, ctx: V1HintContext, d: Details | undefined): 
     case "SHELL_FACE_NOT_ON_BODY":
     case "DRAFT_FACE_UNSUPPORTED":
     case "DRAFT_FAILED": {
+      // A face is a key (the oracle) or `{ key, name, reason? }` (Forge's blend errors).
+      const faceText = (x: unknown): string => {
+        if (typeof x === "string") return entityName(ctx, x);
+        const o = obj(x);
+        const n = nameOf(o, ctx);
+        if (n === undefined) return valueText(x);
+        const why = str(o, "reason");
+        return why ? `${displayName(n)} (${why.replaceAll("-", " ")})` : displayName(n);
+      };
       const faces = list(d, "faces");
-      return faces.length > 0 ? `Faces ${capList(faces, 4, (x) => (typeof x === "string" ? entityName(ctx, x) : valueText(x))).join(", ")}: ${PLAYBOOK_V1[code]}` : undefined;
+      return faces.length > 0 ? `Faces ${capList(faces, 4, faceText).join(", ")}: ${PLAYBOOK_V1[code]}` : undefined;
     }
     case "SHELL_FAILED": {
       const r = str(d, "reason");

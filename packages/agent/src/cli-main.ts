@@ -341,7 +341,7 @@ async function cmdRun(flags: Map<string, string>, io: CliIo, deps: CliDeps): Pro
   if (ir === "v1") {
     const e = flags.get("--engine") ?? "auto";
     if (e !== "auto" && e !== "forge" && e !== "oracle") {
-      throw new UsageError("--ir v1 runs on Forge (--engine forge, or auto) or on the OCCT oracle's v1 pipeline (--engine oracle: CI/dev only, for operations Forge does not evaluate yet, e.g. draft); --engine fixture replays aicad.metrics/0 reports only");
+      throw new UsageError("--ir v1 runs on Forge (--engine forge, or auto) or on the OCCT oracle's v1 pipeline (--engine oracle: CI/dev only, a cross-check of Forge on the same documents); --engine fixture replays aicad.metrics/0 reports only");
     }
     engineV1 = deps.makeEngineV1
       ? deps.makeEngineV1()

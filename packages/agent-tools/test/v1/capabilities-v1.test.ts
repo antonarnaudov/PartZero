@@ -76,11 +76,11 @@ describe("the engine capability probe", () => {
     expect(limits).toEqual([1234]);
   });
 
-  it("Forge today (recorded): the operations it rejects are named, with the code it answers", () => {
+  it("Forge today (recorded): it evaluates every probed operation, draft included (it answered UNSUPPORTED_FEATURE for draft before the feature tools)", () => {
     const c = v1Fixtures().capabilities;
     expect(c).toBeDefined();
     expect(c!.unknown).toEqual([]);
-    expect(c!.unsupported.map((u) => `${u.op}:${u.code}`)).toEqual(["draft:UNSUPPORTED_FEATURE"]);
+    expect(c!.unsupported).toEqual([]);
     expect([...c!.evaluated, ...c!.unsupported.map((u) => u.op)].sort()).toEqual(PROBED_OPERATIONS_V1.map((o) => o.op).sort());
   });
 });

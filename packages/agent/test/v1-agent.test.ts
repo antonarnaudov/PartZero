@@ -99,9 +99,10 @@ describe("CadScript v1 runs", () => {
     expect(system).toContain("# CadScript v1 reference");
     const tools = (designer.payload["tools"] as { name: string }[]).map((t) => t.name);
     for (const t of ["set_param", "accept_ref_candidate", "accept_ref_proposal", "sketch_edit", "query", "describe"]) expect(tools).toContain(t);
-    // The task header says up front what the attached engine rejects (Forge: draft), asked of the engine itself.
-    expect(designer.userText).toContain("Engine: The attached engine does not evaluate `draft` (it answers UNSUPPORTED_FEATURE): do not use it;");
-    expect(JSON.stringify(r.events)).toContain("engine capabilities: does not evaluate draft");
+    // The task header would say up front what the attached engine rejects, asked of the engine
+    // itself; Forge evaluates every probed operation since the draft (it named `draft` before).
+    expect(designer.userText).not.toContain("does not evaluate");
+    expect(JSON.stringify(r.events)).not.toContain("does not evaluate draft");
 
     // The REF_AMBIGUOUS result numbered the candidates with their queries; the designer picked one.
     const failed = seen[0]!.toolResults[0]!.content;
@@ -508,7 +509,7 @@ describe("bench and runtime caps", () => {
     expect(out.join("")).toBe(PLATE);
     // Fixtures replay aicad.metrics/0 only; the oracle's v1 pipeline is an engine (here: not installed there).
     expect(await cliMain(["run", "--prompt", "x", "--ir", "v1", "--engine", "fixture"], io, {})).toBe(2);
-    expect(err.join("")).toContain("--engine oracle: CI/dev only, for operations Forge does not evaluate yet, e.g. draft");
+    expect(err.join("")).toContain("--engine oracle: CI/dev only, a cross-check of Forge on the same documents");
     expect(await cliMain(["run", "--prompt", "x", "--ir", "v1", "--engine", "oracle", "--oracle-dir", "/nonexistent-aicad-oracle"], io, {})).toBe(2);
     expect(err.join("")).toContain("engine oracle is not available: no oracle project at /nonexistent-aicad-oracle");
   });

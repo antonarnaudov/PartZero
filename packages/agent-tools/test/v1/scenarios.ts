@@ -65,8 +65,8 @@ const body: Record<string, string> = {
   boolean_consumed: `${RECT}const s2 = sketch(XY, { o: rect({ center: [0, 0], w: 40, h: 40 }) });\nconst c = extrude(s2, { distance: 5, op: "cut", targets: e });\n`,
   boolean_tool_is_target: `${RECT}const b = boolean("join", { targets: e, tools: e });\n`,
   // ── Operations Forge did not evaluate when these were written (labels kept: the oracle recording
-  //    uses them). Forge evaluates hole, fillet and shell now (ok models); draft is still rejected
-  //    with UNSUPPORTED_FEATURE. The capability probe (capabilities-v1.test.ts) tracks which. ──
+  //    uses them). Forge evaluates all four now (ok models; draft since the feature tools). The
+  //    capability probe (capabilities-v1.test.ts) tracks which. ──
   unsupported_hole: `${RECT}const h = hole(e.cap("end"), { at: { a: [0, 0] }, d: 3, depth: "through" });\n`,
   unsupported_fillet: `${RECT}const f = fillet(e.sides().edges().parallel(Z), { r: 2 });\n`,
   unsupported_shell: `${RECT}const sh = shell(e, { open: e.cap("end"), thickness: 1 });\n`,

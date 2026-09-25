@@ -85,7 +85,7 @@ const EXPECT: Readonly<Record<string, readonly string[]>> = {
   DEGENERATE_CURVE: ["Curve 'c'", "circle radius must be > 0"],
   DEPENDENCY_FAILED: ["e depends on s", "root cause is parameter w (EXPR_DOMAIN)"],
   DEPENDENCY_SUPPRESSED: ["t is suppressed but s2 uses it"],
-  DRAFT_FACE_UNSUPPORTED: ["Faces e/side:c:", "planar faces only"],
+  DRAFT_FACE_UNSUPPORTED: ["Faces e/side:c (not planar):", "planar faces only"],
   DRAFT_FAILED: ["Faces e/side:o.bottom, e/side:o.left, e/side:o.right, e/side:o.top", "reduce the angle"],
   DUPLICATE_ID: ["e1:", "distinct key"],
   DUPLICATE_NAME: ["base:", "one namespace"],
@@ -184,7 +184,8 @@ const EXPECT: Readonly<Record<string, readonly string[]>> = {
   SKETCH_WRONG_ENTITY_TYPE: ['Constraint k refers to "b" (expected point, found line)'],
   UNRESOLVED_FEATURE: ["e2 (at /parts/0/features/2/edges/q/of/feature) is not extrude declared above"],
   UNRESOLVED_SKETCH: ["base is not a sketch declared above"],
-  UNSUPPORTED_FEATURE: ["cannot evaluate draft features yet", "leave the walls vertical"],
+  // Forge evaluates every v1 type since the draft: the first report is a conformance document's unknown type.
+  UNSUPPORTED_FEATURE: ["features yet", "Model the geometry with the operations it has"],
   UNSUPPORTED_FEATURE_VERSION: ["extrude version 2 is not implemented (supported: 1)", "remove the explicit v"],
   UNSUPPORTED_SCHEMA: ['"aicad.ir/2"', '"aicad.ir/1"'],
 };
@@ -285,8 +286,7 @@ const SAME_INPUT_DIFFS: readonly string[] = [
 
 /**
  * Scenarios and programs where the two engines raise different codes (`label: forge codes | oracle
- * codes`; programs as `program:<label>`). Expected ones: Forge rejects draft, which it does not
- * evaluate yet (UNSUPPORTED_FEATURE; hole, fillet and shell it evaluates now), the oracle does not
+ * codes`; programs as `program:<label>`). Expected ones: the oracle does not
  * solve constraints (ORACLE_SOLVE_REQUIRES_REPLAY, SPEC §8.1) or analyse DOF. The rest are for W7b
  * (SKETCH_NO_REGIONS on the sketch instead of the consumer; an extra BOOLEAN_BODY_CONSUMED on an
  * empty intersection).
@@ -295,20 +295,18 @@ const SAME_INPUT_CODE_DIFFS: readonly string[] = [
   "boolean_empty: BOOLEAN_EMPTY_RESULT | BOOLEAN_BODY_CONSUMED, BOOLEAN_EMPTY_RESULT",
   "conflict: DEPENDENCY_FAILED, SKETCH_CONSTRAINT_CONFLICT | DEPENDENCY_FAILED, ORACLE_SOLVE_REQUIRES_REPLAY",
   "no_regions: SKETCH_NO_REGIONS | DEPENDENCY_FAILED, SKETCH_NO_REGIONS",
-  "program:draft_cylinder: UNSUPPORTED_FEATURE | DRAFT_FACE_UNSUPPORTED",
-  "program:draft_too_steep: UNSUPPORTED_FEATURE | DRAFT_FAILED",
   // The oracle also warns PATTERN_INSTANCE_SKIPPED per failed instance of a pattern that failed as a whole; Forge does not (W5/W7b).
   "program:pattern_all_failed: PATTERN_ALL_INSTANCES_FAILED | PATTERN_ALL_INSTANCES_FAILED, PATTERN_INSTANCE_SKIPPED",
   "redundant: SKETCH_REDUNDANT_CONSTRAINTS | —",
   "under_constrained: SKETCH_UNDER_CONSTRAINED | —",
-  "unsupported_draft: UNSUPPORTED_FEATURE | —",
 ];
 
-/** Oracle programs Forge does not raise the target of: the operations it rejects (draft, see the capability probe). */
-const FORGE_PROGRAM_MISSES: Readonly<Record<string, string>> = {
-  "forge:draft_cylinder": "UNSUPPORTED_FEATURE",
-  "forge:draft_too_steep": "UNSUPPORTED_FEATURE",
-};
+/**
+ * Oracle programs Forge does not raise the target of: the operations it rejects (see the capability
+ * probe). None since Forge evaluates draft (it raised UNSUPPORTED_FEATURE for `draft_cylinder` and
+ * `draft_too_steep` before).
+ */
+const FORGE_PROGRAM_MISSES: Readonly<Record<string, string>> = {};
 
 /**
  * What the hint computed from the forge-refs goldens must say for the codes whose first Forge

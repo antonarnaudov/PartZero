@@ -9425,26 +9425,296 @@
     "schema": "aicad.metrics/1",
     "engine": "forge 0.0.1",
     "document": "unsupported_draft",
-    "status": "error",
-    "features": [],
-    "error": {
-     "code": "UNSUPPORTED_FEATURE",
-     "message": "UNSUPPORTED_FEATURE at /parts/0/features/2/type: this engine does not implement \"draft\"",
-     "details": {
-      "errors": [
+    "status": "ok",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
        {
-        "code": "UNSUPPORTED_FEATURE",
-        "details": {
-         "type": "draft"
+        "area": 400,
+        "loops": 1,
+        "outer_curves": [
+         "o.bottom",
+         "o.left",
+         "o.right",
+         "o.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "o.bottom",
+         "start": [
+          -10,
+          -10
+         ],
+         "end": [
+          10,
+          -10
+         ]
         },
-        "message": "this engine does not implement \"draft\"",
-        "path": "/parts/0/features/2/type"
+        {
+         "kind": "line",
+         "id": "o.right",
+         "start": [
+          10,
+          -10
+         ],
+         "end": [
+          10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.top",
+         "start": [
+          10,
+          10
+         ],
+         "end": [
+          -10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.left",
+         "start": [
+          -10,
+          10
+         ],
+         "end": [
+          -10,
+          -10
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1999.9999999999998,
+        "area": 1200.0000000000002,
+        "centroid": [
+         0,
+         -1.7763568394002508e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "dr",
+      "feature_id": "f_dr",
+      "type": "draft",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1965.2824738652346,
+        "area": 1182.9032504122495,
+        "centroid": [
+         0,
+         6.869400281624686e-17,
+         2.4853219130427795
+        ],
+        "bbox_min": [
+         -9.999999999999998,
+         -10,
+         -5.564662105366377e-17
+        ],
+        "bbox_max": [
+         9.999999999999998,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "modified"
+       }
+      ],
+      "refs": [
+       {
+        "field": "/faces",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_e/side:o.bottom",
+          "name": "e/side:o.bottom",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            0,
+            -10,
+            2.5
+           ],
+           "normal": [
+            0,
+            -1,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_e/side:o.left",
+          "name": "e/side:o.left",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -10,
+            0,
+            2.5
+           ],
+           "normal": [
+            -1,
+            0,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_e/side:o.right",
+          "name": "e/side:o.right",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            10,
+            0,
+            2.5
+           ],
+           "normal": [
+            1,
+            0,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_e/side:o.top",
+          "name": "e/side:o.top",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            0,
+            10,
+            2.5
+           ],
+           "normal": [
+            0,
+            1,
+            0
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1965.2824738652346,
+        "area": 1182.9032504122495,
+        "centroid": [
+         0,
+         6.869400281624686e-17,
+         2.4853219130427795
+        ],
+        "bbox_min": [
+         -9.999999999999998,
+         -10,
+         -5.564662105366377e-17
+        ],
+        "bbox_max": [
+         9.999999999999998,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
        }
       ]
      }
-    },
-    "params": [],
-    "parts": []
+    ]
    }
   },
   {
@@ -11396,7 +11666,7 @@
       "status": "error",
       "error": {
        "code": "FILLET_RADIUS_TOO_LARGE",
-       "message": "4/4 edges failed: max feasible r = 9.999 (r = 12) (face width at f_e/side:o.bottom, edge e/edge:{e/side:o.bottom|e/side:o.left})",
+       "message": "4/4 edges failed: max feasible r = 9.999 (r = 12) (face width 20 at e/side:o.bottom, edge e/edge:{e/side:o.bottom|e/side:o.left})",
        "details": {
         "edges": [
          {
@@ -11738,7 +12008,7 @@
       "status": "error",
       "error": {
        "code": "FILLET_RADIUS_TOO_LARGE",
-       "message": "4/4 edges failed: max feasible r = 4.999 (r = 6) (face width at f_e/side:o.bottom, edge e/edge:{e/cap:end|e/side:o.bottom})",
+       "message": "4/4 edges failed: max feasible r = 4.999 (r = 6) (face width 5 at e/side:o.bottom, edge e/edge:{e/cap:end|e/side:o.bottom})",
        "details": {
         "edges": [
          {
@@ -12556,62 +12826,62 @@
       "status": "error",
       "error": {
        "code": "FILLET_RADIUS_TOO_LARGE",
-       "message": "12/12 edges failed: max feasible r = 2.499 (r = 2.5) (adjacent blend at f_e/side:o.bottom, edge e/edge:{e/cap:end|e/side:o.bottom})",
+       "message": "12/12 edges failed: max feasible r = 2.499 (r = 2.5) (face width 5 at e/side:o.bottom, edge e/edge:{e/cap:end|e/side:o.bottom})",
        "details": {
         "edges": [
          {
           "face": "f_e/side:o.bottom",
           "key": "f_e/edge:{f_e/cap:end@o.bottom|f_e/side:o.bottom}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:end|e/side:o.bottom}"
          },
          {
-          "face": "f_e/side:o.bottom",
+          "face": "f_e/side:o.left",
           "key": "f_e/edge:{f_e/cap:end@o.bottom|f_e/side:o.left}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:end|e/side:o.left}"
          },
          {
-          "face": "f_e/side:o.bottom",
+          "face": "f_e/side:o.right",
           "key": "f_e/edge:{f_e/cap:end@o.bottom|f_e/side:o.right}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:end|e/side:o.right}"
          },
          {
-          "face": "f_e/side:o.right",
+          "face": "f_e/side:o.top",
           "key": "f_e/edge:{f_e/cap:end@o.bottom|f_e/side:o.top}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:end|e/side:o.top}"
          },
          {
           "face": "f_e/side:o.bottom",
           "key": "f_e/edge:{f_e/cap:start@o.bottom|f_e/side:o.bottom}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:start|e/side:o.bottom}"
          },
          {
-          "face": "f_e/side:o.bottom",
+          "face": "f_e/side:o.left",
           "key": "f_e/edge:{f_e/cap:start@o.bottom|f_e/side:o.left}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:start|e/side:o.left}"
          },
          {
-          "face": "f_e/side:o.bottom",
+          "face": "f_e/side:o.right",
           "key": "f_e/edge:{f_e/cap:start@o.bottom|f_e/side:o.right}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:start|e/side:o.right}"
          },
          {
-          "face": "f_e/side:o.right",
+          "face": "f_e/side:o.top",
           "key": "f_e/edge:{f_e/cap:start@o.bottom|f_e/side:o.top}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:start|e/side:o.top}"
          },
@@ -14707,7 +14977,7 @@
       "status": "error",
       "error": {
        "code": "SHELL_THICKNESS_TOO_LARGE",
-       "message": "shell thickness 12 is too large: max feasible thickness = 4.999",
+       "message": "shell thickness 12 is too large: max feasible thickness = 4.999 (an offset edge collapses or turns over)",
        "details": {
         "limits": [
          {
@@ -15043,7 +15313,7 @@
       "status": "error",
       "error": {
        "code": "SHELL_THICKNESS_TOO_LARGE",
-       "message": "shell thickness 12 is too large: max feasible thickness = 4.999",
+       "message": "shell thickness 12 is too large: max feasible thickness = 4.999 (an offset edge collapses or turns over)",
        "details": {
         "limits": [
          {
@@ -16021,25 +16291,175 @@
     "engine": "forge 0.0.1",
     "document": "draft_cylinder",
     "status": "error",
-    "features": [],
-    "error": {
-     "code": "UNSUPPORTED_FEATURE",
-     "message": "UNSUPPORTED_FEATURE at /parts/0/features/2/type: this engine does not implement \"draft\"",
-     "details": {
-      "errors": [
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
        {
-        "code": "UNSUPPORTED_FEATURE",
-        "details": {
-         "type": "draft"
+        "area": 314.1592653589793,
+        "loops": 1,
+        "outer_curves": [
+         "c"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "circle",
+         "id": "c",
+         "center": [
+          0,
+          0
+         ],
+         "radius": 10
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "c"
         },
-        "message": "this engine does not implement \"draft\"",
-        "path": "/parts/0/features/2/type"
+        "volume": 1570.7963267948971,
+        "area": 942.477796076939,
+        "centroid": [
+         6.102304279181763e-16,
+         -6.5116630153724335e-16,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 3,
+        "edges": 2,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 2
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "dr",
+      "feature_id": "f_dr",
+      "type": "draft",
+      "status": "error",
+      "error": {
+       "code": "DRAFT_FACE_UNSUPPORTED",
+       "message": "1 face(s) cannot be drafted: e/side:c (not planar)",
+       "details": {
+        "faces": [
+         {
+          "key": "f_e/side:c",
+          "name": "e/side:c",
+          "reason": "not-planar"
+         }
+        ]
+       }
+      },
+      "refs": [
+       {
+        "field": "/faces",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_e/side:c",
+          "name": "e/side:c",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            4.042004954701993,
+            -9.146704102908574,
+            2.5
+           ],
+           "normal": [
+            0.4042004954701993,
+            -0.9146704102908574,
+            0
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "c"
+        },
+        "volume": 1570.7963267948971,
+        "area": 942.477796076939,
+        "centroid": [
+         6.102304279181763e-16,
+         -6.5116630153724335e-16,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 3,
+        "edges": 2,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 2
+        },
+        "edge_types": {
+         "circle": 2
+        },
+        "valid": true
        }
       ]
      }
-    },
-    "params": [],
-    "parts": []
+    ]
    }
   },
   {
@@ -16101,25 +16521,283 @@
     "engine": "forge 0.0.1",
     "document": "draft_too_steep",
     "status": "error",
-    "features": [],
-    "error": {
-     "code": "UNSUPPORTED_FEATURE",
-     "message": "UNSUPPORTED_FEATURE at /parts/0/features/2/type: this engine does not implement \"draft\"",
-     "details": {
-      "errors": [
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
        {
-        "code": "UNSUPPORTED_FEATURE",
-        "details": {
-         "type": "draft"
+        "area": 400,
+        "loops": 1,
+        "outer_curves": [
+         "o.bottom",
+         "o.left",
+         "o.right",
+         "o.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "o.bottom",
+         "start": [
+          -10,
+          -10
+         ],
+         "end": [
+          10,
+          -10
+         ]
         },
-        "message": "this engine does not implement \"draft\"",
-        "path": "/parts/0/features/2/type"
+        {
+         "kind": "line",
+         "id": "o.right",
+         "start": [
+          10,
+          -10
+         ],
+         "end": [
+          10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.top",
+         "start": [
+          10,
+          10
+         ],
+         "end": [
+          -10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.left",
+         "start": [
+          -10,
+          10
+         ],
+         "end": [
+          -10,
+          -10
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 20000.000000000007,
+        "area": 4800.000000000001,
+        "centroid": [
+         0,
+         -1.1368683772161599e-17,
+         25
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         50
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "dr",
+      "feature_id": "f_dr",
+      "type": "draft",
+      "status": "error",
+      "error": {
+       "code": "DRAFT_FAILED",
+       "message": "draft failed: the draft collapses or turns over e/edge:{e/cap:end|e/side:o.bottom} (a smaller angle, or a taller neutral plane, keeps it)",
+       "details": {
+        "faces": [
+         {
+          "key": "f_e/side:o.bottom",
+          "name": "e/side:o.bottom"
+         },
+         {
+          "key": "f_e/side:o.left",
+          "name": "e/side:o.left"
+         },
+         {
+          "key": "f_e/side:o.right",
+          "name": "e/side:o.right"
+         },
+         {
+          "key": "f_e/side:o.top",
+          "name": "e/side:o.top"
+         }
+        ]
+       }
+      },
+      "refs": [
+       {
+        "field": "/faces",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_e/side:o.bottom",
+          "name": "e/side:o.bottom",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            0,
+            -10,
+            25
+           ],
+           "normal": [
+            0,
+            -1,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_e/side:o.left",
+          "name": "e/side:o.left",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -10,
+            0,
+            25
+           ],
+           "normal": [
+            -1,
+            0,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_e/side:o.right",
+          "name": "e/side:o.right",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            10,
+            0,
+            25
+           ],
+           "normal": [
+            1,
+            0,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_e/side:o.top",
+          "name": "e/side:o.top",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            0,
+            10,
+            25
+           ],
+           "normal": [
+            0,
+            1,
+            0
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 20000.000000000007,
+        "area": 4800.000000000001,
+        "centroid": [
+         0,
+         -1.1368683772161599e-17,
+         25
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         50
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
        }
       ]
      }
-    },
-    "params": [],
-    "parts": []
+    ]
    }
   },
   {
@@ -26290,17 +26968,12 @@
    "fillet",
    "chamfer",
    "shell",
+   "draft",
    "linearPattern",
    "circularPattern",
    "mirror"
   ],
-  "unsupported": [
-   {
-    "op": "draft",
-    "type": "draft",
-    "code": "UNSUPPORTED_FEATURE"
-   }
-  ],
+  "unsupported": [],
   "unknown": []
  }
 }

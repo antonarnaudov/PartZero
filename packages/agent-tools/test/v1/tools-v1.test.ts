@@ -120,13 +120,19 @@ describe("apply_cadscript (v1)", () => {
     expect(out.text).toContain("Did you mean width?");
   });
 
-  it("explains an operation Forge does not evaluate (draft) with a workaround", async () => {
+  it("a draft Forge evaluates now goes through the ladder like any feature (it was UNSUPPORTED_FEATURE before)", async () => {
     const ctx = await ctxFor();
     const out = await call(ctx, "apply_cadscript", { source: `${PLATE}const taper = draft(slab.sides(), { neutral: XY, angle: 2 });\n` });
+    expect(out.isError, out.text).toBeFalsy();
+    expect(out.text).toMatch(/^apply #1: OK/);
+  });
+
+  it("explains a draft face Forge cannot tilt (a round wall) with the planar-walls rule", async () => {
+    const ctx = await ctxFor();
+    const out = await call(ctx, "apply_cadscript", { source: `${PLATE}const ring = sketch(XY, { c: circle({ center: [100, 0], radius: 5 }) });\nconst post = extrude(ring, { distance: 8 });\nconst taper = draft(post.sides(), { neutral: XY, angle: 2 });\n` });
     expect(out.text).toMatch(/FAILED at L1/);
-    expect(out.text).toContain("✗ rejected UNSUPPORTED_FEATURE");
-    expect(out.text).toContain("cannot evaluate draft features yet");
-    expect(out.text).toContain("leave the walls vertical");
+    expect(out.text).toContain("DRAFT_FACE_UNSUPPORTED");
+    expect(out.text).toContain("planar faces only");
   });
 
   it("a hole Forge evaluates now goes through the ladder like any feature", async () => {

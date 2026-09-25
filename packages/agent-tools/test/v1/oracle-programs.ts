@@ -2,7 +2,7 @@
  * CadScript v1 programs for the v1 playbook fixtures, each targeting one catalogue code of holes,
  * fillets, chamfers, shells, drafts, patterns and reference captures (§5.7 step 3). Both engines
  * evaluate every program — the OCCT oracle (`v1-oracle-reports.json`, AICAD_RECORD_FIXTURES=oracle-v1)
- * and Forge (`v1-forge-reports.json`, forge-v1; it rejects draft) — so the same inputs' codes and
+ * and Forge (`v1-forge-reports.json`, forge-v1) — so the same inputs' codes and
  * details are compared across engines. The oracle also evaluates every Forge scenario
  * (`scenarios.ts`) and the conformance rejection documents.
  *
