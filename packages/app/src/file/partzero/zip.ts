@@ -55,6 +55,24 @@ const MAX_NAME = 512;
 
 const utf8 = new TextEncoder();
 
+/**
+ * Compressed forms of large inputs, by identity: a document's imported meshes are the same `Uint8Array` objects from
+ * one save (or autosave) to the next, so they are compressed once. The output is a pure function of the bytes, so the
+ * cache never changes a file. (A caller that mutates an array after writing it must not rely on this cache: nothing in
+ * the document layer does; blobs are immutable.)
+ */
+const deflated = new WeakMap<Uint8Array, { crc: number; body: Uint8Array | null }>();
+const CACHE_FROM_BYTES = 64 * 1024;
+
+function compressEntry(data: Uint8Array): { crc: number; body: Uint8Array | null } {
+  const hit = data.length >= CACHE_FROM_BYTES ? deflated.get(data) : undefined;
+  if (hit) return hit;
+  const z = deflateRaw(data);
+  const r = { crc: crc32(data), body: z.length < data.length ? z : null };
+  if (data.length >= CACHE_FROM_BYTES) deflated.set(data, r);
+  return r;
+}
+
 /** Whether `name` is a safe, relative, forward-slash entry name (the only kind we write or read). */
 export function isSafeEntryName(name: string): boolean {
   if (name.length === 0 || name.length > MAX_NAME) return false;
@@ -77,15 +95,18 @@ export function writeZip(entries: readonly ZipEntryInput[]): Uint8Array {
     if (seen.has(e.name)) throw new ZipError("ZIP_DUPLICATE", `duplicate entry: ${e.name}`, e.name);
     seen.add(e.name);
     const name = utf8.encode(e.name);
-    const crc = crc32(e.data);
+    let crc: number;
     let method = 0;
     let body = e.data;
     if (e.compress !== false && e.data.length > 0) {
-      const z = deflateRaw(e.data);
-      if (z.length < e.data.length) {
+      const c = compressEntry(e.data);
+      crc = c.crc;
+      if (c.body) {
         method = 8;
-        body = z;
+        body = c.body;
       }
+    } else {
+      crc = crc32(e.data);
     }
     if (body.length > 0xfffffffe || e.data.length > 0xfffffffe) throw new ZipError("ZIP_TOO_LARGE", `entry too large for a zip without ZIP64: ${e.name}`, e.name);
     const local = new Uint8Array(30 + name.length);

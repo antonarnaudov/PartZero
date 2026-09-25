@@ -137,6 +137,19 @@ function subEntries(prefix: string, map: Record<string, Uint8Array>): Array<[str
     .map((k) => [`${prefix}${k}`, map[k]!]);
 }
 
+/** SHA-256 of large blobs by identity (the same imported mesh is hashed once across saves and autosaves). */
+const digests = new WeakMap<Uint8Array, string>();
+
+function digest(data: Uint8Array): string {
+  if (data.length < 64 * 1024) return sha256Hex(data);
+  let d = digests.get(data);
+  if (d === undefined) {
+    d = sha256Hex(data);
+    digests.set(data, d);
+  }
+  return d;
+}
+
 /** JSON with sorted keys and 2-space indentation: the manifest's canonical form. */
 export function canonicalJson(value: unknown): string {
   const sortKeys = (v: unknown): unknown => {
@@ -166,7 +179,7 @@ export function encodePartZero(contents: PartZeroContents): Uint8Array {
     if (!files.some(([n]) => n === r.blob)) throw new PartZeroError("PZ_ENTRY_MISSING", `reference ${r.id} points at ${r.blob}, which is not in the document`, r.blob);
   }
   const entries: Record<string, EntryInfo> = {};
-  for (const [name, data] of files) entries[name] = { size: data.length, sha256: sha256Hex(data) };
+  for (const [name, data] of files) entries[name] = { size: data.length, sha256: digest(data) };
   const manifest: Manifest = {
     format: PARTZERO_FORMAT,
     formatVersion: PARTZERO_FORMAT_VERSION,

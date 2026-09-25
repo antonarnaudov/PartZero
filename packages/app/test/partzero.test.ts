@@ -136,6 +136,22 @@ describe("zip", () => {
     expect(back[2]!.data).toEqual(entries[2]!.data);
   });
 
+  it("compresses a large blob once and still writes each archive from the bytes it is given", () => {
+    const blob = new Uint8Array([...noise(40_000, 9), ...new Uint8Array(100_000).fill(3)]);
+    const t0 = performance.now();
+    const a = writeZip([{ name: "blobs/x.stl", data: blob }]);
+    const first = performance.now() - t0;
+    const t1 = performance.now();
+    const b = writeZip([{ name: "blobs/x.stl", data: blob }]);
+    const second = performance.now() - t1;
+    expect(b).toEqual(a);
+    expect(second).toBeLessThan(first);
+    // Another array with other bytes is compressed on its own.
+    const other = blob.slice();
+    other[0] = other[0]! ^ 0xff;
+    expect(readZip(writeZip([{ name: "blobs/x.stl", data: other }]))[0]!.data).toEqual(other);
+  });
+
   it("is readable by standard tools' conventions (fixed 1980 timestamp, UTF-8 names)", () => {
     const z = writeZip([{ name: "ünïcode/файл.txt", data: enc.encode("x") }]);
     const view = new DataView(z.buffer);
