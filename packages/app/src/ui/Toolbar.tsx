@@ -60,11 +60,11 @@ export function Toolbar(): ReactElement {
 
   return (
     <header className={`toolbar platform-${platform}`} data-testid="toolbar">
-      <div className="brand" aria-label="aicad">
+      <div className="brand" aria-label="PartZero">
         <span className="brand-mark" aria-hidden="true">
           <Icon.Cube size={14} />
         </span>
-        <span className="brand-name">aicad</span>
+        <span className="brand-name">PartZero</span>
       </div>
       <div className="tb-group">
         <ToolButton cmd={{ id: "file.new" }} title="New" keyHint="Mod+N">
