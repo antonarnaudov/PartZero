@@ -81,6 +81,8 @@ mod geometry;
 pub mod lift;
 mod lower;
 mod regions;
+pub mod session;
+pub mod session_json;
 mod values;
 mod weld;
 
@@ -319,11 +321,34 @@ fn warning(code: &str, severity: Severity, message: String, details: Value) -> W
     }
 }
 
-fn evaluate_constrained_sketch(
+/// The solved geometry of a sketch's constraints (SPEC-v1 §4.3, §4.4 rules 1–7), checked
+/// independently, **before** the region stages.
+///
+/// [`evaluate_sketch`] runs the region stages on it. The interactive [`session`] uses it
+/// directly: a sketch that is being drawn is usually open, so its region stage fails while its
+/// solve is fine. It is the same computation, in the same order, with the same errors.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConstrainedSolve {
+    /// The stored guess (literal geometry, curve order).
+    pub stored: Vec<LiteralCurve>,
+    /// The solved geometry, curve for curve (aliases at their representative, arcs mapped back
+    /// through the `ccw` rule).
+    pub solved: Vec<LiteralCurve>,
+    /// The evaluated constraint values, in constraint order.
+    pub values: Vec<ConstraintValues>,
+    /// The solver's diagnosis in IR terms (welds included).
+    pub diagnosis: SolveDiagnosis,
+    /// The report's `sketch.dimensions`.
+    pub dimensions: Vec<DimensionReport>,
+}
+
+/// Solve a sketch's constraints (constrained mode, or an explicit sketch whose geometry is all
+/// literal) and verify the solution: SPEC-v1 §4.3–§4.4 up to, not including, the region stages
+/// of v0 §3 (see [`ConstrainedSolve`]).
+pub fn solve_constrained(
     sketch: &SketchFeature,
     values: &dyn ValueSource,
-    frame: &Frame,
-) -> Result<SketchResult, SketchError> {
+) -> Result<ConstrainedSolve, SketchError> {
     // 1. The stored guess (literal geometry only) and the constraint values.
     let stored = stored_geometry(sketch)?;
     let cvals = constraint_values(sketch, values)?;
@@ -486,13 +511,36 @@ fn evaluate_constrained_sketch(
         structural_check(c, &format!("/curves/{ci}"), false)?;
     }
 
+    let dimensions = dimension_reports(sketch, &cvals, &diag, &lowered.decided);
+    Ok(ConstrainedSolve {
+        stored,
+        solved,
+        values: cvals,
+        diagnosis: diag,
+        dimensions,
+    })
+}
+
+fn evaluate_constrained_sketch(
+    sketch: &SketchFeature,
+    values: &dyn ValueSource,
+    frame: &Frame,
+) -> Result<SketchResult, SketchError> {
+    // 1–8. Solve and verify (SPEC-v1 §4.3, §4.4 rules 1–7).
+    let ConstrainedSolve {
+        stored,
+        solved,
+        diagnosis: diag,
+        dimensions,
+        ..
+    } = solve_constrained(sketch, values)?;
+
     // 9. Regions of the solved geometry, then the flip check (§4.4 rule 8).
     let profile = regions::profile_curves(&solved);
     let regions = regions::regions_of(&sketch.id, &profile)?;
     let flipped = regions::flipped_loops(&regions, &stored, &solved);
 
     // 10. Report block and warnings.
-    let dimensions = dimension_reports(sketch, &cvals, &diag, &lowered.decided);
     let mut warnings = Vec::new();
     match diag.status {
         SolveStatus::UnderConstrained => {

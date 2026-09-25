@@ -1,0 +1,24 @@
+[package]
+name = "forge-sketch-wasm"
+description = "WebAssembly bindings of the interactive sketch session (forge-sketch::session, contract C5): solve, drag, edit and finish an IR v1 sketch on the UI thread"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MPL-2.0"
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+forge-sketch = { path = "../forge-sketch" }
+
+# JS bindings (MIT OR Apache-2.0), wasm32 only. Pinned exactly like forge-wasm's: the
+# `wasm-bindgen` CLI used by packages/forge-web/scripts/build-sketch.mjs must be this version.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "=0.2.128"
+# Readable panic messages in the browser console (MIT OR Apache-2.0).
+console_error_panic_hook = "0.1"
+
+[lints]
+workspace = true

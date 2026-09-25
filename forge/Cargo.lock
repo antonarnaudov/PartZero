@@ -479,10 +479,21 @@ dependencies = [
  "forge-core",
  "forge-ir",
  "forge-ops",
+ "forge-params",
  "forge-solve",
  "proptest",
+ "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "forge-sketch-wasm"
+version = "0.0.1"
+dependencies = [
+ "console_error_panic_hook",
+ "forge-sketch",
+ "wasm-bindgen",
 ]
 
 [[package]]
