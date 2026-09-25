@@ -357,6 +357,9 @@ export class DocStore extends Store<DocState> {
   async applyCode(source: string, options: { label?: string; origin?: TransactionOrigin; approvals?: Approvals } = {}): Promise<boolean> {
     const ir = this.deps.ir;
     if (!ir || !this.isV1) throw new Error("applyCode edits IR v1 models; this document is CadScript (use setSource)");
+    // CadScript v0 keeps its feature ids (the const names) through the migration; v1 compiles as v1.
+    const v0 = await this.deps.cadscript.compile(source);
+    if (v0.ok && v0.ir) return this.applyDocument(JSON.stringify(v0.ir), { label: "Edit code", ...options });
     const c = await this.deps.cadscript.compileV1(source);
     if (!c.ok || !c.irJson) {
       const first = c.errors[0];

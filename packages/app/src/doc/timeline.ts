@@ -132,6 +132,18 @@ function summarize(f: Json, r: FeatureReport | undefined): string {
   return parts.join(" · ");
 }
 
+/**
+ * Warnings that are information, not a problem to look at: an under-constrained sketch is normal
+ * while you design (Fusion and Shapr3D show it in the sketch, not in the timeline).
+ */
+const INFORMATIONAL_WARNINGS: ReadonlySet<string> = new Set(["SKETCH_UNDER_CONSTRAINED"]);
+
+/** Whether a report entry carries a warning worth a timeline badge. */
+function notable(r: FeatureReport | undefined): boolean {
+  const warnings = (r as { warnings?: Array<{ code?: string }> } | undefined)?.warnings ?? [];
+  return warnings.some((w) => !INFORMATIONAL_WARNINGS.has(w.code ?? ""));
+}
+
 export function buildTimeline(
   state: Pick<DocState, "compile" | "model" | "report"> & Partial<Pick<DocState, "format" | "source" | "v1">>,
   problems: readonly Problem[],
@@ -164,7 +176,7 @@ export function buildTimeline(
       if (rolledBack) status = "rolled-back";
       else if (suppressed) status = "suppressed";
       else if (issues.some((p) => p.severity === "error") || r?.status === "error") status = "error";
-      else if (issues.some((p) => p.severity === "warning") || ((r as { warnings?: unknown[] } | undefined)?.warnings?.length ?? 0) > 0) status = "warning";
+      else if (issues.some((p) => p.severity === "warning") || notable(r)) status = "warning";
       else if (r?.status === "ok") status = "ok";
       else status = "pending";
       return {

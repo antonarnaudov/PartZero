@@ -26,9 +26,14 @@ export function faceRole(face: string): string {
   return role || "face";
 }
 
-/** Feature display name: the IR feature name (provenance uses it as the name's first segment). */
-function featureName(name: string, _ir?: IrDocument | null): string {
-  return featureNameOfFace(name);
+/**
+ * Feature display name. Provenance names start with the feature's name (IR v0) or its id (IR v1:
+ * `f_plate/cap:end`); the model maps an id to the name people gave it.
+ */
+function featureName(name: string, ir?: IrDocument | null): string {
+  const head = featureNameOfFace(name);
+  for (const p of ir?.parts ?? []) for (const f of p.features) if (f.id === head) return f.name;
+  return head;
 }
 
 export function faceLabel(face: string, ir?: IrDocument | null): string {

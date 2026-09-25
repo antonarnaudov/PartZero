@@ -422,10 +422,10 @@ export class AgentService extends Store<AgentState> {
       if (d.format === "ir-v1") {
         // The model and the proposal as IR v1 (a v0 proposal compiles to its migration).
         const v1Base = this.#v1Bases.get(run.runId) ?? d.source;
-        const proposed = result.proposedSource.trim() ? await cadscript.compileV1(result.proposedSource) : null;
+        const proposed = result.proposedSource.trim() ? await this.#proposalAsV1(result.proposedSource) : null;
         if (seq !== this.#reviewSeq) return;
         baseIr = JSON.parse(v1Base) as IrDocument;
-        proposedIr = proposed?.ok && proposed.irJson ? (JSON.parse(proposed.irJson) as IrDocument) : null;
+        proposedIr = proposed ? (JSON.parse(proposed) as IrDocument) : null;
       } else {
         const idBase = d.source === result.baseSource && d.compile?.ok ? d.compile.ir : null;
         const base = await cadscript.compile(result.baseSource, idBase);
@@ -453,6 +453,26 @@ export class AgentService extends Store<AgentState> {
       if (seq !== this.#reviewSeq) return;
       this.setState({ review: { ...review, status: "error", error: e instanceof Error ? e.message : String(e) } });
     }
+  }
+
+  /**
+   * A proposal's CadScript as canonical IR v1 text: CadScript v0 compiles to IR v0 (feature ids = the
+   * const names, as the model's) and is migrated by the engine; CadScript v1 compiles as v1. Null when
+   * it compiles as neither.
+   */
+  async #proposalAsV1(source: string): Promise<string | null> {
+    const { cadscript } = this.#deps;
+    const v0 = await cadscript.compile(source);
+    const commands = this.#deps.engine().commands;
+    if (v0.ok && v0.ir && commands) {
+      try {
+        return (await commands.canonicalize(JSON.stringify(v0.ir))).document;
+      } catch {
+        // falls through to the v1 compiler
+      }
+    }
+    const v1 = await cadscript.compileV1(source);
+    return v1.ok && v1.irJson ? v1.irJson : null;
   }
 
   async #evaluatePreview(ir: IrDocument): Promise<void> {

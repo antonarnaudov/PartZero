@@ -197,10 +197,12 @@ export class DocStoreAdapter implements DocumentAdapter {
       return { text: request.documentJson, warnings };
     }
     if (!request.code) return { text: blankDocument(request.name), warnings: [] };
-    const v1 = await this.cadscript.compileV1(request.code.source);
-    if (v1.ok && v1.irJson) return { text: v1.irJson, warnings: [] };
+    // CadScript v0 compiles to IR v0 (feature ids = the const names), migrated on load; CadScript v1
+    // (parameters, holes, …) compiles with the v1 compiler.
     const v0 = await this.cadscript.compile(request.code.source);
     if (v0.ok && v0.ir) return { text: JSON.stringify(v0.ir), warnings: [] };
+    const v1 = await this.cadscript.compileV1(request.code.source);
+    if (v1.ok && v1.irJson) return { text: v1.irJson, warnings: [] };
     return null;
   }
 
