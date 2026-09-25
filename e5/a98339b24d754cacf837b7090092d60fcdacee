@@ -1,0 +1,47 @@
+packages/app/src/tools/create/hole.ts
+  s_59c0dd2af30db2::t_3063821b51d8a8 60
+packages/app/src/tools/create/ports.ts
+  s_59c0dd2af30db2::t_c379590838dbe9 10,12
+  s_59c0dd2af30db2::t_def388b5410140 14
+  s_59c0dd2af30db2::t_5bf7d505244a77 55-56
+  s_59c0dd2af30db2::t_eaef74cb76292a 76-77
+  s_59c0dd2af30db2::t_9bde90406f6ec0 27-28,33,35
+  s_59c0dd2af30db2::t_c58766f76882b2 70-71,74-75,80
+packages/desktop/e2e/create-tools.e2e.ts
+  s_59c0dd2af30db2::t_45d521d12a07c5 311
+  s_59c0dd2af30db2::t_3416097b72ab21 207
+  s_59c0dd2af30db2::t_3dc0a10d86e91d 92-99,101,103-111
+  s_59c0dd2af30db2::t_8284d0cf604222 349
+  s_59c0dd2af30db2::t_402aeea8245e69 340
+  s_59c0dd2af30db2::t_87a25505e810f2 1-91,100,102,112-197
+  s_59c0dd2af30db2::t_10577d2480e6ce 260
+  s_59c0dd2af30db2::t_f0fa256554b977 198-206,208-220,222-245,248-259,261-310,312-338,341,344-348,351,353-358
+  s_59c0dd2af30db2::t_fae19a19dcb588 342
+  s_59c0dd2af30db2::t_8ce624bac444e3 350,352
+  s_59c0dd2af30db2::t_f74fff8a6d804e 221
+  s_59c0dd2af30db2::t_5f6c98bfbd3787 246-247
+  s_59c0dd2af30db2::t_0d1120efa3a900 339,343
+packages/app/src/ui/shell/PropertyPanel.tsx
+  s_59c0dd2af30db2::t_661a52f065ac8a 23,25
+packages/app/src/tools/framework/types.ts
+  s_59c0dd2af30db2::t_0b984350e37375 85-86
+packages/app/src/tools/create/model.ts
+  s_59c0dd2af30db2::t_df6ae38cb36d3f 68
+  s_59c0dd2af30db2::t_06a2631c60ce71 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e5a98339b24d754cacf837b7090092d60fcdacee",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
