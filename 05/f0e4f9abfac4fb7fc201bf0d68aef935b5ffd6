@@ -1,0 +1,85 @@
+packages/desktop/src/ipc.ts
+  s_59c0dd2af30db2::t_0f8ccbf83af9bf 200-201
+  s_59c0dd2af30db2::t_64ff23e74b7be8 47-48
+packages/desktop/src/agent/setup.ts
+  s_59c0dd2af30db2::t_29d23406eb11f0 137-138,234
+  s_59c0dd2af30db2::t_7000ecdefd2e11 17
+packages/desktop/test/agent-live.test.ts
+  s_59c0dd2af30db2::t_62ddae926cfeb4 26-31
+  s_59c0dd2af30db2::t_5dfb82770ff1d2 146-150
+  s_59c0dd2af30db2::t_f83390c7dc0593 1-25,32-145,151-234
+packages/app/src/agent-protocol.ts
+  s_59c0dd2af30db2::t_65fea8118785de 213-216
+  s_59c0dd2af30db2::t_946be6a4e90a09 110-161
+  s_59c0dd2af30db2::t_100c8468e68e82 412-415
+  s_59c0dd2af30db2::t_c06beaa3e4bcd8 236-239
+  s_59c0dd2af30db2::t_779aa182409726 368-369
+  s_59c0dd2af30db2::t_40e85774d54b6d 250-254
+  s_59c0dd2af30db2::t_1151a8076160dc 56-67,72,74-75
+  s_59c0dd2af30db2::t_4fc7308ffdef40 383-384
+packages/desktop/src/agent/worker.ts
+  s_59c0dd2af30db2::t_6927de6c11420a 39
+packages/desktop/src/agent/protocol.ts
+  s_59c0dd2af30db2::t_ce51d04a59aff7 238-290
+  s_59c0dd2af30db2::t_61631073c130c1 443-444
+  s_59c0dd2af30db2::t_792318ecdd2cd8 476-478
+  s_59c0dd2af30db2::t_3770082578d8d8 132
+  s_59c0dd2af30db2::t_6b16787830c419 16-17,19-20
+  s_59c0dd2af30db2::t_5004908a34f2d9 57-61
+  s_59c0dd2af30db2::t_95098aa1de98c9 459-460
+  s_59c0dd2af30db2::t_f39a5380bb7ba3 506-509
+packages/app/src/bridge.ts
+  s_59c0dd2af30db2::t_8ea7609619ab35 21-22,333-334,360-361
+packages/desktop/src/preload.cts
+  s_59c0dd2af30db2::t_36481e634783ac 9
+  s_59c0dd2af30db2::t_e94d5c0822ae18 30
+  s_59c0dd2af30db2::t_5cc1569a3990f7 67-74
+packages/desktop/src/agent/runner.ts
+  s_59c0dd2af30db2::t_fc359dda6725f8 540-541,548-549
+  s_59c0dd2af30db2::t_d3a8217216cdeb 30-46
+  s_59c0dd2af30db2::t_b696b23d55fd3a 658-661,665-705,708
+  s_59c0dd2af30db2::t_3a6976aadd9080 797-799
+  s_59c0dd2af30db2::t_71f0deb0c5675b 90-91,94
+  s_59c0dd2af30db2::t_4ab984db2b23c4 572-626,633-634
+  s_59c0dd2af30db2::t_9d80c83557a494 864-866
+  s_59c0dd2af30db2::t_e80e92ecc78d0c 924-943,947
+packages/desktop/e2e/fixtures/live-cube.script.json
+  s_59c0dd2af30db2::t_7c1b731e43f5e4 1-168
+packages/desktop/src/agent/settings.ts
+  s_59c0dd2af30db2::t_691681b6506ed8 46,60-61,66,295,356,449
+  s_59c0dd2af30db2::t_b1f938fef1c410 21
+packages/desktop/test/agent.test.ts
+  s_59c0dd2af30db2::t_32ff02b9686f02 220
+packages/desktop/package.json
+  s_59c0dd2af30db2::t_7a5fd017c408a0 37
+packages/desktop/src/agent/host.ts
+  s_59c0dd2af30db2::t_3443cc192d60ea 42
+  s_59c0dd2af30db2::t_b35a01c7ed9624 20
+  s_59c0dd2af30db2::t_1b22ecc5be3a53 105-109
+  s_59c0dd2af30db2::t_ebd8afc16c8c91 488-492
+  s_59c0dd2af30db2::t_0505eb61c25098 337-338
+  s_59c0dd2af30db2::t_5545bd0909bd12 395-402
+packages/desktop/src/main.ts
+  s_59c0dd2af30db2::t_8b001bd9cedc34 28
+  s_59c0dd2af30db2::t_7000ecdefd2e11 473
+  s_59c0dd2af30db2::t_1683f68db023dd 526
+  s_59c0dd2af30db2::t_5b9476d96d7a85 216-221
+pnpm-lock.yaml
+  s_59c0dd2af30db2::t_7f5f4eaf564a18 189-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "05f0e4f9abfac4fb7fc201bf0d68aef935b5ffd6",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
