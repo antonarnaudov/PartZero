@@ -323,6 +323,10 @@ export class SketchMode extends Store<SketchModeState> {
       pending: null,
       view: box ? fitBox(view, box) : { ...view, cx: 0, cy: 0 },
       hint: this.tool.hint(),
+      notice:
+        o.sketch && (o.sketch.constraints ?? []).length === 0 && snapshot.constraints.length > 0
+          ? { kind: "info", text: "Converted to a constrained sketch: its sizes are now dimensions bound to the same parameters." }
+          : null,
     });
     return true;
   }
@@ -347,6 +351,7 @@ export class SketchMode extends Store<SketchModeState> {
       part: this.part,
       params: r.params,
       edits: r.edits,
+      conversion: r.conversion ?? null,
       check: { ok: r.ok, ...(r.error ? { error: r.error } : {}), regions: r.regions, ...(r.status ? { status: r.status } : {}), ...(r.dof !== undefined ? { dof: r.dof } : {}), warnings: r.warnings, validation: r.validation },
     };
     const out = await this.sink.commit(f);

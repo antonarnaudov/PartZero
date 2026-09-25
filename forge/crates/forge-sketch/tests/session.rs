@@ -27,6 +27,7 @@ fn load(sketch: Value, document: Option<Value>) -> SketchSession {
         sketch,
         document,
         part: None,
+        convert: None,
     })
     .expect("loads")
 }
@@ -655,19 +656,30 @@ fn finish_gives_a_valid_feature_that_evaluates_to_the_same_geometry() {
 }
 
 #[test]
-fn loading_a_compound_sketch_asks_for_conversion() {
-    let r = SketchSession::load(LoadRequest {
-        sketch: json!({ "id": "s", "name": "s", "plane": "XY", "curves": [
-            { "kind": "rect", "id": "r", "center": [0, 0], "w": 10, "h": 5 }
-        ] }),
+fn loading_a_compound_sketch_converts_it_unless_refused() {
+    let rect = json!({ "id": "s", "name": "s", "plane": "XY", "curves": [
+        { "kind": "rect", "id": "r", "center": [0, 0], "w": 10, "h": 5 }
+    ] });
+    let s = SketchSession::load(LoadRequest {
+        sketch: rect.clone(),
         document: None,
         part: None,
+        convert: None,
+    })
+    .unwrap();
+    assert_eq!(s.snapshot().curves.len(), 4);
+    let r = SketchSession::load(LoadRequest {
+        sketch: rect,
+        document: None,
+        part: None,
+        convert: Some(false),
     });
     assert_eq!(r.unwrap_err().code, "SESSION_NEEDS_CONVERSION");
     let r = SketchSession::load(LoadRequest {
         sketch: json!({ "type": "extrude", "id": "e" }),
         document: None,
         part: None,
+        convert: None,
     });
     assert_eq!(r.unwrap_err().code, "SESSION_NOT_A_SKETCH");
 }

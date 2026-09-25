@@ -75,6 +75,7 @@
 //! already reports `conflict` or `failed_to_converge`).
 
 pub mod check;
+pub mod convert;
 mod diagnosis;
 mod error;
 mod geometry;

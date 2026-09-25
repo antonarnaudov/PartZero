@@ -206,21 +206,32 @@ mod tests {
 
     #[test]
     fn a_session_round_trips_through_json_text() {
-        let mut s = load(r#"{ "sketch": { "id": "s1", "name": "s", "plane": "XY", "curves": [] } }"#)
-            .unwrap();
+        let mut s =
+            load(r#"{ "sketch": { "id": "s1", "name": "s", "plane": "XY", "curves": [] } }"#)
+                .unwrap();
         let r = parse(&apply(
             &mut s,
             r#"[{ "op": "addCurve", "curve": { "kind": "line", "id": "l", "start": [0, 0], "end": [10.1, 0.30000000000000004] } }]"#,
             "",
         ));
         assert_eq!(r["ok"], true);
-        assert_eq!(r["snapshot"]["curves"][0]["end"][1], json!(0.30000000000000004));
-        let r = parse(&apply(&mut s, r#"[{ "op": "removeCurve", "id": "nope" }]"#, "{}"));
+        assert_eq!(
+            r["snapshot"]["curves"][0]["end"][1],
+            json!(0.30000000000000004)
+        );
+        let r = parse(&apply(
+            &mut s,
+            r#"[{ "op": "removeCurve", "id": "nope" }]"#,
+            "{}",
+        ));
         assert_eq!(r["ok"], false);
         assert_eq!(r["error"]["code"], "SESSION_UNKNOWN_ID");
         let r = parse(&apply(&mut s, "not json", ""));
         assert_eq!(r["error"]["code"], "SESSION_BAD_REQUEST");
-        let r = parse(&drag_begin(&mut s, r#"{ "target": "l.end", "grab": [10.1, 0.3] }"#));
+        let r = parse(&drag_begin(
+            &mut s,
+            r#"{ "target": "l.end", "grab": [10.1, 0.3] }"#,
+        ));
         assert_eq!(r["ok"], true);
         let r = parse(&drag_to(&mut s, 12.0, 1.0));
         assert_eq!(r["ok"], true);
@@ -231,7 +242,10 @@ mod tests {
         assert_eq!(r["value"], json!(6.0));
         let r = parse(&finish(&s));
         assert_eq!(r["feature"]["type"], "sketch");
-        assert_eq!(r["error"]["code"], "SKETCH_OPEN_LOOP", "a lone line is an open profile");
+        assert_eq!(
+            r["error"]["code"], "SKETCH_OPEN_LOOP",
+            "a lone line is an open profile"
+        );
         let r = parse(&feature(&s));
         assert_eq!(r["curves"][0]["id"], "l");
         assert!(load("{}").is_err());

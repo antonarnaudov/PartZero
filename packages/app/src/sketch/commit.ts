@@ -31,6 +31,12 @@ export interface SketchFinish {
   params: v1.Parameter[];
   /** The session's committed edits (for a `sketchEdit` op on an existing sketch). */
   edits: SketchEdit[];
+  /**
+   * The edited sketch was explicit and loading converted it (`convertSketch`): its compound
+   * members became curves (`[member id, curve id]`); later features that name the members
+   * (`regions`, queries on `side:<member>`) must be rewritten in the same transaction.
+   */
+  conversion: { renames: Array<[string, string]>; notes: string[] } | null;
   /** The evaluation of record and IR validation of the feature. */
   check: Pick<FinishResult, "ok" | "error" | "regions" | "status" | "dof" | "warnings" | "validation">;
 }

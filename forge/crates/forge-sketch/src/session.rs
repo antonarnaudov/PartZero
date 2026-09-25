@@ -417,6 +417,9 @@ pub struct FinishResult {
     pub edits: Vec<SketchEdit>,
     /// Parameters defined during the session (the command layer adds them first).
     pub params: Vec<Parameter>,
+    /// Set when loading converted an explicit sketch (`convertSketch`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub conversion: Option<ConversionInfo>,
 }
 
 /// What [`SketchSession::load`] takes.
@@ -431,6 +434,21 @@ pub struct LoadRequest {
     /// The part (id) the sketch belongs to; default: the first part.
     #[serde(default)]
     pub part: Option<String>,
+    /// Convert an explicit sketch with compound curves or expressions to constrained mode
+    /// (`convertSketch`, [`crate::convert`]); default `true`. `false` refuses such a sketch
+    /// with `SESSION_NEEDS_CONVERSION`.
+    #[serde(default)]
+    pub convert: Option<bool>,
+}
+
+/// What loading converted (`convertSketch`): member ids that became curve ids, and notes.
+#[derive(Debug, Clone, PartialEq, Default, Serialize)]
+pub struct ConversionInfo {
+    /// `[member id, curve id]` pairs (`outline.bottom` → `outline_bottom`): the command layer
+    /// rewrites later references to them.
+    pub renames: Vec<(String, String)>,
+    /// What could not be kept parametric.
+    pub notes: Vec<String>,
 }
 
 // ─── Parameter environment ───────────────────────────────────────────────────────────────────
@@ -521,6 +539,7 @@ pub struct SketchSession {
     undo: Vec<UndoEntry>,
     redo: Vec<UndoEntry>,
     drag: Option<DragState>,
+    conversion: Option<ConversionInfo>,
 }
 
 impl SketchSession {
@@ -531,7 +550,19 @@ impl SketchSession {
     /// expression coordinates needs `convertSketch` first (`SESSION_NEEDS_CONVERSION`).
     pub fn load(req: LoadRequest) -> Result<Self, SessionError> {
         let env = Env::new(req.document, req.part.as_deref())?;
-        let sketch = parse_sketch(req.sketch)?;
+        let mut sketch = parse_sketch(req.sketch)?;
+        let mut conversion = None;
+        if req.convert.unwrap_or(true) && crate::convert::needs_conversion(&sketch) {
+            let vs = |site: &SiteRef<'_>| env.eval(site.text, site.field);
+            let ev = |t: &str, f: FieldType| env.eval(t, f).ok();
+            let c = crate::convert::convert_to_constrained(&sketch, &vs, &ev)
+                .map_err(|e| SessionError::from_sketch(&e))?;
+            sketch = c.sketch;
+            conversion = Some(ConversionInfo {
+                renames: c.renames,
+                notes: c.notes,
+            });
+        }
         for (ci, c) in sketch.curves.iter().enumerate() {
             literal_curve(c).map_err(|e| {
                 SessionError::new(
@@ -554,6 +585,7 @@ impl SketchSession {
             undo: Vec::new(),
             redo: Vec::new(),
             drag: None,
+            conversion,
         };
         s.current = s.snapshot_of(&s.sketch);
         Ok(s)
@@ -572,6 +604,7 @@ impl SketchSession {
             sketch,
             document,
             part,
+            convert: None,
         })
     }
 
@@ -842,7 +875,13 @@ impl SketchSession {
             validation,
             edits: self.log.clone(),
             params: self.env.new_params.clone(),
+            conversion: self.conversion.clone(),
         }
+    }
+
+    /// What loading converted, when it did.
+    pub fn conversion(&self) -> Option<&ConversionInfo> {
+        self.conversion.as_ref()
     }
 
     // ── Internals ────────────────────────────────────────────────────────────────────────

@@ -352,6 +352,34 @@ describe("sketch mode", () => {
     expect(d2.sink.results).toHaveLength(1);
   });
 
+  it("edits an agent's explicit sketch: converted, re-dimensioned, finished as an edit", async () => {
+    const { SketchMode } = await import("../../src/sketch/controller");
+    const { MemorySink } = await import("../../src/sketch/commit");
+    const { engines } = await import("./harness");
+    const { namedFrame } = await import("../../src/sketch/frames");
+    const sink = new MemorySink();
+    const m = new SketchMode(engines, sink);
+    m.setViewport(1000, 800);
+    const document = { schema: "aicad.ir/1", params: [{ name: "width", unit: "mm", value: 40 }], parts: [{ id: "p", name: "p", features: [] }] } as unknown as import("@aicad/ir-types").v1.IrDocument;
+    const sketch = { type: "sketch", id: "base", name: "base", plane: "XY", curves: [{ kind: "rect", id: "outline", center: [0, 0], w: "width", h: 20 }] } as unknown as import("@aicad/ir-types").v1.SketchFeature;
+    expect(await m.begin({ plane: { ref: "XY", frame: namedFrame("XY"), label: "XY" }, sketch, document })).toBe(true);
+    let s = m.getState();
+    expect(s.mode).toBe("edit");
+    expect(s.notice?.text).toMatch(/Converted/);
+    expect(s.snapshot!.status).toBe("fully_constrained");
+    // The height is a literal dimension: change it.
+    const h = s.snapshot!.constraints.find((c) => c.type === "distance" && c.value === 20)!;
+    m.editDimension(h.id);
+    m.setDimText("25");
+    expect(m.commitDimension()).toBe(true);
+    s = m.getState();
+    const f = await m.finish();
+    expect(f!.mode).toBe("edit");
+    expect(f!.conversion!.renames).toContainEqual(["outline.bottom", "outline_bottom"]);
+    expect(f!.check.ok).toBe(true);
+    expect(f!.feature.constraints!.some((c) => c.type === "distance" && c.value === "width")).toBe(true);
+  });
+
   it("refuses to finish a failing sketch unless forced", async () => {
     const d = await start();
     const m = d.mode;

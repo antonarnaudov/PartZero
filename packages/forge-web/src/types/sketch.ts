@@ -160,6 +160,9 @@ export interface FinishResult {
   edits: SketchEdit[];
   /** Parameters defined during the session: `addParam` them before the feature. */
   params: v1.Parameter[];
+  /** Set when loading converted an explicit sketch (`convertSketch`): member ids that became
+   * curve ids (rewrite later references), and what could not stay parametric. */
+  conversion?: { renames: Array<[string, string]>; notes: string[] };
 }
 
 export interface SketchLoadRequest {
@@ -168,4 +171,6 @@ export interface SketchLoadRequest {
   document?: v1.IrDocument;
   /** Part id (default: the first part). */
   part?: string;
+  /** Convert an explicit sketch with compound curves or expressions (default true). */
+  convert?: boolean;
 }

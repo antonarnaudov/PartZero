@@ -22,6 +22,24 @@ const rect = (x, y, w, h) => [
   { op: "addConstraint", constraint: { id: "v2", type: "vertical", line: "right" } },
 ];
 
+test("the sketch module's crates are a subset of forge-wasm's, so the app's notices cover it", () => {
+  const rows = (file) => {
+    const text = readFileSync(join(here, file), "utf8");
+    const table = text.slice(text.indexOf("-----")).split("\n").slice(1);
+    const out = [];
+    for (const line of table) {
+      if (!line.trim()) break;
+      const [name, version] = line.split(/\s{2,}/);
+      out.push(`${name} ${version}`);
+    }
+    return out;
+  };
+  const sketch = rows("../pkg-sketch/THIRD_PARTY_LICENSES.txt");
+  const main = new Set(rows("../pkg/THIRD_PARTY_LICENSES.txt"));
+  assert.ok(sketch.length > 5);
+  assert.deepEqual(sketch.filter((c) => !main.has(c)), []);
+});
+
 test("a rectangle sketch goes from blue to fully constrained and finishes as an IR v1 feature", () => {
   assert.match(sketchVersion(), /^\d+\.\d+\.\d+/);
   const s = SketchSession.create({ id: "sketch1", name: "base", plane: "XY" });
@@ -111,8 +129,18 @@ test("expressions use the document's parameters; bad loads throw a coded error",
   assert.deepEqual(s.defineParam("depth", "mm", "width + 3"), { ok: true, value: 15 });
   assert.equal(s.finish().params[0].name, "depth");
   s.dispose();
+  const rect = { id: "s", name: "s", plane: "XY", curves: [{ kind: "rect", id: "r", center: [0, 0], w: "width", h: 5 }] };
   assert.throws(
-    () => SketchSession.load({ sketch: { id: "s", name: "s", plane: "XY", curves: [{ kind: "rect", id: "r", center: [0, 0], w: 1, h: 1 }] } }),
+    () => SketchSession.load({ sketch: rect, convert: false }),
     (e) => e instanceof SketchSessionError && e.code === "SESSION_NEEDS_CONVERSION",
   );
+  // By default an explicit sketch converts: members become curves, sizes dimensions.
+  const conv = SketchSession.load({ sketch: rect, document });
+  const snap = conv.snapshot();
+  assert.equal(snap.status, "fully_constrained");
+  assert.ok(snap.constraints.some((c) => c.expr === "width"));
+  const fin = conv.finish();
+  assert.equal(fin.ok, true);
+  assert.deepEqual(fin.conversion.renames[0], ["r.bottom", "r_bottom"]);
+  conv.dispose();
 });
