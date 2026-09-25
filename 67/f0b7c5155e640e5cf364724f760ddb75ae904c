@@ -1,0 +1,23 @@
+docs/FULL-MODELING-PLAN.md
+  s_59c0dd2af30db2::t_df60429be43af7 134
+docs/fm/feature-tools.md
+  s_59c0dd2af30db2::t_bd154b928df569 25
+  s_59c0dd2af30db2::t_5f36c3a2cc07f1 77
+  s_59c0dd2af30db2::t_734ba8cddc435f 1-24,26-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "67f0b7c5155e640e5cf364724f760ddb75ae904c",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
