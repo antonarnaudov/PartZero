@@ -39,6 +39,7 @@ const bridge: AicadBridge = {
     info: () => invoke("forge:info"),
     eval: (request) => invoke("forge:eval", request),
     export: (request) => invoke("forge:export", request),
+    exportStep: (request) => invoke("forge:exportStep", request),
   },
   setDocumentState: (state) => send("doc:state", state),
   onMenuCommand(listener) {

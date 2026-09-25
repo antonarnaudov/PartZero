@@ -100,6 +100,30 @@ export interface ForgeExportResponse {
   error?: string;
 }
 
+/** STEP application protocol of an export (`aicad export --step-schema`). */
+export type StepSchema = "ap214" | "ap242";
+
+/** The exact B-rep of the evaluated bodies as STEP (`aicad export --format step`, forge-io's writer). */
+export interface ForgeStepExportRequest {
+  irJson: string;
+  /** Default `ap214` (the most widely read). */
+  schema?: StepSchema;
+  /** The STEP product name other CAD tools show as the part name (default: `part`). */
+  productName?: string;
+  /** Export the bodies that evaluated even when some features failed. */
+  allowPartial?: boolean;
+}
+
+export interface ForgeStepExportResponse {
+  /** The STEP bytes (exit 0 only). */
+  data: Uint8Array | null;
+  /** The `aicad.export/1` summary (per body: Forge's metrics and what the writer produced; the `error` on a refusal). */
+  summary: unknown;
+  exitCode: number | null;
+  stderr: string;
+  error?: string;
+}
+
 export interface ForgeEvalRequest {
   irJson: string;
   /** Also export an OBJ for display (default true). */
@@ -266,6 +290,8 @@ export interface AicadBridge {
     info(): Promise<ForgeCliInfo>;
     eval(request: ForgeEvalRequest): Promise<ForgeEvalResponse>;
     export(request: ForgeExportRequest): Promise<ForgeExportResponse>;
+    /** STEP export (optional: an older shell has none). */
+    exportStep?(request: ForgeStepExportRequest): Promise<ForgeStepExportResponse>;
   };
   setDocumentState(state: DocumentStateMessage): void;
   /** Subscribe to native menu commands; returns an unsubscribe function. */
@@ -290,6 +316,7 @@ export interface IpcContract {
   "forge:info": { args: []; result: ForgeCliInfo };
   "forge:eval": { args: [ForgeEvalRequest]; result: ForgeEvalResponse };
   "forge:export": { args: [ForgeExportRequest]; result: ForgeExportResponse };
+  "forge:exportStep": { args: [ForgeStepExportRequest]; result: ForgeStepExportResponse };
   "agent:start": { args: [AgentStartRequest]; result: AgentStartResponse };
   "agent:answer": { args: [AgentAnswerRequest]; result: { ok: boolean } };
   "agent:stop": { args: [AgentStopRequest]; result: { ok: boolean } };
