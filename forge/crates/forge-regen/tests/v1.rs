@@ -628,8 +628,8 @@ fn feature_types_are_partitioned_into_implemented_unimplemented_and_rejected() {
 
 /// Every canonical v1 example program (`corpus/v1/programs`): a program that uses an
 /// unimplemented type is rejected with exactly one `UNSUPPORTED_FEATURE_VERSION` per such
-/// feature (none since Phase C) plus `UNSUPPORTED_FEATURE` for a `draft` (`shell_box`), and
-/// every other program evaluates (`knob_queries` and `plate_features` since Phase C).
+/// feature (none since Phase C), and every other program evaluates (`knob_queries` and
+/// `plate_features` since Phase C, `shell_box` with its draft since the draft).
 #[test]
 fn corpus_programs_with_unimplemented_types_list_every_one() {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../corpus/v1/programs");
@@ -652,7 +652,7 @@ fn corpus_programs_with_unimplemented_types_list_every_one() {
                         "UNSUPPORTED_FEATURE_VERSION".into(),
                         format!("/parts/{pi}/features/{fi}/v"),
                     ));
-                } else if ty == "draft" {
+                } else if v1::REJECTED_FEATURE_TYPES.contains(&ty) {
                     want.push((
                         "UNSUPPORTED_FEATURE".into(),
                         format!("/parts/{pi}/features/{fi}/type"),
@@ -668,10 +668,7 @@ fn corpus_programs_with_unimplemented_types_list_every_one() {
         assert_eq!(ev.is_none(), !want.is_empty(), "{}", f.display());
         rejected += usize::from(!want.is_empty());
     }
-    assert_eq!(
-        rejected, 1,
-        "only shell_box (its optional draft) is rejected"
-    );
+    assert_eq!(rejected, 0, "every corpus program evaluates");
 }
 
 #[test]
@@ -934,6 +931,8 @@ fn the_oracle_comparison_programs_evaluate_as_documented() {
                 ("b1", "BOOLEAN_TOOL_IS_TARGET"),
                 ("e4", "BOOLEAN_NO_INTERSECTION"),
             ],
+            // A cap is not square to the pull direction (§6.9).
+            "draft_walls" => &[("d4", "DRAFT_FACE_UNSUPPORTED")],
             _ => &[],
         };
         assert_eq!(failed, expected, "{name}");
@@ -1031,17 +1030,25 @@ fn captured_references_repair_or_fail_with_candidates() {
     assert!(close(c.probe.point[1], 5.0, 0.0));
 }
 
-// ---- rejection of the optional `draft` (§6.9, §7.5 stage R) ---------------------------------------
+// ---- the optional `draft` (§6.9) ------------------------------------------------------------------
 
 fn draft_doc(angle: Value) -> String {
+    draft_doc_with(angle, json!("XY"), json!({}))
+}
+
+fn draft_doc_with(angle: Value, neutral: Value, extra: Value) -> String {
+    let mut d = json!({ "type": "draft", "id": "d1", "name": "d1",
+        "faces": { "kind": "face", "q": { "op": "sides", "feature": "e1" } },
+        "neutral": neutral, "angle": angle });
+    for (k, v) in extra.as_object().unwrap() {
+        d[k] = v.clone();
+    }
     doc(
-        json!([]),
+        json!([{ "name": "a", "unit": "deg", "value": 3 }]),
         json!([
             rect_sketch("s1", json!("XY"), json!(0), json!(0), json!(20), json!(20)),
             extrude("e1", "s1", json!(10)),
-            { "type": "draft", "id": "d1", "name": "d1",
-              "faces": { "kind": "face", "q": { "op": "sides", "feature": "e1" } },
-              "neutral": "XY", "angle": angle }
+            d
         ]),
     )
 }
@@ -1064,68 +1071,160 @@ fn rejections(r: &EvalReport) -> Vec<(String, String)> {
     v
 }
 
+/// A 20 × 20 × 10 box drafted all round by `a` degrees about its base: `A·h − P·k·h²/2 +
+/// 4·k²·h³/3` with `k = tan(a)` (mitred right corners).
+fn drafted_box_volume(a: f64) -> f64 {
+    let (s, c) = forge_core::math::sin_cos_deg(a);
+    let k = s / c;
+    400.0 * 10.0 - 80.0 * k * 100.0 / 2.0 + 4.0 * k * k * 1000.0 / 3.0
+}
+
 #[test]
-fn a_document_with_a_draft_is_rejected_with_unsupported_feature() {
-    let (r, ev) = v1::evaluate_text(&draft_doc(json!(3)), "forge test", "t");
-    assert!(ev.is_none(), "{:#?}", r.features);
-    assert_eq!(r.status, Status::Error);
-    assert_eq!(r.error.as_ref().unwrap().code, "UNSUPPORTED_FEATURE");
+fn a_draft_tapers_the_walls_about_its_neutral_plane() {
+    let r = run(&draft_doc(json!(3)));
+    assert_eq!(code(&r, "d1"), None, "{:#?}", feature(&r, "d1").error);
+    assert!(close(part_volumes(&r)[0], drafted_box_volume(3.0), 1e-11));
+    let e = feature(&r, "d1");
+    assert_eq!(e.bodies.len(), 1);
+    assert_eq!(
+        serde_json::to_value(e.bodies[0].change).unwrap(),
+        json!("modified")
+    );
+    assert_eq!(e.bodies[0].faces, 6);
+    // A parameter expression drives the angle; the reference resolves every side exactly.
+    let r = run(&draft_doc(json!("a * 2")));
+    assert!(close(part_volumes(&r)[0], drafted_box_volume(6.0), 1e-11));
+    assert_eq!(feature(&r, "d1").refs.len(), 1);
+    // The neutral plane at the top keeps the top outline (the walls grow outward below);
+    // pulling the other way about the base does the same.
+    let top = json!({ "origin": [0, 0, 10], "normal": [0, 0, 1], "x_dir": [1, 0, 0] });
+    let r = run(&draft_doc_with(json!(3), top, json!({})));
+    let (s, c) = forge_core::math::sin_cos_deg(3.0);
+    let k = s / c;
+    let grown = 4000.0 + 80.0 * k * 100.0 / 2.0 + 4.0 * k * k * 1000.0 / 3.0;
+    assert!(close(part_volumes(&r)[0], grown, 1e-11));
+    let r = run(&draft_doc_with(
+        json!(3),
+        json!("XY"),
+        json!({ "pull": "reverse" }),
+    ));
+    assert!(close(part_volumes(&r)[0], grown, 1e-11));
+}
+
+#[test]
+fn draft_failures_are_explicit() {
+    // A literal angle out of (0, 45) is a rejection; an expression one fails the feature.
+    let (r, ev) = v1::evaluate_text(&draft_doc(json!(50)), "forge test", "t");
+    assert!(ev.is_none());
     assert_eq!(
         rejections(&r),
         vec![(
-            "UNSUPPORTED_FEATURE".to_string(),
-            "/parts/0/features/2/type".to_string()
+            "INVALID_VALUE".to_string(),
+            "/parts/0/features/2/angle".to_string()
         )]
     );
-    assert!(r.features.is_empty() && r.parts.is_empty());
-    // Every other rejection is still listed (§0.5 rule 3).
-    let (r, _) = v1::evaluate_text(&draft_doc(json!(50)), "forge test", "t");
-    assert_eq!(
-        rejections(&r),
-        vec![
-            (
-                "INVALID_VALUE".to_string(),
-                "/parts/0/features/2/angle".to_string()
-            ),
-            (
-                "UNSUPPORTED_FEATURE".to_string(),
-                "/parts/0/features/2/type".to_string()
-            ),
-        ]
+    let r = run(&draft_doc(json!("a * 20")));
+    assert_eq!(code(&r, "d1"), Some("INVALID_VALUE"));
+    assert!(
+        close(part_volumes(&r)[0], 4000.0, 1e-12),
+        "passes its input through"
     );
-    // `load` is the rejection pipeline every entry point uses.
-    let e = v1::load(&draft_doc(json!(3))).unwrap_err();
-    assert_eq!(e.errors()[0].code, "UNSUPPORTED_FEATURE");
-    assert_eq!(v1::REJECTED_FEATURE_TYPES, ["draft"]);
-    assert!(!v1::SUPPORTED_FEATURE_TYPES.contains(&"draft"));
-    // The committed conformance program with a draft is rejected at its draft feature.
+    // The caps are not walls of this pull direction.
+    let caps =
+        json!({ "faces": { "kind": "face", "q": { "op": "cap", "feature": "e1", "end": "end" } } });
+    let r = run(&draft_doc_with(json!(3), json!("XY"), caps));
+    assert_eq!(code(&r, "d1"), Some("DRAFT_FACE_UNSUPPORTED"));
+    // Walls next to a round corner are not drafted (draft before filleting).
+    let text = doc(
+        json!([]),
+        json!([
+            rect_sketch("s1", json!("XY"), json!(0), json!(0), json!(20), json!(20)),
+            extrude("e1", "s1", json!(10)),
+            { "type": "fillet", "id": "f1", "name": "f1", "r": 2,
+              "edges": { "kind": "edge", "q": { "op": "filter", "where": { "parallel": "Z" },
+                         "of": { "op": "edges", "of": { "op": "sides", "feature": "e1" } } } } },
+            { "type": "draft", "id": "d1", "name": "d1",
+              "faces": { "kind": "face", "q": { "op": "filter", "where": { "type": "plane" },
+                         "of": { "op": "sides", "feature": "e1" } } },
+              "neutral": "XY", "angle": 3 }
+        ]),
+    );
+    let r = run(&text);
+    assert_eq!(code(&r, "d1"), Some("DRAFT_FAILED"));
+    assert!(
+        feature(&r, "d1")
+            .error
+            .as_ref()
+            .unwrap()
+            .message
+            .contains("curved"),
+        "{:?}",
+        feature(&r, "d1").error
+    );
+}
+
+/// §5.2: drafted entities keep their keys. A side–side junction edge's `@c.end` qualifier is
+/// derived from the sketch junction its carrier passes through; about a neutral plane off the
+/// sketch plane the tilted edge no longer does, so the draft carries the input's qualifier over:
+/// the key invariant holds, and a tag on a vertical edge still resolves to it after the draft.
+#[test]
+fn a_draft_off_the_sketch_plane_keeps_the_junction_edge_keys() {
+    let mid = json!({ "origin": [0, 0, 6], "normal": [0, 0, 1], "x_dir": [1, 0, 0] });
+    for neutral in [json!("XY"), mid] {
+        let text = draft_doc_with(json!(4), neutral.clone(), json!({}));
+        let l = v1::load(&text).unwrap();
+        let (ev, problems) = v1::evaluate_with_key_check(&l.doc);
+        assert!(ev.is_ok(), "{neutral}");
+        assert!(problems.is_empty(), "{neutral}: {problems:#?}");
+        // A tag after the draft on the edge between the bottom and right sides (by its faces).
+        let mut v: Value = serde_json::from_str(&text).unwrap();
+        v["parts"][0]["features"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!(
+                { "type": "tag", "id": "t1", "name": "t1", "target": { "kind": "edge", "q": {
+                    "op": "between", "a": { "op": "side", "feature": "e1", "curve": "r.bottom" },
+                    "b": { "op": "side", "feature": "e1", "curve": "r.right" } }, "card": "one" } }
+            ));
+        let r = run(&v.to_string());
+        assert_eq!(
+            code(&r, "t1"),
+            None,
+            "{neutral}: {:#?}",
+            feature(&r, "t1").error
+        );
+        let key = &feature(&r, "t1").refs[0].members[0].key;
+        assert!(
+            key.contains('@'),
+            "{neutral}: the junction qualifier is kept: {key}"
+        );
+    }
+}
+
+/// A document built without `load` evaluates the draft the same way (`load` rejects nothing
+/// for it any more: [`v1::REJECTED_FEATURE_TYPES`] is empty).
+#[test]
+fn a_draft_evaluates_the_same_through_load_or_not() {
+    assert!(v1::REJECTED_FEATURE_TYPES.is_empty());
+    assert!(v1::SUPPORTED_FEATURE_TYPES.contains(&"draft"));
+    let d = forge_ir::v1::from_json(&draft_doc(json!(3))).expect("valid IR v1");
+    let direct = v1::report(&v1::evaluate(&d), "forge test", "t", None);
+    let r = run(&draft_doc(json!(3)));
+    assert_eq!(
+        serde_json::to_string(&direct).unwrap(),
+        serde_json::to_string(&r).unwrap()
+    );
+    // The committed conformance program with a draft evaluates. Its draft takes every side of
+    // a rounded box, whose round corners are not planar: SPEC-v1 §6.9 drafts planar faces only
+    // (the oracle says the same), so the draft fails and passes the shelled box through.
     let text = std::fs::read_to_string(
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../../corpus/v1/programs/shell_box.json"),
     )
     .unwrap();
-    let (r, ev) = v1::evaluate_text(&text, "forge test", "shell_box");
-    assert!(ev.is_none());
-    // Its draft only: the shell, patterns, fillet and chamfer are implemented since Phase C.
-    assert_eq!(
-        rejections(&r),
-        vec![(
-            "UNSUPPORTED_FEATURE".to_string(),
-            "/parts/0/features/3/type".to_string(),
-        )]
-    );
-}
-
-/// Defence in depth: a document validated without this engine's options (so the draft was not
-/// rejected) never gets a guessed draft; the feature fails with the engine-internal code.
-#[test]
-fn a_draft_that_reaches_evaluation_fails_with_the_engine_internal_code() {
-    let d = forge_ir::v1::from_json(&draft_doc(json!(3))).expect("valid IR v1");
-    let ev = v1::evaluate(&d);
-    let r = v1::report(&ev, "forge test", "t", None);
-    assert_eq!(code(&r, "d1"), Some("FORGE_UNSUPPORTED_FEATURE"));
-    assert_eq!(code(&r, "e1"), None);
-    assert!(close(part_volumes(&r)[0], 4000.0, 1e-12));
+    let r = run(&text);
+    assert_eq!(code(&r, "dr1"), Some("DRAFT_FACE_UNSUPPORTED"));
+    assert_eq!(code(&r, "sh1"), None);
 }
 
 // ---- §7.1 step 2: tags (and seeds) are dependencies by id -----------------------------------------

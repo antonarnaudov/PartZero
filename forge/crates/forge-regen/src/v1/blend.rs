@@ -16,13 +16,21 @@
 //! The modified bodies keep their origins; the report gets `fillet` / `chamfer`
 //! (`{ edges, chain_added, faces_created }`, concatenated over the bodies) or `shell`
 //! (`{ removed_faces, closed_void? }`) and, for a shell without open faces, the info
-//! `SHELL_CLOSED_VOID`. `draft` stays unimplemented (§6.9, rejected by `load`).
+//! `SHELL_CLOSED_VOID`.
+//!
+//! `draft` (§6.9, optional): the `angle` in (0, 45) (`INVALID_VALUE`), `/faces` (face,
+//! `some`), the `neutral` plane (its references), then `forge-blend`'s draft on each body the
+//! faces lie on, the pull direction being the neutral plane's normal (reversed for
+//! `pull: reverse`). Drafted faces keep their keys; the report lists the modified bodies.
 
-use forge_blend::{BlendOptions, BlendOutput, ChamferSpec, KeyMap, Pick, ShellOptions};
+use forge_blend::{
+    BlendOptions, BlendOutput, ChamferSpec, DraftOptions, DraftSpec, KeyMap, Pick, ShellOptions,
+};
 use forge_core::topo::{Body, EdgeId, FaceId};
 use forge_ir::v1::metrics::{BlendReport, BodyChange, FeatureReport, Origin, Severity, Warning};
 use forge_ir::v1::{
-    Cardinality, ChamferFeature, FieldType, FilletFeature, LINEAR_TOLERANCE, Ref, ShellFeature,
+    Cardinality, ChamferFeature, DraftFeature, FieldType, FilletFeature, LINEAR_TOLERANCE,
+    PullDirection, Ref, ShellFeature,
 };
 use forge_refs::{Entity, EntityId, Scope};
 use serde_json::json;
@@ -205,6 +213,73 @@ impl PartEval<'_> {
                 details: serde_json::Map::new(),
             });
         }
+        Ok(())
+    }
+
+    /// Evaluate draft feature `x` at timeline index `fi` (see the module docs).
+    pub(super) fn draft(
+        &mut self,
+        fi: usize,
+        x: &DraftFeature,
+        entry: &mut FeatureReport,
+    ) -> Result<(), FeatureError> {
+        let a = self.scalar(&x.angle, FieldType::Angle)?;
+        if !(a.is_finite() && a > 0.0 && a < 45.0) {
+            return Err(range("INVALID_VALUE", "angle", a, "in (0, 45)"));
+        }
+        let faces = self.resolve_all(fi, &x.faces, "/faces", Cardinality::SOME, entry)?;
+        let frame = self.plane(fi, &x.neutral, "/neutral", entry)?;
+        let n = frame.z();
+        let pull = match x.pull {
+            PullDirection::Normal => n,
+            PullDirection::Reverse => -n,
+        };
+        let spec = DraftSpec {
+            neutral_origin: frame.origin(),
+            neutral_normal: n,
+            pull,
+            angle_deg: a,
+        };
+        let mut per_body: Vec<(usize, Vec<FaceId>)> = Vec::new();
+        for e in &faces {
+            let EntityId::Face(id) = e.id else {
+                return Err(kind_mismatch("/faces", "face"));
+            };
+            match per_body.iter_mut().find(|(b, _)| *b == e.body) {
+                Some((_, v)) => v.push(id),
+                None => per_body.push((e.body, vec![id])),
+            }
+        }
+        let fid = self.part.features[fi].id().to_string();
+        let made: Vec<(usize, Body)> = self.with_scope(fi, |s| {
+            let mut out = Vec::with_capacity(per_body.len());
+            for (b, ids) in &per_body {
+                let picks: Vec<Pick<FaceId>> = ids
+                    .iter()
+                    .map(|&id| {
+                        Pick::new(
+                            *b,
+                            id,
+                            s.key(Entity {
+                                body: *b,
+                                id: EntityId::Face(id),
+                            }),
+                        )
+                    })
+                    .collect();
+                let opts = DraftOptions {
+                    feature: fid.clone(),
+                    keys: Some(key_map(s, *b)),
+                    body: *b,
+                };
+                out.push((
+                    *b,
+                    forge_blend::draft(&self.bodies[*b].body, &picks, &spec, &opts)?,
+                ));
+            }
+            Ok::<_, FeatureError>(out)
+        })?;
+        entry.bodies = self.replace_bodies(made)?;
         Ok(())
     }
 

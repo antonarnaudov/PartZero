@@ -6,8 +6,8 @@
 //! `aicad.metrics/0` report (unchanged). Everything else goes through `forge_regen::v1` and is
 //! reported as `aicad.metrics/1` (SPEC-v1 §7): an `aicad.ir/1` document's bodies are the final
 //! bodies of every part (`parts[].bodies`: later features modify earlier bodies); an unknown
-//! or missing schema is rejected with `UNSUPPORTED_SCHEMA`, and a document using the optional
-//! `draft` (not implemented, §6.9) with `UNSUPPORTED_FEATURE`.
+//! or missing schema is rejected with `UNSUPPORTED_SCHEMA`. Every feature type is evaluated,
+//! the optional `draft` (§6.9) included.
 //!
 //! A feature at a behavior version `v` Forge does not implement (SPEC-v1 §0.2 rule 3; since
 //! Phase C every mandatory type is implemented at `v: 1`) is rejected with
@@ -1112,10 +1112,10 @@ mod tests {
         assert!(matches!(out.report, Report::V1(_)));
     }
 
-    /// SPEC-v1 §6.9: Forge does not implement the optional `draft`; a document using it is
-    /// rejected (`UNSUPPORTED_FEATURE` at the draft's `/type`), in the viewer as in the CLI.
+    /// SPEC-v1 §6.9: Forge evaluates the optional `draft` (planar walls between planar faces),
+    /// in the viewer as in the CLI.
     #[test]
-    fn a_document_with_a_draft_is_rejected() {
+    fn a_document_with_a_draft_is_evaluated_and_exported() {
         let with_draft = V1_PLATE.replace(
             "\n      ]}]\n    }",
             r#",
@@ -1133,23 +1133,30 @@ mod tests {
             &clock,
         )
         .expect("ok");
-        assert_eq!(out.report.error_code(), Some("UNSUPPORTED_FEATURE"));
         let Report::V1(r) = &out.report else {
             panic!("expected an aicad.metrics/1 report");
         };
-        let errors = r.error.as_ref().unwrap().details["errors"]
-            .as_array()
-            .unwrap();
-        assert_eq!(errors[0]["path"], "/parts/0/features/4/type");
-        assert!(out.bodies.is_empty());
-        let e = export_mesh(
+        assert!(out.report.is_ok(), "{r:#?}");
+        assert_eq!(out.bodies.len(), 1);
+        assert!(out.mesh_errors.is_empty());
+        // The 80 × 50 × 8 slab's walls lean in by k = tan 2° per unit height (the frustum of a
+        // rectangle: A h − P k h²/2 + 4 k² h³/3); the boss on its top cap is untouched.
+        let k = 2.0f64.to_radians().tan();
+        let slab = 4000.0 * 8.0 - 260.0 * k * 32.0 + 4.0 * k * k * 512.0 / 3.0;
+        let want = slab + std::f64::consts::PI * 121.0 * 12.0;
+        let got = r.parts[0].bodies[0].volume;
+        assert!((got - want).abs() < 1e-9 * want, "{got} vs {want}");
+        export_mesh(
             &with_draft,
             ExportFormat::Stl,
             &tess_params(None, None),
-            true,
+            false,
         )
-        .unwrap_err();
-        assert_eq!(e.code, "UNSUPPORTED_FEATURE");
+        .expect("the drafted plate exports");
+        // A literal angle outside (0, 45) is a static error: the document is rejected.
+        let steep = with_draft.replace("\"angle\": 2", "\"angle\": 50");
+        let e = export_mesh(&steep, ExportFormat::Stl, &tess_params(None, None), true).unwrap_err();
+        assert_eq!(e.code, "INVALID_VALUE");
     }
 
     #[test]

@@ -27,11 +27,12 @@ use super::deps::{ByIdKind, by_id};
 use super::error::{FeatureError, finite};
 use crate::checked;
 
-/// The feature types this engine evaluates (SPEC-v1 §6). [`super::load`] rejects every other
-/// IR v1 type (§0.2 rule 3): the optional ones of [`super::REJECTED_FEATURE_TYPES`] with
-/// `UNSUPPORTED_FEATURE`, the mandatory ones of [`super::UNIMPLEMENTED_FEATURE_TYPES`] (none
-/// since Phase C) with `UNSUPPORTED_FEATURE_VERSION`.
-pub const SUPPORTED_FEATURE_TYPES: [&str; 12] = [
+/// The feature types this engine evaluates (SPEC-v1 §6), the optional `draft` included.
+/// [`super::load`] rejects every other IR v1 type (§0.2 rule 3): the optional ones of
+/// [`super::REJECTED_FEATURE_TYPES`] (none) with `UNSUPPORTED_FEATURE`, the mandatory ones of
+/// [`super::UNIMPLEMENTED_FEATURE_TYPES`] (none since Phase C) with
+/// `UNSUPPORTED_FEATURE_VERSION`.
+pub const SUPPORTED_FEATURE_TYPES: [&str; 13] = [
     "sketch",
     "extrude",
     "revolve",
@@ -40,6 +41,7 @@ pub const SUPPORTED_FEATURE_TYPES: [&str; 12] = [
     "fillet",
     "chamfer",
     "shell",
+    "draft",
     "pattern",
     "datum_plane",
     "datum_axis",
@@ -394,13 +396,7 @@ impl<'d> PartEval<'d> {
             Feature::Fillet(x) => self.fillet(fi, x, entry),
             Feature::Chamfer(x) => self.chamfer(fi, x, entry),
             Feature::Shell(x) => self.shell(fi, x, entry),
-            // Unreachable: failed above with FORGE_UNSUPPORTED_FEATURE (the optional `draft`,
-            // §6.9, is rejected by `load`).
-            Feature::Draft(_) => Err(FeatureError::new(
-                "FORGE_INTERNAL",
-                "unsupported feature reached evaluation",
-                json!({}),
-            )),
+            Feature::Draft(x) => self.draft(fi, x, entry),
         }
     }
 

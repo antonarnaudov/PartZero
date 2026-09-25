@@ -8,8 +8,9 @@
 //! targets, an intersect inside its tool, re-joined split pieces, seam cases, a sliver cut,
 //! spiric torus sections, the evaluation-time error codes, and since Phase C every hole kind
 //! and placement, linear / circular / mirror / body-seed patterns, fillets, chamfers and
-//! shells; `shell_box` is hashed as a rejected report: it uses the optional `draft`, SPEC-v1
-//! §0.2 rule 3, §6.9) and compares it with a constant recorded on the
+//! shells, and since the FM feature tools drafts (`draft_walls`; `shell_box`'s draft of a rounded
+//! box fails with `DRAFT_FACE_UNSUPPORTED`, SPEC-v1 §6.9)) and compares it with a constant
+//! recorded on the
 //! reference platform (aarch64-apple-darwin). Reports print every `f64` in shortest round-trip form, so
 //! a one-ulp difference in any metric, probe, frame or parameter changes the hash. The
 //! documents are compiled in, so the test also runs on wasm32-wasip1 without a filesystem:
@@ -29,7 +30,7 @@ macro_rules! programs {
     };
 }
 
-const PROGRAMS: [(&str, &str); 36] = programs![
+const PROGRAMS: [(&str, &str); 37] = programs![
     "../../../../corpus/v1/programs/" / "constrained_plate",
     "../../../../corpus/v1/programs/" / "knob_queries",
     "../../../../corpus/v1/programs/" / "params_plate",
@@ -44,6 +45,7 @@ const PROGRAMS: [(&str, &str); 36] = programs![
     "v1_programs/" / "blends_box",
     "v1_programs/" / "consumed_target",
     "v1_programs/" / "datum_sketch_revolve_cut",
+    "v1_programs/" / "draft_walls",
     "v1_programs/" / "errors_dependencies",
     "v1_programs/" / "errors_expressions",
     "v1_programs/" / "errors_geometry",
@@ -68,11 +70,11 @@ const PROGRAMS: [(&str, &str); 36] = programs![
     "v1_programs/" / "torus_pocket_spiric_edges",
 ];
 
-/// Programs this engine rejects (their rejected report is hashed): `shell_box` uses the
-/// optional `draft` (§6.9, `UNSUPPORTED_FEATURE`). Until Phase C, `knob_queries` and
-/// `plate_features` were rejected too (`hole`, `fillet`, `chamfer`, `shell`, `pattern`:
-/// `UNSUPPORTED_FEATURE_VERSION`).
-const REJECTED: [&str; 1] = ["shell_box"];
+/// Programs this engine rejects (their rejected report is hashed): none since the draft
+/// (§6.9) is evaluated. Until then `shell_box` was rejected for its optional `draft`
+/// (`UNSUPPORTED_FEATURE`), and until Phase C `knob_queries` and `plate_features` too (`hole`,
+/// `fillet`, `chamfer`, `shell`, `pattern`: `UNSUPPORTED_FEATURE_VERSION`).
+const REJECTED: [&str; 0] = [];
 
 /// FNV-1a over bytes.
 fn fnv(h: &mut u64, b: &[u8]) {
@@ -96,7 +98,13 @@ fn fnv(h: &mut u64, b: &[u8]) {
 ///   (`blends_box`, `fillet_then_chamfer_keys`, `holes_kinds`, `patterns_mixed`). Every other
 ///   program's hash is unchanged (the [W0-40] `removed` fix of forge-regen changes none of
 ///   them).
-const PINNED: u64 = 0xaf34_a471_1876_8a6f;
+/// - → `0x48c0_7ec4_5636_0ea3` (FM feature tools, 2026-09-25): the optional `draft` evaluates
+///   (planar walls between planar faces) — `shell_box` is evaluated instead of rejected
+///   (0x5225a661e8497b88; its draft of a rounded box fails with `DRAFT_FACE_UNSUPPORTED`) and
+///   the oracle case `draft_walls` was added (0x9d98ab9a05e3dbd4). The draft code path is new
+///   and only draft features reach it; the per-program hashes recorded above (`knob_queries`,
+///   `plate_features`, `join_nested_tool`, `join_identical_tool`) are unchanged.
+const PINNED: u64 = 0x48c0_7ec4_5636_0ea3;
 
 #[test]
 fn v1_reports_are_bit_identical_to_the_recorded_hash() {

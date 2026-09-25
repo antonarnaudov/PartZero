@@ -262,19 +262,31 @@ fn export_of_a_v1_document_writes_the_final_bodies() {
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
-    // A document Forge rejects (§0.2 rule 3: `shell_box`'s optional `draft`) is never
-    // exported, even partially.
+    // A document Forge rejects (§0.5: a literal draft angle out of (0, 45)) is never exported,
+    // even partially.
+    let path = scratch("rejected.json");
+    std::fs::write(&path, DRAFT_DOC.replace("\"angle\": 3", "\"angle\": 50")).expect("write");
     let out = aicad()
         .arg("export")
-        .arg(v1_program("shell_box"))
+        .arg(&path)
         .arg("--out")
         .arg(scratch("rejected.stl"))
         .arg("--allow-partial")
         .output()
         .expect("run");
     assert_eq!(out.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&out.stderr).contains("UNSUPPORTED_FEATURE"));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("INVALID_VALUE"));
 }
+
+/// A 20 × 20 × 10 box whose four walls are drafted 3° about its base (SPEC-v1 §6.9).
+const DRAFT_DOC: &str = r#"{ "schema": "aicad.ir/1", "meta": { "name": "drafted" }, "params": [],
+  "parts": [{ "id": "p1", "name": "part", "features": [
+    { "type": "sketch", "id": "s1", "name": "s1", "plane": "XY",
+      "curves": [{ "kind": "rect", "id": "r", "center": [0, 0], "w": 20, "h": 20 }] },
+    { "type": "extrude", "id": "e1", "name": "e1", "sketch": "s1", "distance": 10 },
+    { "type": "draft", "id": "d1", "name": "d1",
+      "faces": { "kind": "face", "q": { "op": "sides", "feature": "e1" } },
+      "neutral": "XY", "angle": 3 } ] }] }"#;
 
 // ---- the rejection pipeline through `aicad eval` (SPEC-v1 §0.5 rule 4, I9) ----------------------
 
@@ -312,11 +324,10 @@ fn rejected_pairs(v: &serde_json::Value) -> Vec<(String, String)> {
 
 /// Every I9 invalid-document fixture through the CLI's default mode: the exact `{code, path}`
 /// multiset, exit 2, an `aicad.metrics/1` rejected report (v0 documents: their v0 codes, in the
-/// v0 report by default and with paths under `--report-version v1`). Forge rejects the optional
-/// `draft` (§6.9), so a fixture document with a draft feature also expects `UNSUPPORTED_FEATURE`
-/// at that feature's `/type`, and (§0.2 rule 3) one with a `hole`, `fillet`, `chamfer`, `shell`
-/// or `pattern` also expects `UNSUPPORTED_FEATURE_VERSION` at its `/v`; the fixtures are
-/// written for an engine that implements every type.
+/// v0 report by default and with paths under `--report-version v1`). Forge implements every
+/// type, the optional `draft` included (§6.9), so the fixtures' own expectations are exactly
+/// what it reports (a type it did not implement would add `UNSUPPORTED_FEATURE_VERSION` at its
+/// `/v`, §0.2 rule 3; the fixtures are written for an engine that implements every type).
 #[test]
 fn every_invalid_document_fixture_is_rejected_by_aicad_eval_with_its_codes_and_paths() {
     let text = std::fs::read_to_string(repo("corpus/v1/conformance/invalid/documents.json"))
@@ -360,10 +371,6 @@ fn every_invalid_document_fixture_is_rejected_by_aicad_eval_with_its_codes_and_p
             {
                 if f["type"] == "draft" {
                     drafts += 1;
-                    want.push((
-                        "UNSUPPORTED_FEATURE".into(),
-                        format!("/parts/{pi}/features/{fi}/type"),
-                    ));
                 }
                 // §0.2 rule 3: a type Forge does not implement yet, at a defined `v`.
                 let vpath = format!("/parts/{pi}/features/{fi}/v");
@@ -471,39 +478,59 @@ fn unknown_or_missing_schemas_are_unsupported_schema_in_a_v1_report() {
     assert_eq!(r.error.unwrap().code, "IR_PARSE_ERROR");
 }
 
-/// SPEC-v1 §6.9, §7.5: Forge does not implement the optional `draft`, so a document using it
-/// is rejected (exit 2, `UNSUPPORTED_FEATURE` at the draft's `/type`), not evaluated.
+/// SPEC-v1 §6.9: Forge evaluates the optional `draft` (planar walls between planar faces). The
+/// committed `shell_box` drafts every side of a rounded box, round corners included, which §6.9
+/// refuses (`DRAFT_FACE_UNSUPPORTED`, exit 1: a feature failed, the rest evaluated); a box of
+/// planar walls drafts and exports.
 #[test]
-fn a_document_with_a_draft_is_rejected_by_eval_and_export() {
+fn a_document_with_a_draft_is_evaluated_and_exported() {
     let out = aicad()
         .arg("eval")
         .arg(v1_program("shell_box"))
         .output()
         .expect("run");
-    assert_eq!(out.status.code(), Some(2));
-    let stderr = String::from_utf8_lossy(&out.stderr);
-    assert!(
-        stderr.contains("UNSUPPORTED_FEATURE at /parts/0/features/3/type"),
-        "{stderr}"
-    );
-    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
-    // The draft only: the shell, fillet, chamfer and patterns are implemented since Phase C.
     assert_eq!(
-        rejected_pairs(&v),
-        vec![(
-            "UNSUPPORTED_FEATURE".to_string(),
-            "/parts/0/features/3/type".to_string(),
-        )]
+        out.status.code(),
+        Some(1),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
     );
     let r = report(&out);
-    assert!(r.features.is_empty() && r.parts.is_empty());
+    let draft = r
+        .features
+        .iter()
+        .find(|f| f.feature_id == "dr1")
+        .expect("the draft");
+    assert_eq!(
+        draft.error.as_ref().map(|e| e.code.as_str()),
+        Some("DRAFT_FACE_UNSUPPORTED")
+    );
+    let path = scratch("drafted.json");
+    std::fs::write(&path, DRAFT_DOC).expect("write");
+    let out = aicad().arg("eval").arg(&path).output().expect("run");
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let r = report(&out);
+    let (s, c) = forge_core::math::sin_cos_deg(3.0);
+    let k = s / c;
+    let want = 4000.0 - 80.0 * k * 50.0 + 4.0 * k * k * 1000.0 / 3.0;
+    let got = r.parts[0].bodies[0].volume;
+    assert!((got - want).abs() < 1e-9 * want, "{got} vs {want}");
     let out = aicad()
         .arg("export")
-        .arg(v1_program("shell_box"))
+        .arg(&path)
         .arg("--out")
-        .arg(scratch("shell_box.stl"))
-        .arg("--allow-partial")
+        .arg(scratch("drafted.stl"))
         .output()
         .expect("run");
-    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
 }

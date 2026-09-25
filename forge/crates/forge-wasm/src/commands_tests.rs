@@ -1889,12 +1889,13 @@ fn rename_curve_of_plate_features_hole_points_is_verified() {
     );
 }
 
-/// The pure IR edits need no evaluation: a document Forge does not evaluate (a `draft`, the
-/// optional type Forge rejects with `UNSUPPORTED_FEATURE`, SPEC-v1 §6.9) is edited, and its
-/// parameter values are reported; the evaluated ops are refused on it with the engine's
-/// capability check. (It used plate_features while Forge rejected holes and patterns.)
+/// Forge evaluates every type the contract defines, the optional `draft` (SPEC-v1 §6.9)
+/// included since the feature tools, so a drafted document takes the pure IR edits and the
+/// evaluated ops alike. (This test used a draft, and plate_features before it, while Forge
+/// rejected those types with `UNSUPPORTED_FEATURE`; the pure IR edits still load with the
+/// contract's rejection pipeline alone.)
 #[test]
-fn pure_ir_edits_accept_documents_forge_does_not_evaluate() {
+fn ir_edits_and_evaluated_ops_accept_a_drafted_document() {
     let mut v: Value = forge_ir::v1::json::parse(&plate()).unwrap();
     v["parts"][0]["features"].as_array_mut().unwrap().push(
         json!({ "type": "draft", "id": "d1", "name": "taper",
@@ -1902,10 +1903,17 @@ fn pure_ir_edits_accept_documents_forge_does_not_evaluate() {
             "neutral": "XY", "angle": 2 }),
     );
     let text = v.to_string();
-    assert_eq!(
-        code(capture_ref(&text, "t_side", "/target")),
-        "UNSUPPORTED_FEATURE"
-    );
+    let r = report(&text);
+    let d1 = r
+        .features
+        .iter()
+        .find(|f| f.feature_id == "d1")
+        .expect("d1");
+    assert!(d1.error.is_none(), "{:?}", d1.error);
+    capture_ref(&text, "t_side", "/target").expect("captureRef");
+    let e = upgrade_feature(&text, "d1", None).expect("upgradeFeature");
+    assert!(!e.changed);
+    engine::write_back(&text, None).expect("writeBack");
     let e = rename_feature(&text, "d1", "taper2").expect("renameFeature");
     assert!(e.changed);
     let back = rename_feature(&e.document, "d1", "taper").unwrap();
@@ -1923,17 +1931,7 @@ fn pure_ir_edits_accept_documents_forge_does_not_evaluate() {
         code(set_param(&text, "t", &json!(0.5))),
         "PARAM_OUT_OF_RANGE"
     );
-    for r in [
-        rename_curve(&text, "s1", "top", "a_top"),
-        accept_ref_proposal(&text, "t_side", "/target"),
-        upgrade_feature(&text, "e1", None),
-    ] {
-        assert_eq!(code(r), "UNSUPPORTED_FEATURE");
-    }
-    assert_eq!(
-        engine::write_back(&text, None).unwrap_err().code,
-        "UNSUPPORTED_FEATURE"
-    );
+    rename_curve(&text, "s1", "top", "a_top").expect("renameCurve");
 }
 
 /// Review finding: the DocStore must store canonical expressions (§2.4), and every op returns

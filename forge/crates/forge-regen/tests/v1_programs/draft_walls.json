@@ -1,0 +1,69 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "draft_walls",
+    "description": "SPEC-v1 §6.9: the outer walls of a pocketed block drafted about its base (the pocket's walls stay), an L-shaped prism with a reflex corner drafted about a mid-height frame with the pull reversed, one wall of a third block drafted alone about its top, then a fillet of the drafted block's top edges; and the refusal of a cap (DRAFT_FACE_UNSUPPORTED)"
+  },
+  "params": [
+    { "name": "taper", "unit": "deg", "value": 3 }
+  ],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "block",
+      "features": [
+        { "type": "sketch", "id": "s1", "name": "s1", "plane": "XY",
+          "curves": [{ "kind": "rect", "id": "r", "center": [0, 0], "w": 40, "h": 20 }] },
+        { "type": "extrude", "id": "e1", "name": "e1", "sketch": "s1", "distance": 10 },
+        { "type": "sketch", "id": "s2", "name": "s2",
+          "plane": { "origin": [0, 0, 10], "normal": [0, 0, 1], "x_dir": [1, 0, 0] },
+          "curves": [{ "kind": "rect", "id": "p", "center": [10, 0], "w": 4, "h": 4 }] },
+        { "type": "extrude", "id": "e2", "name": "e2", "sketch": "s2", "distance": 3,
+          "direction": "reverse", "op": "cut", "targets": "all" },
+        { "type": "draft", "id": "d1", "name": "d1",
+          "faces": { "kind": "face", "q": { "op": "sides", "feature": "e1" } },
+          "neutral": "XY", "angle": "taper" },
+        { "type": "fillet", "id": "f1", "name": "f1", "r": 1,
+          "edges": { "kind": "edge", "q": { "op": "between",
+            "a": { "op": "cap", "feature": "e1", "end": "end" },
+            "b": { "op": "side", "feature": "e1", "curve": "r.bottom" } } } }
+      ]
+    },
+    {
+      "id": "p2",
+      "name": "ell",
+      "features": [
+        { "type": "sketch", "id": "s3", "name": "s3", "plane": "XY",
+          "curves": [
+            { "kind": "line", "id": "a", "start": [0, 0], "end": [30, 0] },
+            { "kind": "line", "id": "b", "start": [30, 0], "end": [30, 10] },
+            { "kind": "line", "id": "c", "start": [30, 10], "end": [15, 10] },
+            { "kind": "line", "id": "d", "start": [15, 10], "end": [15, 20] },
+            { "kind": "line", "id": "e", "start": [15, 20], "end": [0, 20] },
+            { "kind": "line", "id": "f", "start": [0, 20], "end": [0, 0] }
+          ] },
+        { "type": "extrude", "id": "e3", "name": "e3", "sketch": "s3", "distance": 8 },
+        { "type": "draft", "id": "d2", "name": "d2",
+          "faces": { "kind": "face", "q": { "op": "sides", "feature": "e3" } },
+          "neutral": { "origin": [0, 0, 4], "normal": [0, 0, 1], "x_dir": [1, 0, 0] },
+          "angle": 4, "pull": "reverse" }
+      ]
+    },
+    {
+      "id": "p3",
+      "name": "wedge",
+      "features": [
+        { "type": "sketch", "id": "s4", "name": "s4", "plane": "XY",
+          "curves": [{ "kind": "rect", "id": "q", "center": [0, 50], "w": 20, "h": 12 }] },
+        { "type": "extrude", "id": "e4", "name": "e4", "sketch": "s4", "distance": 15 },
+        { "type": "draft", "id": "d3", "name": "d3",
+          "faces": { "kind": "face", "q": { "op": "side", "feature": "e4", "curve": "q.right" } },
+          "neutral": { "origin": [0, 0, 15], "normal": [0, 0, 1], "x_dir": [1, 0, 0] },
+          "angle": 7.5 },
+        { "type": "draft", "id": "d4", "name": "d4",
+          "faces": { "kind": "face", "q": { "op": "cap", "feature": "e4", "end": "end" } },
+          "neutral": "XY", "angle": 2 }
+      ]
+    }
+  ]
+}

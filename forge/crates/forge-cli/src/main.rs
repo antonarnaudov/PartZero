@@ -15,10 +15,10 @@
 //!   the report then carries `migration` when ids were rewritten);
 //! - everything else — `aicad.ir/1`, any other or missing `schema`, text that is not JSON —
 //!   goes through `forge_regen::v1` and gets an `aicad.metrics/1` report: an unknown or missing
-//!   schema is rejected with `UNSUPPORTED_SCHEMA` at `/schema`, unreadable JSON with
-//!   `IR_PARSE_ERROR`, and a document using the optional `draft` (not implemented by Forge,
-//!   §6.9) with `UNSUPPORTED_FEATURE` at the feature's `/type` (§0.2 rule 3). Every mandatory
-//!   type — `hole`, `fillet`, `chamfer`, `shell` and `pattern` since Phase C — is evaluated.
+//!   schema is rejected with `UNSUPPORTED_SCHEMA` at `/schema` and unreadable JSON with
+//!   `IR_PARSE_ERROR`. Every type is evaluated: the mandatory ones (`hole`, `fillet`,
+//!   `chamfer`, `shell` and `pattern` since Phase C) and the optional `draft` (§6.9, planar
+//!   walls between planar faces).
 //!
 //! **Open contract issue (W0), not resolved here:** §0.2 rule 4 says the report of a migrated
 //! v0 input "is then a v1 report". The default `auto` keeps the v0 report for v0 input because

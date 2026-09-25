@@ -10,7 +10,7 @@
 //! | plane/axis references, datums, tags, body references | `forge-refs` (W3) | §3, §5 |
 //! | `join` / `cut` / `intersect` on extrude, revolve and `boolean` | `forge-ops` booleans (W4) | §6.0.3–§6.0.5, §6.4 |
 //! | `hole`, `pattern` (linear, circular, mirror; feature and body seeds) | `forge-ops` holes and patterns (W5) | §6.5, §6.10 |
-//! | `fillet`, `chamfer`, `shell` | `forge-blend` (W6) | §6.6–§6.8 |
+//! | `fillet`, `chamfer`, `shell`, `draft` | `forge-blend` (W6; draft: FM feature tools) | §6.6–§6.9 |
 //!
 //! Per feature, the checks of §7.1 step 2 run in order and the first failure decides the code:
 //! `PARAM_FAILED` → features referenced by id (`SKETCH_SUPPRESSED`, `DEPENDENCY_SUPPRESSED`,
@@ -26,12 +26,13 @@
 //!
 //! Feature types (SPEC-v1 §0.2 rule 3, §7.5 stages): every mandatory type is evaluated
 //! ([`SUPPORTED_FEATURE_TYPES`], Phase C: `hole`, `pattern`, `fillet`, `chamfer`, `shell`
-//! joined). The **rejections** (stage R, CLI exit 2, no feature is evaluated), exactly as the
-//! frozen text states them:
-//! - the optional `draft` (§6.9), which this engine does not implement: [`load`] runs the
-//!   rejection pipeline with [`validate_options`], so a document using it gets
-//!   `UNSUPPORTED_FEATURE` at the feature's `/type` (suppressed or not: rule 3 is about the
-//!   document);
+//! joined), and the optional `draft` (§6.9: `forge-blend`'s draft of planar walls between
+//! planar faces; [`REJECTED_FEATURE_TYPES`] is empty). The **rejections** (stage R, CLI exit 2,
+//! no feature is evaluated), exactly as the frozen text states them:
+//! - an optional type this engine does not implement ([`REJECTED_FEATURE_TYPES`], none since
+//!   the draft): [`load`] runs the rejection pipeline with [`validate_options`], so a document
+//!   using it gets `UNSUPPORTED_FEATURE` at the feature's `/type` (suppressed or not: rule 3 is
+//!   about the document);
 //! - a mandatory type this build does not implement ([`UNIMPLEMENTED_FEATURE_TYPES`], empty
 //!   since Phase C; kept for the next type): "an engine that does not implement a feature's `v`
 //!   rejects the document with `UNSUPPORTED_FEATURE_VERSION` (path of the `v` field)" —
@@ -79,10 +80,10 @@ pub use forge_ir::v1::metrics::FeatureReport;
 pub use part::{NO_CHANGE_CODE, PartResult, SUPPORTED_FEATURE_TYPES, UNSUPPORTED_CODE};
 pub use ref_for::{Pick, RefFor, RefForError, RefForMember, ref_for};
 
-/// Optional IR v1 feature types this engine does not implement (SPEC-v1 §6.9: `draft`).
-/// [`load`] rejects documents that use them with `UNSUPPORTED_FEATURE` at the feature's `/type`
-/// (§0.2 rule 3, §7.5 stage R).
-pub const REJECTED_FEATURE_TYPES: [&str; 1] = ["draft"];
+/// Optional IR v1 feature types this engine does not implement: none since the draft (SPEC-v1
+/// §6.9) is. [`load`] rejects documents that use one with `UNSUPPORTED_FEATURE` at the feature's
+/// `/type` (§0.2 rule 3, §7.5 stage R); kept for the next optional type.
+pub const REJECTED_FEATURE_TYPES: [&str; 0] = [];
 
 /// Mandatory IR v1 feature types this build does not implement yet: none since Phase C
 /// (`hole`, `pattern`: W5; `fillet`, `chamfer`, `shell`: W6). [`load`] rejects a document that
@@ -402,8 +403,9 @@ pub struct Loaded {
 }
 
 /// Parse and validate a document of either version through the rejection pipeline of
-/// SPEC-v1 §0.5 rule 4 with this engine's [`validate_options`] (W1's expression checker; the
-/// optional `draft` rejected with `UNSUPPORTED_FEATURE`); a v0 document is migrated. Any schema
+/// SPEC-v1 §0.5 rule 4 with this engine's [`validate_options`] (W1's expression checker; an
+/// optional type it lacks rejected with `UNSUPPORTED_FEATURE`: none today); a v0 document is
+/// migrated. Any schema
 /// other than `aicad.ir/0` and `aicad.ir/1` (or none) is `UNSUPPORTED_SCHEMA` at `/schema`.
 ///
 /// This engine's capability check comes with it (§0.2 rule 3): every feature of a type in
