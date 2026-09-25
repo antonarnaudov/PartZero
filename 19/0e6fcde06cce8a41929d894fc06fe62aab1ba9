@@ -1,0 +1,20 @@
+forge/crates/forge-wasm/src/step_export.rs
+  s_59c0dd2af30db2::t_6be1f7615bfe28 66-71,162-165,224-228,240
+  s_59c0dd2af30db2::t_27fbea44095f29 1-65,72-161,166-223,229-239,241-252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "190e6fcde06cce8a41929d894fc06fe62aab1ba9",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
