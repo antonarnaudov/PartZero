@@ -199,7 +199,7 @@ async function runRuntime(s, argv, record) {
   const cad = config.mcpServers?.cad;
   const mcp = cad === undefined ? null : await startMcp(cad);
   const tools = mcp?.tools ?? [];
-  const phase = tools.includes("submit_spec") ? "spec" : tools.includes("apply_cadscript") ? "build" : "ask";
+  const phase = tools.includes("submit_spec") ? "spec" : tools.includes("apply_cadscript") || tools.includes("add_feature") ? "build" : "ask";
   const script = s.runtime?.[phase] ?? { turns: [] };
   const maxTurns = Number(flag(argv, "--max-turns") ?? "0");
   const price = s.pricing ?? { input: 1, output: 5 }; // $/MTok (Haiku list price)

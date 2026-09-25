@@ -15,6 +15,7 @@ import { CLI_TEST_PROFILES } from "./fake-runtime.js";
 import { fakeClock, fixtureEngine } from "./helpers.js";
 import { PLATE_OK, PLATE_OPEN, PLATE_THICK, SLAB_10, WASHER } from "./scenarios.js";
 import { WASHER_REQS, WASHER_TESTS } from "./scripts.js";
+import { HAS_WASM, memoryHost } from "./forge-ops.js";
 
 let fake: FakeClaude | undefined;
 afterEach(() => {
@@ -33,6 +34,60 @@ async function runAgent(scenario: FakeClaudeScenario, options: Partial<AgentOpti
   const r = await agent.run(request);
   return { r, gateway, fake };
 }
+
+describe.skipIf(skipRealBroker() || !HAS_WASM)("the live operator in runtime mode: fake Claude Code + real broker and shim + the real engine", () => {
+  it("the CLI operates the op tools (scope ops) through the broker; every step lands in the document; finish closes", async () => {
+    const j = (v: unknown): string => JSON.stringify(v);
+    const call = (name: string, args: Record<string, unknown>): FakeMsg => ({ calls: [{ name, args }] });
+    fake = new FakeClaude({
+      runtime: {
+        build: {
+          turns: [
+            [
+              call("plan", { steps: ["Sketch the base", "Extrude it", "Round the vertical edges"] }),
+              call("add_feature", { feature_json: j({ type: "sketch", id: "base", name: "base", plane: "XY", curves: [{ kind: "rect", id: "o", center: [0, 0], w: 40, h: 40 }] }), note: "Sketch the base" }),
+              call("add_feature", { feature_json: j({ type: "extrude", id: "cube", name: "cube", sketch: "base", distance: 40 }), note: "Extrude the cube" }),
+              call("find_entities", { ref_json: j({ kind: "edge", q: { op: "filter", where: { parallel: "Z" }, of: { op: "edges", of: { op: "sides", feature: "cube" } } } }) }),
+              call("add_feature", {
+                feature_json: j({ type: "fillet", id: "rounds", name: "rounds", r: 2, edges: { kind: "edge", q: { op: "filter", where: { parallel: "Z" }, of: { op: "edges", of: { op: "sides", feature: "cube" } } } } }),
+                note: "Round the vertical edges",
+              }),
+              call("finish", { summary: "A 40 mm cube with rounded vertical edges.", assumptions: [], known_issues: [] }),
+              { text: "Done." },
+            ],
+          ],
+        },
+      },
+    });
+    const ops = await memoryHost();
+    const steps: string[] = [];
+    const gateway = new LLMGateway({ profiles: CLI_TEST_PROFILES });
+    const agent = new Agent({ gateway, engine: fixtureEngine(), now: fakeClock(), models: { designer: "claude-cli:haiku" }, runtime: fake.runtime(), ops, hooks: { onStep: (s) => steps.push(s.note) } });
+    const r = await agent.run({ prompt: "a 40 mm cube with 2 mm rounds on the vertical edges", name: "cube" });
+    expect(r.status, r.message).toBe("proposed");
+    expect(r.mode).toBe("cli-runtime");
+    const [inv] = fake.invocations();
+    expect(inv!.mode).toBe("runtime");
+    expect(inv!.system).toContain("You never write code");
+    expect(inv!.system).toContain("`mcp__cad__add_feature`");
+    const [phase] = fake.phases();
+    expect(phase!.tools).toContain("add_feature");
+    expect(phase!.tools).toContain("request_approval");
+    expect(phase!.tools).not.toContain("apply_cadscript");
+    const calls = fake.calls();
+    expect(calls.map((c) => c.name)).toEqual(["plan", "add_feature", "add_feature", "find_entities", "add_feature", "finish"]);
+    expect(calls[3]!.text).toMatch(/^4 edges/);
+    expect(calls[4]!.text).toMatch(/Check: ✓ 3 features ok · 1 body valid/);
+    expect(steps).toEqual(["Sketch the base", "Extrude the cube", "Round the vertical edges"]);
+    expect((await ops.report()).features.map((f) => [f.feature_id, f.status])).toEqual([
+      ["base", "ok"],
+      ["cube", "ok"],
+      ["rounds", "ok"],
+    ]);
+    expect(await until(() => !isAlive(phase!.pid) && !isAlive(phase!.mcpPid))).toBe(true);
+    expect(fake.leftoverWorkspaces()).toEqual([]);
+  });
+});
 
 describe.skipIf(skipRealBroker())("CliAgentRuntime + fake Claude Code + real broker and shim", () => {
   it("the proposal is accepted through the broker, which closes; the CLI exits; nothing is left behind", async () => {
