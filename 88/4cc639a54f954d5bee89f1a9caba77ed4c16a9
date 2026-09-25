@@ -1,0 +1,61 @@
+packages/app/src/print/open-in-slicer.ts
+  s_59c0dd2af30db2::t_97a88209c70271 7-9
+  s_59c0dd2af30db2::t_cb0d11cac49bfd 95-96
+  s_59c0dd2af30db2::t_7a2742de61a680 84,87-88
+  s_59c0dd2af30db2::t_f10b1e4170ed4e 18
+packages/app/src/bridge.ts
+  s_59c0dd2af30db2::t_0ff565869f8fee 215-224,229,231-232
+  s_59c0dd2af30db2::t_a7d2a86c1ae511 264,266
+packages/app/src/commands/commands.ts
+  s_59c0dd2af30db2::t_bcb41535124d95 20
+  s_59c0dd2af30db2::t_d176feea7bc3a1 291-308
+packages/desktop/test/print.test.ts
+  s_59c0dd2af30db2::t_94e36e8fcb1e3c 493
+  s_59c0dd2af30db2::t_c573d3286a2d3e 9,454
+  s_59c0dd2af30db2::t_c0f67a7dd2f706 344-361,380-403
+  s_59c0dd2af30db2::t_b91752d743d28e 362-379
+  s_59c0dd2af30db2::t_27825b1de12ffd 483-492,494-541
+packages/desktop/src/slicer.ts
+  s_59c0dd2af30db2::t_7e0d2cc801275e 13
+  s_59c0dd2af30db2::t_53624bdf849649 226,232-233
+packages/app/src/ui/Toolbar.tsx
+  s_59c0dd2af30db2::t_2d3d7e3d7c8c31 9
+  s_59c0dd2af30db2::t_32ca73d740d46f 1
+  s_59c0dd2af30db2::t_af1582dec814c7 10-12
+packages/app/test/print.test.ts
+  s_59c0dd2af30db2::t_a6b91c1083e81a 122-138
+packages/desktop/src/menu.ts
+  s_59c0dd2af30db2::t_38cab5b1a0fd1c 100-102
+packages/desktop/src/print-handoff.ts
+  s_59c0dd2af30db2::t_f6748e9723a825 283-292
+  s_59c0dd2af30db2::t_d52cdbcd12feec 37,41
+  s_59c0dd2af30db2::t_d92982dfd8f628 301,303,305-306,308
+  s_59c0dd2af30db2::t_fe81ffb63ce20f 256
+  s_59c0dd2af30db2::t_9a76fa57da647a 26-32
+  s_59c0dd2af30db2::t_19e93b5028f883 320
+  s_59c0dd2af30db2::t_6ce2952768b78c 219-225,229
+  s_59c0dd2af30db2::t_5f6e4b4ec002aa 172,176,180-181
+  s_59c0dd2af30db2::t_b0ada53fc4acb4 237-238,241-244
+packages/app/src/ui/shell/ShellToolbar.tsx
+  s_59c0dd2af30db2::t_32ca73d740d46f 13
+packages/app/src/ui/shell/SlicerButton.tsx
+  s_59c0dd2af30db2::t_d96cb1ab80c2dd 1-131
+packages/desktop/src/ipc.ts
+  s_59c0dd2af30db2::t_f62c57da901d57 224-229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "884cc639a54f954d5bee89f1a9caba77ed4c16a9",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
