@@ -610,6 +610,50 @@ def _cases() -> list[ErrCase]:
             {"type": "horizontal", "id": "h", "line": "a"},
             {"type": "distance", "id": "len", "a": "a.start", "b": "a.end", "value": v}]), params=t0),
             "SKETCH_INVALID_DIMENSION", _f("s1"))
+
+    # -- threads (§6.13, §6.5 thread.modeled) ------------------------------------------------------
+    def thr(q, fid="t1", **kw) -> dict:
+        return {"type": "thread", "id": fid, "name": f"n_{fid}", "face": ref("face", q, card="one"), **kw}
+
+    wall = {"op": "hole_face", "feature": "h1", "at": "a", "part": "wall"}
+    boss = {"op": "side", "feature": "e1", "curve": "c"}
+
+    def bore(d=6.8, t=10, at=(0.0, 0.0), extra=()) -> list:
+        return [*plate(t=t), hole(one_at(*at), d=d, depth="through"), *extra]
+
+    for i, kw in enumerate([{"major": 1, "pitch": 1}, {"major": 8, "pitch": 0.0005}, {"major": 2, "pitch": 1.5}]):
+        add(f"thread-invalid-form-{i}", doc(*disk(r=4), thr(boss, **kw)), "THREAD_INVALID_VALUE", _f("t1"))
+    add("thread-nut-in-a-small-bore", doc(*bore(d=5), thr(wall, standard="M8")), "THREAD_DIAMETER_MISMATCH", _f("t1"))
+    add("thread-bolt-on-a-large-boss", doc(*disk(r=5), thr(boss, standard="M8")), "THREAD_DIAMETER_MISMATCH", _f("t1"))
+    add("hole-thread-in-a-large-bore", doc(*plate(), hole(one_at(), d=10, depth="through",
+                                                               thread={"standard": "1/2-20 UNF", "modeled": True})),
+        "THREAD_DIAMETER_MISMATCH", _f("h1"))
+    add("thread-on-a-cap", doc(*plate(), thr(cap_q("e1"), standard="M8")), "THREAD_FACE_UNSUPPORTED", _f("t1"))
+    add("thread-on-a-plate-side", doc(*plate(), thr({"op": "side", "feature": "e1", "curve": "o.left"}, standard="M8")),
+        "THREAD_FACE_UNSUPPORTED", _f("t1"))
+    add("thread-on-a-drill-point", doc(*plate(), hole(one_at(), d=6.8, depth={"blind": 6}),
+                                       thr({"op": "hole_face", "feature": "h1", "at": "a", "part": "tip"}, standard="M8")),
+        "THREAD_FACE_UNSUPPORTED", _f("t1"))
+    add("thread-longer-than-the-bore", doc(*bore(), thr(wall, standard="M8", length=12)), "THREAD_LENGTH_OUT_OF_RANGE", _f("t1"))
+    add("thread-offset-past-the-bore", doc(*bore(), thr(wall, standard="M8", offset=3, length=8)),
+        "THREAD_LENGTH_OUT_OF_RANGE", _f("t1"))
+    add("thread-longer-than-the-boss", doc(*disk(r=4), thr(boss, standard="M8", length=20)), "THREAD_LENGTH_OUT_OF_RANGE", _f("t1"))
+    add("thread-end-just-short-of-the-exit", doc(*bore(), thr(wall, standard="M8", length=9.9995)), "THREAD_END_TOO_CLOSE", _f("t1"))
+    add("thread-start-just-inside-the-entry", doc(*bore(), thr(wall, standard="M8", offset=0.0005)), "THREAD_END_TOO_CLOSE", _f("t1"))
+    add("bolt-thread-end-just-short", doc(*disk(r=4), thr(boss, standard="M8", length=9.9996)), "THREAD_END_TOO_CLOSE", _f("t1"))
+    add("thread-floating-in-the-bore", doc(*bore(), thr(wall, standard="M8", offset=1, length=3)), "THREAD_END_UNSUPPORTED", _f("t1"))
+    add("bolt-thread-floating-on-the-boss", doc(*disk(r=4), thr(boss, standard="M8", offset=2, length=2)),
+        "THREAD_END_UNSUPPORTED", _f("t1"))
+    add("thread-floating-mid-bore", doc(*bore(t=12), thr(wall, standard="M8", offset=4, length=4)),
+        "THREAD_END_UNSUPPORTED", _f("t1"))
+    add("thread-too-near-the-plate-edge", doc(*bore(at=(16.2, 0.0)), thr(wall, standard="M8")), "THREAD_INTERFERENCE", _f("t1"))
+    add("thread-too-near-the-long-side", doc(*bore(at=(0.0, 11.2)), thr(wall, standard="M8")), "THREAD_INTERFERENCE", _f("t1"))
+    add("thread-next-to-another-hole", doc(*bore(extra=(hole(one_at(7.2, 0.0), hid="h2", d=6.8, depth="through"),)),
+                                           thr(wall, standard="M8")),
+        "THREAD_INTERFERENCE", _f("t1"))
+    add("hole-thread-too-near-the-plate-edge", doc(*plate(), hole(one_at(16.2, 0.0), size="M8", depth="through",
+                                                                thread={"modeled": True})),
+        "THREAD_INTERFERENCE", _f("h1"))
     return C
 
 

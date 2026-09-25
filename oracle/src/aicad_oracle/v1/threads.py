@@ -308,6 +308,9 @@ def thread_feature(ev, st, fi: int, f: dict, entry: dict, refs: list) -> None:
     za, zb = offset, offset + ln
     if abs(zb - span) <= TOL:
         zb = span
+    if modeled and not (zb - za > END_MARGIN):
+        raise FeatureFailure("THREAD_INVALID_VALUE", f"length = {zb - za} is invalid",
+                             {"field": "length", "value": zb - za, "expected": f"> {END_MARGIN} mm"})
     if zb > span + TOL or za < 0.0:
         raise FeatureFailure("THREAD_LENGTH_OUT_OF_RANGE", "the thread runs past the face",
                              {"face": face.key, "start": za, "end": zb, "face_start": 0.0, "face_end": span})
@@ -320,6 +323,19 @@ def thread_feature(ev, st, fi: int, f: dict, entry: dict, refs: list) -> None:
     }
     if not modeled:
         return
+    # The ends (Forge's order): each on an end circle or at least END_MARGIN inside the face, at
+    # least one on an end circle; then the thread's region must be clear.
+    for ze, fe in ((za, 0.0), (zb, span)):
+        gap = abs(ze - fe)
+        if TOL < gap < END_MARGIN:
+            raise FeatureFailure("THREAD_END_TOO_CLOSE", f"a thread end lies {gap} mm from the end of {face.key}",
+                                 {"face": face.key, "distance": gap, "margin": END_MARGIN})
+    on_ring = (za <= TOL, zb >= span - TOL)
+    if not any(on_ring):
+        raise FeatureFailure("THREAD_END_UNSUPPORTED", "both thread ends are inside the face",
+                             {"face": face.key,
+                              "reason": "a thread must start at an end of its cylinder (both ends are inside it)"})
+    _check_clear(face, form, rc, p0, z_dir, za, zb, [(p0, on_ring[0]), (p1, on_ring[1])])
     tools = groove_tool(fid, None, fi, form, rc, p0, x_dir, z_dir, za, zb, ev.gate)
     apply_body_op(ev, st, fid, fi, "cut", [face.body], tools, entry, keep_tools=False, nurbs_targets=True)
     normalized(entry)
@@ -330,6 +346,116 @@ def normalized(entry: dict) -> None:
     entry["warnings"].append({"code": "ORACLE_NORMALIZED", "severity": "info",
                               "message": "§8.3 rule 9 (thread flanks, crest and root as B-spline sweeps)",
                               "details": {"rule": "9"}})
+
+
+#: Forge's `CLEARANCE`: the thread's region grows by ten times the linear tolerance.
+CLEARANCE = 10.0 * LINEAR_TOLERANCE
+
+
+def _radial(p, origin, z_dir) -> float:
+    r = geom.sub(p, origin)
+    return math.sqrt(max(0.0, geom.dot(r, r) - geom.dot(r, z_dir) ** 2))
+
+
+def _edge_radial_range(edge_shape, origin, z_dir, n: int = 256) -> tuple[float, float]:
+    c = BRepAdaptor_Curve(edge_shape)
+    t0, t1 = c.FirstParameter(), c.LastParameter()
+    rs = []
+    for i in range(n + 1):
+        q = c.Value(t0 + (t1 - t0) * i / n)
+        rs.append(_radial((q.X(), q.Y(), q.Z()), origin, z_dir))
+    return min(rs), max(rs)
+
+
+def _check_clear(face, form, rc, origin, z_dir, za, zb, ends) -> None:
+    """§6.13 `THREAD_INTERFERENCE` (Forge's `clear::check`): the region
+    `ρ ∈ [min(R_c, R_r) − m, max(R_c, R_r) + m]`, `z ∈ [z_a − m, z_b + m]` (`m` = `CLEARANCE`) holds no
+    face of the body but the crest and the faces the thread ends on, and a plane it ends on keeps
+    its other boundary radially out of it. Measured exactly here (OCCT sections, sampled edges),
+    where Forge decides by conservative bounds."""
+    m = CLEARANCE
+    r_lo, r_hi = min(rc, form.rr) - m, max(rc, form.rr) + m
+    z_lo, z_hi = za - m, zb + m
+    body = face.body
+    region = {"r_in": r_lo, "r_out": r_hi, "z_start": z_lo, "z_end": z_hi}
+    ring_faces: list = []
+    for e in body.edges_of_face(face):
+        ax = e.circle_axis() if e.type == "circle" else None
+        if ax is None:
+            continue
+        for centre, on in ends:
+            if on and geom.dist(ax.origin, centre) < 1e-6 * max(1.0, rc):
+                for nb in body.faces_of_edge(e):
+                    if nb is face or nb in ring_faces:
+                        continue
+                    ring_faces.append(nb)
+                    if nb.type == "plane":
+                        for other in body.edges_of_face(nb):
+                            if other is e:
+                                continue
+                            for piece in other.parts():
+                                lo, hi = _edge_radial_range(piece, origin, z_dir)
+                                if not (hi < r_lo or lo > r_hi):
+                                    raise FeatureFailure("THREAD_INTERFERENCE",
+                                                         f"face {nb.key} reaches into the thread's region",
+                                                         {"face": nb.key, **region})
+    tube = _region_tube(origin, z_dir, r_lo, r_hi, z_lo, z_hi)
+    for f in body.faces:
+        if f is face or f in ring_faces:
+            continue
+        _clear_of(f, tube, region)
+
+
+def _region_tube(origin, z_dir, r_lo, r_hi, z_lo, z_hi):
+    from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
+    from OCP.BRepPrimAPI import BRepPrimAPI_MakeCylinder
+    from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt
+
+    base = geom.add(origin, geom.mul(z_dir, z_lo))
+    ax2 = gp_Ax2(gp_Pnt(*base), gp_Dir(*z_dir))
+    outer = BRepPrimAPI_MakeCylinder(ax2, r_hi, z_hi - z_lo).Shape()
+    inner = BRepPrimAPI_MakeCylinder(ax2, max(r_lo, 1e-9), z_hi - z_lo).Shape()
+    return BRepAlgoAPI_Cut(outer, inner).Shape()
+
+
+def _clear_of(f, tube, region) -> None:
+    from OCP.BRepAlgoAPI import BRepAlgoAPI_Common
+    from OCP.BRepGProp import BRepGProp
+    from OCP.GProp import GProp_GProps
+
+    for piece in f.parts():
+        g = GProp_GProps()
+        BRepGProp.SurfaceProperties_s(BRepAlgoAPI_Common(piece, tube).Shape(), g)
+        if g.Mass() > 1e-12:
+            raise FeatureFailure("THREAD_INTERFERENCE", f"face {f.key} reaches into the thread's region",
+                                 {"face": f.key, **region})
+
+
+def _hole_clear(targets, form, rc, origin, z_dir, za, zb) -> None:
+    """`THREAD_INTERFERENCE` for a hole's modelled thread, checked on its targets before the cut
+    (the bore does not exist yet): the planes across the axis at the thread's ends (the entry, a
+    through hole's exit, a flat floor) keep their boundary radially out of the region; no other
+    face enters it."""
+    m = CLEARANCE
+    r_lo, r_hi = min(rc, form.rr) - m, max(rc, form.rr) + m
+    z_lo, z_hi = za - m, zb + m
+    region = {"r_in": r_lo, "r_out": r_hi, "z_start": z_lo, "z_end": z_hi}
+    tube = _region_tube(origin, z_dir, r_lo, r_hi, z_lo, z_hi)
+    for b in targets:
+        for f in b.faces:
+            n = f.plane_normal()
+            if n is not None and geom.dist(geom.cross(n, z_dir), (0.0, 0.0, 0.0)) <= 1e-9:
+                h = geom.dot(geom.sub(f.point(), origin), z_dir)
+                if min(abs(h - za), abs(h - zb)) <= TOL:
+                    for e in b.edges_of_face(f):
+                        for piece in e.parts():
+                            lo, hi = _edge_radial_range(piece, origin, z_dir)
+                            if not (hi < r_lo or lo > r_hi):
+                                raise FeatureFailure("THREAD_INTERFERENCE",
+                                                     f"face {f.key} reaches into the thread's region",
+                                                     {"face": f.key, **region})
+                    continue
+            _clear_of(f, tube, region)
 
 
 # ---- modelled hole threads (§6.5) -------------------------------------------------------------
@@ -359,6 +485,7 @@ def hole_grooves(ev, fid: str, fi: int, spec, positions, d, x_dir, depths: dict,
             zb = _wall_exit(targets, p.point, x_dir, d, 0.5 * (0.5 * spec.d + form.rr))
             if zb is None:
                 raise TopoError("OCCT_THREAD_TOOL_FAILED", f"hole {fid} position {p.id}: no wall end on the axis")
+        _hole_clear(targets, form, 0.5 * spec.d, p.point, d, y0, zb)
         tools.extend(groove_tool(fid, p.id, fi, form, 0.5 * spec.d, p.point, x_dir, d, y0, zb, ev.gate))
     return tools
 

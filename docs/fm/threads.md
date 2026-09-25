@@ -62,6 +62,9 @@ only: tolerance classes and FDM compensation are not in the IR.
   construction: a Frenet sweep cut from B-spline-converted faces): counts, volume, area, box and
   centroid match (volume 2.8e-8 relative or better); types differ only as §8.3 rule 9 allows →
   `NORMALIZED`.
+- The oracle's error corpus (`oracle/src/aicad_oracle/v1/errcorpus.py`) has three documents per
+  `THREAD_*` E code; Forge and the oracle raise the expected code on all 21 (the oracle measures
+  interference exactly where Forge uses conservative bounds).
 - `forge-io/tests/step_threads.rs`: threaded bodies export, read back, verify, and bound Forge's
   exact volume and area to 1e-7. OCCT's `step_check` reads the corpus program's STEP export as
   valid with Forge's volume, area, box and counts (1/1 bodies match).
@@ -75,8 +78,6 @@ only: tolerance classes and FDM compensation are not in the IR.
   are refused: put the positions into the hole itself.
 - Both ends inside the face (a thread in the middle of a bore) is refused.
 - Thread run-outs / chamfered thread starts and tolerance classes are not modelled.
-- The oracle's own checks cover diameter, face and length; end-margin and interference refusals are
-  Forge-only (no oracle program raises them).
 - STEP export of long threads is slow: the writer's self-verification integrates each B-spline
   flank with a cost that grows with the square of its spans (about 21 per turn), so the corpus
   program (three threads of 8–10 turns) takes minutes in a debug build. A per-span cumulative
