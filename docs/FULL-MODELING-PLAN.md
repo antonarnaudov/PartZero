@@ -140,7 +140,7 @@ The parity survey tiered what users expect:
 | Wall-thickness and interference checks | New | FM8 | Row A2 in ROADMAP |
 | Configurations or variants table | New | FM8 | |
 | Laser pack: flat-part detection, kerf, nesting | New | FM8 | NORTH-STAR B9, Phase 1 beta |
-| Sweep, loft, modelled threads | New | FM9 | F3 / Phase 2 in the roadmap. FD2 proposes restricted forms earlier, including a helical sweep of a planar profile (printed threads and springs) |
+| Sweep, loft, modelled threads | New (modelled threads landed early, 2026-09-25: exact helicoid threads on bores and bosses, `docs/fm/threads.md`) | FM9 | F3 / Phase 2 in the roadmap. FD2 proposes restricted forms earlier, including a helical sweep of a planar profile (printed threads and springs) |
 | Variable fillets; setback and chord fillets | New (analytic edges only) | FM9 | F3 |
 | Move, offset, replace and delete face (ADR 0019) | New | FM9 | F3. Push/pull falls back to these on faces no parameter drives |
 
