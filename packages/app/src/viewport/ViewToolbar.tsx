@@ -79,6 +79,9 @@ export function ViewToolbar({ runtime, run, measureOpen }: ViewToolbarProps): Re
       <button type="button" className={`vp-btn${view.origin ? " on" : ""}`} title="Origin planes, axes and point" aria-pressed={view.origin} data-testid="toggle-origin" onClick={() => run({ id: "view.setToggle", args: { toggle: "origin" } })}>
         Origin
       </button>
+      <button type="button" className={`vp-btn${view.sketches ? " on" : ""}`} title="Show every sketch (the selected one is always shown)" aria-pressed={view.sketches} data-testid="toggle-sketches" onClick={() => run({ id: "view.setToggle", args: { toggle: "sketches" } })}>
+        Sketches
+      </button>
       <span className="vp-menu-anchor">
         <button type="button" className={`vp-btn${view.section ? " on" : ""}`} title="Section view" aria-expanded={menu === "section"} data-testid="section-menu" onClick={() => toggleMenu("section")}>
           Section

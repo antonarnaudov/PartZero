@@ -3,29 +3,17 @@
  * meter vs budget, Stop, clarifying questions as multiple-choice cards, the result with assumption
  * chips), selection chips that travel with the message, and the composer.
  */
-import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import type { AgentPhase, AgentQuestion } from "../agent-protocol";
 import type { AgentRun } from "../agent/agent-service";
 import type { AppInvocation } from "../commands/commands";
-import { findFeature } from "../doc/provenance";
+import { useSelectionChips as useModelSelectionChips } from "../selection/chips";
 import type { ChatMessage, SelectionChip } from "../ui-store";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
 
-function useSelectionChips(): SelectionChip[] {
-  const { services } = useApp();
-  const selection = useStore(services.doc, (s) => s.selection);
-  const model = useStore(services.doc, (s) => s.model);
-  return useMemo(() => {
-    const chips: SelectionChip[] = [];
-    const loc = selection.featureId ? findFeature(model?.ir, selection.featureId) : null;
-    if (loc) chips.push({ kind: "feature", ref: loc.feature.id, label: loc.feature.name });
-    const e = selection.entity;
-    if (e?.face) chips.push({ kind: "face", ref: e.face, label: e.face });
-    else if (e?.edge) chips.push({ kind: "edge", ref: e.edge, label: e.edge });
-    return chips;
-  }, [selection, model]);
-}
+// Chips come from the selection model (plural: every selected face, edge and body).
+const useSelectionChips: () => SelectionChip[] = useModelSelectionChips;
 
 // ─── Run card ────────────────────────────────────────────────────────────────────────────
 

@@ -8,6 +8,7 @@ import type { Measurement } from "../measure/measure";
 import { formatMeasurement } from "../measure/measure";
 import type { Rect } from "../selection/box-select";
 import { itemId, type OriginId, type SelectionItem } from "../selection/types";
+import type { SketchPolyline } from "./sketches";
 import type { CameraFrame, Vec3 } from "./view-camera";
 
 export interface OverlayProps {
@@ -22,6 +23,12 @@ export interface OverlayProps {
   box: (Rect & { mode: "window" | "crossing" }) | null;
   onOriginClick: (id: OriginId, additive: boolean) => void;
   onOriginHover: (id: OriginId | null) => void;
+  /** Sketch curves to draw (all with "Sketches" on, else the selected or hovered sketch's). */
+  sketches: readonly SketchPolyline[];
+  /** Whether sketch curves can be clicked (the sketch filter). */
+  sketchPickable: boolean;
+  onSketchClick: (sketch: string, additive: boolean) => void;
+  onSketchHover: (sketch: string | null) => void;
 }
 
 const PLANES: Array<{ id: OriginId; u: Vec3; v: Vec3; cls: string }> = [
@@ -63,8 +70,34 @@ export function Overlay(p: OverlayProps): ReactElement {
     if (s) vertexMarks.push({ key: `h:${itemId(p.hover)}`, x: s.x, y: s.y, state: "hover" });
   }
   const origin = f.project([0, 0, 0]);
+  const selectedSketches = new Set(p.items.flatMap((it) => (it.kind === "sketch" ? [it.feature] : [])));
+  const hoverSketch = p.hover?.kind === "sketch" ? p.hover.feature : null;
   return (
     <svg className="vp-overlay" width={f.width} height={f.height} data-testid="viewport-overlay">
+      {p.sketches.length > 0 && (
+        <g className="vp-sketches" data-testid="sketch-display">
+          {p.sketches.map((s, i) => {
+            const pl = pts(s.points);
+            if (!pl) return null;
+            const state = selectedSketches.has(s.sketch) ? " selected" : hoverSketch === s.sketch ? " hover" : "";
+            return (
+              <g key={`${s.sketch}:${s.curve}:${i}`}>
+                <polyline points={pl} className={`vp-sketch${state}`} />
+                {p.sketchPickable && (
+                  <polyline
+                    points={pl}
+                    className="vp-sketch-hit"
+                    data-sketch={s.sketch}
+                    onPointerEnter={() => p.onSketchHover(s.sketch)}
+                    onPointerLeave={() => p.onSketchHover(null)}
+                    onClick={(e) => p.onSketchClick(s.sketch, e.shiftKey || e.metaKey || e.ctrlKey)}
+                  />
+                )}
+              </g>
+            );
+          })}
+        </g>
+      )}
       {p.origin && (
         <g className="vp-origin" data-testid="origin-display">
           {PLANES.map((pl) => {

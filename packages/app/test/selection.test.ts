@@ -61,6 +61,31 @@ describe("scene topology", () => {
   });
 });
 
+describe("chat chips from the selection", () => {
+  it("gives the primary's feature, then one chip per face, edge and body, with human labels", async () => {
+    const { selectionChips } = await import("../src/selection/chips");
+    const ir = { parts: [{ name: "plate", features: [{ id: "f2", name: "plate", type: "extrude" }] }] } as never;
+    const chips = selectionChips(
+      [
+        { kind: "face", body: BODY, key: "plate/cap:end" },
+        { kind: "edge", body: BODY, key: "plate/edge:{plate/cap:end|plate/side:top}" },
+        { kind: "vertex", body: BODY, key: "v", point: [0, 0, 0] },
+        { kind: "body", body: BODY },
+      ],
+      { featureId: "f2", entity: null },
+      ir,
+    );
+    expect(chips).toEqual([
+      { kind: "feature", ref: "f2", label: "plate" },
+      { kind: "face", ref: "plate/cap:end", label: "End cap of plate" },
+      { kind: "edge", ref: "plate/edge:{plate/cap:end|plate/side:top}", label: "Edge: end cap / side top (plate)" },
+      { kind: "body", ref: BODY, label: "Body plate" },
+    ]);
+    // Without model items, the document's own pick is used.
+    expect(selectionChips([], { featureId: null, entity: { body: BODY, edge: "e" } }, ir)).toEqual([{ kind: "edge", ref: "e", label: "e" }]);
+  });
+});
+
 describe("selection store", () => {
   it("keeps order and uniqueness, toggles, and reports the primary", () => {
     const s = new SelectionStore();

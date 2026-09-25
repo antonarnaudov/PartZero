@@ -7,7 +7,7 @@
  * animates `view.fit`).
  */
 import type { AppCommandRegistry } from "../commands/commands";
-import { CommandRegistry, type CommandResult, type CommandSource } from "../commands/registry";
+import { CommandRegistry, type CommandResult, type CommandSource, type PaletteItem } from "../commands/registry";
 import { MEASURE_COMMANDS } from "../measure/commands";
 import { SELECTION_COMMANDS } from "../selection/commands";
 import type { AppServices } from "../services";
@@ -32,6 +32,15 @@ export function viewportCommands(app: AppServices): ViewportCommandRegistry {
     registries.set(app, r);
   }
   return r;
+}
+
+/**
+ * Palette items of both registries: the viewport's first, then the app's whose ids the viewport
+ * registry does not supersede (`view.setView`, `view.fit`, `view.setProjection`).
+ */
+export function routedPaletteItems(app: AppServices, appCommands: AppCommandRegistry): PaletteItem[] {
+  const vr = viewportCommands(app);
+  return [...vr.paletteItems(), ...appCommands.paletteItems().filter((i) => !vr.has(i.id))];
 }
 
 /** Execute on the viewport registry when it has the id, else on the app registry. */

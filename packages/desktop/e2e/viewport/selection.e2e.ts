@@ -39,6 +39,9 @@ test("hover pre-highlights with a readable label; click selects, Shift-click add
   await expect(page.locator(".compose-chips .chip")).toHaveCount(2);
   await clickWorld(page, [25, 0, 2.5], ["Shift"]);
   await expect.poll(keys).toEqual(["plate/cap:end", "plate/side:right"]);
+  // Both faces travel to the agent as chips (feature + two faces), with readable labels.
+  await expect(page.locator(".compose-chips .chip")).toHaveCount(3);
+  await expect(page.locator(".compose-chips")).toContainText("Side right of plate");
   await clickWorld(page, [25, 0, 2.5], ["Shift"]);
   await expect.poll(keys).toEqual(["plate/cap:end"]);
   // Clicking empty space clears; so does Escape.
@@ -125,6 +128,31 @@ test("box select: window (left→right) takes whole visible faces, crossing (rig
   await drag(page, { x: c.x - half, y: c.y - half }, { x: c.x + half, y: c.y + half });
   await expect.poll(keys).toContain("plate/edge:{plate/cap:end|plate/side:m3_a}");
   expect((await keys()).every((e) => e.endsWith("side:m3_a}"))).toBe(true);
+});
+
+test("sketches: shown on demand, picked with the sketch filter, selected in the timeline", async () => {
+  const { page } = L;
+  await expect(page.getByTestId("sketch-display")).toHaveCount(0);
+  await page.getByTestId("toggle-sketches").click();
+  await expect(page.getByTestId("sketch-display")).toBeVisible();
+  // 4 lines + 5 circles of the outline sketch.
+  await expect(page.locator(".vp-sketch")).toHaveCount(9);
+  await page.getByTestId("toggle-sketches").click();
+  await expect(page.getByTestId("sketch-display")).toHaveCount(0);
+  // Key 5: only sketches are selectable, so every sketch is shown to pick from.
+  await page.locator(".viewport-canvas").focus();
+  await page.keyboard.press("5");
+  await expect(page.getByTestId("sketch-display")).toBeVisible();
+  const p = await at(page, [0, -25, 0]);
+  await page.mouse.click(p.x, p.y);
+  await expect.poll(async () => (await selection(page)).items).toEqual([{ kind: "sketch", feature: "outline", label: "Sketch outline" }]);
+  await expect(page.locator('[data-testid="timeline-feature"][data-feature="outline"]')).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".vp-sketch.selected")).toHaveCount(9);
+  // Model entities are not selectable with only the sketch filter on.
+  await clickWorld(page, [0, 18, 5]);
+  await page.waitForTimeout(150);
+  expect((await selection(page)).items.map((i) => i.kind)).toEqual(["sketch"]);
+  await page.keyboard.press("0");
 });
 
 test("selection.get gives the agent the items with labels; re-evaluation keeps them", async () => {

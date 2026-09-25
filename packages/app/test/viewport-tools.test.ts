@@ -134,6 +134,39 @@ describe("manipulator drag math", () => {
   });
 });
 
+describe("sketches in the viewport", () => {
+  it("places sketch curves on their plane (named frames and explicit frames)", async () => {
+    const { sketchFrame, curvePoints2d, sketchPolylines } = await import("../src/viewport/sketches");
+    expect(sketchFrame("XZ")).toEqual({ origin: [0, 0, 0], x: [1, 0, 0], y: [0, 0, 1] });
+    const f = sketchFrame({ origin: [0, 0, 5], normal: [0, 0, 2], x_dir: [3, 0, 0] })!;
+    expect(f.y).toEqual([0, 1, 0]);
+    expect(sketchFrame({ face: "x" })).toBeNull();
+    expect(curvePoints2d({ kind: "line", start: [0, 0], end: [1, 2] })).toEqual([[0, 0], [1, 2]]);
+    const circle = curvePoints2d({ kind: "circle", center: [1, 1], radius: 2 })!;
+    expect(circle).toHaveLength(49);
+    for (const [x, y] of circle) expect(Math.hypot(x - 1, y - 1)).toBeCloseTo(2, 12);
+    // A quarter arc counter-clockwise from +X to +Y, and the other way round clockwise.
+    const ccw = curvePoints2d({ kind: "arc", start: [1, 0], end: [0, 1], center: [0, 0], ccw: true })!;
+    expect(ccw.at(-1)![0]).toBeCloseTo(0, 12);
+    expect(ccw.every(([x, y]) => x >= -1e-12 && y >= -1e-12)).toBe(true);
+    const cw = curvePoints2d({ kind: "arc", start: [1, 0], end: [0, 1], center: [0, 0], ccw: false })!;
+    expect(cw.some(([, y]) => y < -0.5)).toBe(true);
+    const ir = {
+      parts: [
+        {
+          features: [
+            { type: "sketch", name: "s", plane: "YZ", curves: [{ kind: "line", id: "l", start: [0, 0], end: [2, 3] }] },
+            { type: "sketch", name: "off", plane: "XY", suppressed: true, curves: [{ kind: "line", id: "l", start: [0, 0], end: [1, 1] }] },
+            { type: "extrude", name: "e" },
+          ],
+        },
+      ],
+    };
+    expect(sketchPolylines(ir)).toEqual([{ sketch: "s", curve: "l", points: [[0, 0, 0], [0, 2, 3]] }]);
+    expect(sketchPolylines(null)).toEqual([]);
+  });
+});
+
 describe("placeholder section clipping", () => {
   it("keeps the part of a triangle or segment on the kept side of the plane", async () => {
     const { clipByPlane } = await import("../src/viewport/placeholder");

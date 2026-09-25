@@ -89,6 +89,25 @@ test("display modes change what is drawn", async () => {
   expect(await page.evaluate(() => localStorage.getItem("aicad.view"))).toContain("shadedEdges");
 });
 
+test("the command palette lists the viewport commands (display, section, measure)", async () => {
+  const { page } = L;
+  const mod = process.platform === "darwin" ? "Meta" : "Control";
+  await page.locator(".viewport-canvas").focus();
+  await page.keyboard.press(`${mod}+K`);
+  const palette = page.getByTestId("command-palette");
+  await expect(palette).toBeVisible();
+  await page.keyboard.type("display wireframe");
+  await page.keyboard.press("Enter");
+  await expect(palette).toBeHidden();
+  await expect(page.getByTestId("viewport")).toHaveAttribute("data-display", "wireframe");
+  await page.keyboard.press(`${mod}+K`);
+  await page.keyboard.type("section xz");
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("section-panel")).toBeVisible();
+  await view(page, { id: "view.clearSection" });
+  await view(page, { id: "view.setDisplayMode", args: { mode: "shadedEdges" } });
+});
+
 test("per-body colour and visibility from the Bodies menu reach the renderer", async () => {
   const { page } = L;
   const top = await at(page, [0, 18, 5]);

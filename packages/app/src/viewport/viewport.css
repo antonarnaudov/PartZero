@@ -137,6 +137,28 @@
 .vp-origin-point.selected {
   fill: var(--vp-sel);
 }
+.vp-sketch {
+  fill: none;
+  stroke: #2f6fed;
+  stroke-width: 1.4;
+  stroke-dasharray: 6 3;
+}
+.vp-sketch.hover {
+  stroke: var(--vp-hover);
+  stroke-width: 2.2;
+}
+.vp-sketch.selected {
+  stroke: var(--vp-sel);
+  stroke-width: 2.2;
+  stroke-dasharray: none;
+}
+.vp-sketch-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 9;
+  pointer-events: stroke;
+  cursor: pointer;
+}
 .vp-vertex {
   fill: var(--ov-halo);
   stroke-width: 2.4;

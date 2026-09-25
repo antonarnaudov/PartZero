@@ -19,7 +19,7 @@ const NoArgs = z.strictObject({});
 const ViewSchema = z.enum(STANDARD_VIEWS);
 const ProjectionSchema = z.enum(["perspective", "orthographic"]);
 const DisplayModeSchema = z.enum(DISPLAY_MODES);
-const ToggleSchema = z.enum(["grid", "axes", "origin", "viewCube"]);
+const ToggleSchema = z.enum(["grid", "axes", "origin", "viewCube", "sketches"]);
 const SectionBaseSchema = z.enum(["XY", "XZ", "YZ", "face"]);
 const ColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, "a #rrggbb colour");
 
@@ -163,6 +163,9 @@ export const VIEW_COMMANDS = {
     category: "View",
     args: NoArgs,
     keys: ["P"],
+    // The palette has "View: Perspective / Orthographic Projection"; a second entry would only
+    // crowd searches like "view top".
+    palette: false,
     run(_args, ctx) {
       const projection = rt(ctx).view.getState().projection === "perspective" ? "orthographic" : "perspective";
       rt(ctx).setProjection(projection);
@@ -193,13 +196,14 @@ export const VIEW_COMMANDS = {
     id: "view.setToggle",
     title: "Show / Hide",
     category: "View",
-    description: "Show or hide the ground grid, the axes gizmo, the origin planes and axes, or the view cube.",
+    description: "Show or hide the ground grid, the axes gizmo, the origin planes and axes, the view cube, or every sketch's curves.",
     args: z.strictObject({ toggle: ToggleSchema, on: z.boolean().optional() }),
     palette: [
       { title: "View: Toggle Grid", args: { toggle: "grid" } },
       { title: "View: Toggle Origin Planes and Axes", args: { toggle: "origin" } },
       { title: "View: Toggle Axes Gizmo", args: { toggle: "axes" } },
       { title: "View: Toggle View Cube", args: { toggle: "viewCube" } },
+      { title: "View: Toggle Sketches", args: { toggle: "sketches" } },
     ],
     run({ toggle, on }, ctx) {
       const v = rt(ctx).view;

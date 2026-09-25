@@ -22,6 +22,7 @@ import { Overlay } from "../viewport/Overlay";
 import { routedExecute, viewportCommands } from "../viewport/registry";
 import { viewportRuntime } from "../viewport/runtime";
 import { SectionPanel } from "../viewport/SectionPanel";
+import { sketchPolylines } from "../viewport/sketches";
 import { installViewTestHook } from "../viewport/test-hook";
 import type { CameraFrame } from "../viewport/view-camera";
 import { ViewCube } from "../viewport/ViewCube";
@@ -329,6 +330,28 @@ export function Viewport(): ReactElement {
   );
   const onOriginHover = useCallback((id: OriginId | null) => runtime.selection.setHover(id ? { kind: "origin", id } : null), [runtime]);
 
+  // Sketches: all of them with "Sketches" on (or only sketches selectable); otherwise the selected ones.
+  const model = useStore(doc, (s) => s.model);
+  const allSketches = useMemo(() => sketchPolylines(model?.ir), [model]);
+  const onlySketches = sel.filter.sketch && !sel.filter.face && !sel.filter.edge && !sel.filter.vertex && !sel.filter.body;
+  const shownSketches = useMemo(() => {
+    // With only sketches selectable (key 5), every sketch is shown so there is something to pick.
+    if (view.sketches || onlySketches) return allSketches;
+    const keep = new Set(sel.items.flatMap((it) => (it.kind === "sketch" ? [it.feature] : [])));
+    return keep.size ? allSketches.filter((s) => keep.has(s.sketch)) : [];
+  }, [allSketches, view.sketches, onlySketches, sel.items]);
+  const onSketchClick = useCallback(
+    (sketch: string, additive: boolean) => {
+      const it = { kind: "sketch" as const, feature: sketch };
+      if (additive) {
+        runtime.selection.toggle(it);
+        runtime.syncDocSelection();
+      } else runtime.selectItems([it]);
+    },
+    [runtime],
+  );
+  const onSketchHover = useCallback((s: string | null) => runtime.selection.setHover(s ? { kind: "sketch", feature: s } : null), [runtime]);
+
   const busy = phase === "compiling" || phase === "evaluating" || phase === "pending";
   let empty: string | null = null;
   if (bodies.length === 0) {
@@ -354,6 +377,10 @@ export function Viewport(): ReactElement {
           box={box}
           onOriginClick={onOriginClick}
           onOriginHover={onOriginHover}
+          sketches={shownSketches}
+          sketchPickable={sel.filter.sketch}
+          onSketchClick={onSketchClick}
+          onSketchHover={onSketchHover}
         />
       )}
       {frame && <ManipulatorLayer host={runtime.manipulators} frame={frame} />}

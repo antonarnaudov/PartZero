@@ -31,6 +31,8 @@ export interface ViewState {
   /** Origin planes, axes and point (overlay). */
   origin: boolean;
   viewCube: boolean;
+  /** Draw every sketch's curves (the selected sketch is always drawn). */
+  sketches: boolean;
   /** Per-body display state (bodies not listed use the default: visible, default colour). */
   bodies: Readonly<Record<string, BodyDisplay>>;
   section: SectionState | null;
@@ -47,6 +49,7 @@ interface Prefs {
   axes?: boolean;
   origin?: boolean;
   viewCube?: boolean;
+  sketches?: boolean;
   projection?: Projection;
 }
 
@@ -85,6 +88,7 @@ export class ViewStore extends Store<ViewState> {
       axes: p.axes ?? true,
       origin: p.origin ?? false,
       viewCube: p.viewCube ?? true,
+      sketches: p.sketches ?? false,
       bodies: {},
       section: null,
       projection: p.projection ?? "perspective",
@@ -98,7 +102,7 @@ export class ViewStore extends Store<ViewState> {
   private savePrefs(): void {
     if (!this.persist) return;
     const s = this.getState();
-    writePrefs({ display: s.display, grid: s.grid, axes: s.axes, origin: s.origin, viewCube: s.viewCube, projection: s.projection });
+    writePrefs({ display: s.display, grid: s.grid, axes: s.axes, origin: s.origin, viewCube: s.viewCube, sketches: s.sketches, projection: s.projection });
   }
 
   setDisplay(display: DisplayMode): void {
@@ -106,7 +110,7 @@ export class ViewStore extends Store<ViewState> {
     this.savePrefs();
   }
 
-  setToggle(key: "grid" | "axes" | "origin" | "viewCube", on: boolean): void {
+  setToggle(key: "grid" | "axes" | "origin" | "viewCube" | "sketches", on: boolean): void {
     this.setState({ [key]: on } as Partial<ViewState>);
     this.savePrefs();
   }
