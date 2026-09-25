@@ -1,0 +1,48 @@
+packages/app/src/tools/framework/session.ts
+  s_59c0dd2af30db2::t_c783fe7840d247 366-372
+  s_59c0dd2af30db2::t_f2735db1fac568 140-144
+  s_59c0dd2af30db2::t_18e7724f220e65 456-460
+packages/app/src/tools/framework/handles.ts
+  s_59c0dd2af30db2::t_a74190d8b1c5ee 1-171
+packages/app/src/tools/model-selection.ts
+  s_59c0dd2af30db2::t_99665f861af41e 144-246
+  s_59c0dd2af30db2::t_2babc82e4929c4 16
+  s_59c0dd2af30db2::t_f0620ef0763946 77-81
+  s_59c0dd2af30db2::t_49ebe7ce7429e9 1-15,17-76,82-120,125-127,129-143
+  s_59c0dd2af30db2::t_03ef5d28550d0b 121-124,128
+packages/app/src/tools/shell.ts
+  s_59c0dd2af30db2::t_8c6fbf1eb6a329 17-18,61-62,119-120,146,328-330,342-343
+packages/app/src/ui/shell/PropertyPanel.tsx
+  s_59c0dd2af30db2::t_c60f64c821a21d 23,25
+packages/app/src/ui/Viewport.tsx
+  s_59c0dd2af30db2::t_d05186a9a15032 335,355
+packages/app/test/model-selection.test.ts
+  s_59c0dd2af30db2::t_79336a658573d5 1-118
+packages/app/src/viewport/runtime.ts
+  s_59c0dd2af30db2::t_9a17fd797ae644 118-120
+  s_59c0dd2af30db2::t_ce417cded9b8ff 472,476,478-479,487
+  s_59c0dd2af30db2::t_d05186a9a15032 473-475,477,482,484,508
+packages/app/test/ir-v1-ops.test.ts
+  s_59c0dd2af30db2::t_f8cf5cfd677ea3 177,238
+packages/app/src/ui/shell/install.ts
+  s_59c0dd2af30db2::t_fed1c00466c142 11,56-59
+packages/app/src/tools/framework/types.ts
+  s_59c0dd2af30db2::t_407e7fbeb13ec0 457-517
+  s_59c0dd2af30db2::t_74e8eed3107568 84-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "46bddd2c9f4ce8a7d6e4ade0516f9966b4a2a484",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
