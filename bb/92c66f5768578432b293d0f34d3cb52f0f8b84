@@ -1,0 +1,58 @@
+packages/app/vite.config.ts
+  s_59c0dd2af30db2::t_ccfb34f25c639e 7
+  s_59c0dd2af30db2::t_4d22b02a96f8db 313
+packages/desktop/e2e/sketch-mode.e2e.ts
+  s_59c0dd2af30db2::t_0efacf9cdb1ed0 21-22
+  s_59c0dd2af30db2::t_e74253a9bf1e2a 200
+  s_59c0dd2af30db2::t_efb996e7b1503e 72-78
+  s_59c0dd2af30db2::t_82d1e81fc0efd1 1-20,23-71,79-175,178-180,183-199,201
+  s_59c0dd2af30db2::t_c0d45071bef4e1 176-177,181-182
+packages/app/src/ui/sketch/SketchCanvas.tsx
+  s_59c0dd2af30db2::t_0ebd74c5975fa3 1-590
+packages/app/src/ui/Toolbar.tsx
+  s_59c0dd2af30db2::t_97a60e3a5a17fb 7
+  s_59c0dd2af30db2::t_5feaae1dacbea8 92
+packages/app/test/sketch/harness.ts
+  s_59c0dd2af30db2::t_bf51d902ff88fd 1
+packages/app/src/ui/App.tsx
+  s_59c0dd2af30db2::t_9a4fa2ca4109b7 12
+  s_59c0dd2af30db2::t_ea19ba920eaf2b 111
+packages/app/src/sketch/instance.ts
+  s_59c0dd2af30db2::t_8bff9bd644dcc5 71-76
+packages/app/src/ui/sketch/sketch.css
+  s_59c0dd2af30db2::t_fbf222fb4314a5 443-444,446-447
+  s_59c0dd2af30db2::t_9727c89cea3961 351-352,355,357,364-369,378-380
+  s_59c0dd2af30db2::t_223b95cf4bffd8 470-471
+  s_59c0dd2af30db2::t_1645d524c642c9 492-501
+  s_59c0dd2af30db2::t_ccebd454ef43a1 824-827,830,832,835,837
+  s_59c0dd2af30db2::t_728b53529f9a60 1-350,353-354,356,358-363,370-377,381-442,445,448-469,472-491,502-620,623-659,663-823,828-829,831,833-834,836,838-842
+  s_59c0dd2af30db2::t_a4df7e23bb8b2e 621-622
+  s_59c0dd2af30db2::t_c3e27d0e5b42a7 660-662
+packages/app/src/sketch/controller.ts
+  s_59c0dd2af30db2::t_2b07a4a3de4ca4 249-253
+packages/app/src/sketch/integration.ts
+  s_59c0dd2af30db2::t_4e15622bae5072 57-60,63-64
+  s_59c0dd2af30db2::t_40c0ea516a7291 1-56,61-62,65-84
+packages/app/src/ui/sketch/SketchModeHost.tsx
+  s_59c0dd2af30db2::t_fab25a724de3e9 1-13,15-145,147-184,186,203-204,206-380,391-469
+  s_59c0dd2af30db2::t_509e7b156d3256 146
+  s_59c0dd2af30db2::t_c738fcfbf64044 185,187-202,205
+  s_59c0dd2af30db2::t_c0368d232dc0a5 14
+  s_59c0dd2af30db2::t_5c4ae9665f71d2 381-390
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bb92c66f5768578432b293d0f34d3cb52f0f8b84",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
