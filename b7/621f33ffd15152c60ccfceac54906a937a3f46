@@ -1,0 +1,39 @@
+forge/crates/forge-wasm/src/commands_tests.rs
+  s_59c0dd2af30db2::t_570f1c042059b8 2541-2544,2560-2573,2581-2589,2591-2594
+  s_59c0dd2af30db2::t_91132573106b93 2515-2540,2545-2559,2574-2580,2590,2595-2598
+forge/crates/forge-wasm/src/commands.rs
+  s_59c0dd2af30db2::t_5f14b36f6b7457 2457-2462,2466-2470,2473-2476,2482-2486,2491-2495,2507-2510,2514-2520,2532-2542,2548-2553,2558-2560
+  s_59c0dd2af30db2::t_397e5cb1073447 2445-2456,2463-2465,2471-2472,2477-2481,2487-2490,2496-2506,2511-2513,2521-2531,2543-2547,2554-2557,2561-2574
+forge/crates/forge-regen/src/v1/part.rs
+  s_59c0dd2af30db2::t_eb4168bf6c7ab6 196-208
+forge/crates/forge-wasm/src/web.rs
+  s_59c0dd2af30db2::t_2648eb86909592 329-351
+forge/crates/forge-regen/src/v1/ref_for.rs
+  s_59c0dd2af30db2::t_5f14b36f6b7457 30-32,131-134,193-197,300-302,305-309,333-336,355-356,358-359
+  s_59c0dd2af30db2::t_66fd84b1958efd 1-29,33-130,135-192,198-299,303-304,310-332,337-354,357,360-420,426-434
+  s_59c0dd2af30db2::t_e045ae986f0608 421-425
+  s_59c0dd2af30db2::t_f11ecc7aafbc46 435-438
+forge/crates/forge-regen/src/v1/mod.rs
+  s_59c0dd2af30db2::t_dc83457e9287a8 68,80
+forge/crates/forge-regen/src/v1/ref_for_tests.rs
+  s_59c0dd2af30db2::t_570f1c042059b8 11,47-52,71-74,95-103,106-109,121-125,136-139,169-172,179-180,182-183,186-189,192-200,210-217,220-223,227-235,248-256,261-277,279-291,298-306
+  s_59c0dd2af30db2::t_253be61c1428a3 21,76
+  s_59c0dd2af30db2::t_33b8669c966901 1-10,12-20,22-46,53-70,75,77-94,104-105,110-120,126-135,140-168,173-178,181,184-185,190-191,201-209,218-219,224-226,236-247,257-260,278,292-297,307-327,329-342
+  s_59c0dd2af30db2::t_f11ecc7aafbc46 328
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b7621f33ffd15152c60ccfceac54906a937a3f46",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
