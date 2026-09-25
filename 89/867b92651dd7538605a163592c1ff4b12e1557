@@ -1,0 +1,21 @@
+packages/desktop/e2e/shell.e2e.ts
+  s_59c0dd2af30db2::t_d8687eb3e10904 53,86-90,251,391,395-399,401-423
+  s_59c0dd2af30db2::t_26bb5f0b847b52 11-14,56,239-241,252-254,256-257,265,280-281,284,286-287,356-390,392-394,400,424
+  s_59c0dd2af30db2::t_701e06289687ef 425
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "89867b92651dd7538605a163592c1ff4b12e1557",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
