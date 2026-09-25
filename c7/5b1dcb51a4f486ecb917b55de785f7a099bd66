@@ -1,0 +1,22 @@
+packages/desktop/e2e/shell.e2e.ts
+  s_59c0dd2af30db2::t_283a76abdc5c73 208
+packages/app/src/tools/model-selection.ts
+  s_59c0dd2af30db2::t_6bb2fd1c48aeda 93,96,98-105
+  s_59c0dd2af30db2::t_a2388cc1f2a7c1 94-95,97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c75b1dcb51a4f486ecb917b55de785f7a099bd66",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
