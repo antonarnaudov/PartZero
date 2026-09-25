@@ -1,0 +1,22 @@
+packages/agent/test/cli-runtime.test.ts
+  s_59c0dd2af30db2::t_6aac379b92f22d 18
+  s_59c0dd2af30db2::t_aa1950ff0eff64 38-91
+packages/agent/test/fake-cli/fake-claude.mjs
+  s_59c0dd2af30db2::t_dd8e4d9b1bd893 202
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3e61bf9bd705b64c8785a4f466336f822d04e29b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
