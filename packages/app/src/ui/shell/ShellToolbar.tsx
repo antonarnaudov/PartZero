@@ -9,6 +9,7 @@ import { formatKey } from "../../commands/registry";
 import { useFilesState } from "../../file/ui/hooks";
 import { TOOL_GROUPS, type ToolDefinition, type ToolGroupInfo } from "../../tools/framework/types";
 import { undoScopes } from "../../doc/undo-scope";
+import { UndoHistoryButton } from "../model/UndoHistory";
 import { useApp, useStore } from "../context";
 import { Icon } from "../icons";
 import { OpenInSlicerButton } from "../Toolbar";
@@ -220,6 +221,7 @@ export function TitleBar(): ReactElement {
         <CommandButton cmd={{ id: "edit.redo" }} title={redoLabel ? `Redo ${redoLabel}` : "Redo"} keyHint="Mod+Shift+Z" disabled={!canRedo} testId="tb-redo">
           <Icon.Redo />
         </CommandButton>
+        <UndoHistoryButton />
       </div>
       <div className="doc-title" data-testid="doc-title" title={format === "ir-v1" ? "PartZero model (IR v1)" : format === "ir-json" ? "IR JSON document (edited as CadScript)" : "CadScript document"}>
         <span className="doc-name">{name}</span>

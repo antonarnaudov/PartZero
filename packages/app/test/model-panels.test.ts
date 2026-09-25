@@ -8,7 +8,9 @@ import type { EvalReport } from "@aicad/ir-types";
 import { compileAndCheck } from "../src/cadscript/inline-service";
 import { collectProblems } from "../src/doc/problems";
 import { buildTimeline } from "../src/doc/timeline";
+import { History } from "../src/doc/history";
 import { undoScopes } from "../src/doc/undo-scope";
+import { readableLabel } from "../src/ui/model/UndoHistory";
 import { buildBrowserTree, parseBodyName } from "../src/ui/model/browser-model";
 import { filamentOf, PLA_BASIC } from "../src/ui/model/filaments";
 import { BOX } from "./helpers";
@@ -94,5 +96,23 @@ describe("undo scope", () => {
     undoScopes.clear("sketch");
     expect(undoScopes.active).toBeNull();
     expect(calls).toEqual(["undo"]);
+  });
+});
+
+describe("undo history list", () => {
+  it("lists the undo steps oldest first and the redo steps next first, with who made them", () => {
+    const h = new History();
+    h.record("a", "ab", { label: "one", origin: "user", time: 0 });
+    h.record("ab", "abc", { label: "two", origin: "agent", time: 1 });
+    h.record("abc", "abcd", { label: "three", origin: "user", time: 2 });
+    h.undo("abcd");
+    h.undo("abc");
+    expect(h.entries()).toEqual({ undo: [{ label: "one", origin: "user" }], redo: [{ label: "two", origin: "agent" }, { label: "three", origin: "user" }] });
+  });
+
+  it("reads expression values as their text", () => {
+    expect(readableLabel('Set extrude1/distance = {"expr":"h"}')).toBe("Set extrude1/distance = h");
+    expect(readableLabel(String.raw`Set x = {"expr":"a \"b\""}`)).toBe('Set x = a "b"');
+    expect(readableLabel("Colour extrude1 #ff6a13")).toBe("Colour extrude1 #ff6a13");
   });
 });

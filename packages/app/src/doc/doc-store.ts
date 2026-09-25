@@ -386,6 +386,12 @@ export class DocStore extends Store<DocState> {
     this.history.seal();
   }
 
+  /** The undo and redo steps (see `History.entries`), for the undo history list. */
+  historyEntries(): ReturnType<History["entries"]> {
+    if (this.isV1) return this.deps.ir?.historyEntries() ?? { undo: [], redo: [] };
+    return this.history.entries();
+  }
+
   undo(): boolean {
     if (this.isV1) return this.deps.ir?.undo() ?? false;
     const r = this.history.undo(this.getState().source);

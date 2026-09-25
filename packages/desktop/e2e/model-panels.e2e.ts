@@ -413,6 +413,24 @@ test("one Undo/Redo across everything: the title bar and ⌘Z / ⇧⌘Z; in sket
   await page.getByTestId("tb-redo").click();
   await expect.poll(async () => (await summary()).bbox?.max[2]).toBeCloseTo(10, 6);
 
+  // The history list: jump back two steps (to just after the rename), then forward again.
+  await page.getByTestId("tb-history").click();
+  const list = page.getByTestId("history-list");
+  await expect(list).toBeVisible();
+  await expect(list.getByTestId("history-undo").first()).toHaveClass(/current/);
+  expect(await list.getByTestId("history-undo").count()).toBeGreaterThanOrEqual(3);
+  await page.screenshot({ path: screenshotPath("undo-history.png", "AICAD_E2E_PANELS_SCREENSHOT") });
+  await list.getByTestId("history-undo").nth(2).click();
+  await expect.poll(async () => (await summary()).bbox?.max[2]).toBeCloseTo(25.4, 6);
+  await expect.poll(async () => ((await exec("ir.state")).value as { appearance: Record<string, string> }).appearance).toEqual({});
+  await expect(chip("hub")).toBeVisible();
+  await expect(list.getByTestId("history-redo")).toHaveCount(2);
+  await list.getByTestId("history-redo").first().click();
+  await expect.poll(async () => (await summary()).bbox?.max[2]).toBeCloseTo(10, 6);
+  await expect(list.getByTestId("history-redo")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(list).toBeHidden();
+
   // In sketch mode the same Undo steps through the sketch's own edits.
   await page.getByTestId("tool-sketch.new").click();
   await page.getByTestId("sketch-plane-XY").click();

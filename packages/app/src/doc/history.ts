@@ -55,6 +55,12 @@ export class History {
     return this.redoStack[this.redoStack.length - 1]?.label ?? null;
   }
 
+  /** The steps, for an undo history list: `undo` oldest first (the last is the next undo), `redo` next redo first. */
+  entries(): { undo: Array<{ label: string; origin: TransactionOrigin }>; redo: Array<{ label: string; origin: TransactionOrigin }> } {
+    const pick = (t: Transaction) => ({ label: t.label, origin: t.origin });
+    return { undo: this.undoStack.map(pick), redo: [...this.redoStack].reverse().map(pick) };
+  }
+
   get size(): { undo: number; redo: number } {
     return { undo: this.undoStack.length, redo: this.redoStack.length };
   }

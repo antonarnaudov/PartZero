@@ -369,6 +369,11 @@ export class IrDocStore extends Store<IrDocState> {
     return this.step("undo");
   }
 
+  /** The undo and redo steps (of the open group while there is one), for the undo history list. */
+  historyEntries(): ReturnType<History["entries"]> {
+    return (this.groupState ? this.groupState.history : this.history).entries();
+  }
+
   /** Redo the last undone transaction (the recorded edit; nothing is recomputed). */
   redo(): boolean {
     return this.step("redo");
