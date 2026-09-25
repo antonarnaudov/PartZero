@@ -1,0 +1,80 @@
+packages/app/src/sketch/constraints.ts
+  s_59c0dd2af30db2::t_d7bde3001af8ef 1-205
+packages/app/src/tools/sketch/draw.ts
+  s_59c0dd2af30db2::t_9015742bc90f31 214-218
+  s_59c0dd2af30db2::t_850e28cb2985a6 9
+  s_59c0dd2af30db2::t_c7f29d6b4efa8d 588
+  s_59c0dd2af30db2::t_ef5217b9b2049d 1-8,10-213,219-587,589-763
+packages/app/src/sketch/view.ts
+  s_59c0dd2af30db2::t_9989072413ff20 1-102
+packages/app/test/sketch/harness.ts
+  s_59c0dd2af30db2::t_9cf39ec19b4f6b 1-75
+packages/app/src/sketch/ops.ts
+  s_59c0dd2af30db2::t_d8effd2c486a0c 1-11,13-610
+  s_59c0dd2af30db2::t_850e28cb2985a6 12
+packages/app/src/sketch/controller.ts
+  s_59c0dd2af30db2::t_b2cd0d8251bb3a 1-24,26-920
+  s_59c0dd2af30db2::t_850e28cb2985a6 25
+packages/app/src/sketch/geom.ts
+  s_59c0dd2af30db2::t_850e28cb2985a6 7
+  s_59c0dd2af30db2::t_5998a392dbfda8 1-6,8-326
+packages/app/src/sketch/dimension.ts
+  s_59c0dd2af30db2::t_850e28cb2985a6 18
+  s_59c0dd2af30db2::t_74facd805e29f2 1-17,19-271
+packages/app/src/sketch/snap.ts
+  s_59c0dd2af30db2::t_b684fea9630cbd 1-203,206-323
+  s_59c0dd2af30db2::t_30584d7706fd68 204-205
+packages/app/src/tools/sketch/modify.ts
+  s_59c0dd2af30db2::t_189ebebee18947 1-242
+packages/app/src/sketch/virtual-sketch.d.ts
+  s_59c0dd2af30db2::t_4efa3a9dc1f091 1-9
+packages/app/src/sketch/instance.ts
+  s_59c0dd2af30db2::t_91c1ea82d251e7 1-71
+packages/app/src/sketch/frames.ts
+  s_59c0dd2af30db2::t_b23467fbf283e8 1-86
+packages/app/src/tools/sketch/select.ts
+  s_59c0dd2af30db2::t_86d9dd6dadb867 1-141
+packages/app/src/tools/sketch/dimension.ts
+  s_59c0dd2af30db2::t_71df2f850f3335 1-82
+packages/app/src/tools/sketch/types.ts
+  s_59c0dd2af30db2::t_850e28cb2985a6 7
+  s_59c0dd2af30db2::t_64c3708237461a 1-6,8-117
+packages/app/src/tools/sketch/index.ts
+  s_59c0dd2af30db2::t_00b8e9d8e52738 1-93
+packages/app/src/sketch/commit.ts
+  s_59c0dd2af30db2::t_850e28cb2985a6 19
+  s_59c0dd2af30db2::t_f4e53fb9691a96 50-51
+  s_59c0dd2af30db2::t_8a6547501723bb 1-18,20-49,52-70
+packages/app/vite-plugin-forge-web-sketch.ts
+  s_59c0dd2af30db2::t_1211921e74b2ac 1-48
+packages/app/src/sketch/ids.ts
+  s_59c0dd2af30db2::t_850e28cb2985a6 6
+  s_59c0dd2af30db2::t_4a4010504140bd 1-5,7-43
+packages/app/src/sketch/context.ts
+  s_59c0dd2af30db2::t_4bb35b0645417e 1-58
+packages/app/test/sketch/controller.test.ts
+  s_59c0dd2af30db2::t_1e47550b8e8014 33-34
+  s_59c0dd2af30db2::t_d19fd3060c1156 1-32,35-368
+packages/app/test/sketch/snap.test.ts
+  s_59c0dd2af30db2::t_1b4646450166fd 1-88
+packages/app/test/sketch/geom.test.ts
+  s_59c0dd2af30db2::t_a83a1281e355e3 1-112
+packages/app/src/sketch/engine-types.ts
+  s_59c0dd2af30db2::t_1e31f908a31839 1-173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "34349e37b62742d101d8a7c325a707e666abfc34",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
