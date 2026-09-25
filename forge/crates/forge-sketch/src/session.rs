@@ -724,6 +724,21 @@ impl SketchSession {
                     .with(json!({ "name": name })),
             );
         }
+        // Feature names share the parameters' namespace (SPEC-v1 §0.3), this sketch's included.
+        let feature = name == self.sketch.name
+            || self
+                .env
+                .doc
+                .parts
+                .iter()
+                .any(|p| p.features.iter().any(|f| f.name() == name));
+        if feature {
+            return Err(SessionError::new(
+                "DUPLICATE_NAME",
+                "a feature has this name (features and parameters share one namespace)",
+            )
+            .with(json!({ "name": name })));
+        }
         let param = Parameter {
             name: name.to_string(),
             unit,

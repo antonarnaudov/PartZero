@@ -34,6 +34,7 @@ import { dimensionConstraint, type DimProposal } from "./dimension";
 import type { Frame3 } from "./frames";
 import { bounds, curvePoint, dist, fmt, nearestOnCurve, type P2 } from "./geom";
 import { IdAllocator, isId } from "./ids";
+import { namesIn, nextSketchName } from "./names";
 import { snap } from "./snap";
 import { fitBox, initialView, isTrackpadPan, pan, PlaneView, zoomAt, type ViewState } from "./view";
 
@@ -71,11 +72,15 @@ export interface BeginOptions {
   plane: SketchPlaneChoice;
   /** Edit this existing sketch (else a new one). */
   sketch?: v1.SketchFeature;
+  /** A new sketch's id and name (default: the first free `sketch<n>`, see `names.ts`). */
   id?: string;
   name?: string;
+  /** The IR v1 document: its parameters are usable in dimensions, its names are taken. */
   document?: v1.IrDocument;
   part?: string;
   after?: string | null;
+  /** Ids and names the document already uses, beyond `document`'s (e.g. an IR v0 document's). */
+  taken?: readonly string[];
   context?: ContextGeometry;
 }
 
@@ -146,8 +151,8 @@ function initialState(): SketchModeState {
   return {
     phase: "off",
     plane: null,
-    sketchId: "sketch1",
-    sketchName: "sketch1",
+    sketchId: "",
+    sketchName: "",
     mode: "new",
     snapshot: null,
     feature: null,
@@ -283,7 +288,7 @@ export class SketchMode extends Store<SketchModeState> {
       this.setState({ phase: "off", error: `The sketch engine did not load: ${e instanceof Error ? e.message : String(e)}` });
       return false;
     }
-    const id = o.sketch?.id ?? o.id ?? "sketch1";
+    const id = o.sketch?.id ?? o.id ?? nextSketchName([...namesIn(o.document), ...(o.taken ?? [])]);
     const name = o.sketch?.name ?? o.name ?? id;
     const sketch = o.sketch ?? ({ type: "sketch", id, name, plane: o.plane.ref, curves: [] } as v1.SketchFeature);
     let engine: SketchEngine;

@@ -4,6 +4,9 @@
  * - {@link faceSource}: the viewport/selection stream registers a function that returns the
  *   selected planar face (its IR `{ face: Ref }` plane, outward normal and a point on it). Until
  *   then the plane picker offers the origin planes only.
+ * - {@link documentSource}: the document layer registers the open document as a new sketch sees
+ *   it (parameters, part, insertion point, taken names), so dimensions can use the document's
+ *   parameters and every new sketch gets a free id and name.
  * - {@link SKETCH_COMMANDS}: the `sketch.*` app commands the integrator registers in
  *   `commands/sketch.ts` (ids, titles, keys, what they call).
  * - `sketchMode.setSink(...)` (controller): route finished sketches into the command layer.
@@ -11,7 +14,8 @@
  *   `AICAD_ALLOW_DEBUGGER=1`), in the spirit of contract C7's `window.__pzTest`.
  */
 import type { v1 } from "@aicad/ir-types";
-import type { SketchMode, SketchModeState } from "./controller";
+import type { ContextGeometry } from "./context";
+import type { BeginOptions, SketchMode, SketchModeState, SketchPlaneChoice } from "./controller";
 import type { V3 } from "./frames";
 import type { P2 } from "./geom";
 import { PlaneView } from "./view";
@@ -29,6 +33,37 @@ export interface SelectedFace {
 
 /** Set by the viewport stream (C4/C2): the currently selected planar face, if any. */
 export const faceSource: { current: (() => Promise<SelectedFace | null>) | null } = { current: null };
+
+/** Where a new sketch goes, and what its dimensions may use. */
+export interface SketchDocContext {
+  /** The IR v1 document whose parameters dimensions use (null: a document without parameters, IR v0). */
+  document: v1.IrDocument | null;
+  /** The part the sketch goes into (null: the first part). */
+  part: string | null;
+  /** Insert after this feature (null: at the end of the part's timeline). */
+  after: string | null;
+  /** Ids and names the document already uses beyond `document`'s: the new sketch avoids them. */
+  taken: readonly string[];
+}
+
+/**
+ * Set by the document layer: the open document as a new sketch sees it. Today the CadScript
+ * bridge (`sketch/v0-bridge.ts`) sets it from the v0 DocStore; after Phase C the integrator sets
+ * it from `services.ir` (the v1 document, the selected part, the rollback marker).
+ */
+export const documentSource: { current: (() => SketchDocContext | null) | null } = { current: null };
+
+/** The `begin` options for a new sketch on `plane`: the document's parameters, part and names. */
+export function newSketchOptions(plane: SketchPlaneChoice, context: ContextGeometry, doc: SketchDocContext | null): BeginOptions {
+  return {
+    plane,
+    context,
+    ...(doc?.document ? { document: doc.document } : {}),
+    ...(doc?.part ? { part: doc.part } : {}),
+    after: doc?.after ?? null,
+    taken: doc?.taken ?? [],
+  };
+}
 
 /** The `sketch.*` commands for the command layer (plan §2.1 rule 5: UI-state commands). */
 export const SKETCH_COMMANDS = [

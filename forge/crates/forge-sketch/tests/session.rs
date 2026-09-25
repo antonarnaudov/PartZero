@@ -559,6 +559,28 @@ fn dimensions_take_expressions_and_parameters_from_the_document() {
 }
 
 #[test]
+fn a_new_parameter_may_not_take_a_feature_name() {
+    let doc = json!({
+        "schema": "aicad.ir/1",
+        "params": [{ "name": "width", "unit": "mm", "value": 12 }],
+        "parts": [{ "id": "p", "name": "p", "features": [
+            { "type": "sketch", "id": "base", "name": "base", "plane": "XY", "curves": [
+                { "kind": "circle", "id": "c", "center": [0, 0], "radius": 5 }
+            ] }
+        ] }]
+    });
+    let mut s = load(
+        json!({ "type": "sketch", "id": "sketch2", "name": "sketch2", "plane": "XY", "curves": [] }),
+        Some(doc),
+    );
+    for taken in ["width", "base", "sketch2"] {
+        let err = s.define_param(taken, ParamUnit::Mm, "3").unwrap_err();
+        assert_eq!(err.code, "DUPLICATE_NAME", "{taken}: {err:?}");
+    }
+    assert_eq!(s.define_param("depth", ParamUnit::Mm, "3").unwrap(), 3.0);
+}
+
+#[test]
 fn driving_and_driven_toggle_keeps_the_measured_value() {
     let mut s = session();
     apply(

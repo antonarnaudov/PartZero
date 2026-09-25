@@ -14,7 +14,7 @@ import type { SketchMode, SketchModeState, SketchPlaneChoice } from "../../sketc
 import { faceFrame, namedFrame, type NamedPlane } from "../../sketch/frames";
 import { fmt } from "../../sketch/geom";
 import { sketchMode } from "../../sketch/instance";
-import { exposeSketchTestHooks, faceSource } from "../../sketch/integration";
+import { documentSource, exposeSketchTestHooks, faceSource, newSketchOptions } from "../../sketch/integration";
 import { PlaneView } from "../../sketch/view";
 import { SKETCH_TOOLS, type ToolId } from "../../tools/sketch";
 import { useApp, useStore } from "../context";
@@ -369,7 +369,7 @@ export function SketchModeHost(): ReactElement | null {
   const beginOn = useCallback(
     (plane: SketchPlaneChoice) => {
       const context = contextFromBodies(bodies, plane.frame);
-      void sketchMode.begin({ plane, context });
+      void sketchMode.begin(newSketchOptions(plane, context, documentSource.current?.() ?? null));
     },
     [bodies],
   );
