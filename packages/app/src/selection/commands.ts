@@ -203,7 +203,7 @@ export const SELECTION_COMMANDS = {
     category: "Selection",
     description: "Select every visible entity of the filter's box kind (faces, else edges, vertices, bodies).",
     args: NoArgs,
-    keys: ["Mod+A"],
+    // ⌘A is bound canvas-only in viewport/keyboard.ts (in the code editor it must stay "select all text").
     run(_args, ctx) {
       const r = rt(ctx);
       const f = r.selection.getState().filter;

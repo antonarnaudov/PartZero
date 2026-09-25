@@ -3,7 +3,7 @@
  * grid/origin, section, measure and the bodies list (top left); the selection filter and count
  * (bottom centre).
  */
-import { useState, useSyncExternalStore, type ReactElement } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactElement } from "react";
 import { featureNameOfBody } from "../doc/provenance";
 import type { SelectionKind } from "../selection/types";
 import { BODY_SWATCHES, DISPLAY_MODE_LABELS, DISPLAY_MODES, hexToRgb, modeAvailable, rgbToHex } from "./display";
@@ -19,6 +19,14 @@ const VIEWS: Array<{ view: StandardView; label: string; title: string }> = [
   { view: "right", label: "Right", title: "Right (Shift+4)" },
 ];
 
+const SHOW_ITEMS: Array<{ toggle: "grid" | "origin" | "sketches" | "viewCube" | "axes"; label: string; title: string }> = [
+  { toggle: "grid", label: "Grid", title: "Ground grid" },
+  { toggle: "origin", label: "Origin", title: "Origin planes, axes and point (selectable)" },
+  { toggle: "sketches", label: "Sketches", title: "Every sketch (the selected one is always shown)" },
+  { toggle: "viewCube", label: "View cube", title: "The view cube" },
+  { toggle: "axes", label: "Axes gizmo", title: "The axes in the corner" },
+];
+
 export interface ViewToolbarProps {
   runtime: ViewportRuntime;
   run: Run;
@@ -27,11 +35,28 @@ export interface ViewToolbarProps {
 
 export function ViewToolbar({ runtime, run, measureOpen }: ViewToolbarProps): ReactElement {
   const view = useSyncExternalStore(runtime.view.subscribe, runtime.view.getState);
-  const [menu, setMenu] = useState<null | "section" | "bodies">(null);
+  const [menu, setMenu] = useState<null | "section" | "bodies" | "show">(null);
   const native = runtime.adapter?.capabilities().nativeModes ?? DISPLAY_MODES;
-  const toggleMenu = (m: "section" | "bodies"): void => setMenu((cur) => (cur === m ? null : m));
+  const toggleMenu = (m: "section" | "bodies" | "show"): void => setMenu((cur) => (cur === m ? null : m));
+  const barRef = useRef<HTMLDivElement>(null);
+  // A menu closes on a press anywhere outside the toolbar, or on Escape.
+  useEffect(() => {
+    if (!menu) return;
+    const down = (e: PointerEvent): void => {
+      if (!barRef.current?.contains(e.target as Node)) setMenu(null);
+    };
+    const key = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") setMenu(null);
+    };
+    window.addEventListener("pointerdown", down, true);
+    window.addEventListener("keydown", key, true);
+    return () => {
+      window.removeEventListener("pointerdown", down, true);
+      window.removeEventListener("keydown", key, true);
+    };
+  }, [menu]);
   return (
-    <div className="vp-toolbar" role="toolbar" aria-label="View">
+    <div ref={barRef} className="vp-toolbar" role="toolbar" aria-label="View">
       {VIEWS.map((v) => (
         <button key={v.view} type="button" className={`vp-btn${view.view === v.view ? " active" : ""}`} title={v.title} data-view={v.view} onClick={() => run({ id: "view.setView", args: { view: v.view } })}>
           {v.label}
@@ -73,15 +98,32 @@ export function ViewToolbar({ runtime, run, measureOpen }: ViewToolbarProps): Re
           </option>
         ))}
       </select>
-      <button type="button" className={`vp-btn${view.grid ? " on" : ""}`} title="Ground grid" aria-pressed={view.grid} data-testid="toggle-grid" onClick={() => run({ id: "view.setToggle", args: { toggle: "grid" } })}>
-        Grid
-      </button>
-      <button type="button" className={`vp-btn${view.origin ? " on" : ""}`} title="Origin planes, axes and point" aria-pressed={view.origin} data-testid="toggle-origin" onClick={() => run({ id: "view.setToggle", args: { toggle: "origin" } })}>
-        Origin
-      </button>
-      <button type="button" className={`vp-btn${view.sketches ? " on" : ""}`} title="Show every sketch (the selected one is always shown)" aria-pressed={view.sketches} data-testid="toggle-sketches" onClick={() => run({ id: "view.setToggle", args: { toggle: "sketches" } })}>
-        Sketches
-      </button>
+      <span className="vp-menu-anchor">
+        <button type="button" className={`vp-btn${menu === "show" ? " on" : ""}`} title="Show or hide the grid, origin, sketches, view cube and axes" aria-expanded={menu === "show"} data-testid="show-menu" onClick={() => toggleMenu("show")}>
+          Show ▾
+        </button>
+        {menu === "show" && (
+          <div className="vp-menu" role="menu">
+            {SHOW_ITEMS.map((t) => (
+              <button
+                key={t.toggle}
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={view[t.toggle]}
+                className={`vp-menu-item check${view[t.toggle] ? " checked" : ""}`}
+                data-testid={`toggle-${t.toggle.toLowerCase()}`}
+                title={t.title}
+                onClick={() => run({ id: "view.setToggle", args: { toggle: t.toggle } })}
+              >
+                <span className="vp-check" aria-hidden="true">
+                  {view[t.toggle] ? "✓" : ""}
+                </span>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </span>
       <span className="vp-menu-anchor">
         <button type="button" className={`vp-btn${view.section ? " on" : ""}`} title="Section view" aria-expanded={menu === "section"} data-testid="section-menu" onClick={() => toggleMenu("section")}>
           Section

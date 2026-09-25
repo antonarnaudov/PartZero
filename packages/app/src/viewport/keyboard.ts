@@ -14,8 +14,15 @@ function isEditable(el: EventTarget | null): boolean {
   return el.closest(".monaco-editor") !== null || el.isContentEditable || el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
 }
 
+/**
+ * Shortcuts that only make sense on the canvas and must never reach a text field, so they are
+ * not in the command specs (the app keyboard runs modifier shortcuts inside editors too).
+ */
+const CANVAS_ONLY: ReadonlyArray<[string, string]> = [["mod+a", "selection.selectAll"]];
+
 export function installViewportKeyboard(registry: ViewportCommandRegistry, appRegistry: AppCommandRegistry, isMac: boolean, isBlocked: () => boolean): () => void {
   const keymap = registry.keymap();
+  for (const [k, id] of CANVAS_ONLY) if (!keymap.has(k)) keymap.set(k, id);
   const appKeys = appRegistry.keymap();
   const handler = (e: KeyboardEvent): void => {
     if (e.isComposing || e.repeat || e.defaultPrevented) return;

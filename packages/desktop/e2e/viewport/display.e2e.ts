@@ -133,21 +133,29 @@ test("per-body colour and visibility from the Bodies menu reach the renderer", a
 
 test("grid toggle and the origin planes, axes and point (selectable)", async () => {
   const { page } = L;
+  await page.getByTestId("show-menu").click();
   await page.getByTestId("toggle-grid").click();
   expect(await page.evaluate(() => window.__pzView!.view().grid)).toBe(true);
-  await expect(page.getByTestId("toggle-grid")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("toggle-grid")).toHaveAttribute("aria-checked", "true");
   await page.getByTestId("toggle-grid").click();
   expect(await page.evaluate(() => window.__pzView!.view().grid)).toBe(false);
+  // The view cube can be hidden too.
+  await page.getByTestId("toggle-viewcube").click();
+  await expect(page.getByTestId("view-cube")).toHaveCount(0);
+  await page.getByTestId("toggle-viewcube").click();
+  await expect(page.getByTestId("view-cube")).toBeVisible();
 
   await expect(page.getByTestId("origin-display")).toHaveCount(0);
   await page.getByTestId("toggle-origin").click();
+  await page.getByTestId("show-menu").click();
+  await expect(page.getByTestId("toggle-origin")).toHaveCount(0);
   await expect(page.getByTestId("origin-display")).toBeVisible();
   await page.locator('.vp-origin-label[data-origin="XZ"]').click();
   await expect.poll(async () => (await selection(page)).items).toEqual([{ kind: "origin", id: "XZ", label: "XZ plane" }]);
   await page.locator('.vp-axis-hit[data-origin="Z"]').click({ force: true, modifiers: ["Shift"] });
   await expect.poll(async () => (await selection(page)).items.map((i) => i.id)).toEqual(["XZ", "Z"]);
   await page.keyboard.press("Escape");
-  await page.getByTestId("toggle-origin").click();
+  await view(page, { id: "view.setToggle", args: { toggle: "origin", on: false } });
   await expect(page.getByTestId("origin-display")).toHaveCount(0);
   // Clicking the model still works with the overlay present.
   await clickWorld(page, [0, 18, 5]);

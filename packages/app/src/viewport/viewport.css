@@ -353,6 +353,16 @@
 .vp-menu-item:hover {
   background: var(--accent-weak);
 }
+.vp-menu-item.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.vp-check {
+  width: 12px;
+  color: var(--accent-text);
+  text-align: center;
+}
 .vp-menu-note {
   padding: 5px 8px;
   color: var(--text-muted);

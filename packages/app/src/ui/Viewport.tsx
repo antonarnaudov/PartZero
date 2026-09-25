@@ -378,7 +378,9 @@ export function Viewport(): ReactElement {
           onOriginClick={onOriginClick}
           onOriginHover={onOriginHover}
           sketches={shownSketches}
-          sketchPickable={sel.filter.sketch}
+          // Overlay curves are not depth-tested: they take clicks only when nothing else is selectable
+          // (key 5), so they never steal a click meant for a face in front of them.
+          sketchPickable={onlySketches}
           onSketchClick={onSketchClick}
           onSketchHover={onSketchHover}
         />

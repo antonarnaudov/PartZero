@@ -133,11 +133,17 @@ test("box select: window (left→right) takes whole visible faces, crossing (rig
 test("sketches: shown on demand, picked with the sketch filter, selected in the timeline", async () => {
   const { page } = L;
   await expect(page.getByTestId("sketch-display")).toHaveCount(0);
+  await page.getByTestId("show-menu").click();
   await page.getByTestId("toggle-sketches").click();
   await expect(page.getByTestId("sketch-display")).toBeVisible();
   // 4 lines + 5 circles of the outline sketch.
   await expect(page.locator(".vp-sketch")).toHaveCount(9);
+  // Shown curves do not take clicks meant for the model (they are not depth-tested).
+  await clickWorld(page, [0, 18, 5]);
+  await expect.poll(keys).toEqual(["plate/cap:end"]);
+  await page.getByTestId("show-menu").click();
   await page.getByTestId("toggle-sketches").click();
+  await page.keyboard.press("Escape");
   await expect(page.getByTestId("sketch-display")).toHaveCount(0);
   // Key 5: only sketches are selectable, so every sketch is shown to pick from.
   await page.locator(".viewport-canvas").focus();
