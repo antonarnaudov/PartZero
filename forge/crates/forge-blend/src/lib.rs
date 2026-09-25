@@ -88,7 +88,8 @@
 //!   vertices of more than three faces (each vertex of a three-chamfer corner triangle): both
 //!   `SHELL_FAILED` naming them;
 //! - a blend radius equal to a face's width (a full round), a blend ending at a reflex vertex
-//!   on a curved face, openings with both smooth and sharp edges, draft.
+//!   on a curved face, openings with both smooth and sharp edges, draft of a curved face or
+//!   of a face next to a curved one (`DRAFT_FACE_UNSUPPORTED`, `DRAFT_FAILED`).
 //!
 //! **Selections** are [`Pick`]s — an id together with the index of the body it was resolved
 //! on (the caller's numbering, e.g. forge-refs' `Entity::body`) and its key — and the
@@ -101,12 +102,13 @@
 //! patches `F/corner:{V}`, shell offsets `S/offset:{X}` and rims `S/rim:{X}`; new edges and
 //! vertices `F/edge:{A|B}`, `F/vertex:{…}`; modified entities keep their keys.
 //!
-//! Draft (§6.9) is not implemented (ADR 0013 decision 5): engines reject it with
-//! `UNSUPPORTED_FEATURE`.
+//! Draft (§6.9, optional in v1) is built on planar faces between planar faces ([`draft`]):
+//! drafted faces keep their keys.
 
 mod blend;
 mod cert2d;
 mod check;
+mod draft;
 mod error;
 mod geom;
 mod interfere;
@@ -128,9 +130,11 @@ pub mod testing {
         crate::cert2d::with_crossings_budget(budget, f)
     }
 }
+pub use draft::{DraftOptions, DraftSpec, draft};
 pub use error::{
-    BlendError, BlendOp, EdgeDistanceLimit, EdgeRadiusLimit, Limit, Named, ShellLimit,
-    ShellLimitReason, UnsupportedEdge, UnsupportedReason, round_down_mm,
+    BlendError, BlendOp, DraftFaceReason, EdgeDistanceLimit, EdgeRadiusLimit, Limit, Named,
+    ShellLimit, ShellLimitReason, UnsupportedEdge, UnsupportedFace, UnsupportedReason,
+    round_down_mm,
 };
 pub use forge_ir::v1::ShellDirection;
 pub use keys::{KeyMap, Pick, pick_edges, pick_faces};

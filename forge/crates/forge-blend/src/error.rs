@@ -133,7 +133,30 @@ pub struct ShellLimit {
     pub reason: ShellLimitReason,
 }
 
-/// A fillet, chamfer or shell failure.
+/// Why a face cannot be drafted (`DRAFT_FACE_UNSUPPORTED`, SPEC §6.9).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum DraftFaceReason {
+    /// The face is not a plane.
+    NotPlanar,
+    /// Its normal is not perpendicular to the pull direction.
+    NotPerpendicular,
+    /// It is not a face of the body drafted.
+    NotOnBody,
+}
+
+/// One face that cannot be drafted.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct UnsupportedFace {
+    /// Key.
+    pub key: String,
+    /// Display name.
+    pub name: String,
+    /// Why.
+    pub reason: DraftFaceReason,
+}
+
+/// A fillet, chamfer, shell or draft failure.
 #[derive(Clone, Debug, PartialEq, Error)]
 pub enum BlendError {
     /// A value is out of range (`INVALID_RADIUS` for a fillet radius, `INVALID_VALUE`
@@ -242,6 +265,37 @@ pub enum BlendError {
         /// What could not be built.
         reason: String,
     },
+    /// `DRAFT_FACE_UNSUPPORTED` (SPEC §6.9): a face that is not planar, not perpendicular to
+    /// the pull direction, or not on the body.
+    #[error("{} face(s) cannot be drafted: {}", faces.len(), draft_list(faces))]
+    DraftFaceUnsupported {
+        /// The faces and reasons.
+        faces: Vec<UnsupportedFace>,
+    },
+    /// `DRAFT_FAILED`: the configuration cannot be built (explained in `reason`), never a
+    /// wrong body.
+    #[error("draft failed: {reason}")]
+    DraftFailed {
+        /// The drafted faces.
+        faces: Vec<Named>,
+        /// What could not be built, with entity names.
+        reason: String,
+    },
+}
+
+fn draft_list(faces: &[UnsupportedFace]) -> String {
+    faces
+        .iter()
+        .map(|f| {
+            let r = match f.reason {
+                DraftFaceReason::NotPlanar => "not planar",
+                DraftFaceReason::NotPerpendicular => "not perpendicular to the pull direction",
+                DraftFaceReason::NotOnBody => "not on the body",
+            };
+            format!("{} ({r})", f.name)
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn limit_hint(edges: &[EdgeRadiusLimit]) -> String {
@@ -317,6 +371,8 @@ impl BlendError {
             BlendError::ThicknessTooLarge { .. } => "SHELL_THICKNESS_TOO_LARGE".into(),
             BlendError::FaceNotOnBody { .. } => "SHELL_FACE_NOT_ON_BODY".into(),
             BlendError::ShellFailed { .. } => "SHELL_FAILED".into(),
+            BlendError::DraftFaceUnsupported { .. } => "DRAFT_FACE_UNSUPPORTED".into(),
+            BlendError::DraftFailed { .. } => "DRAFT_FAILED".into(),
         }
     }
 
@@ -358,6 +414,10 @@ impl BlendError {
             }
             BlendError::FaceNotOnBody { faces } => json!({ "faces": faces }),
             BlendError::ShellFailed { reason } => json!({ "reason": reason }),
+            BlendError::DraftFaceUnsupported { faces } => json!({ "faces": faces }),
+            BlendError::DraftFailed { faces, reason } => {
+                json!({ "faces": faces, "reason": reason })
+            }
         };
         match v {
             Value::Object(m) => m,
@@ -419,6 +479,8 @@ mod tests {
             "SHELL_THICKNESS_TOO_LARGE",
             "SHELL_FACE_NOT_ON_BODY",
             "SHELL_FAILED",
+            "DRAFT_FACE_UNSUPPORTED",
+            "DRAFT_FAILED",
         ] {
             assert!(
                 forge_ir::v1::codes::CATALOGUE.iter().any(|x| x.code == c),
