@@ -50,7 +50,9 @@ const Ack = z
   .array(z.string().min(1).max(200))
   .max(1000)
   .optional()
-  .describe("The ids of the newly failing features to accept, exactly as a COMMAND_NEW_FAILURES refusal listed them.");
+  .describe(
+    "The ids of the newly failing features to accept, exactly as a COMMAND_NEW_FAILURES refusal listed them. Only your own (agent-authored) features: making one of the user's features fail is refused (unapproved_user_change); ask the user instead.",
+  );
 
 function errorText(e: unknown): string {
   if (e instanceof CommandEngineError) {

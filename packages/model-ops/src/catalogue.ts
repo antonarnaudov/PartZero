@@ -302,7 +302,7 @@ export const OP_CATALOGUE: readonly OpInfo[] = [
     tool: "move_feature",
     area: "feature",
     description:
-      "Reorder a feature within its part: it goes after `after` (a feature id or name; null = first). Refused with COMMAND_ILLEGAL_ORDER when a feature would reference a later one (SPEC-v1 §0.3 rule 4).",
+      "Reorder a feature within its part: it goes after `after` (a feature id or name; null = first). Refused with COMMAND_ILLEGAL_ORDER when a feature would reference a later one (SPEC-v1 §0.3 rule 4). Moving a user-authored feature needs the user's approval (ADR 0015: unapproved_user_change).",
   },
   {
     op: "setSuppressed",
@@ -355,14 +355,15 @@ export const OP_CATALOGUE: readonly OpInfo[] = [
     tool: "set_rollback",
     area: "view",
     description:
-      "Move the timeline's rollback marker after a feature (id or name): later features are not built, and new features are inserted at the marker. null clears it (everything is built).",
+      "Move the timeline's rollback marker after a feature (id or name): later features are not built, and new features are inserted at the marker. null clears it (everything is built). The marker is the user's: an agent needs their approval to move it (unapproved_user_change).",
   },
   {
     op: "setAppearance",
     title: "Set Appearance",
     tool: "set_appearance",
     area: "view",
-    description: 'Set the display colour ("#rrggbb", or null for the default) of the bodies a feature creates. Geometry-free.',
+    description:
+      'Set the display colour ("#rrggbb", or null for the default) of the bodies a feature creates. Geometry-free. Recolouring a user-authored feature needs the user\'s approval (unapproved_user_change).',
   },
   {
     op: "setAuthor",
