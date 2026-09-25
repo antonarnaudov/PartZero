@@ -1,0 +1,31 @@
+packages/app/src/file/partzero/index.ts
+  s_59c0dd2af30db2::t_82c603cbb66b61 1-6
+packages/app/src/file/partzero/manifest.ts
+  s_59c0dd2af30db2::t_a45a3cdb29e2f5 1-108
+packages/app/src/file/partzero/codec.ts
+  s_59c0dd2af30db2::t_5e63f5f9e0c879 1-347
+packages/app/src/file/partzero/zip.ts
+  s_59c0dd2af30db2::t_0843d07ab5ed51 1-237
+packages/app/test/partzero.test.ts
+  s_59c0dd2af30db2::t_df861cbc5e36b4 1-238
+packages/app/src/file/partzero/deflate.ts
+  s_59c0dd2af30db2::t_4b28270bd37a9b 1-349
+packages/app/src/file/partzero/checksum.ts
+  s_59c0dd2af30db2::t_b99a6eece7743b 1-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2ebf63e2e1c73aa77b184a5fe369792c44702e71",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
