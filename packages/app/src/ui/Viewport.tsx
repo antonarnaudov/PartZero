@@ -31,6 +31,7 @@ import { SelectionBar, ViewToolbar } from "../viewport/ViewToolbar";
 import "../viewport/viewport.css";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
+import { useToolPreviewBodies, useToolPreviewStale } from "./shell/tool-preview";
 
 function readColors(el: HTMLElement): ViewportColors {
   const cs = getComputedStyle(el);
@@ -87,10 +88,14 @@ export function Viewport(): ReactElement {
   const view = useSyncExternalStore(runtime.view.subscribe, runtime.view.getState);
   const measureOpen = useSyncExternalStore(runtime.measure.subscribe, () => runtime.measure.getState().open);
   const reviewOpen = !!review && review.status === "ready" && review.resolution === null;
+  const toolPreview = useToolPreviewBodies();
+  const toolPreviewStale = useToolPreviewStale();
   const showPreview = reviewOpen && review.previewEnabled && review.preview.status === "ready";
+  // An open tool's live preview wins over the proposal preview; both are tinted.
+  const tinted = toolPreview !== null || showPreview;
   // Reference meshes (imported STL/3MF/OBJ) are drawn with the document's bodies, never edited.
   const refBodies = useReferenceBodies();
-  const docShown = showPreview ? review.preview.bodies : bodies;
+  const docShown = toolPreview ?? (showPreview ? review.preview.bodies : bodies);
   const shown = useMemo(() => (refBodies.length ? [...docShown, ...refBodies] : docShown), [docShown, refBodies]);
   const extent = useMemo(() => zExtent(shown), [shown]);
 
@@ -188,9 +193,9 @@ export function Viewport(): ReactElement {
     if (!adapter || !container) return;
     requestAnimationFrame(() => {
       const colors = readColors(container);
-      adapter.setColors(showPreview ? { ...colors, body: TINT_CSS } : colors);
+      adapter.setColors(tinted ? { ...colors, body: TINT_CSS } : colors);
     });
-  }, [adapter, theme, showPreview]);
+  }, [adapter, theme, tinted]);
 
   // Bodies (the document's, or the proposal preview's); refit when another document was loaded.
   const lastFitDoc = useRef(0);
@@ -368,7 +373,15 @@ export function Viewport(): ReactElement {
   const originSize = runtime.topo.bbox ? Math.max(10, Math.max(...runtime.topo.bbox.max.map((v, i) => Math.abs(v - runtime.topo.bbox!.min[i]!))) * 0.6) : 40;
 
   return (
-    <div className="viewport" data-testid="viewport" data-shown={showPreview ? "proposal" : "current"} data-extent-z={extent} data-display={view.display} data-renderer={vpStatus.kind}>
+    <div
+      className="viewport"
+      data-testid="viewport"
+      data-shown={toolPreview ? "tool-preview" : showPreview ? "proposal" : "current"}
+      data-preview-stale={toolPreview && toolPreviewStale ? "true" : undefined}
+      data-extent-z={extent}
+      data-display={view.display}
+      data-renderer={vpStatus.kind}
+    >
       <div ref={containerRef} className="viewport-surface" />
       {frame && (
         <Overlay
@@ -419,7 +432,7 @@ export function Viewport(): ReactElement {
           <Icon.Spinner size={12} /> Evaluating
         </div>
       )}
-      {empty && !showPreview && <div className="vp-empty">{empty}</div>}
+      {empty && !tinted && <div className="vp-empty">{empty}</div>}
       {reviewOpen && (
         <div className={`vp-proposal${showPreview ? "" : " off"}`} data-testid="proposal-preview-chip">
           {showPreview ? (

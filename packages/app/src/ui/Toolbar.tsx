@@ -12,7 +12,7 @@ import { SketchButton } from "./sketch/SketchModeHost";
  * user's Bambu Studio. Desktop only. It calls `openInSlicer` directly until `file.openInSlicer`
  * (with ⌘P) is registered in the command layer; failures surface as toasts like other commands.
  */
-function OpenInSlicerButton(): ReactElement | null {
+export function OpenInSlicerButton(): ReactElement | null {
   const { services } = useApp();
   const [busy, setBusy] = useState(false);
   if (!services.host.print) return null;
@@ -65,11 +65,11 @@ export function Toolbar(): ReactElement {
 
   return (
     <header className={`toolbar platform-${platform}`} data-testid="toolbar">
-      <div className="brand" aria-label="aicad">
+      <div className="brand" aria-label="PartZero">
         <span className="brand-mark" aria-hidden="true">
           <Icon.Cube size={14} />
         </span>
-        <span className="brand-name">aicad</span>
+        <span className="brand-name">PartZero</span>
       </div>
       <div className="tb-group">
         <ToolButton cmd={{ id: "file.new" }} title="New" keyHint="Mod+N">

@@ -105,7 +105,7 @@ export const WELCOME_MESSAGE: ChatMessage = {
 
 export const WELCOME_MESSAGE_WEB: ChatMessage = {
   ...WELCOME_MESSAGE,
-  text: "The design agent runs in the desktop app (it needs the agent process and your API keys). The chat UI is shown so the co-editing flow can be tried.",
+  text: "The design agent runs in the desktop app, on your Claude Code plan. The chat is shown here so the co-editing flow can be tried.",
 };
 
 export class UiStore extends Store<UiState> {

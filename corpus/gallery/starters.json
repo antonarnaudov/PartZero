@@ -1,0 +1,45 @@
+{
+  "$comment": "The five starter parts of docs/ALPHA-0-PLAN.md §2.4: the welcome screen's prompt chips and, where Forge already builds the part with committed features, a ready-made parametric example (IR v1 CadScript beside this file). packages/app/test/gallery.test.ts builds every example with the Forge CLI and checks its bodies, closed-form volumes and bed fit. `needs`: why a starter has no example yet.",
+  "starters": [
+    {
+      "id": "p1-storage-bin",
+      "title": "Storage bin with dividers",
+      "blurb": "80 × 40 × 30 mm, 2 compartments, 1.2 mm walls",
+      "prompt": "A desk storage bin with 2 compartments in a row, 40 mm per compartment: 80 × 40 mm outside and 30 mm tall, 4 mm rounded vertical corners, 1.2 mm walls and floor, open top. A 1.2 mm divider every 40 mm, 5 mm lower than the rim, and a 0.4 mm chamfer on the outside bottom edge. Make the compartment count a parameter.",
+      "example": null,
+      "needs": "shell, patterns and chamfers (IR v1 features still being finished)"
+    },
+    {
+      "id": "p2-phone-stand",
+      "title": "Phone stand",
+      "blurb": "Holds a phone at about 65°, with a cable notch",
+      "prompt": "Make me a phone stand for my desk that holds my phone at about 65° so I can watch videos, with a gap for the charging cable.",
+      "example": "p2-phone-stand.cad.ts",
+      "exampleNote": "Our reading of the vague prompt: every assumption (angle, slot for the phone, width, lip) is a parameter. The lip is rounded in the sketch."
+    },
+    {
+      "id": "p3-cable-clip",
+      "title": "Screw-on cable clip",
+      "blurb": "For a 6 mm cable, one countersunk M3 screw",
+      "prompt": "A screw-on cable clip for a 6 mm cable: a C-shaped ring with 6 mm inside diameter and 1.6 mm wall, centre 6 mm above the bottom, with a 4.5 mm gap at the top so the cable snaps in. It sits at one end of a 26 × 10 × 3 mm foot, flush with the end, and the other end has one countersunk hole for an M3 flat-head screw. 10 mm wide.",
+      "example": null,
+      "needs": "countersunk hole features (IR v1 features still being finished)"
+    },
+    {
+      "id": "p4-knob",
+      "title": "Knob for a D-shaft pot",
+      "blurb": "30 mm, 18 grip grooves, press-fit D bore",
+      "prompt": "A knob for a potentiometer with a 6 mm D-shaft, 4.5 mm across the flat: 30 mm diameter, 16 mm tall, a D-shaped bore 12 mm deep from the bottom that press-fits the metal shaft, with a 0.4 mm chamfer on the bore's bottom edge, 18 half-round grip grooves 1.5 mm wide around the side running from the bottom to 2 mm below the top, a 1 mm chamfer on the top edge, and a 0.6 mm deep pointer line on top that stops short of the chamfer.",
+      "example": null,
+      "needs": "circular patterns and chamfers (IR v1 features still being finished)"
+    },
+    {
+      "id": "p5-electronics-box",
+      "title": "Electronics box with a lid",
+      "blurb": "For an ESP32 dev board; the lid slides on",
+      "prompt": "A small box with a lid for an ESP32 dev board: inside 60 × 32 mm and 22 mm deep, 2 mm walls and floor, 3 mm rounded vertical corners outside. The lid is a 2 mm plate with a 3 mm deep lip that slides inside the box using my slip clearance; round the lip's outside corners to 1 mm minus half the clearance, so they follow the box's inside corners. Cut a 12 × 7 mm slot for the USB cable in one short wall, 5 mm above the floor. Put the lid next to the box so both print flat.",
+      "example": "p5-electronics-box.cad.ts",
+      "exampleNote": "The slip clearance is the PLA default (0.2 mm); change `clearance_slip` for your material."
+    }
+  ]
+}

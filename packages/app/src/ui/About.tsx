@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
+import { BRAND_NAME, BrandMark } from "./shell/BrandMark";
 
 /**
  * Where recipients of this build can get its source code (MPL-2.0 §3.2(a) asks every executable
@@ -8,12 +9,12 @@ import { Icon } from "./icons";
  * set {@link SOURCE_CODE_URL_IS_PLACEHOLDER} to false when it has one. `.invalid` is reserved
  * (RFC 2606), so the placeholder can never resolve to someone else's site.
  */
-export const SOURCE_CODE_URL = "https://example.invalid/aicad";
+export const SOURCE_CODE_URL = "https://example.invalid/partzero";
 export const SOURCE_CODE_URL_IS_PLACEHOLDER = true;
 
 /** Files written next to `index.html` by the production build (packages/app/vite.config.ts). */
 const TEXT_FILES = {
-  license: { file: "LICENSE.txt", title: "aicad license (MPL-2.0)" },
+  license: { file: "LICENSE.txt", title: "PartZero license (MPL-2.0)" },
   notices: { file: "THIRD_PARTY_NOTICES.txt", title: "Third-party notices" },
 } as const;
 
@@ -66,8 +67,12 @@ export function AboutDialog(): ReactElement {
   const engines = useStore(services.engines, (s) => s.candidates);
   const active = useStore(services.engines, (s) => s.active);
   const viewport = useStore(services.ui, (s) => s.viewport);
+  const agentSettings = useStore(services.agent, (s) => s.settings);
   const [view, setView] = useState<"about" | TextView>("about");
   const close = (): void => services.ui.closeDialog();
+  useEffect(() => {
+    if (services.agent.getState().available && !services.agent.getState().settings) void services.agent.refreshSettings().catch(() => undefined);
+  }, [services]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === "Escape") close();
@@ -75,8 +80,19 @@ export function AboutDialog(): ReactElement {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+  const build = info?.build;
+  const claude = agentSettings?.cli?.find((c) => c.id === "claude-cli");
+  const designer = agentSettings ? (agentSettings.profiles.find((p) => p.id === agentSettings.models.designer)?.name ?? agentSettings.models.designer) : null;
   const rows: Array<[string, string]> = [
     ["Version", info?.version ?? "—"],
+    [
+      "Build",
+      build
+        ? [build.commit ? `${build.commit.slice(0, 12)}${build.dirty ? " (modified tree)" : ""}` : "no commit (development run)", build.edition, build.builtAt ? `built ${build.builtAt}` : null].filter(Boolean).join(" · ")
+        : "development run",
+    ],
+    ["Claude Code", claude ? [claude.version ? `v${claude.version}` : "version unknown", claude.support.replace("_", " "), claude.auth === "logged_in" ? "logged in" : claude.auth.replace("_", " ")].join(" · ") : agentSettings ? "not found" : "—"],
+    ["Design model", designer ?? "—"],
     ["Electron / Chrome / Node", info ? `${info.electron} / ${info.chrome} / ${info.node}` : "—"],
     ["Platform", info ? `${info.platform} ${info.arch}` : "—"],
     ["Cross-origin isolated", String(globalThis.crossOriginIsolated === true)],
@@ -86,13 +102,13 @@ export function AboutDialog(): ReactElement {
   ];
   return (
     <div className="overlay" onMouseDown={close}>
-      <div className={`dialog about${view === "about" ? "" : " about-text"}`} role="dialog" aria-label="About aicad" onMouseDown={(e) => e.stopPropagation()}>
+      <div className={`dialog about${view === "about" ? "" : " about-text"}`} role="dialog" aria-label={`About ${BRAND_NAME}`} data-testid="about-dialog" onMouseDown={(e) => e.stopPropagation()}>
         <header className="dialog-head">
           {view === "about" ? (
             <>
-              <Icon.Cube size={15} />
-              <h2>aicad</h2>
-              <span className="muted small">AI-native CAD · app shell spike</span>
+              <BrandMark size={22} />
+              <h2>{BRAND_NAME}</h2>
+              <span className="muted small">AI-native CAD for makers</span>
             </>
           ) : (
             <>
@@ -119,7 +135,7 @@ export function AboutDialog(): ReactElement {
             </dl>
             <section className="about-licenses" aria-label="Licenses" data-testid="about-licenses">
               <p className="small">
-                aicad is free software under the Mozilla Public License 2.0. CadScript, the file format and the SDK are Apache-2.0. It includes third-party software under
+                {BRAND_NAME} is free software under the Mozilla Public License 2.0. CadScript, the file format and the SDK are Apache-2.0. It includes third-party software under
                 their own licenses.
               </p>
               <p className="small" data-testid="about-source">

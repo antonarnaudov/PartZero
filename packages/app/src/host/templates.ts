@@ -30,19 +30,15 @@ const sources = import.meta.glob("../../../../corpus/makerbench/*.cad.ts", { eag
 
 export const BLANK_TEMPLATE_ID = "blank";
 
-/** The document `file.new` creates. */
-export const BLANK_SOURCE = `import { doc, part, sketch, line, circle, extrude, revolve, XY, XZ, YZ } from "@aicad/std";
+/**
+ * The document `file.new` creates, and the app starts with: an empty part (ALPHA-0-PLAN W2). The
+ * welcome screen shows over it until the part gets its first feature.
+ */
+export const BLANK_SOURCE = `import { doc, part, sketch, line, arc, circle, extrude, revolve, XY, XZ, YZ } from "@aicad/std";
 
 doc({ name: "untitled", description: "" });
 
 part("part");
-const base = sketch(XY, {
-  bottom: line([-20, -15], [20, -15]),
-  right: line([20, -15], [20, 15]),
-  top: line([20, 15], [-20, 15]),
-  left: line([-20, 15], [-20, -15]),
-});
-const block = extrude(base, { distance: 10 });
 `;
 
 function fileStem(path: string): string {
