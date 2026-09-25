@@ -33,6 +33,7 @@ function useExec(): (id: string, args?: Record<string, unknown>) => void {
   return (id, args = {}) => void commands.executeUnknown({ id, args }, { source: "ui" });
 }
 
+/** Escape closes the dialog. Capture phase: the app's keyboard handler (also capture, registered first) stops propagation. */
 function useEscape(onClose: () => void): void {
   useEffect(() => {
     const h = (e: KeyboardEvent): void => {
@@ -41,8 +42,8 @@ function useEscape(onClose: () => void): void {
         onClose();
       }
     };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
+    window.addEventListener("keydown", h, true);
+    return () => window.removeEventListener("keydown", h, true);
   }, [onClose]);
 }
 

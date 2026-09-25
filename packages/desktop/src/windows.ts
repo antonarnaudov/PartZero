@@ -234,10 +234,11 @@ export class DocumentWindows<W extends WindowLike> {
       this.reveal(existing);
       return;
     }
-    const cur = this.lastFocused();
-    if (cur && cur.info?.pristine && cur.startupTaken && !cur.win.webContents.isDestroyed()) {
-      cur.win.webContents.send("files:event", { type: "open", path });
-      this.reveal(cur.win);
+    // An untitled, unchanged window is reused (the most recently focused one), as a new window would be empty anyway.
+    const empty = this.live().find((r) => !r.hidden && r.info?.pristine === true && r.startupTaken && !r.win.webContents.isDestroyed());
+    if (empty) {
+      empty.win.webContents.send("files:event", { type: "open", path });
+      this.reveal(empty.win);
       return;
     }
     this.open({ open: path });

@@ -12,7 +12,6 @@
  *   so restoring a snapshot can grant it again without letting a renderer name an arbitrary file.
  */
 import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { readFileCapped, writeFileAtomic } from "./files.js";
 
@@ -112,9 +111,10 @@ export class RecoveryStore {
     return readFileCapped(join(this.dir, `${id}.partzero`), MAX_SNAPSHOT_BYTES);
   }
 
+  /** Remove a snapshot. Synchronous underneath: a window closing during a quit must not leave it behind. */
   async discard(id: string): Promise<void> {
     if (!isRecoveryId(id)) throw new Error("invalid recovery id");
-    await rm(join(this.dir, `${id}.json`), { force: true });
-    await rm(join(this.dir, `${id}.partzero`), { force: true });
+    rmSync(join(this.dir, `${id}.json`), { force: true });
+    rmSync(join(this.dir, `${id}.partzero`), { force: true });
   }
 }
