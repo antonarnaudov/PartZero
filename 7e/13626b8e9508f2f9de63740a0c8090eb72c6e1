@@ -1,0 +1,22 @@
+packages/app/src/ui/model/TimelineBar.tsx
+  s_59c0dd2af30db2::t_94311545778852 343-344,347-351,355-356,493-496
+packages/desktop/e2e/model-panels.e2e.ts
+  s_59c0dd2af30db2::t_dc3374286612c7 123-124,127-134
+  s_59c0dd2af30db2::t_94311545778852 125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7e13626b8e9508f2f9de63740a0c8090eb72c6e1",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
