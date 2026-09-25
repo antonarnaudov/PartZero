@@ -78,7 +78,21 @@ Stop (keeps the steps), a 10-minute wall clock by default (`OPERATOR_WALL_MS`), 
 | 1 | a 40 mm cube with a 10 mm hole through the top and 2 mm fillets on the vertical edges | 23.2 s | 4 (1 refused call before them: `feature_json` inside `apply_ops`, now accepted) | 4 features ok, one valid 40×40×40 body, V 60 721 mm³ | ≈ $0.36 notional; the plan read 5-hour 37 %, 7-day 83 % after it |
 | 2 | a 60 × 40 × 6 mm mounting plate with 3 mm rounded corners, four M3 countersunk screw holes 6 mm in from each corner, and a Ø20 boss in the middle, 10 mm tall, with an M5 heat-set insert hole in its top | 41.6 s | 7 (1 refused, `HOLE_OPTIONS_CONFLICT`, repaired from its hint) | 6 features ok, one valid 60×40×16 body; parametric; ISO 10642 countersinks; M5 insert preset | ≈ $0.28 notional; 5-hour 39 %, 7-day 84 % after it |
 
-In both runs the features appeared in the timeline one by one while the run was going (timestamps in `packages/desktop/test-results/agent-operator-live-run{1,2}.json`, screenshots `…-mid.png` / `…-end.png`; git-ignored). The notional cost is the API list price Claude Code reports; the subscription is not billed per token.
+In both runs the features appeared in the timeline one by one while the run was going. The harness polls the chat and the model every 0.4 s; times are from pressing Enter (its JSON and screenshots go to the git-ignored `packages/desktop/test-results/`, which the next e2e run clears, so they are copied here):
+
+| Run 1 | | Run 2 | |
+|---|---|---|---|
+| 3.5 s | plan shown (6 steps) | 7.8 s | step: add plate, corner, hole and boss parameters |
+| 9.8 s | `base` sketch in the model | 10.7 s | `plate_sk` sketch |
+| 11.9 s | `cube` extrude (40×40×40, V 64 000) | 12.7 s | `plate` extrude (60×40×6) |
+| 14.6 s | `rounds` fillet | 15.5 s | `boss_sk` on the plate top |
+| 17.0 s | `bore` hole (V 60 721.1) | 17.9 s | `boss` joined (60×40×16) |
+| 17.7 s | check_model ✓ | 23.2 s | `mounts`: 4 × M3 countersunk |
+| 20.9 s | finish accepted | 28.2 s | refused: insert hole with a depth (`HOLE_OPTIONS_CONFLICT`: an insert sets its own) |
+| 23.2 s | run ended (9 turns, 8 tool calls) | 31.0 s | `insert_hole` M5 insert, repaired |
+| | | 39.1 s | finish accepted; 41.6 s run ended (13 turns, 12 tool calls) |
+
+The notional cost is the API list price Claude Code reports; the subscription is not billed per token. The plan percentages are the owner's windows as Claude Code reported them after each run (they include all other use of the plan).
 
 ## Not built / open
 
