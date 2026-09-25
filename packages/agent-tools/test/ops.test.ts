@@ -45,11 +45,13 @@ describe("the op tools", () => {
       "capture_ref",
       "delete_feature",
       "delete_param",
+      "feasible_range",
       "feature_dependents",
       "get_feature",
       "get_model",
       "move_feature",
       "param_uses",
+      "ref_for",
       "rename_curve",
       "rename_feature",
       "rename_param",
@@ -142,5 +144,43 @@ describe("an agent operating the tools", () => {
     expect(await host.document()).toBe(before);
     const ro = await opsRegistry().execute({ name: "set_param", input: { name: "x", value: 1 } }, { ops: host, readOnly: true });
     expect(ro.isError).toBe(true);
+  });
+
+  it_("chains the manual tools' queries: ref_for a picked edge, feasible_range, then a fillet, a shell and a mirror", async () => {
+    const { host, call } = await session();
+    await call("add_feature", { feature_json: JSON.stringify({ type: "sketch", plane: "XY", curves: [{ kind: "rect", id: "r", center: [0, 0], w: 40, h: 20 }] }) });
+    await call("add_feature", { feature_json: JSON.stringify({ type: "extrude", sketch: "sketch1", distance: 10 }) });
+    // The user's selection chip: an edge by its render name and the point where it was picked.
+    let r = await call("ref_for", { kind: "edge", picks: [{ kind: "edge", name: "extrude1/edge:{extrude1/cap:end|extrude1/side:r.top}", point: [3, 10, 10] }] });
+    expect(r.isError, r.text).toBeFalsy();
+    const ref = JSON.parse(/^ref: (.*)$/m.exec(r.text)![1]!) as Record<string, unknown>;
+    expect(ref["capture"]).toBeTruthy();
+    r = await call("feasible_range", { candidate_json: JSON.stringify({ type: "fillet", r: 1, edges: ref }) });
+    expect(r.text).toMatch(/r of .*≤ 9\.999 mm/);
+    r = await call("add_feature", { feature_json: JSON.stringify({ type: "fillet", r: 3, edges: ref }) });
+    expect(r.isError, r.text).toBeFalsy();
+    r = await call("feasible_range", { feature: "fillet1" });
+    expect(r.text).toMatch(/≤ 9\.999 mm/);
+    // A shell with the bottom open, picked by face name; then the body mirrored as a new body.
+    r = await call("ref_for", { kind: "face", picks: [{ kind: "face", name: "extrude1/cap:start" }] });
+    const open = JSON.parse(/^ref: (.*)$/m.exec(r.text)![1]!) as Record<string, unknown>;
+    r = await call("ref_for", { kind: "body", picks: [{ kind: "body", body: { feature: "extrude1", member: "r.bottom" } }] });
+    const body = JSON.parse(/^ref: (.*)$/m.exec(r.text)![1]!) as Record<string, unknown>;
+    r = await call("add_feature", { feature_json: JSON.stringify({ type: "shell", body, open, thickness: 1.5 }) });
+    expect(r.isError, r.text).toBeFalsy();
+    r = await call("add_feature", { feature_json: JSON.stringify({ type: "pattern", seed: { bodies: body }, layout: { mirror: { plane: { origin: [25, 0, 0], normal: [1, 0, 0], x_dir: [0, 1, 0] } } } }) });
+    expect(r.isError, r.text).toBeFalsy();
+    const rep = await host.report();
+    expect(rep.features.map((f) => [f.feature_id, f.status])).toEqual([
+      ["sketch1", "ok"],
+      ["extrude1", "ok"],
+      ["fillet1", "ok"],
+      ["shell1", "ok"],
+      ["pattern1", "ok"],
+    ]);
+    expect(rep.parts[0]!.bodies).toHaveLength(2);
+    r = await call("ref_for", { kind: "edge", picks: [{ kind: "edge", name: "nope/edge:{a|b}" }] });
+    expect(r.isError).toBe(true);
+    expect(r.text).toMatch(/COMMAND_PICK_NOT_FOUND/);
   });
 });

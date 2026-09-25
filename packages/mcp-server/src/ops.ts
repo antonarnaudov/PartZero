@@ -6,7 +6,7 @@
  * host's origin (`agent`, `mcp:<client>`): authorship, ADR 0015's commit check and the failure rule
  * apply exactly as in the app.
  *
- * `ops-read` is the read-only subset (`get_model`, `get_feature`, `feature_dependents`,
+ * `ops-read` is the read-only subset (`get_model`, `get_feature`, `feature_dependents`, `ref_for`, `feasible_range`,
  * `param_uses`).
  */
 import { OPS_READ_TOOLS, OPS_TOOLS, opsRegistry, type OpsToolContext, type ToolRegistry } from "@aicad/agent-tools";

@@ -420,6 +420,12 @@ describe("v1 playbook coverage (codes read from ir-v1.constants.json)", () => {
       WRITE_BACK_UNKNOWN_SKETCH: "a command-layer error of writeBackSolution (SPEC-v1 §0.6), never in a report; the agent does not call it",
       SSI_TANGENT_UNRESOLVED: "a detail value (FORGE_BOOLEAN_SSI's ssi_code), not a code",
       EXPORT_BED_FIT: "an `aicad export --bed` refusal (forge-cli, the part does not fit the printer bed), never in an evaluation report",
+      // refFor (forge-regen v1 ref_for.rs): a query's refusals, returned to the tool panel or the agent's ref_for call with their own message, never in a report.
+      COMMAND_INVALID_ARGUMENT: "a refFor refusal (a malformed pick), returned to its caller, never in a report",
+      COMMAND_PICK_AMBIGUOUS: "a refFor refusal (several entities share the picked name; the message asks for the point), never in a report",
+      COMMAND_PICK_NOT_FOUND: "a refFor refusal (the pick is not in the state at the insertion point), never in a report",
+      COMMAND_REF_NOT_EXACT: "a refFor refusal (the synthesized Ref did not resolve to the picked set; nothing is returned), never in a report",
+      COMMAND_REF_NO_QUERY: "a refFor refusal (no query selects the entity), never in a report",
     };
     const codes = [...literals].filter((c) => !constants.includes(c) && !envVars.has(c) && NOT_REPORT_CODES[c] === undefined).sort();
     expect(codes.length).toBeGreaterThan(100);

@@ -16,16 +16,20 @@
 import {
   CommandEngineError,
   dependents,
+  feasibleRange,
   HOST_ONLY_OPS,
+  insertionPoint,
   IrOpSchema,
   OP_CATALOGUE,
   OP_SCHEMAS,
   paramUses,
   parseDoc,
+  refForPicks,
   type IrOp,
   type IrOpName,
   type OpsCommit,
   type OpsHost,
+  type RefForRequest,
 } from "@aicad/model-ops";
 import type { metricsV1 } from "@aicad/ir-types";
 import { z } from "zod";
@@ -267,6 +271,89 @@ const paramUsesTool = defineTool<OpsToolContext, z.ZodObject>({
   },
 });
 
+const Point = z.array(z.number().finite()).length(3);
+
+/**
+ * `ref_for`: a Ref (query + capture) for entities the user picked (selection chips carry their
+ * names and points) or the agent names by report key — the same `refFor` the manual tools use for
+ * a fillet's edges, a shell's open faces or a pattern's bodies. Paste `ref` into `add_feature`.
+ */
+const refForTool = defineTool<OpsToolContext, z.ZodObject>({
+  name: "ref_for",
+  description:
+    'A reference (IR v1 Ref: synthesized query + capture, verified by Forge to resolve to exactly the picked set) for picked faces, edges, vertices or bodies, in the state where a new feature goes (at the rollback marker, or the end of the part) — or, with `feature`, in that existing feature\'s input state (to re-pick its edges). Picks name an entity by its render `name` (selection chips: "e1/edge:{e1/cap:end|e1/side:r.top}") or report `key`, with the `point` where it was picked; a body by its `body` origin { feature, member } (get_model / the report). `kind` converts: kind "edge" from picked faces takes their boundary edges (a fillet of "this face"); kind "body" from faces takes their body. Use the returned ref JSON as a feature field (fillet/chamfer `edges`, shell `body`/`open`, pattern `seed.bodies`, a plane `{ face: ref }`). Refusals: COMMAND_PICK_NOT_FOUND (the pick is not in that state), COMMAND_PICK_AMBIGUOUS (give the point), COMMAND_REF_NOT_EXACT.',
+  input: z.strictObject({
+    kind: z.enum(["face", "edge", "vertex", "body"]).describe("The Ref's kind (the feature field's)."),
+    picks: z
+      .array(
+        z.strictObject({
+          kind: z.enum(["face", "edge", "vertex", "body"]),
+          name: z.string().min(1).max(2048).optional(),
+          key: z.string().min(1).max(2048).optional(),
+          point: Point.optional().describe("[x, y, z] in mm, where it was picked"),
+          body: z.strictObject({ feature: z.string().min(1).max(200), member: z.string().min(1).max(200), instance: z.array(z.number().int().min(0)).min(1).max(2).optional() }).optional(),
+        }),
+      )
+      .min(1)
+      .max(1000),
+    part: z.string().min(1).max(200).optional().describe("Part id or name (default: the first part)."),
+    feature: z.string().min(1).max(200).optional().describe("Resolve in this existing feature's input state (re-editing it)."),
+    card: z.union([z.enum(["one", "some", "any"]), z.number().int().min(1)]).optional(),
+  }),
+  readOnly: true,
+  async run(args, ctx) {
+    const a = args as { kind: RefForRequest["kind"]; picks: RefForRequest["picks"]; part?: string; feature?: string; card?: RefForRequest["card"] };
+    try {
+      const host = await ctx.ops.hostState();
+      const r = await refForPicks(
+        ctx.ops.engine(),
+        await ctx.ops.document(),
+        { kind: a.kind, picks: a.picks, ...(a.card !== undefined ? { card: a.card } : {}) },
+        { ...(a.part !== undefined ? { part: a.part } : {}), rollback: host.rollback, ...(a.feature !== undefined ? { feature: a.feature } : {}) },
+      );
+      const members = r.members.map((m) => `${m.name} (${m.key})`).join("\n  ");
+      return { text: clip(`ref: ${JSON.stringify(r.ref)}\nresolves to ${r.members.length}:\n  ${members}`, 7000), data: { kind: "ref_for", count: r.members.length } };
+    } catch (e) {
+      return { text: errorText(e), isError: true, data: { kind: "query_failed" } };
+    }
+  },
+});
+
+/** `feasible_range`: the largest fillet radius, chamfer distance or shell thickness that builds. */
+const feasibleRangeTool = defineTool<OpsToolContext, z.ZodObject>({
+  name: "feasible_range",
+  description:
+    'The feasible range of a size field — fillet `r`, chamfer `d`, shell `thickness` — with the rest of the model fixed: Forge reports the largest value that builds (rounded down to 0.001 mm, safe to apply) and what limits it (e.g. "face width 20 at slab/side:r.left"). For an existing feature pass `feature`; for one you are about to add pass `candidate_json` (its IR v1 JSON; it goes where add_feature would put it). Use it before choosing a size instead of guessing, and after a *_TOO_LARGE refusal.',
+  input: z.strictObject({
+    feature: z.string().min(1).max(200).optional(),
+    candidate_json: z.string().min(2).max(200_000).optional().describe("The feature you would add, as IR v1 JSON text."),
+    part: z.string().min(1).max(200).optional(),
+  }),
+  readOnly: true,
+  async run(args, ctx) {
+    const a = args as { feature?: string; candidate_json?: string; part?: string };
+    try {
+      const document = await ctx.ops.document();
+      let target: Parameters<typeof feasibleRange>[2];
+      if (a.feature !== undefined) target = { feature: a.feature };
+      else if (a.candidate_json !== undefined) {
+        const candidate = parseJsonArg("candidate", a.candidate_json);
+        if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) return { text: "candidate_json must be a feature object.", isError: true, data: { kind: "invalid_argument" } };
+        const at = insertionPoint(document, a.part, (await ctx.ops.hostState()).rollback);
+        target = { candidate: candidate as Record<string, unknown>, part: at.part, after: at.after };
+      } else return { text: "Pass feature (an existing feature) or candidate_json (one you would add).", isError: true, data: { kind: "invalid_argument" } };
+      const r = await feasibleRange(ctx.ops.engine(), document, target);
+      const text =
+        r.max !== undefined
+          ? `${r.field} of ${r.feature}: > 0 and ≤ ${r.max} mm. ${r.reason ?? ""}`.trim()
+          : `${r.field} of ${r.feature}: > 0; no maximum known${r.code ? ` (${r.code})` : ""}. ${r.reason ?? ""}`.trim();
+      return { text: clip(text, 3000), data: { kind: "feasible_range", ...(r.max !== undefined ? { max: r.max } : {}) } };
+    } catch (e) {
+      return { text: errorText(e), isError: true, data: { kind: "query_failed" } };
+    }
+  },
+});
+
 /** Every catalogue op with a tool, generated. */
 function catalogueTools(): AgentTool<OpsToolContext, z.ZodObject>[] {
   return OP_CATALOGUE.filter((o) => !o.hostOnly && o.tool).map((o) => opTool(o.op, o.tool!, o.description));
@@ -274,11 +361,11 @@ function catalogueTools(): AgentTool<OpsToolContext, z.ZodObject>[] {
 
 /** The op tools and the model reading tools. */
 export function opTools(): AgentTool<OpsToolContext, z.ZodObject>[] {
-  return [...catalogueTools(), applyOpsTool, getModelTool, getFeatureTool, dependentsTool, paramUsesTool];
+  return [...catalogueTools(), applyOpsTool, getModelTool, getFeatureTool, dependentsTool, paramUsesTool, refForTool, feasibleRangeTool];
 }
 
 /** The model reading tools (safe in ask/explain mode and for read-only MCP scopes). */
-export const OPS_READ_TOOLS = ["feature_dependents", "get_feature", "get_model", "param_uses"] as const;
+export const OPS_READ_TOOLS = ["feasible_range", "feature_dependents", "get_feature", "get_model", "param_uses", "ref_for"] as const;
 
 /** Every op tool name, sorted: the catalogue's tools, `apply_ops` and the reading tools. */
 export const OPS_TOOLS: readonly string[] = [...OP_CATALOGUE.filter((o) => !o.hostOnly && o.tool).map((o) => o.tool!), "apply_ops", ...OPS_READ_TOOLS].sort();
