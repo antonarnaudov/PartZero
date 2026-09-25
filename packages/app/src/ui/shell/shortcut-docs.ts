@@ -45,6 +45,21 @@ export const PANEL_KEYS: ShortcutSection = {
   ],
 };
 
+/** The timeline under the viewport (ui/model/TimelineBar.tsx). */
+export const TIMELINE_KEYS: ShortcutSection = {
+  id: "timeline",
+  title: "Timeline",
+  order: 15,
+  rows: [
+    { keys: "Click · double-click", label: "Select a feature · edit it (a sketch opens in sketch mode)" },
+    { keys: "Drag a feature", label: "Reorder: the line is green where it may go, red with the reason where not" },
+    { keys: "Drag the marker ▼", label: "Roll the model back (features after it are not built)" },
+    { keys: "Right-click", label: "Rename, suppress, roll back here, move, keep, delete" },
+    { keys: "← →", label: "Previous / next feature (timeline focused)" },
+    { keys: "⏎ · F2 · ⌫", label: "Edit · rename · delete (timeline focused)" },
+  ],
+};
+
 /**
  * The viewport's navigation as `@aicad/forge-web`'s controls implement it today
  * (`ForgeViewport.attachControls`). The viewport workstream replaces this section (same id) when the

@@ -62,6 +62,11 @@
   position: relative;
   z-index: 6;
 }
+.ptl.locked .ptl-track,
+.ptl.locked .ptl-transport {
+  opacity: 0.45;
+  pointer-events: none;
+}
 .ptl.dragging,
 .ptl.dragging * {
   cursor: grabbing !important;

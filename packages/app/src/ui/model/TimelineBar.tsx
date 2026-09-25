@@ -25,6 +25,7 @@ import type { TimelineFeature, TimelinePart } from "../../doc/timeline";
 import { moveSlots, slotForGap, type MoveSlot, type OrderFeature } from "../../doc/v1/feature-order";
 import { useApp, useStore } from "../context";
 import { useProblems, useTimeline } from "../doc-hooks";
+import { sketchMode } from "../../sketch/instance";
 import { useShell } from "../shell/context";
 import { ToolIcon } from "../shell/tool-icons";
 import { editFeature, keepFeatures, moveFeature, requestDelete, rollTo, selectFeature, setSuppressed, startRename, type ModelActionContext } from "./actions";
@@ -64,6 +65,15 @@ function featureJson(ir: unknown): Map<string, Json> {
     for (const f of p.features ?? []) if (typeof f["id"] === "string") m.set(f["id"], f);
   }
   return m;
+}
+
+/** While dragging near either end of the strip, scroll it (long histories). */
+function edgeScroll(track: HTMLElement | null, x: number): void {
+  if (!track) return;
+  const r = track.getBoundingClientRect();
+  const zone = 36;
+  if (x < r.left + zone) track.scrollLeft -= Math.ceil((r.left + zone - x) / 3);
+  else if (x > r.right - zone) track.scrollLeft += Math.ceil((x - (r.right - zone)) / 3);
 }
 
 /** The gap (0…n) under client x among the chips of `part` (by chip centres). */
@@ -131,6 +141,8 @@ export function TimelineBar(): ReactElement {
   const dragRef = useRef<ChipDrag | null>(null);
   const suppressClick = useRef(false);
   const [markerGap, setMarkerGap] = useState<number | null>(null);
+  // While a sketch is open the history waits (Finish or Cancel first), as in Fusion.
+  const sketching = useStore(sketchMode, (s) => s.phase !== "off");
 
   const flat = useMemo(() => timeline.parts.flatMap((p) => p.features.map((f) => ({ f, part: p }))), [timeline]);
   const multiPart = timeline.parts.length > 1;
@@ -179,7 +191,10 @@ export function TimelineBar(): ReactElement {
       window.removeEventListener("pointercancel", cancel);
       window.removeEventListener("keydown", key, true);
     };
-    const move = (ev: PointerEvent): void => setMarkerGap(Math.max(1, gapAt(track.current, null, ev.clientX)));
+    const move = (ev: PointerEvent): void => {
+      edgeScroll(track.current, ev.clientX);
+      setMarkerGap(Math.max(1, gapAt(track.current, null, ev.clientX)));
+    };
     const up = (ev: PointerEvent): void => {
       done();
       const g = Math.max(1, gapAt(track.current, null, ev.clientX));
@@ -211,6 +226,7 @@ export function TimelineBar(): ReactElement {
       const d = dragRef.current;
       if (!d) return;
       const active = d.active || Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > 4;
+      if (active) edgeScroll(track.current, e.clientX);
       const next = { ...d, x: e.clientX, y: e.clientY, active, gap: gapAt(track.current, d.part.id, e.clientX) };
       dragRef.current = next;
       setDrag(next);
@@ -370,7 +386,7 @@ export function TimelineBar(): ReactElement {
   );
 
   return (
-    <section className={`ptl${activeDrag ? " dragging" : ""}`} aria-label="Timeline" data-testid="timeline">
+    <section className={`ptl${activeDrag ? " dragging" : ""}${sketching ? " locked" : ""}`} aria-label="Timeline" data-testid="timeline" aria-disabled={sketching || undefined} title={sketching ? "Finish or cancel the sketch to work on the timeline" : undefined}>
       <div className="ptl-transport" role="toolbar" aria-label="Roll back">
         <button type="button" className="ptl-tbtn" title="Roll back to the first feature" aria-label="Roll back to the first feature" disabled={!canRoll} onClick={() => transport("first")} data-testid="timeline-first">
           <ModelIcon.First size={13} />

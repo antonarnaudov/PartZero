@@ -435,6 +435,8 @@ test("one Undo/Redo across everything: the title bar and ⌘Z / ⇧⌘Z; in sket
   await page.getByTestId("tool-sketch.new").click();
   await page.getByTestId("sketch-plane-XY").click();
   await expect.poll(() => page.evaluate(() => (window as unknown as AW).__pzSketch.state().phase)).toBe("active");
+  // The history waits while a sketch is open.
+  await expect(page.getByTestId("timeline")).toHaveAttribute("aria-disabled", "true");
   await page.keyboard.press("r");
   await expect.poll(() => page.evaluate(() => (window as unknown as AW).__pzSketch.state().tool)).toBe("rect2");
   for (const [u, v] of [
@@ -456,6 +458,7 @@ test("one Undo/Redo across everything: the title bar and ⌘Z / ⇧⌘Z; in sket
   await expect.poll(() => page.evaluate(() => (window as unknown as AW).__pzSketch.state().snapshot?.curves.length ?? 0)).toBeGreaterThan(0);
   await page.getByTestId("sketch-cancel").click();
   await expect(page.getByTestId("sketch-mode")).toBeHidden();
+  await expect(page.getByTestId("timeline")).not.toHaveAttribute("aria-disabled", "true");
   // Back on the model, Undo is the document's again.
   await expect(page.getByTestId("tb-undo")).not.toHaveAttribute("title", /in sketch/);
   expect(pageErrors).toEqual([]);

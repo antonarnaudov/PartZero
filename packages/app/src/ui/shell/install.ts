@@ -12,7 +12,7 @@ import { attachShell, Shell } from "../../tools/shell";
 import type { ShellContextValue } from "./context";
 import { registerBuiltinPanels } from "./panel-catalog";
 import { PanelRegistry, type PanelDefinition } from "./panels";
-import { PANEL_KEYS, ShortcutDocs, VIEWPORT_NAVIGATION } from "./shortcut-docs";
+import { PANEL_KEYS, ShortcutDocs, TIMELINE_KEYS, VIEWPORT_NAVIGATION } from "./shortcut-docs";
 
 /**
  * `window.__partzero`: drive the shell from e2e tests and the console, **only** where the command
@@ -55,7 +55,7 @@ export function installShell(
   registerAllTools(tools);
   const panels = new PanelRegistry();
   registerBuiltinPanels(panels);
-  const shortcutDocs = new ShortcutDocs([PANEL_KEYS, VIEWPORT_NAVIGATION]);
+  const shortcutDocs = new ShortcutDocs([PANEL_KEYS, TIMELINE_KEYS, VIEWPORT_NAVIGATION]);
 
   if (options.automation && typeof window !== "undefined") {
     window.__partzero = {
