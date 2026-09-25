@@ -1,0 +1,76 @@
+packages/app/src/ui-store.ts
+  s_59c0dd2af30db2::t_e9731f07b8cd22 45-46
+  s_59c0dd2af30db2::t_20da916b72c9b9 11-15,99
+packages/app/src/ui/model/feature-types.ts
+  s_59c0dd2af30db2::t_baa04512ae9882 1-48
+packages/app/src/ui/model/ContextMenu.tsx
+  s_59c0dd2af30db2::t_88690366cc3ccb 1-78
+packages/app/src/ui/model/panels.css
+  s_59c0dd2af30db2::t_37945f3bb1ec53 1-522
+packages/app/src/ui/model/actions.ts
+  s_59c0dd2af30db2::t_e6795c91a400eb 25-33,35,49,54
+  s_59c0dd2af30db2::t_a3a86bb19389e5 1-24,34,36-48,50-53,55-127
+packages/app/src/ui/model/ModelDialogs.tsx
+  s_59c0dd2af30db2::t_f4b71bb876c175 1-117,119-127,129-137
+  s_59c0dd2af30db2::t_b356ae7b5cc302 118
+  s_59c0dd2af30db2::t_e6795c91a400eb 128
+packages/desktop/src/menu.ts
+  s_59c0dd2af30db2::t_efc6f91144264c 187-188
+packages/app/src/ui/model/TimelineBar.tsx
+  s_59c0dd2af30db2::t_f6aa2c57a3d841 1-15,17-169,171-172,175,182-183,185-189,191,198,203-429,431-555
+  s_59c0dd2af30db2::t_ff905ffa4c6207 170,173-174,176-181,184,190,192-197,199-202
+  s_59c0dd2af30db2::t_8cf805c7dcc2e4 16,430
+packages/app/src/ui/model/BrowserPanel.tsx
+  s_59c0dd2af30db2::t_975d56f90d890b 143-154
+  s_59c0dd2af30db2::t_bf41e4d2fd71fa 1-142,155-459
+packages/app/src/ui/shell/AppShell.tsx
+  s_59c0dd2af30db2::t_df84f1313b2a8d 28,186
+  s_59c0dd2af30db2::t_334924dd2d00f9 8-10,30,153-161
+  s_59c0dd2af30db2::t_efc6f91144264c 162
+  s_59c0dd2af30db2::t_8c1642592e538e 29,40,187
+packages/app/src/tools/shell.ts
+  s_59c0dd2af30db2::t_c4185826051bcf 124
+packages/app/src/doc/undo-scope.ts
+  s_59c0dd2af30db2::t_5f422db2c5a4fe 1-42
+packages/app/src/ui/model/ParametersPanel.tsx
+  s_59c0dd2af30db2::t_dbb54866a995e0 71-77,318,398,401-402
+  s_59c0dd2af30db2::t_e94339818fedeb 176-190,195-200
+  s_59c0dd2af30db2::t_a092fe698dfe4c 17,43-51,157,251
+  s_59c0dd2af30db2::t_8e8f2f37cfeced 1-16,18-42,52-70,78-156,158-175,191-194,201-250,252-317,319-397,399-400,403-430
+packages/app/src/ui/model/icons.tsx
+  s_59c0dd2af30db2::t_b23b3a50203762 1-156
+packages/app/src/ui/model/SketchUndoScope.tsx
+  s_59c0dd2af30db2::t_4fbe8928036023 1-24
+packages/app/src/ui/shell/panel-catalog.tsx
+  s_59c0dd2af30db2::t_df84f1313b2a8d 9-11,46-61
+packages/app/src/ui/ProblemsPanel.tsx
+  s_59c0dd2af30db2::t_45b6bd394ea1fe 1-10,12,14-18,27-28,31-47,49-51,53,61-80,92-139
+packages/app/src/ui/model/model.css
+  s_59c0dd2af30db2::t_241c9e4d3ed17a 1-701
+packages/app/src/ui/model/browser-model.ts
+  s_59c0dd2af30db2::t_a395c1e3ea0da7 1-76
+packages/app/src/ui/shell/ShellToolbar.tsx
+  s_59c0dd2af30db2::t_8c1642592e538e 11,187-196
+packages/app/src/commands/commands.ts
+  s_59c0dd2af30db2::t_efc6f91144264c 34,520-521,549-551,553,564-573
+  s_59c0dd2af30db2::t_c648d28aacb5e4 25-26,299-305,319-324
+  s_59c0dd2af30db2::t_772b76362b22c9 574-577
+packages/app/src/ui/model/filaments.ts
+  s_59c0dd2af30db2::t_ef153b328ebec6 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e29c871703552dabb4c9ae4fcc7ac23cd9e45ce1",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
