@@ -19,6 +19,9 @@
  */
 export * from "./format.js";
 export * from "./ops.js";
+export * from "./ops-playbooks.js";
+export * from "./ops-query.js";
+export * from "./ops-reference.js";
 export * from "./playbooks.js";
 export * from "./registry.js";
 export * from "./session.js";

@@ -43,11 +43,15 @@ describe("the op tools", () => {
       "add_param",
       "apply_ops",
       "capture_ref",
+      "check_model",
       "delete_feature",
       "delete_param",
       "feature_dependents",
+      "find_entities",
       "get_feature",
       "get_model",
+      "list_entities",
+      "measure",
       "move_feature",
       "param_uses",
       "rename_curve",
@@ -69,10 +73,11 @@ describe("the op tools", () => {
     const registry = opsRegistry();
     const add = registry.schema("add_feature") as { properties: Record<string, unknown>; additionalProperties: boolean; required: string[] };
     expect(add.additionalProperties).toBe(false);
-    expect(Object.keys(add.properties).sort()).toEqual(["ack", "after", "feature_json", "part"]);
+    expect(Object.keys(add.properties).sort()).toEqual(["ack", "after", "feature_json", "note", "part"]);
     expect(add.required).toContain("feature_json");
+    expect(add.required).not.toContain("note");
     const set = registry.schema("set_field") as { properties: Record<string, unknown> };
-    expect(Object.keys(set.properties).sort()).toEqual(["ack", "feature", "path", "remove", "value_json"]);
+    expect(Object.keys(set.properties).sort()).toEqual(["ack", "feature", "note", "path", "remove", "value_json"]);
     const walk = (node: unknown): void => {
       if (!node || typeof node !== "object") return;
       const o = node as Record<string, unknown>;

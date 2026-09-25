@@ -12,6 +12,12 @@
  * JSON-valued arguments (a feature, a field value, a merge patch, an op list) travel as JSON text
  * (`feature_json`, `value_json`, `set_json`, `ops_json`): strict tool schemas close every object,
  * so a free-form object could not pass through them otherwise.
+ *
+ * Every tool that changes the model takes an optional `note`: one line for the user's chat (the
+ * live agent narrates each step with it). A committed change is followed by Forge's check of the
+ * whole model (statuses, the touched features' warnings, bodies and their validity); a refusal
+ * carries its op-worded repair hint (`ops-playbooks.ts`). The read-only tools that find entities by
+ * semantic references, measure and check the model are in `ops-query.ts`.
  */
 import {
   CommandEngineError,
@@ -29,7 +35,9 @@ import {
 } from "@aicad/model-ops";
 import type { metricsV1 } from "@aicad/ir-types";
 import { z } from "zod";
-import { clip } from "./format.js";
+import { clip, oneLine } from "./format.js";
+import { opsRepairHint } from "./ops-playbooks.js";
+import { opsQueryTools, stepCheck } from "./ops-query.js";
 import { defineTool, ToolRegistry, type AgentTool, type ToolOutput } from "./registry.js";
 
 /** What the op tools run against. */
@@ -58,12 +66,31 @@ function errorText(e: unknown): string {
   if (e instanceof CommandEngineError) {
     const details = Object.keys(e.details).length ? ` details: ${clip(JSON.stringify(e.details), 1200)}` : "";
     const errors = e.errors.length ? ` problems: ${clip(JSON.stringify(e.errors.slice(0, 5)), 1200)}` : "";
-    return `Refused (${e.code}): ${e.message}.${errors}${details} Nothing was changed.`;
+    const fix = opsRepairHint({ code: e.code, details: e.details, errors: e.errors });
+    return `Refused (${e.code}): ${e.message}.${errors}${details} Nothing was changed.\nfix: ${fix.join(" ")}`;
   }
   return `Refused: ${e instanceof Error ? e.message : String(e)}. Nothing was changed.`;
 }
 
-function commitText(c: OpsCommit): string {
+/** The inner code of a refusal (`COMMAND_FEATURE_FAILS` → the feature's own code), for signatures and narration. */
+function innerCode(e: CommandEngineError): string | undefined {
+  const c = e.details["code"];
+  return typeof c === "string" ? c : e.errors[0]?.code;
+}
+
+/** The features a commit added or edited (for the step check's warnings and the narration). */
+export function touchedFeatures(c: Pick<OpsCommit, "ops">): string[] {
+  const out = new Set<string>();
+  for (const o of c.ops) {
+    const r = o.result as Record<string, unknown> | null;
+    if (r && typeof r["feature"] === "string") out.add(r["feature"]);
+    const op = o.op as Record<string, unknown>;
+    if (typeof op["feature"] === "string") out.add(op["feature"]);
+  }
+  return [...out];
+}
+
+function commitText(c: OpsCommit, check: string | null): string {
   if (!c.changed) return `No change (${c.label}): the model already was that way.`;
   const results = c.ops
     .filter((o) => o.op.op !== "writeBackSolution")
@@ -71,18 +98,55 @@ function commitText(c: OpsCommit): string {
     .join("\n");
   const fails = c.newFailures?.length ? `\nAcknowledged newly failing: ${c.newFailures.map((f) => `${f.name} (${f.code})`).join(", ")}.` : "";
   const withheld = c.writeBackWithheld?.length ? `\nSketch solution not written back (would fail): ${c.writeBackWithheld.map((w) => w.sketch).join(", ")}.` : "";
-  return `Done: ${c.label} (revision ${c.revision}).\n${results}${fails}${withheld}`;
+  return `Done: ${c.label} (revision ${c.revision}).\n${results}${fails}${withheld}${check ? `\nCheck: ${check}` : ""}`;
 }
 
-async function applyOps(ctx: OpsToolContext, name: string, ops: IrOp[], ack: readonly string[] | undefined, label?: string): Promise<ToolOutput> {
+/** The optional narration line every model-changing tool takes. */
+const Note = z
+  .string()
+  .max(240)
+  .optional()
+  .describe('One short line for the user\'s chat saying what this step does, in plain words (e.g. "Sketch the 40 mm base square on XY"). Shown live as you work.');
+
+async function applyOps(ctx: OpsToolContext, name: string, ops: IrOp[], ack: readonly string[] | undefined, label?: string, note?: string): Promise<ToolOutput> {
   if (ctx.readOnly) return { text: `${name} changes the model; this is a read-only session.`, isError: true, data: { kind: "read_only" } };
+  const narration = note !== undefined && note.trim() ? oneLine(note, 240) : undefined;
+  let c: OpsCommit;
   try {
-    const c = await ctx.ops.apply(ops, { ...(ack ? { ack } : {}), ...(label ? { label } : {}) });
-    return { text: commitText(c), data: { kind: "ops_commit", ops: ops.map((o) => o.op), changed: c.changed, revision: c.revision } };
+    c = await ctx.ops.apply(ops, { ...(ack ? { ack } : {}), ...(label ? { label } : {}) });
   } catch (e) {
-    const code = e instanceof CommandEngineError ? e.code : "FAILED";
-    return { text: errorText(e), isError: true, data: { kind: "ops_refused", code } };
+    const err = e instanceof CommandEngineError ? e : null;
+    const code = err?.code ?? "FAILED";
+    const inner = err ? innerCode(err) : undefined;
+    return {
+      text: errorText(e),
+      isError: true,
+      data: {
+        kind: "ops_refused",
+        code,
+        ...(inner ? { inner } : {}),
+        ...(narration ? { note: narration } : {}),
+        label: ops.length === 1 ? ops[0]!.op : `${ops.length} edits`,
+        message: oneLine(e instanceof Error ? e.message : String(e), 300),
+      },
+    };
   }
+  const touched = touchedFeatures(c);
+  const check = c.changed ? await stepCheck(ctx.ops, new Set(touched)) : null;
+  const checkText = check ? [check.line, ...check.issues.slice(0, 6)].join("\n  ") : null;
+  return {
+    text: commitText(c, checkText),
+    data: {
+      kind: "ops_commit",
+      ops: ops.map((o) => o.op),
+      changed: c.changed,
+      revision: c.revision,
+      label: c.label,
+      features: touched,
+      ...(narration ? { note: narration } : {}),
+      ...(check ? { check: check.line, checkOk: check.ok } : {}),
+    },
+  };
 }
 
 function parseJsonArg(name: string, text: string): unknown {
@@ -99,7 +163,7 @@ function opTool(op: IrOpName, toolName: string, description: string): AgentTool<
   const jsonArgs = JSON_ARGS[op] ?? [];
   const omit: Record<string, true> = { op: true };
   for (const a of jsonArgs) omit[a] = true;
-  const extra: Record<string, z.ZodType> = { ack: Ack };
+  const extra: Record<string, z.ZodType> = { ack: Ack, note: Note };
   for (const a of jsonArgs) {
     const field = schema.shape[a] as unknown as z.ZodType | undefined;
     const optional = field?.safeParse(undefined).success === true;
@@ -112,7 +176,7 @@ function opTool(op: IrOpName, toolName: string, description: string): AgentTool<
     description,
     input,
     async run(args, ctx) {
-      const { ack, ...rest } = args as { ack?: string[] } & Record<string, unknown>;
+      const { ack, note, ...rest } = args as { ack?: string[]; note?: string } & Record<string, unknown>;
       const raw: Record<string, unknown> = { op };
       try {
         for (const [k, v] of Object.entries(rest)) {
@@ -129,7 +193,7 @@ function opTool(op: IrOpName, toolName: string, description: string): AgentTool<
         const issues = parsed.error.issues.slice(0, 4).map((i) => `${i.path.join(".") || "(input)"}: ${i.message}`);
         return { text: `Invalid ${toolName} arguments: ${issues.join("; ")}. Nothing was changed.`, isError: true, data: { kind: "invalid_input" } };
       }
-      return applyOps(ctx, toolName, [parsed.data], ack);
+      return applyOps(ctx, toolName, [parsed.data], ack, undefined, note);
     },
   });
 }
@@ -143,9 +207,10 @@ const applyOpsTool = defineTool<OpsToolContext, z.ZodObject>({
     ops_json: z.string().min(2).max(400_000).describe("A JSON array of ops."),
     label: z.string().max(200).optional().describe("The undo label people see."),
     ack: Ack,
+    note: Note,
   }),
   async run(args, ctx) {
-    const { ops_json, label, ack } = args as { ops_json: string; label?: string; ack?: string[] };
+    const { ops_json, label, ack, note } = args as { ops_json: string; label?: string; ack?: string[]; note?: string };
     let list: unknown;
     try {
       list = parseJsonArg("ops_json", ops_json);
@@ -165,7 +230,7 @@ const applyOpsTool = defineTool<OpsToolContext, z.ZodObject>({
       if (HOST_ONLY_OPS.has(p.data.op)) return { text: `Op ${i + 1} (${p.data.op}) is the user's to do. Nothing was changed.`, isError: true, data: { kind: "ops_refused", code: "COMMAND_HOST_ONLY" } };
       ops.push(p.data);
     }
-    return applyOps(ctx, "apply_ops", ops, ack, label);
+    return applyOps(ctx, "apply_ops", ops, ack, label, note);
   },
 });
 
@@ -272,13 +337,13 @@ function catalogueTools(): AgentTool<OpsToolContext, z.ZodObject>[] {
   return OP_CATALOGUE.filter((o) => !o.hostOnly && o.tool).map((o) => opTool(o.op, o.tool!, o.description));
 }
 
-/** The op tools and the model reading tools. */
+/** The op tools and the model reading tools (finding entities by semantic references, measuring, checking). */
 export function opTools(): AgentTool<OpsToolContext, z.ZodObject>[] {
-  return [...catalogueTools(), applyOpsTool, getModelTool, getFeatureTool, dependentsTool, paramUsesTool];
+  return [...catalogueTools(), applyOpsTool, getModelTool, getFeatureTool, dependentsTool, paramUsesTool, ...(opsQueryTools() as AgentTool<OpsToolContext, z.ZodObject>[])];
 }
 
 /** The model reading tools (safe in ask/explain mode and for read-only MCP scopes). */
-export const OPS_READ_TOOLS = ["feature_dependents", "get_feature", "get_model", "param_uses"] as const;
+export const OPS_READ_TOOLS = ["check_model", "feature_dependents", "find_entities", "get_feature", "get_model", "list_entities", "measure", "param_uses"] as const;
 
 /** Every op tool name, sorted: the catalogue's tools, `apply_ops` and the reading tools. */
 export const OPS_TOOLS: readonly string[] = [...OP_CATALOGUE.filter((o) => !o.hostOnly && o.tool).map((o) => o.tool!), "apply_ops", ...OPS_READ_TOOLS].sort();
