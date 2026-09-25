@@ -1,0 +1,37 @@
+packages/app/src/agent/agent-service.ts
+  s_59c0dd2af30db2::t_205d852fa16405 35,472
+packages/app/src/doc/doc-store.ts
+  s_59c0dd2af30db2::t_6c8b64b09de613 29,363
+packages/app/src/doc/v1/names-as-ids.ts
+  s_59c0dd2af30db2::t_c760dc66482a3a 1-28
+packages/app/src/file/adapter.ts
+  s_59c0dd2af30db2::t_32fe3b766c8649 16,204
+packages/app/src/tools/starters.ts
+  s_59c0dd2af30db2::t_0d8bb36bff5e13 11,106
+packages/app/src/ui/shell/Dock.tsx
+  s_59c0dd2af30db2::t_0e11f9b4fa7efb 69-70
+packages/desktop/e2e/files.e2e.ts
+  s_59c0dd2af30db2::t_7157b8ff6cd4c7 86-102,151,162-163,165-167,175,179-180,202-203,223,235,247,262,268,278,294,313,333,349-350,361,378
+packages/desktop/e2e/partzero-files.ts
+  s_59c0dd2af30db2::t_00199050e027d8 44-45
+packages/desktop/e2e/shell.e2e.ts
+  s_59c0dd2af30db2::t_9ee81411a0f4d9 227-229,397-398,401-404,413-414,428
+packages/desktop/e2e/smoke.e2e.ts
+  s_59c0dd2af30db2::t_45e0b72ef61c8a 133,162,173-175,177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9647a6083ea908d96961b764b2e4910c420eb47b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
