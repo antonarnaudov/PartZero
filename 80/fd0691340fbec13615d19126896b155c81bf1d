@@ -1,0 +1,91 @@
+docs/adr/0012-no-seam-edges.md
+  s_59c0dd2af30db2::t_29df5fd5a5f287 66
+forge/Cargo.lock
+  s_59c0dd2af30db2::t_262c6ca6114569 352,378,380,382,385
+forge/crates/forge-cli/Cargo.toml
+  s_59c0dd2af30db2::t_a5799180210e88 15
+forge/crates/forge-cli/src/main.rs
+  s_59c0dd2af30db2::t_1e041388e32a93 6,59,111-112,114-116,193-202,213,247,268-274,301,425-427,478
+forge/crates/forge-cli/src/step.rs
+  s_59c0dd2af30db2::t_150cc7d45fb7ef 1-306
+forge/crates/forge-cli/tests/cli_step.rs
+  s_59c0dd2af30db2::t_e81d2a76027819 1-141
+forge/crates/forge-io/Cargo.toml
+  s_59c0dd2af30db2::t_c030e5e305160b 3,11,19-24
+forge/crates/forge-io/examples/step_corpus.rs
+  s_59c0dd2af30db2::t_82ec50cc3ed0cd 1-127
+forge/crates/forge-io/src/lib.rs
+  s_59c0dd2af30db2::t_bb6015d4a52248 1,4,11,69-72,130-132,146
+forge/crates/forge-io/src/step/brep.rs
+  s_59c0dd2af30db2::t_5aebab713d416a 1-1902
+forge/crates/forge-io/src/step/geometry.rs
+  s_59c0dd2af30db2::t_77a8d3219bdc44 1-507
+forge/crates/forge-io/src/step/mod.rs
+  s_59c0dd2af30db2::t_65459bc356e439 1-926
+forge/crates/forge-io/src/step/orient.rs
+  s_59c0dd2af30db2::t_4f8bae9b6fad20 1-529
+forge/crates/forge-io/src/step/p21.rs
+  s_59c0dd2af30db2::t_c161d0c5aa294b 1-388
+forge/crates/forge-io/src/step/parse.rs
+  s_59c0dd2af30db2::t_251491e9441035 1-653
+forge/crates/forge-io/src/step/verify.rs
+  s_59c0dd2af30db2::t_1ef707c2f51200 1-970
+forge/crates/forge-io/tests/common/step_corpus.rs
+  s_59c0dd2af30db2::t_87d6975a239043 1-292
+forge/crates/forge-io/tests/common/step_mutate.rs
+  s_59c0dd2af30db2::t_7294ee70300088 1-49
+forge/crates/forge-io/tests/golden/cylinder.p21
+  s_59c0dd2af30db2::t_7ca2e65051c5d7 1-77
+forge/crates/forge-io/tests/step_corpus.rs
+  s_59c0dd2af30db2::t_9aea7cca592219 1-181
+forge/crates/forge-io/tests/step_samples.rs
+  s_59c0dd2af30db2::t_20a2a98e372373 1-315
+forge/crates/forge-wasm/src/step_export.rs
+  s_59c0dd2af30db2::t_8f9815d587d7bf 1-252
+oracle/README.md
+  s_59c0dd2af30db2::t_5607d69d8fa169 442-471
+oracle/src/aicad_oracle/cli.py
+  s_59c0dd2af30db2::t_e14209d9ebd6ad 576-580,585-589
+oracle/src/aicad_oracle/step_check.py
+  s_59c0dd2af30db2::t_7dbac490c8c6f9 1-468
+oracle/tests/test_step_check.py
+  s_59c0dd2af30db2::t_697e5f4a1c5b7e 1-159
+packages/app/src/bridge.ts
+  s_59c0dd2af30db2::t_94ac0858a52044 105-128,295-296,323
+packages/app/src/io/step-export-command.ts
+  s_59c0dd2af30db2::t_1c66156931090b 1-111
+packages/app/src/io/step-export.ts
+  s_59c0dd2af30db2::t_18d740be92d713 1-157
+packages/app/test/step-export-command.test.ts
+  s_59c0dd2af30db2::t_01aa1eca2f6a2a 1-168
+packages/app/test/step-export.test.ts
+  s_59c0dd2af30db2::t_ae007b2693fa1d 1-154
+packages/desktop/e2e/step-export.e2e.ts
+  s_59c0dd2af30db2::t_b36edbddacdb51 1-187
+packages/desktop/src/forge-cli.ts
+  s_59c0dd2af30db2::t_63d1ab13482547 69,76,103
+packages/desktop/src/ipc.ts
+  s_59c0dd2af30db2::t_fbd83722940e91 27,164-165
+packages/desktop/src/preload.cts
+  s_59c0dd2af30db2::t_74b86fdaa41182 44
+packages/desktop/src/step-export.ts
+  s_59c0dd2af30db2::t_4d6fd60ade20d9 1-94
+packages/desktop/test/step-export.test.ts
+  s_59c0dd2af30db2::t_46c8377069befc 1-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "80fd0691340fbec13615d19126896b155c81bf1d",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
