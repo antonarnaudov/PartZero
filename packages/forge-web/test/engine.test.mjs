@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { evaluate, exportMesh, init, engineVersion, transferables } from "../dist/index.js";
+import { evaluate, exportMesh, exportStep, init, engineVersion, transferables } from "../dist/index.js";
 import { benchDocument } from "../demo/bench-doc.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -98,4 +98,16 @@ test("exportMesh writes 3MF, STL and OBJ", () => {
   assert.equal(tmf[0], 0x50);
   assert.equal(tmf[1], 0x4b);
   assert.throws(() => exportMesh(ir, "step"), (e) => e.code === "EXPORT_FORMAT");
+});
+
+test("exportStep writes forge-io's STEP (AP214 by default, AP242 on request)", () => {
+  const ir = readFileSync(join(corpus, "extrude_box.json"), "utf8");
+  const text = (bytes) => new TextDecoder().decode(bytes);
+  const ap214 = text(exportStep(ir, { productName: "box" }));
+  assert.match(ap214, /^ISO-10303-21;/);
+  assert.match(ap214, /AUTOMOTIVE_DESIGN/);
+  assert.match(ap214, /MANIFOLD_SOLID_BREP\(/);
+  assert.equal(text(exportStep(ir, { productName: "box" })), ap214, "deterministic bytes");
+  assert.doesNotMatch(text(exportStep(ir, { schema: "ap242" })), /AUTOMOTIVE_DESIGN/);
+  assert.throws(() => exportStep(ir, { schema: "ap999" }), (e) => e.code === "STEP_INVALID_OPTIONS");
 });

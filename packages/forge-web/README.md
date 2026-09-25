@@ -2,7 +2,7 @@
 
 Forge for the web, in one WebAssembly module compiled from Rust (`forge/crates/forge-wasm`):
 
-- **Engine.** `evaluate` runs the IR through forge-regen and tessellates every body with `forge_mesh::tessellate_render`. You get per-face meshes with exact normals, and face ranges and edge polylines named by provenance. `exportMesh` writes 3MF, STL or OBJ through forge-io.
+- **Engine.** `evaluate` runs the IR through forge-regen and tessellates every body with `forge_mesh::tessellate_render`. You get per-face meshes with exact normals, and face ranges and edge polylines named by provenance. `exportMesh` writes 3MF, STL or OBJ through forge-io, and `exportStep` writes STEP (AP214 or AP242) with forge-io's own B-rep writer.
 - **Viewport.** `forge-render` is our own wgpu CAD renderer ([ADR 0007](../../docs/adr/0007-own-renderer-wgpu.md)). It runs on WebGPU and falls back to WebGL2. It draws shaded bodies, exact B-rep edges, silhouettes, and a section view with caps. It has GPU ID picking, hover and selection, a Z-up turntable camera, a grid and an axes gizmo.
 
 License: MPL-2.0. The spike report is [docs/spikes/05-renderer.md](../../docs/spikes/05-renderer.md).
@@ -57,6 +57,7 @@ All geometry is in **millimetres**, with **Z up**. All screen coordinates are **
 | `init` | `(input?: InitInput) => Promise<void>` | Idempotent. The default input is `pkg/forge_wasm_bg.wasm`, resolved via `import.meta.url`. You can pass a URL, bytes, a `Response` or a compiled `WebAssembly.Module`. |
 | `evaluate` | `(ir: string \| object, options?: TessellationOptions) => EvaluateResult` | Synchronous. Options are `{ chordalDeflection = 0.05, angularDeflection = 0.35 }`. |
 | `exportMesh` | `(ir, format: "3mf" \| "stl" \| "obj", options?: ExportOptions) => Uint8Array` | `stl` is binary. Takes `allowPartial` (default false). |
+| `exportStep` | `(ir, options?: StepExportOptions) => Uint8Array` | Exact B-rep of the final bodies, as `aicad export --format step`. Takes `schema` (`ap214` default, `ap242`), `productName` and `allowPartial`. |
 | `engineVersion` | `() => string` | `"forge 0.0.1"` |
 | `createEvaluator` | `(options?) => Evaluator` | Starts a Web Worker (`dist/worker.js`) that runs `evaluate`. |
 | `createSharedEvaluator` | `(options?) => Promise<Evaluator>` | Runs `init()` first, then hands the compiled module to the worker. |

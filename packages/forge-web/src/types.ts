@@ -137,6 +137,16 @@ export interface ExportOptions extends TessellationOptions {
   allowPartial?: boolean;
 }
 
+/** Options of {@link exportStep}. */
+export interface StepExportOptions {
+  /** STEP application protocol: `ap214` (default, the most widely read) or `ap242`. */
+  schema?: "ap214" | "ap242";
+  /** The STEP product name (default `part`). */
+  productName?: string;
+  /** Export the bodies that did evaluate even if some features failed (default false). */
+  allowPartial?: boolean;
+}
+
 /** One problem of a rejected document (SPEC-v1 §0.5, §7.2 `error.details.errors`). */
 export interface RejectionProblem {
   code: string;

@@ -23,6 +23,8 @@
 //! - `report(irJson, reportVersion?)` → the report of `evaluate` without tessellation;
 //! - `exportMesh(irJson, format, chordal?, angular?, allowPartial?)` → `Uint8Array`
 //!   (3MF / binary STL / OBJ via forge-io);
+//! - `exportStep(irJson, optionsJson?)` → `Uint8Array`: forge-io's STEP writer over the final
+//!   bodies, exactly as `aicad export --format step` (module [`step_export`]);
 //! - `createViewport(canvas, backend, width, height, dpr)` → `RawViewport` (its
 //!   `loadIr(irJson, chordal?, angular?, reportVersion?)` evaluates and uploads): the
 //!   forge-render viewport on an `HTMLCanvasElement` or `OffscreenCanvas`, on WebGPU or
@@ -35,6 +37,7 @@
 pub mod commands;
 pub mod engine;
 pub mod scopes;
+pub mod step_export;
 
 #[cfg(target_arch = "wasm32")]
 mod web;

@@ -22,6 +22,7 @@ export {
   engineVersion,
   evaluate,
   exportMesh,
+  exportStep,
   init,
   migrate,
   params,

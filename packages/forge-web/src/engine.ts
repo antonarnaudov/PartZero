@@ -22,6 +22,7 @@ import type {
   RenameCurveResult,
   RenameFeatureResult,
   SetParamResult,
+  StepExportOptions,
   UpgradeFeatureResult,
   WriteBackOptions,
   WriteBackResult,
@@ -283,6 +284,17 @@ export function exportMesh(ir: IrInput, format: MeshFormat, options: ExportOptio
     options.angularDeflection,
     options.allowPartial ?? false,
   );
+}
+
+/**
+ * Evaluate and write every final body as STEP with forge-io's own AP214/AP242 B-rep writer,
+ * exactly as `aicad export --format step` (same body names, same bytes). Throws a
+ * {@link ForgeError} (a feature error unless `allowPartial`, `EXPORT_NO_BODIES`, the writer's
+ * `STEP_*` refusals, `STEP_INVALID_OPTIONS`).
+ */
+export function exportStep(ir: IrInput, options: StepExportOptions = {}): Uint8Array {
+  assertReady();
+  return raw.exportStep(irText(ir), JSON.stringify(options));
 }
 
 /** The engine identifier (`forge <version>`), as written into reports. */

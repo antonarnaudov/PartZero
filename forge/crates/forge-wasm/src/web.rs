@@ -441,6 +441,16 @@ pub fn export_mesh(
     Ok(Uint8Array::from(bytes.as_slice()))
 }
 
+/// Evaluate and write every final body as STEP (AP214 by default); `optionsJson` is
+/// `{ "schema"?: "ap214" | "ap242", "productName"?: string, "allowPartial"?: bool }`.
+#[wasm_bindgen(js_name = exportStep)]
+pub fn export_step(ir_json: &str, options_json: Option<String>) -> Result<Uint8Array, JsValue> {
+    let opts = crate::step_export::StepExportOptions::from_json(options_json.as_deref())
+        .map_err(core_error)?;
+    let bytes = crate::step_export::export_step(ir_json, &opts).map_err(core_error)?;
+    Ok(Uint8Array::from(bytes.as_slice()))
+}
+
 /// The engine identifier (`forge <version>`).
 #[wasm_bindgen(js_name = engineVersion)]
 pub fn engine_version() -> String {
