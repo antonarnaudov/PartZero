@@ -759,6 +759,7 @@ describe.skipIf(!hasWasm)("IR v1 command layer on Forge (forge-web WASM)", () =>
           "ir.renameCurve",
           "ir.renameFeature",
           "ir.renameParam",
+          "ir.replaceDocument",
           "ir.sealGroup",
           "ir.setAppearance",
           "ir.setAuthor",

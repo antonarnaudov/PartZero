@@ -277,13 +277,21 @@ export class AgentService extends Store<AgentState> {
     const s = await doc.idle();
     const ir = s.compile?.ok ? s.compile.ir : (s.model?.ir ?? null);
     const selection = describeSelection(input.chips, ir);
-    const res = await bridge.start({ v: 1, prompt: input.prompt, source: s.source, documentName: s.name, selection });
+    // An IR v1 model reaches the designer as CadScript (its print; a model without features: none,
+    // the designer starts from scratch). Its proposal comes back as a code edit (accept()).
+    let source = s.source;
+    if (s.format === "ir-v1") {
+      const empty = (ir?.parts ?? []).every((p) => p.features.length === 0);
+      source = empty ? "" : ((await this.#deps.cadscript.printV1(s.source)) ?? "");
+    }
+    const res = await bridge.start({ v: 1, prompt: input.prompt, source, documentName: s.name, selection });
     if (!res.ok) {
       ui.addChatMessage("system", res.message, [], { tone: "error", ...(SETTINGS_FIXES.has(res.code) ? { action: { label: "Open Settings", command: "settings.open" } } : {}) });
       throw new AgentError(res.code, res.message);
     }
     const run = newRun(res.runId, input.prompt, input.chips);
-    this.#bases.set(res.runId, s.source);
+    this.#bases.set(res.runId, source);
+    if (s.format === "ir-v1") this.#v1Bases.set(res.runId, s.source);
     this.setState((st) => ({ runs: [...st.runs, run], activeRunId: res.runId }));
     ui.addChatMessage("agent", "", [], { runId: res.runId });
     const early = this.#pendingEvents.get(res.runId);
@@ -359,6 +367,8 @@ export class AgentService extends Store<AgentState> {
 
   /** The document source when the run started (kept per run for live drafts). */
   readonly #bases = new Map<string, string>();
+  /** IR v1 models: the model (canonical text) each run started from. */
+  readonly #v1Bases = new Map<string, string>();
   #baseOf(run: AgentRun): string {
     let b = this.#bases.get(run.runId);
     if (b === undefined) {
@@ -407,12 +417,23 @@ export class AgentService extends Store<AgentState> {
     this.setState({ review, codeTab: "proposal" });
     try {
       const d = doc.getState();
-      const idBase = d.source === result.baseSource && d.compile?.ok ? d.compile.ir : null;
-      const base = await cadscript.compile(result.baseSource, idBase);
-      const proposed = await cadscript.compile(result.proposedSource, base.ok ? base.ir : null);
-      if (seq !== this.#reviewSeq) return;
-      const baseIr = base.ok ? base.ir : null;
-      const proposedIr = proposed.ok ? proposed.ir : null;
+      let baseIr: IrDocument | null;
+      let proposedIr: IrDocument | null;
+      if (d.format === "ir-v1") {
+        // The model and the proposal as IR v1 (a v0 proposal compiles to its migration).
+        const v1Base = this.#v1Bases.get(run.runId) ?? d.source;
+        const proposed = result.proposedSource.trim() ? await cadscript.compileV1(result.proposedSource) : null;
+        if (seq !== this.#reviewSeq) return;
+        baseIr = JSON.parse(v1Base) as IrDocument;
+        proposedIr = proposed?.ok && proposed.irJson ? (JSON.parse(proposed.irJson) as IrDocument) : null;
+      } else {
+        const idBase = d.source === result.baseSource && d.compile?.ok ? d.compile.ir : null;
+        const base = await cadscript.compile(result.baseSource, idBase);
+        const proposed = await cadscript.compile(result.proposedSource, base.ok ? base.ir : null);
+        if (seq !== this.#reviewSeq) return;
+        baseIr = base.ok ? base.ir : null;
+        proposedIr = proposed.ok ? proposed.ir : null;
+      }
       const changes = baseIr && proposedIr ? diffProposal(baseIr, proposedIr) : [];
       this.setState({
         review: {
@@ -513,6 +534,7 @@ export class AgentService extends Store<AgentState> {
     const set = new Set(keys);
     const all = review.changes.every((c) => set.has(c.key));
     const { doc, cadscript, ui } = this.#deps;
+    if (doc.isV1) return this.#acceptV1(review, set, all, options);
     let warnings: DependencyWarning[] = [];
     if (!all && review.baseIr && review.proposedIr) {
       const v = buildVariant(review.baseIr, review.proposedIr, review.baseIr, set, review.changes);
@@ -548,6 +570,52 @@ export class AgentService extends Store<AgentState> {
       "system",
       partial ? `Applied ${applied} of ${review.changes.length} changes as one undo step.` : `Applied the proposal as one undo step${review.changes.length ? ` (${review.changes.length} change${review.changes.length === 1 ? "" : "s"})` : ""}.`,
     );
+    return { applied, total: review.changes.length, changed, warnings };
+  }
+
+  /**
+   * Accept on an IR v1 model: the accepted changes (the whole proposal, or the variant of the ticked
+   * features) replace the model as ONE undoable code edit (`replaceDocument`, origin `agent`). Your
+   * accept is the approval ADR 0015 asks for: of the features and parameters the proposal changes.
+   */
+  async #acceptV1(
+    review: ProposalReview,
+    set: ReadonlySet<string>,
+    all: boolean,
+    options: { features?: readonly string[]; force?: boolean },
+  ): Promise<{ applied: number; total: number; changed: boolean; warnings: DependencyWarning[] }> {
+    const { doc, ui } = this.#deps;
+    const s = await doc.idle();
+    const base = this.#v1Bases.get(review.runId);
+    if (base !== undefined && s.source !== base) {
+      throw new AgentError("CONFLICT", "The model changed since the run started; reject the proposal and run again (or undo your edits).");
+    }
+    if (!review.proposedIr) throw new AgentError("INVALID", review.error ?? "The proposed code does not compile to a model.");
+    let target: IrDocument = review.proposedIr;
+    let warnings: DependencyWarning[] = [];
+    if (!all && review.baseIr) {
+      const v = buildVariant(review.baseIr, review.proposedIr, review.baseIr, set, review.changes);
+      warnings = checkVariant(v.ir, review.changes, set);
+      const errors = warnings.filter((w) => w.severity === "error");
+      if (errors.length > 0 && !options.force) throw new AgentError("DEPENDENCY", `This selection breaks the model: ${errors.map((w) => w.message).join(" ")}`);
+      target = v.ir;
+    }
+    const current = JSON.parse(s.source) as IrDocument;
+    const approvals = {
+      features: current.parts.flatMap((p) => p.features.map((f) => f.id)),
+      params: [...((current as { params?: Array<{ name: string }> }).params ?? []), ...current.parts.flatMap((p) => (p as { params?: Array<{ name: string }> }).params ?? [])].map((p) => p.name),
+    };
+    const ir = this.#deps.doc;
+    let changed: boolean;
+    try {
+      changed = await ir.applyDocument(JSON.stringify(target), { label: `Agent: ${shortLabel(review.prompt)}`, origin: "agent", approvals });
+    } catch (e) {
+      throw new AgentError("INVALID", e instanceof Error ? e.message : String(e));
+    }
+    const applied = all ? review.changes.length : set.size;
+    this.#patchReview(() => ({ resolution: { kind: all ? "accepted" : "partial", applied, total: review.changes.length }, previewEnabled: false }));
+    this.setState({ codeTab: "code" });
+    ui.addChatMessage("system", all ? `Applied the proposal as one undo step${review.changes.length ? ` (${review.changes.length} change${review.changes.length === 1 ? "" : "s"})` : ""}.` : `Applied ${applied} of ${review.changes.length} changes as one undo step.`);
     return { applied, total: review.changes.length, changed, warnings };
   }
 

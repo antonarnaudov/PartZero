@@ -279,6 +279,34 @@ describe("host state and authorship", () => {
   });
 });
 
+describe("replaceDocument (a code edit)", () => {
+  it_("replaces the model, keeps authorship (code cannot write it), reports what changed, and undoes to the same bytes", async () => {
+    const base = await canonical(plate({ features: [{ type: "extrude", id: "e2", name: "boss", sketch: "s1", distance: 2, op: "join", targets: "all", author: "agent" }] }));
+    const next = JSON.parse(base) as { params: Array<{ value: unknown }>; parts: Array<{ features: Array<Record<string, unknown>> }> };
+    next.params[0]!.value = 9;
+    next.parts[0]!.features[2]!["distance"] = 3;
+    next.parts[0]!.features[2]!["author"] = "user"; // ignored: the host writes authorship
+    next.parts[0]!.features.push({ type: "extrude", id: "e3", name: "more", sketch: "s1", distance: 1, op: "join", targets: "all" });
+    const byAgent = await apply(base, { op: "replaceDocument", document: JSON.stringify(next) }, "agent");
+    expect(byAgent.touched).toMatchObject({ features: ["e2", "e3"], params: ["t"] });
+    expect(features(byAgent.document).map((f) => [f.id, f.author ?? null])).toEqual([
+      ["s1", null],
+      ["e1", null],
+      ["e2", "agent"],
+      ["e3", "agent"],
+    ]);
+    expect(byAgent.inverse).toEqual({ op: "replaceDocument", document: base, keepAuthors: true });
+    expect((await undoWith(byAgent.document, byAgent)).document).toBe(base);
+    // The user's code edit of an agent feature makes it theirs.
+    const byUser = await apply(base, { op: "replaceDocument", document: JSON.stringify(next) }, "user");
+    expect(features(byUser.document).find((f) => f.id === "e2")?.author).toBe("user");
+    // A v0 document is migrated; an invalid one is the engine's rejection.
+    expect((await refusal(apply(base, { op: "replaceDocument", document: '{"schema":"aicad.ir/1","parts":[{"id":"p1","name":"part","features":[{"type":"extrude","id":"x","name":"x","sketch":"nope","distance":1}]}]}' }))).code).toBe(
+      "UNRESOLVED_SKETCH",
+    );
+  });
+});
+
 describe("Phase C ops keep their inverses", () => {
   it_("setParam, renameFeature and renameCurve", async () => {
     const base = await canonical(plate());

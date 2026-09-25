@@ -20,6 +20,7 @@
  * | `setRollback` | the rollback marker (features after it are not built; new features go after it) | `setRollback` back |
  * | `setAppearance` | the display colour of the bodies a feature creates | `setAppearance` with the previous colour |
  * | `setAuthor` | (host only, ADR 0015) who authored features: "Keep" makes the agent's features yours | `setAuthor` back |
+ * | `replaceDocument` | (host only) a code edit: the document a CadScript edit compiled to | `replaceDocument` with the previous document |
  * | `writeBackSolution`, `captureRef`, `acceptRefCandidate`, `acceptRefProposal`, `renameCurve`, `upgradeFeature` | Phase C (SPEC-v1 §0.6, §5.9, §9.2), applied by the engine | see `apply.ts` |
  *
  * Every transaction is **exactly** undoable whatever the op: the store records the canonical
@@ -173,6 +174,22 @@ export const SetAuthorOp = z.strictObject({
   author: z.enum(["user", "agent"]),
 });
 
+// ─── Catalogue v2: code edits ─────────────────────────────────────────────────────────────────
+
+/**
+ * A code edit (FULL-MODELING-PLAN §2.1 rule 6): the document a CadScript edit compiled to (either
+ * IR version; a v0 document is migrated) replaces the document. Features keep their authorship
+ * (an `author` in the code is ignored, ADR 0015 §2); the ones it adds or changes are what the
+ * failure rule and the commit check look at.
+ */
+export const ReplaceDocumentOp = z.strictObject({
+  op: z.literal("replaceDocument"),
+  /** The new document, JSON text. */
+  document: z.string().min(2).max(20_000_000),
+  /** Take the document's `author` marks as they are (the op's own inverse restores them); default: the host's. */
+  keepAuthors: z.boolean().optional(),
+});
+
 /** Every op, validated (the command layer validates whoever the caller is). */
 export const IrOpSchema = z.discriminatedUnion("op", [
   SetParamOp,
@@ -195,6 +212,7 @@ export const IrOpSchema = z.discriminatedUnion("op", [
   SetRollbackOp,
   SetAppearanceOp,
   SetAuthorOp,
+  ReplaceDocumentOp,
 ]);
 
 export type IrOp = z.infer<typeof IrOpSchema>;
@@ -223,6 +241,7 @@ export const OP_SCHEMAS = {
   setRollback: SetRollbackOp,
   setAppearance: SetAppearanceOp,
   setAuthor: SetAuthorOp,
+  replaceDocument: ReplaceDocumentOp,
 } as const satisfies { [K in IrOpName]: z.ZodType<OpOf<K>> };
 
 /** What the command registry, the agent's tools and MCP generate from each op. */
@@ -353,6 +372,14 @@ export const OP_CATALOGUE: readonly OpInfo[] = [
     description: "Record who authored features (ADR 0015): Keep makes the agent's features yours. Host-only: agents and MCP clients cannot write authorship.",
   },
   {
+    op: "replaceDocument",
+    title: "Apply Code Edit",
+    area: "feature",
+    hostOnly: true,
+    description:
+      "Replace the document by the one a CadScript edit compiled to (the code view, an accepted code proposal). Host-only: agents and MCP clients change the model with the op tools, one feature at a time.",
+  },
+  {
     op: "writeBackSolution",
     title: "Write Back Sketch Solutions",
     tool: "write_back_solution",
@@ -461,5 +488,7 @@ export function opLabel(op: IrOp): string {
       return op.color === null ? `Reset colour of ${op.feature}` : `Colour ${op.feature} ${op.color}`;
     case "setAuthor":
       return op.author === "user" ? `Keep ${op.features.length === 1 ? op.features[0] : `${op.features.length} features`}` : `Mark ${op.features.length} as agent-made`;
+    case "replaceDocument":
+      return "Edit code";
   }
 }

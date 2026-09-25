@@ -19,7 +19,7 @@
  * latest content.
  */
 import type { EvalReport, IrDocument } from "@aicad/ir-types";
-import { EMPTY_HOST_STATE, hostStateEqual, rolledBack, type HostState } from "@aicad/model-ops";
+import { EMPTY_HOST_STATE, hostStateEqual, rolledBack, type Approvals, type HostState } from "@aicad/model-ops";
 import type { CadScriptService, CompileOutput } from "../cadscript/service";
 import type { ForgeEngine, PickResult, RenderBody } from "../engine/types";
 import { Store } from "../store";
@@ -345,6 +345,36 @@ export class DocStore extends Store<DocState> {
     });
     this.applySource(source, options.coalesceKey !== undefined ? this.debounceMs : 0);
     return true;
+  }
+
+  /**
+   * A code edit on an IR v1 model (FULL-MODELING-PLAN §2.1 rule 6): the CadScript (v1; a v0 source
+   * compiles to its migration) becomes the document through the command layer's `replaceDocument`
+   * op — one undoable transaction, authorship kept, the failure rule and ADR 0015's commit check
+   * applied for `origin`. Throws when the code does not compile; resolves to whether the model
+   * changed.
+   */
+  async applyCode(source: string, options: { label?: string; origin?: TransactionOrigin; approvals?: Approvals } = {}): Promise<boolean> {
+    const ir = this.deps.ir;
+    if (!ir || !this.isV1) throw new Error("applyCode edits IR v1 models; this document is CadScript (use setSource)");
+    const c = await this.deps.cadscript.compileV1(source);
+    if (!c.ok || !c.irJson) {
+      const first = c.errors[0];
+      throw new Error(`The code does not compile${first ? ` (line ${first.line}: ${first.code} ${first.message})` : ""}.`);
+    }
+    return this.applyDocument(c.irJson, { label: "Edit code", ...options });
+  }
+
+  /** Replace an IR v1 model by `irJson` (either IR version) as one `replaceDocument` transaction; see {@link applyCode}. */
+  async applyDocument(irJson: string, options: { label?: string; origin?: TransactionOrigin; approvals?: Approvals } = {}): Promise<boolean> {
+    const ir = this.deps.ir;
+    if (!ir || !this.isV1) throw new Error("applyDocument edits IR v1 models");
+    const t = await ir.transaction(options.label ?? "Edit model", (tx) => tx.apply({ op: "replaceDocument", document: irJson }).then(() => undefined), {
+      origin: options.origin ?? "user",
+      ...(options.approvals ? { approvals: options.approvals } : {}),
+    });
+    await this.idle();
+    return t.changed;
   }
 
   /** End the current (coalescing) transaction, e.g. when the editor loses focus. */

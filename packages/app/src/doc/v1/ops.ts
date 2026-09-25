@@ -25,6 +25,7 @@ export {
   RenameCurveOp,
   RenameFeatureOp,
   RenameParamOp,
+  ReplaceDocumentOp,
   repairOps,
   SetAppearanceOp,
   SetAuthorOp,

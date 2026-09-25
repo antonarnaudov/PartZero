@@ -22,7 +22,7 @@ import { selectionChips } from "../selection/chips";
 import type { SelectionChip } from "../ui-store";
 import { VIEWPORT_COMMANDS } from "../viewport/registry";
 import { viewportRuntime } from "../viewport/runtime";
-import { IR_COMMANDS, runOps } from "./ir-commands";
+import { IR_COMMANDS, originOf as irOriginOf, runOps } from "./ir-commands";
 import { CommandRegistry, defineCommand, type ExecuteMeta, type Invocation } from "./registry";
 
 const command = defineCommand<AppServices>();
@@ -316,14 +316,19 @@ export const COMMANDS = {
     id: "doc.setSource",
     title: "Set Source",
     category: "Model",
-    description: "Replace the CadScript source (one undoable transaction). `coalesceKey` merges rapid edits (typing).",
+    description:
+      "Replace the CadScript source (one undoable transaction). `coalesceKey` merges rapid edits (typing). On an IR v1 model it is a code edit: the source (CadScript v1, or v0 which is migrated) compiles to the new model, applied as the `replaceDocument` op (authorship kept, the failure rule and the commit check applied).",
     args: z.strictObject({
       source: z.string().max(5_000_000),
       label: z.string().max(200).optional(),
       coalesceKey: z.string().max(100).optional(),
     }),
     palette: false,
-    run({ source, label, coalesceKey }, ctx, meta) {
+    async run({ source, label, coalesceKey }, ctx, meta) {
+      if (ctx.doc.isV1) {
+        const changed = await ctx.doc.applyCode(source, { origin: irOriginOf(meta), ...(label !== undefined ? { label } : {}) });
+        return { changed, revision: ctx.doc.getState().revision };
+      }
       const origin = meta.source === "ui" || meta.source === "keyboard" ? "user" : originOf(meta);
       const changed = ctx.doc.setSource(source, {
         origin,
@@ -343,6 +348,11 @@ export const COMMANDS = {
     args: z.strictObject({ ir: IrDocumentSchema, label: z.string().max(200).optional() }),
     palette: false,
     async run({ ir, label }, ctx, meta) {
+      if (ctx.doc.isV1) {
+        // An IR v1 model: the (v0) document replaces it, migrated, as the replaceDocument op.
+        const r = await runOps(ctx, meta, [{ op: "replaceDocument", document: JSON.stringify(ir) }], { label: label ?? "Apply IR edit" });
+        return { changed: r.changed };
+      }
       const { ir: oldIr, state } = await currentIr(ctx, "apply an IR edit");
       const source = await ctx.cadscript.applyIrEdit(state.source, oldIr, ir);
       if (ctx.doc.getState().source !== state.source) throw new Error("the document changed while the edit was prepared; retry");

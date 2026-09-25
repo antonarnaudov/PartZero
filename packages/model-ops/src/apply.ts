@@ -31,6 +31,7 @@ import type { IrOp, OpOf } from "./catalogue.js";
 import { opLabel } from "./catalogue.js";
 import {
   allFeatures,
+  allParams,
   featureOfPath,
   formatPointer,
   getAt,
@@ -354,7 +355,43 @@ export async function applyOp(engine: IrCommandEngine | null | undefined, docume
     }
     case "setAuthor":
       return setAuthor(e, document, op, origin);
+    case "replaceDocument":
+      return replaceDocument(e, document, op, origin);
   }
+}
+
+/** A feature's JSON without its authorship mark (what a code edit may change). */
+function unmarked(f: JsonObject): JsonObject {
+  const { author: _author, ...rest } = f;
+  return rest;
+}
+
+async function replaceDocument(e: IrCommandEngine, document: string, op: OpOf<"replaceDocument">, origin: OpOrigin): Promise<OpOutcome> {
+  const base = parseDoc(document);
+  const next = parseDoc((await e.canonicalize(op.document)).document);
+  const before = new Map(allFeatures(base).map((f) => [f.id, f]));
+  const touched: Touched = noTouch();
+  if (op.keepAuthors && isAgentOrigin(origin)) refuseAuthorWrite(origin, "replaceDocument");
+  for (const f of allFeatures(next)) {
+    const b = before.get(f.id);
+    const changed = !b || !jsonEqual(unmarked(b), unmarked(f));
+    if (changed) touched.features.push(f.id);
+    if (op.keepAuthors) continue;
+    // Authorship is the host's (ADR 0015 §2): an `author` in the code is ignored.
+    delete f["author"];
+    if (b && b["author"] !== undefined) f["author"] = b["author"];
+    if (!b && isAgentOrigin(origin)) f["author"] = "agent";
+    if (changed && b && claimsForUser(origin) && isAgentAuthored(b)) f["author"] = "user";
+  }
+  const oldParams = new Map(allParams(base).map((l) => [String(l.param["name"]), l.param]));
+  for (const l of allParams(next)) {
+    const name = String(l.param["name"]);
+    const p = oldParams.get(name);
+    if (!p || !jsonEqual(p, l.param)) touched.params.push(name);
+  }
+  const text = await verify(e, next);
+  const result = { features: touched.features, params: touched.params };
+  return outcome(op, { document: text, changed: text !== document, result }, [{ op: "replaceDocument", document, keepAuthors: true }], touched);
 }
 
 // ─── Features ────────────────────────────────────────────────────────────────────────────────
