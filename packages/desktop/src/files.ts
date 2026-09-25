@@ -224,11 +224,12 @@ export class RecentFiles {
 export const MAX_FILE_BYTES = 512 * 1024 * 1024;
 
 /**
- * A test-only hook: throws at a named point of a save to simulate a crash there (FULL-MODELING-PLAN C7
- * `fault("save:afterTempWrite")`). The main process passes one only in unpackaged runs.
+ * A test-only hook at a named point of a save: it throws to simulate a crash there (FULL-MODELING-PLAN C7
+ * `fault("save:afterTempWrite")`), or returns a promise to hold the save there (a save still in flight). The main
+ * process passes one only in unpackaged runs.
  */
 export type FaultPoint = "save:afterTempWrite" | "save:beforeRename";
-export type FaultHook = (point: FaultPoint) => void;
+export type FaultHook = (point: FaultPoint) => void | Promise<void>;
 
 export interface AtomicWriteOptions {
   /** Keep the previous version of the file as `<file>.bak` (documents). */
@@ -286,7 +287,7 @@ export async function writeFileAtomic(target: string, data: Uint8Array | string,
   }
   await h.close();
   try {
-    options.fault?.("save:afterTempWrite");
+    await options.fault?.("save:afterTempWrite");
     let backup: string | null = null;
     if (options.backup && existed) {
       const bak = backupPath(target);
@@ -295,7 +296,7 @@ export async function writeFileAtomic(target: string, data: Uint8Array | string,
       await rename(bakTmp, bak);
       backup = bak;
     }
-    options.fault?.("save:beforeRename");
+    await options.fault?.("save:beforeRename");
     await rename(tmp, target);
     await syncDirectory(dir);
     return { bytes: bytes.byteLength, backup };

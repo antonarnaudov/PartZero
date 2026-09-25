@@ -121,16 +121,22 @@ let recovery: RecoveryStore | null = null;
 const pendingOsOpens: string[] = [];
 let appReady = false;
 /**
- * Test-only (unpackaged runs): `globalThis.__pzFaults` (a Set of fault points, set through Playwright's
- * `app.evaluate`) makes the next save fail at that point, once (FULL-MODELING-PLAN C7).
+ * Test-only (unpackaged runs), set through Playwright's `app.evaluate`: `globalThis.__pzFaults` (a Set of fault
+ * points) makes the next save fail at that point, once (FULL-MODELING-PLAN C7); `globalThis.__pzHold` holds the next
+ * save at `point` (setting `reached`) until the test resolves `release`.
  */
 const faultHook: FaultHook | undefined = isDev
   ? (point) => {
-      const faults = (globalThis as { __pzFaults?: Set<string> }).__pzFaults;
-      if (faults?.has(point)) {
-        faults.delete(point);
+      const g = globalThis as { __pzFaults?: Set<string>; __pzHold?: { point: string; reached: boolean; release: Promise<void> } | undefined };
+      if (g.__pzFaults?.has(point)) {
+        g.__pzFaults.delete(point);
         throw new Error(`simulated failure at ${point}`);
       }
+      const hold = g.__pzHold;
+      if (hold?.point !== point) return;
+      g.__pzHold = undefined;
+      hold.reached = true;
+      return hold.release;
     }
   : undefined;
 /** The throwaway profile of a `--self-test` run (removed before it exits). */

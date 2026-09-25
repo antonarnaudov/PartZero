@@ -221,6 +221,56 @@ test("an interrupted save leaves the previous file intact (fault point save:afte
   }
 });
 
+test("an edit made while a save is still being written stays unsaved: dirty marker, close prompt and autosave", async () => {
+  const userData = freshDir("profile-save-race");
+  const docs = mkdtempSync(join(root, "docs-"));
+  const file = join(docs, "race.partzero");
+  const { app, page } = await launch(userData);
+  try {
+    await setCode(page, `${CODE}// saved\n`);
+    await answerSave(app, file);
+    // Hold the save in the main process after the temp file is written, before it replaces the target.
+    await app.evaluate(() => {
+      const g = globalThis as { __pzHold?: unknown; __pzHeld?: { reached: boolean }; __pzRelease?: () => void };
+      let release!: () => void;
+      const hold = { point: "save:beforeRename", reached: false, release: new Promise<void>((r) => (release = r)) };
+      g.__pzHold = hold;
+      g.__pzHeld = hold;
+      g.__pzRelease = release;
+    });
+    await page.evaluate(() => {
+      (window as unknown as { __save?: Promise<Result> }).__save = (window as unknown as AW).__aicad.execute({ id: "file.saveAs", args: {} });
+    });
+    await expect.poll(() => app.evaluate(() => (globalThis as { __pzHeld?: { reached: boolean } }).__pzHeld?.reached ?? false)).toBe(true);
+    await setCode(page, `${CODE}// typed during the save\n`);
+    await app.evaluate(() => (globalThis as { __pzRelease?: () => void }).__pzRelease!());
+    const r = await page.evaluate(() => (window as unknown as { __save: Promise<Result> }).__save);
+    expect(r).toMatchObject({ ok: true, value: { saved: true, path: file, upToDate: false } });
+
+    // The file has what the save captured; the window still has the edit, unsaved.
+    expect(readPartZero(readFileSync(file)).code).toBe(`${CODE}// saved\n`);
+    expect(await page.evaluate(() => (window as unknown as AW).__aicad.summary())).toMatchObject({ name: "race", path: file, dirty: true });
+    await expect(page.getByTestId("doc-title")).toContainText("race");
+    if (process.platform === "darwin") {
+      await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isDocumentEdited())).toBe(true);
+    }
+    // The autosave keeps it.
+    expect(await exec(page, "file.flushRecovery")).toMatchObject({ ok: true, value: { written: true } });
+    const snapshots = readdirSync(join(userData, "Recovery")).filter((n) => n.endsWith(".partzero"));
+    expect(snapshots).toHaveLength(1);
+    expect(readPartZero(readFileSync(join(userData, "Recovery", snapshots[0]!))).code).toContain("// typed during the save");
+    // Closing asks (Cancel keeps the window).
+    await answerClosePrompt(app, 2);
+    expect(await exec(page, "file.close")).toMatchObject({ ok: true });
+    await expect.poll(() => app.evaluate(() => (globalThis as { __prompts?: string[] }).__prompts?.length ?? 0)).toBe(1);
+    expect((await app.evaluate(() => (globalThis as { __prompts?: string[] }).__prompts))?.[0]).toMatch(/changes you made to “race”/);
+    expect(await windowCount(app)).toBe(1);
+  } finally {
+    await answerClosePrompt(app, 1).catch(() => undefined);
+    await app.close();
+  }
+});
+
 test("after a force quit, the next launch offers the unsaved document and restores it", async () => {
   const userData = freshDir("profile-crash");
   const marker = `// unsaved work ${Date.now()}`;
