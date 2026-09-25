@@ -1,0 +1,28 @@
+packages/model-ops/src/engine.ts
+  s_59c0dd2af30db2::t_559c6a43569318 150-187
+  s_59c0dd2af30db2::t_903904fb6ad986 254-255,274,332-336
+packages/model-ops/test/picks.test.ts
+  s_59c0dd2af30db2::t_18fb4b38946a2f 53
+  s_59c0dd2af30db2::t_dcf0bd8753fe7c 102-103
+  s_59c0dd2af30db2::t_9b6ed8ef254ad2 1-52,54-101,104-106
+packages/model-ops/src/index.ts
+  s_59c0dd2af30db2::t_b3faa5ce84b68f 15
+packages/model-ops/src/picks.ts
+  s_59c0dd2af30db2::t_478c95f911d832 1-147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1da0d16708ce447198e89f8d16d22f62e3c25538",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
