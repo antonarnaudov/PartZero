@@ -5,12 +5,16 @@
  */
 import { registerFeatureTools } from "./builtin/features";
 import { registerInspectTools } from "./builtin/inspect";
+import { registerModifyTools } from "./builtin/modify";
+import { registerPatternTools } from "./builtin/pattern";
 import { registerSketchTools } from "./builtin/sketch";
 import type { ToolRegistry } from "./registry";
 
 export const TOOL_MODULES: ReadonlyArray<(registry: ToolRegistry) => void> = [
   registerSketchTools,
   registerFeatureTools,
+  registerModifyTools,
+  registerPatternTools,
   registerInspectTools,
 ];
 
