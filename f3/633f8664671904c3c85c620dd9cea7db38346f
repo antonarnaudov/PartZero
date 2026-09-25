@@ -1,0 +1,26 @@
+oracle/src/aicad_oracle/step_check.py
+  s_59c0dd2af30db2::t_e19731c620ae02 1-342
+oracle/src/aicad_oracle/cli.py
+  s_59c0dd2af30db2::t_c2850d286753aa 548-552
+  s_59c0dd2af30db2::t_cd3eeb7ea06879 539-543
+oracle/tests/test_step_check.py
+  s_59c0dd2af30db2::t_40a149da5f4b47 1-91
+oracle/README.md
+  s_59c0dd2af30db2::t_05fdef274983e1 405-425
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f3633f8664671904c3c85c620dd9cea7db38346f",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
