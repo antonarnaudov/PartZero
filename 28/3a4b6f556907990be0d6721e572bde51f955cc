@@ -1,0 +1,22 @@
+packages/app/src/ui/sketch/tool-icons.tsx
+  s_59c0dd2af30db2::t_d706c1298d6210 1-4,6,8,10-16,19-24,27-28,31-32
+packages/app/src/ui/shell/tool-icons.tsx
+  s_59c0dd2af30db2::t_bc323687802f3c 318-320
+  s_59c0dd2af30db2::t_5e37bc06b84ebf 2-11,13,15,17,19-31,37-51,54,57-64,69-71,76-85,90-107,112-130,135-138,143-144,149-150,155-163,168-170,175-176,179,182-191,196-216,221-251,254-307,310-313,325-328,333,338-345,348,351-354,359-362,367-369,374-377,382-383,388-389,394-395,400-402,407-408,413-414,417,420-422,427-432,435,438,443-445,450-458,461,464-465,470-471,476-478,483-486,491-510,517-518,522-534,536-540,543
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "283a4b6f556907990be0d6721e572bde51f955cc",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
