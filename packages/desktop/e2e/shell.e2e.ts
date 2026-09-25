@@ -8,7 +8,10 @@
  * - The tool ribbon comes from the tool registry: groups, shortcuts, disabled reasons, the group menu.
  * - The property panel framework: a tool registered at run time opens a panel with typed fields (a number with
  *   units and expressions, a selection input with its count, a choice, a toggle), live preview, inline errors with
- *   the feasible range and a one-click fix, OK as one undoable transaction, Cancel leaving nothing behind.
+ *   the feasible range and a one-click fix, OK as one undoable transaction (the tool's ops, applied to the document
+ *   as it is at OK time), Cancel leaving nothing behind. A slow preview never outlives its panel, OK waits for the
+ *   check of the values it commits, an edit made while the panel is open is kept, and an open inspect panel
+ *   follows undo.
  * - Keyboard: tool shortcuts, Esc and Enter, Space repeats the last tool, ⌘K and ⌘⇧P open the palette (which
  *   lists tools), `?` opens the shortcuts map; the mode (model/sketch) decides which tools show.
  */
@@ -47,12 +50,11 @@ interface Automation {
 /** What a test tool's `activate` uses of the tool context (packages/app/src/tools/framework/types.ts). */
 interface TestToolContext {
   services: {
-    doc: { getState(): { model: { ir: unknown } | null } };
+    doc: { getState(): { model: { ir: unknown } | null; source: string }; idle(): Promise<unknown> };
     engines: { active: { evaluate(irJson: string): Promise<{ report: { features: unknown[] }; bodies: unknown[] }> } };
   };
-  run(cmd: { id: string; args?: unknown }): Promise<{ ok: true; value: unknown } | { ok: false; error: { message: string } }>;
+  document: { feature(idOrName: string): { id: string; json: Record<string, unknown> } | null };
   openPanel(spec: unknown): unknown;
-  showPreview(bodies: unknown[] | null): void;
 }
 
 type PanelValues = Record<string, unknown>;
@@ -79,6 +81,11 @@ interface ShellHook {
 interface PW {
   __aicad: Automation;
   __partzero: ShellHook;
+}
+
+/** The demo thickness tool leaves its context here, so a test can read the source as the tool sees it. */
+interface TestWindow extends PW {
+  __pzThicknessCtx?: TestToolContext;
 }
 
 test.beforeAll(async () => {
@@ -229,7 +236,9 @@ test("inspect tools: Forge's exact body properties and the printer fit, in the p
 
 test("a property panel: typed fields, units and expressions, feasible range, preview, OK as one undo step", async () => {
   // A demo tool registered at run time, built only on the public contract (tools/framework/types.ts):
-  // it changes the plate's thickness through the command layer (`doc.applyIr`, one transaction).
+  // its preview evaluates the part as it is now with the new thickness, and OK commits one `setField`
+  // op, which the shell applies to the document as it is at OK time (one transaction). 7 mm previews
+  // slowly, for the checks below.
   await page.evaluate(() => {
     type Ir = { parts: Array<{ features: Array<{ type: string; name: string; distance?: number }> }> };
     (window as unknown as PW).__partzero.registerTool({
@@ -239,12 +248,13 @@ test("a property panel: typed fields, units and expressions, feasible range, pre
       icon: "pushPull",
       shortcut: "Shift+T",
       activate: (ctx) => {
-        const ir = ctx.services.doc.getState().model?.ir as unknown as Ir | undefined;
-        const plate = ir?.parts[0]?.features.find((f) => f.type === "extrude");
-        if (!ir || !plate) throw new Error("no extrude to edit");
+        (window as unknown as TestWindow).__pzThicknessCtx = ctx;
+        const plate = ctx.document.feature("plate");
+        if (!plate) throw new Error("no extrude to edit");
+        // Built from the document as it is when called (never a copy taken here).
         const withDistance = (d: number): Ir => {
-          const next = structuredClone(ir);
-          next.parts[0]!.features.find((f) => f.type === "extrude")!.distance = d;
+          const next = structuredClone(ctx.services.doc.getState().model!.ir) as Ir;
+          next.parts[0]!.features.find((f) => f.name === "plate")!.distance = d;
           return next;
         };
         return {
@@ -252,7 +262,7 @@ test("a property panel: typed fields, units and expressions, feasible range, pre
           description: "Sets the extrude distance.",
           fields: [
             { kind: "selection", key: "face", label: "Face", accepts: ["face"], min: 0 },
-            { kind: "number", key: "d", label: "Thickness", quantity: "length", min: 0, minExclusive: true, max: 20, default: String(plate.distance) },
+            { kind: "number", key: "d", label: "Thickness", quantity: "length", min: 0, minExclusive: true, max: 20, default: String(plate.json["distance"]) },
             { kind: "choice", key: "side", label: "Direction", options: [{ value: "up", label: "Up" }, { value: "down", label: "Down" }] },
             { kind: "toggle", key: "keep", label: "Keep holes", default: true },
             {
@@ -267,16 +277,14 @@ test("a property panel: typed fields, units and expressions, feasible range, pre
             const d = (values["d"] as { value: number | null }).value;
             if (d === null) return { ok: true };
             if (d > 12) return { ok: false, errors: [{ field: "d", code: "PLATE_TOO_THICK", message: "Thicker than the screws are long.", feasible: { min: 0.5, max: 12 } }] };
+            if (d === 7) await new Promise((r) => setTimeout(r, 1500));
+            await ctx.services.doc.idle();
             const r = await ctx.services.engines.active.evaluate(JSON.stringify(withDistance(d)));
-            ctx.showPreview(r.bodies);
             const vol = (r.report.features as Array<{ bodies?: Array<{ volume: number }> }>).flatMap((f) => f.bodies ?? []).reduce((s, b) => s + b.volume, 0);
-            return { ok: true, summary: [{ label: "Volume", value: `${vol.toFixed(2)} mm³` }] };
+            return { ok: true, summary: [{ label: "Volume", value: `${vol.toFixed(2)} mm³` }], bodies: r.bodies };
           },
-          commit: async (values: PanelValues) => {
-            const d = (values["d"] as { value: number }).value;
-            const r = await ctx.run({ id: "doc.applyIr", args: { ir: withDistance(d), label: `Plate ${d} mm` } });
-            return r.ok ? { ok: true } : { ok: false, errors: [{ message: r.error.message }] };
-          },
+          toOps: (values: PanelValues) => [{ op: "setField", feature: plate.id, path: "/distance", value: (values["d"] as { value: number }).value }],
+          label: (values: PanelValues) => `Plate ${(values["d"] as { text: string }).text} mm`,
         };
       },
     });
@@ -343,6 +351,76 @@ test("a property panel: typed fields, units and expressions, feasible range, pre
   expect(s.dirty).toBe(true);
   await page.keyboard.press(`${mod}+Z`);
   await expect(page.locator('[data-testid="timeline-feature"][data-feature="plate"] .tl-summary')).toContainText("5 mm");
+});
+
+test("a slow preview never outlives its panel, and OK waits for the check of the values it commits", async () => {
+  const panel = page.getByTestId("property-panel");
+  const viewport = page.getByTestId("viewport");
+  const summary = page.locator('[data-testid="timeline-feature"][data-feature="plate"] .tl-summary');
+  await page.getByTestId("tool-test.thickness").click();
+  await expect(panel).toHaveAttribute("data-state", "ready");
+  await expect(viewport).toHaveAttribute("data-shown", "tool-preview");
+  // Esc while the (slow) 7 mm preview runs: the viewport shows the document again, and the late preview is dropped.
+  await panel.getByTestId("input-d").fill("7");
+  await expect(panel).toHaveAttribute("data-state", "previewing");
+  await expect(viewport).toHaveAttribute("data-preview-stale", "true");
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(viewport).toHaveAttribute("data-shown", "current");
+  await page.waitForTimeout(2000);
+  await expect(viewport).toHaveAttribute("data-shown", "current");
+  await expect(viewport).toHaveAttribute("data-extent-z", "5.00");
+
+  // Enter while the 7 mm check runs: the panel waits for it, then commits 7 mm.
+  await page.getByTestId("tool-test.thickness").click();
+  await expect(panel).toHaveAttribute("data-state", "ready");
+  await panel.getByTestId("input-d").fill("7");
+  await panel.getByTestId("input-d").press("Enter");
+  await expect(panel).toHaveAttribute("data-pending-commit", "true");
+  await expect(panel.getByTestId("panel-state")).toHaveText("Checking, then applying…");
+  await expect(summary).toContainText("5 mm");
+  await expect(panel).toBeHidden({ timeout: 10_000 });
+  await expect(summary).toContainText("7 mm");
+  await page.keyboard.press(`${mod}+Z`);
+  await expect(summary).toContainText("5 mm");
+});
+
+test("an edit made while a panel is open is kept by OK, and an open inspect panel follows undo", async () => {
+  const panel = page.getByTestId("property-panel");
+  const summary = page.locator('[data-testid="timeline-feature"][data-feature="plate"] .tl-summary');
+  const source = (): Promise<string> => page.evaluate(() => (window as unknown as TestWindow).__pzThicknessCtx!.services.doc.getState().source);
+  await page.getByTestId("tool-test.thickness").click();
+  await panel.getByTestId("input-d").fill("8");
+  await expect(panel).toHaveAttribute("data-state", "ready");
+  // Meanwhile the code changes, as the code editor or an accepted agent proposal would: a smaller pilot hole.
+  const edited = await page.evaluate(() => {
+    const w = window as unknown as TestWindow;
+    const src = w.__pzThicknessCtx!.services.doc.getState().source;
+    return w.__aicad.execute({ id: "doc.setSource", args: { source: src.replace("radius: 11", "radius: 10"), label: "Smaller pilot" } });
+  });
+  expect(edited.ok).toBe(true);
+  // The panel checks again against the changed part; OK then changes only the thickness.
+  await expect(panel).toHaveAttribute("data-state", "ready");
+  await panel.getByTestId("input-d").press("Enter");
+  await expect(panel).toBeHidden();
+  await expect(summary).toContainText("8 mm");
+  const after = await source();
+  expect(after).toContain("radius: 10");
+  expect(after).toContain("distance: 8");
+
+  // Body properties stays open across an undo and shows the part as it is now.
+  await page.getByTestId("tool-inspect.bodyProperties").click();
+  const props = panel.getByTestId("panel-summary");
+  await expect(props).toContainText("50 × 50 × 8 mm");
+  await page.evaluate(() => (window as unknown as PW).__aicad.execute({ id: "edit.undo" }));
+  await expect(props).toContainText("50 × 50 × 5 mm");
+  // 5 × (50² − π·10² − 4·π·1.7²) mm³: the 10 mm pilot is still there.
+  await expect(props).toContainText("10747.6");
+  await expect(panel).toHaveAttribute("data-tool", "inspect.bodyProperties");
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await page.evaluate(() => (window as unknown as PW).__aicad.execute({ id: "edit.undo" }));
+  expect(await source()).toContain("radius: 11");
 });
 
 test("keyboard: ⌘K and ⌘⇧P list tools, `?` opens the shortcuts map, the mode picks the tools", async () => {
