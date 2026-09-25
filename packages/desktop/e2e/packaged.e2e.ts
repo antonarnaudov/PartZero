@@ -57,6 +57,8 @@ test("a packaged-mode run has no automation API, no DevTools and no developer me
   await expect(page.getByTestId("app-shell")).toBeVisible();
   expect(page.url()).toBe("app://aicad/index.html");
   expect(await page.evaluate(() => typeof (window as unknown as { __aicad?: unknown }).__aicad)).toBe("undefined");
+  // Nor the shell's hook (ui/shell/install.ts, same gate as __aicad), which can register tools and run commands.
+  expect(await page.evaluate(() => typeof (window as unknown as { __partzero?: unknown }).__partzero)).toBe("undefined");
   const devTools = await app.evaluate(async ({ BrowserWindow }) => {
     const wc = BrowserWindow.getAllWindows()[0]!.webContents;
     wc.openDevTools({ mode: "detach" });

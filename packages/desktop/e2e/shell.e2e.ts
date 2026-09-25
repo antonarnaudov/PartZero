@@ -70,6 +70,8 @@ interface TestTool {
 interface ShellHook {
   registerTool(def: TestTool): () => void;
   setMode(mode: "model" | "sketch"): void;
+  /** Runs app and shell commands (`help.welcome` is a shell command until the integrator merges them). */
+  execute(cmd: { id: string; args?: unknown }): Promise<unknown>;
 }
 
 /** `window` with the automation hooks of a development run (cast: other suites type `__aicad` their own way). */
@@ -252,6 +254,12 @@ test("a property panel: typed fields, units and expressions, feasible range, pre
             { kind: "number", key: "d", label: "Thickness", quantity: "length", min: 0, minExclusive: true, max: 20, default: String(plate.distance) },
             { kind: "choice", key: "side", label: "Direction", options: [{ value: "up", label: "Up" }, { value: "down", label: "Down" }] },
             { kind: "toggle", key: "keep", label: "Keep holes", default: true },
+            {
+              kind: "choice",
+              key: "material",
+              label: "Material",
+              options: ["PLA", "PETG", "ABS", "PLA-CF", "PETG-CF"].map((m) => ({ value: m.toLowerCase(), label: m })),
+            },
           ],
           previewDelayMs: 30,
           preview: async (values: PanelValues) => {
@@ -304,6 +312,8 @@ test("a property panel: typed fields, units and expressions, feasible range, pre
   await expect(panel.getByTestId("choice-side-down")).toHaveAttribute("aria-checked", "true");
   await panel.getByTestId("toggle-keep").click();
   await expect(panel.getByTestId("toggle-keep")).toHaveAttribute("aria-checked", "false");
+  await panel.getByTestId("input-material").selectOption("petg");
+  await expect(panel.getByTestId("input-material")).toHaveValue("petg");
   await page.screenshot({ path: screenshotPath("shell-property-panel.png", "PZ_E2E_PANEL_SCREENSHOT") });
 
   // Cancel leaves the document untouched.
@@ -365,6 +375,23 @@ test("keyboard: ⌘K and ⌘⇧P list tools, `?` opens the shortcuts map, the mo
   await page.keyboard.press("l");
   await expect(page.getByTestId("property-panel")).toBeHidden();
   expect(pageErrors).toEqual([]);
+});
+
+test("the light theme: welcome and a tool panel (review screenshots)", async () => {
+  await page.evaluate(() => (window as unknown as PW).__aicad.execute({ id: "view.setTheme", args: { theme: "light" } }));
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.evaluate(() => (window as unknown as PW).__aicad.execute({ id: "file.newFromTemplate", args: { templateId: "t1-nema17-plate" } }));
+  await page.evaluate(() => (window as unknown as PW).__aicad.idle());
+  await page.getByTestId("tool-inspect.bodyProperties").click();
+  await expect(page.getByTestId("panel-summary")).toBeVisible();
+  await page.screenshot({ path: screenshotPath("shell-panel-light.png", "PZ_E2E_PANEL_LIGHT_SCREENSHOT") });
+  await page.keyboard.press("Escape");
+  await page.evaluate(() => (window as unknown as PW).__partzero.execute({ id: "help.welcome" }));
+  await expect(page.getByTestId("welcome")).toBeVisible();
+  await page.screenshot({ path: screenshotPath("shell-welcome-light.png", "PZ_E2E_WELCOME_LIGHT_SCREENSHOT") });
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("welcome")).toBeHidden();
+  await page.evaluate(() => (window as unknown as PW).__aicad.execute({ id: "view.setTheme", args: { theme: "dark" } }));
 });
 
 test("a starter chip sends its prompt to the design agent", async () => {

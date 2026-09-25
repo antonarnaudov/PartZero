@@ -252,7 +252,9 @@ export class Shell extends Store<ShellState> {
 
   private onPanelClosed(_reason: CloseReason, session: PanelSession): void {
     if (this.getState().panel !== session) return;
-    this.setState((s) => ({ panel: null, activeToolId: null, rightTab: s.rightTab === "properties" ? "code" : s.rightTab }));
+    // Back to what the code dock showed before (the agent may have opened its proposal meanwhile).
+    const codeTab = this.services.agent.getState().codeTab;
+    this.setState((s) => ({ panel: null, activeToolId: null, rightTab: s.rightTab === "properties" ? codeTab : s.rightTab }));
   }
 
   /** OK on the open panel. */

@@ -76,7 +76,8 @@ function ProviderStatus(): ReactElement {
   }
   const claude: CliProviderStatus | undefined = settings.cli?.find((c) => c.id === "claude-cli");
   const designer = settings.models.designer;
-  const model = settings.profiles.find((p) => p.id === designer)?.name ?? designer;
+  // Profile names carry their route ("Claude Opus (Claude Code, your plan)"); the line already says it.
+  const model = (settings.profiles.find((p) => p.id === designer)?.name ?? designer).replace(/\s*\([^)]*\)\s*$/, "");
   const recheckButton = (
     <button type="button" className="ghost-btn tiny" onClick={recheck} data-testid="welcome-recheck">
       Re-check
