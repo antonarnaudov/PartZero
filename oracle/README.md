@@ -439,3 +439,33 @@ Revision 2026-09-23b resolved the 15 points the oracle raised. These remain or a
 4. **"Within tol of the axis ⇒ on the axis" is implied, not stated.** §4.4 speaks of profile vertices and edges "on the axis" without tying that to tol. The oracle snaps points within tol. State this explicitly.
 5. **Class precedence within one program is unspecified.** The oracle uses POTENTIAL_SILENT_WRONG > CODE_MISMATCH > ROBUSTNESS > MATCH.
 6. **Feature-list mismatches are unclassified.** A missing, extra or reordered feature entry in one report falls under no §6 class. The oracle calls it POTENTIAL_SILENT_WRONG.
+
+## STEP export check (`step-check`)
+
+`oracle step-check` reads Forge's **own** STEP files (forge-io's writer, `aicad export --format step`)
+with OCCT's `STEPControl_Reader` and compares each body with Forge's exact metrics from the export
+summary: `BRepCheck_Analyzer` validity and closed shells; volume, area and tight box within 1e-6
+relative (fixed-order integrators first, the adaptive ones when those disagree); the face count; and
+the edge count after seam normalization, which must account exactly for the seams and split pieces
+the writer reports. It also checks that every face keeps the orientation the file gives it:
+OCCT's healing silently turns an inside-out face (a `same_sense` that disagrees with its loops) or a
+whole inside-out shell back round, after which volume, area and `BRepCheck` all pass. So each face's
+orientation in OCCT's healed solid is compared with the file's (`same_sense` composed with a void's
+`ORIENTED_CLOSED_SHELL`), and healing's orientation warnings are reported; other healing messages
+are kept in the JSON report (`healing`). Healing cannot just be switched off: OCCT's raw
+`StepToTopoDS` translation leaves periodic faces unorientable even in correct files. Code:
+`src/aicad_oracle/step_check.py`; tests: `tests/test_step_check.py`.
+
+```bash
+uv run oracle step-check --programs ../corpus/programs ../corpus/v1/programs   # exports with forge/target/debug/aicad
+(cd ../forge && cargo run --release -p forge-io --example step_corpus -- /tmp/step 200 1 7)
+uv run oracle step-check --dir /tmp/step --json /tmp/step-check.json          # the boolean corpus + samples
+```
+
+Match rate on 2026-09-25 (with Forge's own pcurves in the files): the corpus programs 11/11 bodies;
+the boolean corpus, seeds 1 and 7 (200 cases each, every operand and result) plus the hand-built
+samples, 1604/1605; seeds 2 and 3 (150 cases each) plus 10 chained sequences of 8 operations
+(`STEP_CHAINS=10x8`), 1396/1396. The one other body is a join whose face boundary touches itself at
+two vertices: Forge accepts that face, `BRepCheck` does not (its volume, area and counts match).
+Without pcurves, OCCT approximated the face domains by projection and about 2% of the chained bodies
+differed by 1e-6 to 2e-4 relative.

@@ -3,6 +3,7 @@
 //! ```text
 //! aicad eval <file.json> [--format json|text] [--out <path>] [--report-version auto|v1]
 //! aicad export <file.json> --out <model.3mf|.stl|.obj> [--deflection 0.05] [--angular 0.35]
+//! aicad export <file.json> --out <part.step> [--format step] [--step-schema ap214|ap242]
 //! aicad migrate <file.json> [--out <doc.json>] [--renames <renames.json>]
 //! aicad solve <file.json> [--sketch <id>]... [--write-back] [--out <doc.json>]
 //! ```
@@ -55,6 +56,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use forge_ir::{EvalReport, IrError, METRICS_SCHEMA, ReportError, Status};
 
 mod print;
+mod step;
 
 #[derive(Parser)]
 #[command(
@@ -106,9 +108,12 @@ enum Command {
         /// Output mesh file.
         #[arg(long)]
         out: PathBuf,
-        /// Mesh format (default: from the `--out` extension).
-        #[arg(long, value_enum)]
+        /// Output format (default: from the `--out` extension; `.step`/`.stp` is STEP).
+        #[arg(long, value_enum, visible_alias = "format")]
         mesh_format: Option<MeshFormat>,
+        /// STEP application protocol (STEP only).
+        #[arg(long, value_enum, default_value = "ap214")]
+        step_schema: StepSchemaArg,
         /// Maximum chordal deviation from the exact surface, mm.
         #[arg(long, default_value_t = 0.05)]
         deflection: f64,
@@ -185,6 +190,16 @@ enum MeshFormat {
     StlAscii,
     /// Wavefront OBJ.
     Obj,
+    /// STEP B-rep (exact geometry, not a mesh; see `--step-schema`).
+    Step,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum StepSchemaArg {
+    /// AP214 (`AUTOMOTIVE_DESIGN`), the most widely read.
+    Ap214,
+    /// AP242.
+    Ap242,
 }
 
 impl MeshFormat {
@@ -195,6 +210,7 @@ impl MeshFormat {
             MeshFormat::Stl => "stl",
             MeshFormat::StlAscii => "stl-ascii",
             MeshFormat::Obj => "obj",
+            MeshFormat::Step => "step",
         }
     }
 }
@@ -228,6 +244,7 @@ fn main() -> ExitCode {
             file,
             out,
             mesh_format,
+            step_schema,
             deflection,
             angular,
             allow_partial,
@@ -248,6 +265,13 @@ fn main() -> ExitCode {
                 deflection,
                 angular,
             };
+            let schema = match step_schema {
+                StepSchemaArg::Ap214 => forge_io::StepSchema::Ap214,
+                StepSchemaArg::Ap242 => forge_io::StepSchema::Ap242,
+            };
+            if mesh_format.or_else(|| format_from_extension(&out)) == Some(MeshFormat::Step) {
+                return step::export(&file, &out, allow_partial, &extras, schema);
+            }
             export(&file, &out, mesh_format, allow_partial, &extras)
         }
         Command::Migrate { file, out, renames } => {
@@ -274,7 +298,7 @@ fn export(
         Some(f) => f,
         None => {
             eprintln!(
-                "aicad: cannot infer the mesh format from {}; use .3mf, .stl or .obj, or pass --mesh-format",
+                "aicad: cannot infer the mesh format from {}; use .3mf, .stl, .obj or .step, or pass --format",
                 out.display()
             );
             return ExitCode::from(3);
@@ -398,6 +422,9 @@ fn write_meshes(
         MeshFormat::Obj => forge_io::try_write_obj(&named),
         MeshFormat::Stl => forge_io::try_write_stl(&only, true),
         MeshFormat::StlAscii => forge_io::try_write_stl(&only, false),
+        MeshFormat::Step => Err(forge_io::IoError::Unsupported {
+            what: "STEP is not a mesh format",
+        }),
     };
     let bytes = match bytes {
         Ok(b) => b,
@@ -448,6 +475,7 @@ fn format_from_extension(path: &Path) -> Option<MeshFormat> {
         "3mf" => Some(MeshFormat::ThreeMf),
         "stl" => Some(MeshFormat::Stl),
         "obj" => Some(MeshFormat::Obj),
+        "step" | "stp" => Some(MeshFormat::Step),
         _ => None,
     }
 }

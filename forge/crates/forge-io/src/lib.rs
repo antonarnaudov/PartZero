@@ -1,14 +1,14 @@
-//! # forge-io — mesh file formats (and, later, STEP)
+//! # forge-io — mesh file formats and STEP
 //!
 //! Our own writers and readers for the mesh formats produced from
-//! [`forge_mesh::BodyMesh`]:
+//! [`forge_mesh::BodyMesh`], and our own STEP B-rep writer for Forge bodies:
 //!
 //! | Format | Write | Read | Notes |
 //! |---|---|---|---|
 //! | STL binary / ASCII | [`write_stl`] | [`read_stl`] | `f32` coordinates, facet normals from `f64` positions |
 //! | OBJ | [`write_obj`] | — | one `o` per body, one `g` per B-rep face, `v`/`vn` shared indices, full `f64` precision |
 //! | 3MF | [`write_3mf`], [`try_write_3mf_with`] | [`read_3mf`], [`validate_3mf`] | core spec, millimetres, one object per body with its name, exact `f64` round trip; optional `Title`/`Application` metadata and a build-item translation |
-//! | STEP | — | — | planned (F1), see [`step`] |
+//! | STEP AP214 / AP242 | [`write_step`] | [`step::parse`] (Part 21), [`verify_step`] | exact B-rep of Forge bodies (seams synthesized, ADR 0012), mm, per-body names and colours, deterministic bytes; import planned (FM7), see [`step`] |
 //!
 //! [`place_on_bed`] ([`bed`]) checks that the bodies fit a printer's bed (less a margin per
 //! side, `EXPORT_BED_FIT` otherwise) and computes the translation that centres them on it
@@ -66,6 +66,10 @@ pub use bed::{
     layout_warnings, mesh_bounds, place_on_bed,
 };
 pub use obj::{try_write_obj, write_obj};
+pub use step::{
+    StepBody, StepBodyReport, StepError, StepOptions, StepReport, StepSchema, verify_step,
+    write_step,
+};
 pub use stl::{StlFile, StlSolid, StlTriangle, read_stl, try_write_stl, write_stl};
 pub use threemf::{
     BuildItem3mf, CORE_NS, DEFAULT_APPLICATION, IDENTITY_3MF_TRANSFORM, MODEL_CONTENT_TYPE,
@@ -123,6 +127,9 @@ pub enum IoError {
         /// What.
         what: &'static str,
     },
+    /// STEP export or reading failed (its own stable code, `STEP_*`).
+    #[error(transparent)]
+    Step(#[from] StepError),
 }
 
 impl IoError {
@@ -136,6 +143,7 @@ impl IoError {
             IoError::Xml { .. } => "IO_XML",
             IoError::ThreeMf { .. } => "IO_3MF",
             IoError::Unsupported { .. } => "IO_UNSUPPORTED",
+            IoError::Step(e) => e.code(),
         }
     }
 }

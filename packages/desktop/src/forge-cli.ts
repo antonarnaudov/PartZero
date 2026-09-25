@@ -66,14 +66,14 @@ export async function forgeInfo(bin: string): Promise<ForgeCliInfo> {
   }
 }
 
-interface RunResult {
+export interface RunResult {
   code: number | null;
   stdout: Buffer;
   stderr: string;
   error?: string;
 }
 
-function run(bin: string, args: string[], timeoutMs: number): Promise<RunResult> {
+export function run(bin: string, args: string[], timeoutMs: number): Promise<RunResult> {
   return new Promise((done) => {
     // An allowlisted environment: the main process holds provider API keys (env / .env) that the
     // kernel has no business seeing.
@@ -100,7 +100,7 @@ function run(bin: string, args: string[], timeoutMs: number): Promise<RunResult>
   });
 }
 
-async function withTempDoc<T>(irJson: string, fn: (dir: string, docPath: string) => Promise<T>): Promise<T> {
+export async function withTempDoc<T>(irJson: string, fn: (dir: string, docPath: string) => Promise<T>): Promise<T> {
   if (typeof irJson !== "string" || irJson.length === 0 || irJson.length > MAX_IR_BYTES) throw new Error("invalid IR document");
   const dir = await mkdtemp(join(tmpdir(), "aicad-"));
   try {

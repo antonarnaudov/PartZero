@@ -1,6 +1,6 @@
 [package]
 name = "forge-io"
-description = "Forge file I/O: our own STL (binary/ASCII), OBJ and 3MF writers and readers; STEP planned"
+description = "Forge file I/O: our own STL (binary/ASCII), OBJ and 3MF writers and readers, and a STEP AP214/AP242 B-rep writer"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,14 +8,20 @@ license = "MPL-2.0"
 publish.workspace = true
 
 [dependencies]
+forge-core.workspace = true
 forge-mesh.workspace = true
 thiserror.workspace = true
 # Raw DEFLATE only; the zip container, CRC-32, XML and all format logic are ours.
 miniz_oxide.workspace = true
 
 [dev-dependencies]
-forge-core.workspace = true
 proptest.workspace = true
+# STEP export tests and the corpus dump example: real Forge bodies (extrudes, revolves,
+# the boolean corpus) and their exact metrics. None of these depend on forge-io.
+forge-ops.workspace = true
+forge-ir.workspace = true
+forge-check.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

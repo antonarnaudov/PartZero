@@ -24,6 +24,7 @@ import { forgeEval, forgeExport, forgeInfo, MESH_FORMATS } from "./forge-cli.js"
 import { currentSlicer, openPrintInSlicer, type PrintHandoffDeps } from "./print-handoff.js";
 import { checkSlicerPath, profileView } from "./profiles.js";
 import { isInside } from "./slicer.js";
+import { handleStepExport } from "./step-export.js";
 
 /** Printing: the profile library, the prints folder and the slicer handoff (print-handoff.ts). */
 export interface PrintIpcDeps extends PrintHandoffDeps {
@@ -159,6 +160,8 @@ export function registerIpc(deps: IpcDeps): void {
     if (typeof r.deflection === "number") request.deflection = r.deflection;
     return forgeEval(deps.forgeBin, request);
   });
+
+  handle("forge:exportStep", (_e, req) => handleStepExport(deps.forgeBin, req));
 
   handle("forge:export", async (_e, req) => {
     const r = (typeof req === "object" && req !== null ? req : {}) as ForgeExportRequest;
