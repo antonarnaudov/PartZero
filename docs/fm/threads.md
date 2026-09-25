@@ -63,7 +63,9 @@ only: tolerance classes and FDM compensation are not in the IR.
   centroid match (volume 2.8e-8 relative or better); types differ only as §8.3 rule 9 allows →
   `NORMALIZED`.
 - `forge-io/tests/step_threads.rs`: threaded bodies export, read back, verify, and bound Forge's
-  exact volume and area to 1e-7.
+  exact volume and area to 1e-7. OCCT's `step_check` reads the corpus program's STEP export as
+  valid with Forge's volume, area, box and counts (1/1 bodies match).
+- The WASM build evaluates the corpus program bit-identically to the native CLI (1.1 s).
 
 ## Not done yet
 
@@ -75,3 +77,9 @@ only: tolerance classes and FDM compensation are not in the IR.
 - Thread run-outs / chamfered thread starts and tolerance classes are not modelled.
 - The oracle's own checks cover diameter, face and length; end-margin and interference refusals are
   Forge-only (no oracle program raises them).
+- STEP export of long threads is slow: the writer's self-verification integrates each B-spline
+  flank with a cost that grows with the square of its spans (about 21 per turn), so the corpus
+  program (three threads of 8–10 turns) takes minutes in a debug build. A per-span cumulative
+  integral for surfaces of degree 1 in v would remove the quadratic term.
+- The Playwright-Electron e2e suite was not run for the Thread tool (no Electron binary in the
+  worktree); its unit tests, the app suite and a WASM evaluation of the corpus program pass.
