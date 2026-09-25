@@ -1,0 +1,52 @@
+packages/agent/test/operator.test.ts
+  s_59c0dd2af30db2::t_398ab9b50bb854 154,156-158,161,166-169
+  s_59c0dd2af30db2::t_724af6b6a8519d 304-305,307-311,313-316,318-320,322-323
+  s_59c0dd2af30db2::t_421f0704cf593c 1-153,155,159-160,162-165,170-303,306,312,317,321,324-362
+packages/agent/src/agent.ts
+  s_59c0dd2af30db2::t_9f9c46aae94777 134
+  s_59c0dd2af30db2::t_28f4967625cee2 102-103
+  s_59c0dd2af30db2::t_72b94b046b657f 198-206
+  s_59c0dd2af30db2::t_74c705b572df68 261
+  s_59c0dd2af30db2::t_d071867376aab5 243-250
+packages/agent/test/forge-ops.ts
+  s_59c0dd2af30db2::t_a5a3cc99c7d92c 1-24
+packages/agent/src/runtime.ts
+  s_59c0dd2af30db2::t_a864b0220e4636 64
+packages/agent/package.json
+  s_59c0dd2af30db2::t_9a53e3a1c300cc 42
+packages/agent/src/operator.ts
+  s_59c0dd2af30db2::t_664518a9f49600 272-283
+  s_59c0dd2af30db2::t_01831c0a06eb78 1-271,284-941
+packages/agent/src/prompts.ts
+  s_59c0dd2af30db2::t_c0fc6daa9f45c5 16
+packages/agent/src/testing.ts
+  s_59c0dd2af30db2::t_a864b0220e4636 55
+packages/agent/prompts/operator.v1.md
+  s_59c0dd2af30db2::t_c8a827896781bf 1-29
+packages/agent/vitest.config.ts
+  s_59c0dd2af30db2::t_33e459db8278df 19
+packages/agent/src/index.ts
+  s_59c0dd2af30db2::t_38a0252359df91 5-7
+  s_59c0dd2af30db2::t_068d549b5870e5 17
+packages/agent/src/cli-runtime.ts
+  s_59c0dd2af30db2::t_eb4f14cc469d34 246
+  s_59c0dd2af30db2::t_a864b0220e4636 286
+pnpm-lock.yaml
+  s_59c0dd2af30db2::t_90e1a8c9954398 38-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8fbe43d5e966f392586c5bea6ad97ee85dd51a01",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
