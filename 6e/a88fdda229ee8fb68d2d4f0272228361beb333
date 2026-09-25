@@ -1,0 +1,62 @@
+forge/crates/forge-ops/src/thread/mod.rs
+  s_59c0dd2af30db2::t_f03de59abcc89d 607-615
+  s_59c0dd2af30db2::t_5e1177e16e34e1 1495-1529
+  s_59c0dd2af30db2::t_0382f9739843c3 1-210,215-254,258-339,344-606,616-823,828-833,838-990,996-1049,1055-1087,1089-1099,1103-1173,1175-1179,1184-1222,1227-1235,1242-1249,1251-1326,1328-1340,1342-1373,1379-1406,1430-1494,1530-1531,1538-1566
+  s_59c0dd2af30db2::t_aff547ab02884d 1100-1102
+  s_59c0dd2af30db2::t_8dd48f5735f154 211-214,255-257,1088,1174,1180-1183,1327,1341
+  s_59c0dd2af30db2::t_57854d74be24d9 1407-1429
+  s_59c0dd2af30db2::t_c795bfe7483d83 340-343,824-827,834-837,991-995,1050-1054,1223-1226,1236-1241,1250,1374-1378,1532-1537
+forge/crates/forge-ops/src/thread/error.rs
+  s_59c0dd2af30db2::t_c795bfe7483d83 26-28,51-53,68-70,90-92
+  s_59c0dd2af30db2::t_160cc8e0c8da16 1-9,12-25,29-50,54-67,71-89,93-140
+  s_59c0dd2af30db2::t_37e5316e3ea515 10-11
+forge/crates/forge-ops/src/lib.rs
+  s_59c0dd2af30db2::t_fba6da7253f50c 26,31
+  s_59c0dd2af30db2::t_c795bfe7483d83 44
+forge/crates/forge-ops/src/thread/form.rs
+  s_59c0dd2af30db2::t_de6f91130093b2 1-224
+forge/crates/forge-ops/tests/thread_build.rs
+  s_59c0dd2af30db2::t_e337de927c6885 540-589,614-616
+  s_59c0dd2af30db2::t_575d9c0833be63 268-328,331-333,346-476,618-634,639-641
+  s_59c0dd2af30db2::t_9ba4bd24e83bb6 477-495,503,510-517,525-529,537-539,617
+  s_59c0dd2af30db2::t_c795bfe7483d83 22-24,143-149,218-222,231-235,242-247
+  s_59c0dd2af30db2::t_b7a44acb2c6d34 1-21,25-142,150-217,223-230,236-241,248-267
+  s_59c0dd2af30db2::t_cc52a495429a00 329-330,334-336,342-345
+  s_59c0dd2af30db2::t_6e0c9330ade1c1 337-341,496-502,504-509,518-524,530-536,635-638
+  s_59c0dd2af30db2::t_cefee53fbbfb48 590-613
+forge/crates/forge-ops/src/thread/clear.rs
+  s_59c0dd2af30db2::t_fba6da7253f50c 412-413,473-474,476-477,480-496,498
+  s_59c0dd2af30db2::t_f15001bf186e61 1-98,105-240,245-363,368-411,414-472,475,478-479,497,499
+  s_59c0dd2af30db2::t_c795bfe7483d83 99-104,241-244,364-367
+forge/crates/forge-core/src/topo/validate.rs
+  s_59c0dd2af30db2::t_76047927c1feef 738-769
+  s_59c0dd2af30db2::t_ee452db85d2045 41-48
+  s_59c0dd2af30db2::t_feaa1a2471fdfa 847
+forge/crates/forge-mesh/src/face.rs
+  s_59c0dd2af30db2::t_6e0c9330ade1c1 890-893
+  s_59c0dd2af30db2::t_f2f228b245d6f8 67-68
+  s_59c0dd2af30db2::t_86403a8bd6969a 736-737
+  s_59c0dd2af30db2::t_c29134f04a47c5 873-889,894-929
+  s_59c0dd2af30db2::t_87eec61ede96cd 64-66
+  s_59c0dd2af30db2::t_6a2b780b3d819f 724-735,738-743
+forge/crates/forge-ops/Cargo.toml
+  s_59c0dd2af30db2::t_610f779f585da6 23-24
+forge/Cargo.lock
+  s_59c0dd2af30db2::t_71d9210cd19fad 434
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6ea88fdda229ee8fb68d2d4f0272228361beb333",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
