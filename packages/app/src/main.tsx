@@ -13,6 +13,7 @@ import { AppShell } from "./ui/shell/AppShell";
 import { ShellContext } from "./ui/shell/context";
 import "./ui/styles.css";
 import "./ui/styles/shell.css";
+import "./ui/styles/design.css";
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("#root missing");
