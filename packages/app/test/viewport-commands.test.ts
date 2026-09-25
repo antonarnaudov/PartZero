@@ -224,6 +224,9 @@ describe("view commands", () => {
     // Back to the real size: the finer step again.
     rt.setSceneBodies(parseObj(nemaObj));
     expect(doc.displayTessellation.chordalDeflection).toBe(0.025);
+    // A tool's or the agent's preview does not re-tessellate the document.
+    rt.setSceneBodies(big, { preview: true });
+    expect(doc.displayTessellation.chordalDeflection).toBe(0.025);
   });
 
   it("keeps the view when the same document regenerates", async () => {

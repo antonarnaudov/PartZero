@@ -200,7 +200,7 @@ export function Viewport(): ReactElement {
   // Bodies (the document's, or the proposal preview's); refit when another document was loaded.
   const lastFitDoc = useRef(0);
   useEffect(() => {
-    runtime.setSceneBodies(shown);
+    runtime.setSceneBodies(shown, { preview: tinted });
     if (!adapter) return;
     if (shown.length > 0 && lastFitDoc.current !== docId) {
       lastFitDoc.current = docId;

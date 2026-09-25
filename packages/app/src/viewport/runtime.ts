@@ -198,7 +198,7 @@ export class ViewportRuntime {
   adaptTessellation(): void {
     const a = this.adapter;
     const sphere = this.sceneSphere();
-    if (!a || !sphere) return;
+    if (!a || !sphere || this.scenePreview) return;
     const { width, height } = a.size();
     if (width <= 0 || height <= 0) return;
     const doc = this.app.doc as Partial<Pick<AppServices["doc"], "displayTessellation" | "setDisplayTessellation">>;
@@ -223,16 +223,23 @@ export class ViewportRuntime {
 
   // ─── Scene ──────────────────────────────────────────────────────────────────────────────
 
-  /** The bodies to show (the document's, or a proposal preview's). */
-  setSceneBodies(bodies: readonly RenderBody[]): void {
+  /**
+   * The bodies to show (the document's, or a tool's or proposal's preview: `preview`, which does
+   * not change the document's display tessellation).
+   */
+  setSceneBodies(bodies: readonly RenderBody[], options: { preview?: boolean } = {}): void {
+    this.scenePreview = options.preview === true;
     if (bodies === this.sceneBodies) return;
     this.sceneBodies = bodies;
     this.topo = buildTopology(bodies);
     this.pushBodies();
     this.selection.resolve(this.topo);
     this.syncHighlights();
-    this.adaptTessellation();
+    if (!this.scenePreview) this.adaptTessellation();
   }
+
+  /** Whether the scene is a preview (see {@link setSceneBodies}). */
+  private scenePreview = false;
 
   get bodies(): readonly RenderBody[] {
     return this.sceneBodies;
