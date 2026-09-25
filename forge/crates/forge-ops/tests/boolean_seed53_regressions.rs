@@ -176,7 +176,7 @@ fn slot_tangent_to_a_cylinder_on_its_seam_387_joins_cuts_and_intersects() {
 }
 
 #[test]
-fn cylinders_tangent_on_the_seam_38_intersect_and_fail_join_cut_only_in_loop_orientation() {
+fn cylinders_tangent_on_the_seam_38_satisfy_the_volume_identities() {
     let c = case(38);
     assert_eq!(c.family, "cyl-cyl");
     let (va, vb) = (
@@ -189,31 +189,18 @@ fn cylinders_tangent_on_the_seam_38_intersect_and_fail_join_cut_only_in_loop_ori
         (vi - want).abs() <= 1e-9 * want,
         "intersection {vi} vs closed form {want}"
     );
-    // Join and cut: the sections are right (the intersection above uses the same ones), but
-    // the remaining cap of A has a notch 0.28 mm deep beside a 322° arc edge, and
-    // forge-core's planar loop-orientation check (9 samples per edge, the orientation read at
-    // the extreme sampled vertex) misreads that loop: its sampled shoelace area has the sign
-    // of a correct outer loop, only the extreme-vertex test disagrees. Today's outcome is
-    // pinned exactly: FORGE_BOOLEAN_INVALID_RESULT (LOOP_ORIENTATION), an explicit failure,
-    // never a body and never an SSI failure. When forge-core's loop orientation uses the
-    // exact line/arc area (BACKLOG), this panics with the volumes: replace the pin by the
-    // volume identities (`vol(A ∪ B) = vol A + vol B − vol(A ∩ B)`, `vol(A − B) = vol A −
-    // vol(A ∩ B)`, relative 1e-9).
+    // Join and cut: the remaining cap of A has a notch 0.28 mm deep beside a 322° arc edge.
+    // forge-core's planar loop-orientation check used to sample 9 points per edge and misread
+    // that loop (LOOP_ORIENTATION); it now samples angle edges every π/64 (the helical-thread
+    // work, whose thin groove sections exposed the same misread), and both results are valid
+    // and satisfy the volume identities.
     for (op, want) in [(BodyOp::Join, va + vb - vi), (BodyOp::Cut, va - vi)] {
-        match run(&c, op) {
-            Ok(r) => {
-                let v = checked_volume(&r, "38");
-                panic!(
-                    "{op:?} now succeeds (volume {v}, identity {want}, difference {:e}): \
-                     forge-core's loop orientation was fixed; pin the volume identity instead",
-                    v - want
-                );
-            }
-            Err(e) => {
-                assert_eq!(e.code(), "FORGE_BOOLEAN_INVALID_RESULT", "{op:?}: {e}");
-                assert!(e.to_string().contains("LOOP_ORIENTATION"), "{op:?}: {e}");
-            }
-        }
+        let r = run(&c, op).unwrap_or_else(|e| panic!("{op:?}: {e}"));
+        let v = checked_volume(&r, "38");
+        assert!(
+            (v - want).abs() <= 1e-9 * want,
+            "{op:?}: volume {v} vs the identity {want}"
+        );
     }
 }
 
