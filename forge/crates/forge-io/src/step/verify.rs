@@ -8,7 +8,9 @@
 //!   (a seam twice by the same face);
 //! - every vertex lies on its edges' curves, every edge runs along its curve in the
 //!   direction `same_sense` says, and sampled points of every edge lie on the surfaces of
-//!   the faces that use it, all within the file's uncertainty.
+//!   the faces that use it, all within the file's uncertainty;
+//! - every pcurve (`SURFACE_CURVE`) lies on the surface of a face that uses its edge and
+//!   maps the edge's parameter onto the edge's points.
 //!
 //! The writer runs it on its own output ([`super::write_step`] refuses to return a file
 //! that fails it), and tests run it on every exported corpus body. It does not replace
@@ -17,8 +19,8 @@
 use std::collections::BTreeMap;
 
 use forge_core::geom::{
-    Circle3, Cone, Curve3, Cylinder, Ellipse3, Line3, NurbsCurve3, NurbsSurface, Plane, Sphere,
-    SpindlePatch, Surface, Torus,
+    Circle2, Circle3, Cone, Curve2, Curve3, Cylinder, Ellipse2, Ellipse3, Line2, Line3,
+    NurbsCurve2, NurbsCurve3, NurbsSurface, Plane, Sphere, SpindlePatch, Surface, Torus,
 };
 use forge_core::linalg::{Frame, Point3, Vec3};
 use forge_core::math;
@@ -312,6 +314,158 @@ impl File {
             .map_err(|e| fail(format!("B-spline surface: {e}")))
     }
 
+    /// The 3D curve of an `EDGE_CURVE`'s geometry (a curve, or a `SURFACE_CURVE` /
+    /// `SEAM_CURVE`'s `curve_3d`).
+    fn edge_curve(&self, id: u64) -> Result<Curve3, StepError> {
+        match self.inst(id)?.simple_name() {
+            Some("SURFACE_CURVE" | "SEAM_CURVE") => {
+                let r = self.rec(id, &["SURFACE_CURVE", "SEAM_CURVE"])?;
+                self.curve(self.reff(r, 1)?)
+            }
+            _ => self.curve(id),
+        }
+    }
+
+    /// The pcurves of an `EDGE_CURVE`'s geometry (none for a plain curve).
+    fn pcurves(&self, id: u64) -> Result<Vec<(u64, Curve2)>, StepError> {
+        let Some("SURFACE_CURVE" | "SEAM_CURVE") = self.inst(id)?.simple_name() else {
+            return Ok(Vec::new());
+        };
+        let r = self.rec(id, &["SURFACE_CURVE", "SEAM_CURVE"])?;
+        let mut out = Vec::new();
+        for pid in self.refs(r, 2)? {
+            let pr = self.rec(pid, &["PCURVE"])?;
+            let basis = self.reff(pr, 1)?;
+            let dr = self.rec(self.reff(pr, 2)?, &["DEFINITIONAL_REPRESENTATION"])?;
+            let items = self.refs(dr, 1)?;
+            let [c2] = items.as_slice() else {
+                return Err(fail(format!("#{pid}: a pcurve must hold one 2D curve")));
+            };
+            out.push((basis, self.curve2d(*c2)?));
+        }
+        Ok(out)
+    }
+
+    fn point2(&self, id: u64) -> Result<forge_core::linalg::Vec2, StepError> {
+        let r = self.rec(id, &["CARTESIAN_POINT"])?;
+        match self.reals(self.arg(r, 1)?)?.as_slice() {
+            [x, y] if x.is_finite() && y.is_finite() => Ok(forge_core::linalg::Vec2::new(*x, *y)),
+            _ => Err(fail(format!("#{id} is not a finite 2D point"))),
+        }
+    }
+
+    fn direction2(&self, id: u64) -> Result<forge_core::linalg::Vec2, StepError> {
+        let r = self.rec(id, &["DIRECTION"])?;
+        match self.reals(self.arg(r, 1)?)?.as_slice() {
+            [x, y] => forge_core::linalg::Vec2::new(*x, *y)
+                .normalize()
+                .ok_or_else(|| fail(format!("#{id} is a zero direction"))),
+            _ => Err(fail(format!("#{id} is not a 2D direction"))),
+        }
+    }
+
+    /// A 2D curve of a pcurve: line, circle, ellipse or (rational) B-spline.
+    fn curve2d(&self, id: u64) -> Result<Curve2, StepError> {
+        let geom = |e: forge_core::geom::GeomError| fail(format!("#{id}: {e}"));
+        let placement =
+            |aid: u64| -> Result<(forge_core::linalg::Vec2, forge_core::linalg::Vec2), StepError> {
+                let a = self.rec(aid, &["AXIS2_PLACEMENT_2D"])?;
+                let o = self.point2(self.reff(a, 1)?)?;
+                let x = match self.arg(a, 2)? {
+                    Value::Unset => forge_core::linalg::Vec2::unit_x(),
+                    v => self.direction2(v.as_ref().ok_or_else(|| fail("bad ref_direction"))?)?,
+                };
+                Ok((o, x))
+            };
+        match self.inst(id)? {
+            Instance::Simple(r) => Ok(match r.name.as_str() {
+                "LINE" => {
+                    let p = self.point2(self.reff(r, 1)?)?;
+                    let v = self.rec(self.reff(r, 2)?, &["VECTOR"])?;
+                    let d = self.direction2(self.reff(v, 1)?)?;
+                    let m = self.num(v, 2)?;
+                    if m <= 0.0 {
+                        return Err(fail(format!("#{id}: non-positive vector magnitude")));
+                    }
+                    Curve2::Line(Line2::new(p, d * m).map_err(geom)?)
+                }
+                "CIRCLE" => {
+                    let (o, x) = placement(self.reff(r, 1)?)?;
+                    if (x.x - 1.0).abs() > 1e-12 || x.y.abs() > 1e-12 {
+                        return Err(fail(format!("#{id}: a turned 2D circle is not supported")));
+                    }
+                    Curve2::Circle(Circle2::new(o, self.num(r, 2)?).map_err(geom)?)
+                }
+                "ELLIPSE" => {
+                    let (o, x) = placement(self.reff(r, 1)?)?;
+                    Curve2::Ellipse(
+                        Ellipse2::new(o, x, self.num(r, 2)?, self.num(r, 3)?).map_err(geom)?,
+                    )
+                }
+                "B_SPLINE_CURVE_WITH_KNOTS" => {
+                    let k = r
+                        .args
+                        .get(6..)
+                        .ok_or_else(|| fail(format!("#{id}: too few parameters")))?;
+                    Curve2::BSpline(self.bspline_curve2(r, k, None)?)
+                }
+                other => return Err(fail(format!("#{id}: unsupported 2D curve {other}"))),
+            }),
+            Instance::Complex(_) => {
+                let i = self.inst(id)?;
+                let base = i
+                    .record("B_SPLINE_CURVE")
+                    .ok_or_else(|| fail(format!("#{id}: unsupported complex 2D curve")))?;
+                let knots = i
+                    .record("B_SPLINE_CURVE_WITH_KNOTS")
+                    .ok_or_else(|| fail(format!("#{id}: B-spline curve without knots")))?;
+                let w = i
+                    .record("RATIONAL_B_SPLINE_CURVE")
+                    .map(|r| self.arg(r, 0).cloned())
+                    .transpose()?;
+                let mut args = vec![Value::Str(String::new())];
+                args.extend(base.args.iter().cloned());
+                let rec = Record {
+                    name: "B_SPLINE_CURVE_WITH_KNOTS".into(),
+                    args,
+                };
+                Ok(Curve2::BSpline(self.bspline_curve2(
+                    &rec,
+                    &knots.args,
+                    w.as_ref(),
+                )?))
+            }
+        }
+    }
+
+    fn bspline_curve2(
+        &self,
+        r: &Record,
+        k: &[Value],
+        w: Option<&Value>,
+    ) -> Result<NurbsCurve2, StepError> {
+        let p = match self.arg(r, 1)? {
+            Value::Int(i) if *i > 0 => *i as usize,
+            _ => return Err(fail("bad B-spline degree")),
+        };
+        let pts: Vec<[f64; 2]> = self
+            .refs(r, 2)?
+            .into_iter()
+            .map(|id| self.point2(id).map(|q| [q.x, q.y]))
+            .collect::<Result<_, _>>()?;
+        if k.len() < 2 {
+            return Err(fail("B-spline curve knot data missing"));
+        }
+        let knots: Vec<f64> = self
+            .ints(&k[0])?
+            .iter()
+            .zip(self.reals(&k[1])?)
+            .flat_map(|(&m, v)| std::iter::repeat_n(v, m))
+            .collect();
+        let weights = w.map(|v| self.reals(v)).transpose()?;
+        NurbsCurve2::new(p, knots, pts, weights).map_err(|e| fail(format!("B-spline curve: {e}")))
+    }
+
     fn curve(&self, id: u64) -> Result<Curve3, StepError> {
         let geom = |e: forge_core::geom::GeomError| fail(format!("#{id}: {e}"));
         match self.inst(id)? {
@@ -465,6 +619,8 @@ fn units(f: &P21File) -> Result<(f64, f64), StepError> {
 struct EdgeData {
     v: (u64, u64),
     curve: Curve3,
+    /// `PCURVE`s of a `SURFACE_CURVE`: (basis surface instance, 2D curve).
+    pcurves: Vec<(u64, Curve2)>,
     same_sense: bool,
     /// Uses: (face index within the solid, effective direction).
     uses: Vec<(usize, bool)>,
@@ -527,6 +683,7 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
         ..SolidSummary::default()
     };
     let mut surfaces: Vec<Surface> = Vec::new();
+    let mut surface_ids: Vec<u64> = Vec::new();
     let mut edges: BTreeMap<u64, EdgeData> = BTreeMap::new();
     let mut vertices: BTreeMap<u64, Point3> = BTreeMap::new();
     for (si, &(shell_id, shell_orient)) in shells.iter().enumerate() {
@@ -534,7 +691,9 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
         let mut shell_edges: BTreeMap<u64, Vec<bool>> = BTreeMap::new();
         for face_id in file.refs(sh, 1)? {
             let fr = file.rec(face_id, &["ADVANCED_FACE"])?;
-            let (kind, surface) = file.surface(file.reff(fr, 2)?)?;
+            let surface_id = file.reff(fr, 2)?;
+            let (kind, surface) = file.surface(surface_id)?;
+            surface_ids.push(surface_id);
             file.boolean(fr, 3)?;
             *summary.face_types.entry(kind).or_default() += 1;
             let fi = surfaces.len();
@@ -573,7 +732,8 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
                             }
                             slot.insert(EdgeData {
                                 v: (v1, v2),
-                                curve: file.curve(file.reff(ec, 3)?)?,
+                                curve: file.edge_curve(file.reff(ec, 3)?)?,
+                                pcurves: file.pcurves(file.reff(ec, 3)?)?,
                                 same_sense: file.boolean(ec, 4)?,
                                 uses: Vec::new(),
                             })
@@ -638,7 +798,7 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
                 )));
             }
         }
-        let (a, b) = edge_range(&e.curve, t1, t2, closed, e.same_sense).ok_or_else(|| {
+        let (a, b) = edge_range(&e.curve, t1, t2, closed, e.same_sense, tol).ok_or_else(|| {
             fail(format!(
                 "#{id}: the edge runs against its curve's direction"
             ))
@@ -654,13 +814,38 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
                 }
             }
         }
+        // Each pcurve lies on a face that uses the edge and follows the edge's parameter.
+        for (sid, pc) in &e.pcurves {
+            let Some(&(fi, _)) = e.uses.iter().find(|(fi, _)| surface_ids[*fi] == *sid) else {
+                return Err(fail(format!(
+                    "#{id}: a pcurve is on #{sid}, which no face using the edge carries"
+                )));
+            };
+            for k in 0..=16 {
+                let t = a + (b - a) * f64::from(k) / 16.0;
+                let uv = pc.eval(t);
+                let d = surfaces[fi].eval(uv.x, uv.y).distance(e.curve.eval(t));
+                if d.is_nan() || d > tol {
+                    return Err(fail(format!(
+                        "#{id}: a pcurve is {d:e} mm off the edge at parameter {t}"
+                    )));
+                }
+            }
+        }
     }
     Ok(summary)
 }
 
 /// The curve parameter range an edge covers, from its end parameters; `None` when a
 /// non-periodic curve would run backwards.
-fn edge_range(c: &Curve3, t1: f64, t2: f64, closed: bool, same_sense: bool) -> Option<(f64, f64)> {
+fn edge_range(
+    c: &Curve3,
+    t1: f64,
+    t2: f64,
+    closed: bool,
+    same_sense: bool,
+    closure_tol: f64,
+) -> Option<(f64, f64)> {
     match c.period() {
         Some(per) => {
             if closed {
@@ -677,7 +862,18 @@ fn edge_range(c: &Curve3, t1: f64, t2: f64, closed: bool, same_sense: bool) -> O
             (a.is_finite() && b.is_finite()).then_some((a, b))
         }
         None => {
-            let (a, b) = if same_sense { (t1, t2) } else { (t2, t1) };
+            let (mut a, mut b) = if same_sense { (t1, t2) } else { (t2, t1) };
+            // On a closed curve (a ring cut into pieces) the closing point projects to one
+            // end of the domain; a piece that ends (starts) there uses the other end.
+            let (d0, d1) = c.domain();
+            if a >= b && c.eval(d0).distance(c.eval(d1)) <= closure_tol {
+                if b <= d0 {
+                    b = d1;
+                }
+                if a >= d1 {
+                    a = d0;
+                }
+            }
             (a < b).then_some((a, b))
         }
     }

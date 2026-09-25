@@ -77,6 +77,28 @@ pub fn corpus(seed: u64, n: usize) -> Vec<NamedBody> {
         .collect()
 }
 
+/// Every result of `chains` chained operation sequences of `steps` steps
+/// (`forge_ops::boolean::corpus::run_chains`): operands that are Forge's own results, so
+/// loops through a vertex twice, circles touching edges and vertices at poles appear.
+#[allow(dead_code)]
+pub fn chained(seed: u64, chains: usize, steps: usize) -> Vec<NamedBody> {
+    let mut out = Vec::new();
+    forge_ops::boolean::corpus::run_chains(seed, chains, steps, |s| {
+        for (op, r) in s.results {
+            if let Ok(r) = r {
+                for (k, x) in r.bodies.iter().enumerate() {
+                    out.push(NamedBody {
+                        name: format!("chain{seed}-{}-{}-{}-{k}", s.chain, s.step, op_name(*op)),
+                        body: x.body.clone(),
+                        known: None,
+                    });
+                }
+            }
+        }
+    });
+    out
+}
+
 /// The unit cube with its top face on a (rational) bilinear B-spline patch and its four
 /// top edges as (rational) degree-2 B-spline curves along the straight lines: exercises
 /// `B_SPLINE_SURFACE_WITH_KNOTS`, `B_SPLINE_CURVE_WITH_KNOTS` and their rational complex

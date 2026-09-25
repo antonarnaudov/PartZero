@@ -44,9 +44,6 @@ const SAMPLES_PER_COEDGE: usize = 16;
 const MAX_PARAM_STEP: f64 = PI / 8.0;
 /// Refinement depth limit (bisections of one sample interval).
 const MAX_REFINE_DEPTH: u32 = 48;
-/// Radians by which a non-winding loop may exceed one full turn in the parameter plane
-/// (sampling and projection round-off) before its face counts as wrapping onto itself.
-const WRAP_SLACK: f64 = 1e-6;
 /// Number of evenly spaced fallback seam positions tried after the preferred ones.
 const GRID_CANDIDATES: usize = 48;
 
@@ -64,9 +61,6 @@ pub(crate) struct Topo {
     pub solids: Vec<TSolid>,
     /// Largest edge/vertex tolerance of the body (at least the IR's 1e-6 mm).
     pub tolerance: f64,
-    /// For each ring edge, the curve parameter of its first vertex (where a closed
-    /// non-periodic curve must start when written, so every piece lies in its domain).
-    pub ring_start: BTreeMap<EdgeId, f64>,
     /// What was synthesized.
     pub stats: TopoStats,
 }
@@ -90,6 +84,9 @@ pub(crate) struct TEdge {
     pub start: usize,
     pub end: usize,
     pub curve: TCurve,
+    /// Curve parameters at `start` and `end` for a piece of a Forge edge (increasing; a
+    /// ring's last piece ends one period after the first point).
+    pub t: (f64, f64),
 }
 
 /// The curve of a [`TEdge`].
@@ -113,6 +110,9 @@ pub(crate) struct TFace {
     /// middle of the face's gap — so readers that project edges into `[0, 2π)` never see the
     /// face straddle the period boundary.
     pub u_origin: Option<f64>,
+    /// For a face on a surface periodic in `v` (a ring torus): pcurves are placed in
+    /// `[v_origin, v_origin + 2π)` (the seam, or the middle of the face's gap).
+    pub v_origin: Option<f64>,
 }
 
 /// A face bound: oriented edges `(edge, forward)`.
@@ -226,7 +226,6 @@ struct LoopInfo {
     /// Shoelace area of the unwrapped polygon (sense-adjusted: > 0 encloses the face).
     area: f64,
     extent_u: f64,
-    extent_v: f64,
 }
 
 /// Where a seam line crosses a loop.
@@ -287,6 +286,7 @@ struct Builder<'a> {
     seam_curves: Vec<Curve3>,
     plans: BTreeMap<FaceId, FacePlan>,
     u_origin: BTreeMap<FaceId, f64>,
+    v_origin: BTreeMap<FaceId, f64>,
     stats: TopoStats,
 }
 
@@ -334,6 +334,7 @@ impl<'a> Builder<'a> {
             seam_curves: Vec::new(),
             plans: BTreeMap::new(),
             u_origin: BTreeMap::new(),
+            v_origin: BTreeMap::new(),
             stats: TopoStats::default(),
         })
     }
@@ -749,15 +750,13 @@ impl<'a> Builder<'a> {
             smp[n].vv = smp[0].vv + wv * TAU;
         }
         let mut area = 0.0;
-        let (mut umin, mut umax, mut vmin, mut vmax) = (f64::MAX, f64::MIN, f64::MAX, f64::MIN);
+        let (mut umin, mut umax) = (f64::MAX, f64::MIN);
         for w in smp.windows(2) {
             area += w[0].uu * w[1].vv - w[1].uu * w[0].vv;
         }
         for s in &smp {
             umin = umin.min(s.uu);
             umax = umax.max(s.uu);
-            vmin = vmin.min(s.vv);
-            vmax = vmax.max(s.vv);
         }
         let area = 0.5 * area * if ch.sense { 1.0 } else { -1.0 };
         Ok(LoopInfo {
@@ -768,7 +767,6 @@ impl<'a> Builder<'a> {
             wv: wv as i64,
             area,
             extent_u: umax - umin,
-            extent_v: vmax - vmin,
         })
     }
 
@@ -1035,13 +1033,10 @@ impl<'a> Builder<'a> {
                     "a boundary loop winds more than once around the surface",
                 ));
             }
-            // A loop spanning exactly one turn touches itself at a vertex (a band pinched
-            // at a point: a disc, no seam needed); more than one turn overlaps (helical).
-            if li.wu == 0 && li.extent_u > TAU + WRAP_SLACK
-                || (ch.v_periodic && li.wv == 0 && li.extent_v > TAU + WRAP_SLACK)
-            {
-                return Err(self.seam_err(fid, "the face wraps more than once around its axis"));
-            }
+            // A non-winding loop may span a turn or more of the parameter plane (a band
+            // pinched at a vertex, a face that reaches around its axis at different heights):
+            // it needs no seam, and readers place its pcurves in one continuous range. Forge
+            // bodies never overlap themselves, so this is not a helix wrapping onto itself.
         }
         let wind_u: Vec<usize> = (0..loops.len()).filter(|&i| loops[i].wu != 0).collect();
         let wind_v: Vec<usize> = (0..loops.len()).filter(|&i| loops[i].wv != 0).collect();
@@ -1076,6 +1071,7 @@ impl<'a> Builder<'a> {
                     ));
                 }
                 self.u_origin.insert(fid, mid_gap(&loops));
+                self.v_origin.insert(fid, mid_gap_v(&loops));
                 return Ok(());
             };
             if wind.len() != 2 {
@@ -1098,8 +1094,13 @@ impl<'a> Builder<'a> {
             let vl = self.resolve(&loops[lo], &xl)?;
             let vh = self.resolve(&loops[hi], &xh)?;
             let curve = self.torus_seam(fid, surface, c, along_u)?;
-            self.u_origin
-                .insert(fid, if along_u { c } else { mid_gap(&loops) });
+            if along_u {
+                self.u_origin.insert(fid, c);
+                self.v_origin.insert(fid, mid_gap_v(&loops));
+            } else {
+                self.u_origin.insert(fid, mid_gap(&loops));
+                self.v_origin.insert(fid, c);
+            }
             let lower = SeamEnd::Loop {
                 lp: lo,
                 coedge: xl.coedge,
@@ -1137,8 +1138,8 @@ impl<'a> Builder<'a> {
                 let (Some(pl), Some(ph)) = (lo_end.point, hi_end.point) else {
                     return Err(self.seam_err(fid, "internal: pole-to-pole seam without poles"));
                 };
-                let vl = self.new_vertex(pl);
-                let vh = self.new_vertex(ph);
+                let vl = self.pole_vertex(fid, pl)?;
+                let vh = self.pole_vertex(fid, ph)?;
                 (SeamEnd::Pole { vertex: vl }, SeamEnd::Pole { vertex: vh })
             }
             1 => {
@@ -1159,7 +1160,7 @@ impl<'a> Builder<'a> {
                     (
                         at,
                         SeamEnd::Pole {
-                            vertex: self.new_vertex(ph),
+                            vertex: self.pole_vertex(fid, ph)?,
                         },
                     )
                 } else {
@@ -1170,7 +1171,7 @@ impl<'a> Builder<'a> {
                     };
                     (
                         SeamEnd::Pole {
-                            vertex: self.new_vertex(pl),
+                            vertex: self.pole_vertex(fid, pl)?,
                         },
                         at,
                     )
@@ -1205,6 +1206,31 @@ impl<'a> Builder<'a> {
         self.add_seam(fid, curve, lower, upper)
     }
 
+    /// A new vertex at a pole or apex the seam ends at. The face contains that point in its
+    /// interior, so no vertex of the face may already be there (a loop touching the pole
+    /// would put two vertices at one point).
+    fn pole_vertex(&mut self, fid: FaceId, p: Point3) -> Result<usize, StepError> {
+        let body = self.body;
+        let touches = body.face_edges(fid).into_iter().any(|eid| {
+            let Some(e) = body.edge(eid) else {
+                return false;
+            };
+            let near = self.tol.max(e.tolerance);
+            [e.start, e.end]
+                .into_iter()
+                .flatten()
+                .any(|v| self.vertices[self.vmap[&v]].distance(p) <= near)
+                || self.pts.get(&eid).is_some_and(|l| {
+                    l.iter()
+                        .any(|&(_, vi)| self.vertices[vi].distance(p) <= near)
+                })
+        });
+        if touches {
+            return Err(self.seam_err(fid, "a boundary loop touches the pole the seam must reach"));
+        }
+        Ok(self.new_vertex(p))
+    }
+
     fn add_seam(
         &mut self,
         fid: FaceId,
@@ -1232,6 +1258,8 @@ impl<'a> Builder<'a> {
         let iso_u = self.torus_seam(fid, s, 0.0, true)?;
         let iso_v = self.torus_seam(fid, s, 0.0, false)?;
         let vertex = self.new_vertex(s.eval(0.0, 0.0));
+        self.u_origin.insert(fid, 0.0);
+        self.v_origin.insert(fid, 0.0);
         self.seam_curves.push(iso_u);
         self.seam_curves.push(iso_v);
         self.stats.seams += 2;
@@ -1363,7 +1391,10 @@ impl<'a> Builder<'a> {
             .body
             .edges()
             .iter()
-            .filter(|(id, e)| e.is_ring() && self.pts.get(id).is_none_or(Vec::is_empty))
+            .filter(|(id, e)| {
+                e.is_ring()
+                    && (e.curve.period().is_none() || self.pts.get(id).is_none_or(Vec::is_empty))
+            })
             .map(|(id, e)| (id, e.t_range.0))
             .collect();
         for (eid, t0) in rings {
@@ -1377,7 +1408,6 @@ impl<'a> Builder<'a> {
         let mut edges: Vec<TEdge> = Vec::new();
         // Pieces of each Forge edge in curve order: (piece index).
         let mut pieces: BTreeMap<EdgeId, Vec<usize>> = BTreeMap::new();
-        let mut ring_start: BTreeMap<EdgeId, f64> = BTreeMap::new();
         for (eid, e) in body.edges().iter() {
             let mut pts = self.pts.get(&eid).cloned().unwrap_or_default();
             pts.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -1390,12 +1420,18 @@ impl<'a> Builder<'a> {
                         "internal: ring edge without a vertex".into(),
                     ));
                 }
-                ring_start.insert(eid, pts[0].0);
+                let period = e.t_range.1 - e.t_range.0;
                 for i in 0..pts.len() {
+                    let t_end = if i + 1 < pts.len() {
+                        pts[i + 1].0
+                    } else {
+                        pts[0].0 + period
+                    };
                     edges.push(TEdge {
                         start: pts[i].1,
                         end: pts[(i + 1) % pts.len()].1,
                         curve: TCurve::Edge(eid),
+                        t: (pts[i].0, t_end),
                     });
                     list.push(edges.len() - 1);
                 }
@@ -1406,10 +1442,11 @@ impl<'a> Builder<'a> {
                         format!("edge {} has only one vertex", e.provenance.name()),
                     ));
                 };
-                let mut chain = vec![self.vmap[&vs]];
-                chain.extend(pts.iter().map(|p| p.1));
-                chain.push(self.vmap[&ve]);
+                let mut chain = vec![(e.t_range.0, self.vmap[&vs])];
+                chain.extend(pts.iter().copied());
+                chain.push((e.t_range.1, self.vmap[&ve]));
                 for w in chain.windows(2) {
+                    let (w, t) = ([w[0].1, w[1].1], (w[0].0, w[1].0));
                     if w[0] == w[1] && chain.len() > 2 {
                         return Err(invalid(
                             self.ctx,
@@ -1420,6 +1457,7 @@ impl<'a> Builder<'a> {
                         start: w[0],
                         end: w[1],
                         curve: TCurve::Edge(eid),
+                        t,
                     });
                     list.push(edges.len() - 1);
                 }
@@ -1478,7 +1516,6 @@ impl<'a> Builder<'a> {
             faces,
             solids,
             tolerance: self.tol,
-            ring_start,
             stats: self.stats,
         })
     }
@@ -1569,6 +1606,7 @@ impl<'a> Builder<'a> {
                     start: lower.vertex(),
                     end: upper.vertex(),
                     curve: TCurve::Seam(*curve),
+                    t: (0.0, 0.0),
                 });
                 let s = edges.len() - 1;
                 let piece = |end: &SeamEnd| -> Result<Option<Vec<(usize, bool)>>, StepError> {
@@ -1637,12 +1675,14 @@ impl<'a> Builder<'a> {
                     start: *vertex,
                     end: *vertex,
                     curve: TCurve::Seam(*iso_u),
+                    t: (0.0, 0.0),
                 });
                 let eu = edges.len() - 1;
                 edges.push(TEdge {
                     start: *vertex,
                     end: *vertex,
                     curve: TCurve::Seam(*iso_v),
+                    t: (0.0, 0.0),
                 });
                 let ev = edges.len() - 1;
                 let order = if face.sense {
@@ -1662,6 +1702,7 @@ impl<'a> Builder<'a> {
             same_sense: face.sense != void,
             bounds,
             u_origin: self.u_origin.get(&fid).copied(),
+            v_origin: self.v_origin.get(&fid).copied(),
         })
     }
 
@@ -1787,6 +1828,23 @@ fn mid_gap(loops: &[LoopInfo]) -> f64 {
         (lo.min(s.uu), hi.max(s.uu))
     });
     math::rem_euclid(0.5 * (lo + hi) + PI, TAU)
+}
+
+/// The middle of the `v` gap the face leaves (from its loop with the widest `v` range).
+fn mid_gap_v(loops: &[LoopInfo]) -> f64 {
+    let range = |l: &LoopInfo| {
+        l.smp.iter().fold((f64::MAX, f64::MIN), |(lo, hi), s| {
+            (lo.min(s.vv), hi.max(s.vv))
+        })
+    };
+    let Some((lo, hi)) = loops
+        .iter()
+        .map(range)
+        .max_by(|a, b| (a.1 - a.0).total_cmp(&(b.1 - b.0)))
+    else {
+        return 0.0;
+    };
+    0.5 * (lo + hi) + PI
 }
 
 /// `s` with its frame turned about its axis so that the Forge parameter `u = a` becomes

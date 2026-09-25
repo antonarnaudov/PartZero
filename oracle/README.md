@@ -418,8 +418,10 @@ uv run oracle step-check --programs ../corpus/programs ../corpus/v1/programs   #
 uv run oracle step-check --dir /tmp/step --json /tmp/step-check.json          # the boolean corpus + samples
 ```
 
-Match rate on 2026-09-25: corpus programs 11/11 bodies; boolean corpus (seeds 1 and 7, 200 cases each,
-every operand and result) plus the hand-built samples 1600/1605 bodies at 1e-6. The five others: four
-revolve-family bodies whose B-spline section curves lie on spheres or tori differ by 1.3e-6 to 9e-6
-relative (OCCT derives their pcurves by projection; writing PCURVEs is the follow-up), and one join whose
-face boundary touches itself at two vertices (valid in Forge, rejected by `BRepCheck`).
+Match rate on 2026-09-25 (with Forge's own pcurves in the files): the corpus programs 11/11 bodies;
+the boolean corpus, seeds 1 and 7 (200 cases each, every operand and result) plus the hand-built
+samples, 1604/1605; seeds 2 and 3 (150 cases each) plus 10 chained sequences of 8 operations
+(`STEP_CHAINS=10x8`), 1396/1396. The one other body is a join whose face boundary touches itself at
+two vertices: Forge accepts that face, `BRepCheck` does not (its volume, area and counts match).
+Without pcurves, OCCT approximated the face domains by projection and about 2% of the chained bodies
+differed by 1e-6 to 2e-4 relative.

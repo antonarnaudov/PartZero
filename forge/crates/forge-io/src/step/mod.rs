@@ -20,6 +20,10 @@
 //!   `ORIENTED_EDGE` / `EDGE_CURVE` / `VERTEX_POINT`, with the seams, ring vertices and
 //!   singular-point splits that STEP needs and Forge does not have
 //!   (ADR 0012; see [`brep`]).
+//! - **Pcurves:** the edges of non-planar faces carry Forge's own pcurves
+//!   (`SURFACE_CURVE` / `PCURVE`), moved into the written surface's parameter window, so
+//!   readers integrate over exactly Forge's face domains instead of approximating them by
+//!   projection; a face whose pcurves cannot all be placed gets none.
 //! - **Determinism:** instances are numbered in a fixed traversal order, numbers use the
 //!   shortest round-trip form, and the header carries a fixed timestamp unless the caller
 //!   passes one, so the bytes are a pure function of the bodies and options on every
@@ -60,7 +64,7 @@ pub use verify::{SolidSummary, StepSummary, verify_step};
 use std::collections::BTreeMap;
 use std::fmt::Write;
 
-use forge_core::topo::{Body, EdgeId};
+use forge_core::topo::{Body, EdgeId, FaceId};
 use thiserror::Error;
 
 use self::p21::{Args, DataSection};
@@ -287,8 +291,9 @@ pub fn write_step(
     let mut items = vec![origin];
     let mut styled = Vec::new();
     let mut reports = Vec::new();
+    let mut ctx2d: Option<u32> = None;
     for (b, topo) in bodies.iter().zip(&topos) {
-        let solids = write_body(&mut d, b, topo, opts.face_names);
+        let solids = write_body(&mut d, b, topo, opts.face_names, &mut ctx2d);
         if let Some(c) = b.color {
             for &s in &solids {
                 styled.push(style(&mut d, s, c));
@@ -501,14 +506,35 @@ fn context(d: &mut DataSection, uncertainty: f64) -> u32 {
     ))
 }
 
-/// The topology and geometry of one body; returns its solids.
+/// The topology and geometry of one body; returns its solids. `ctx2d` is the parametric
+/// representation context of pcurves, created on first use.
 fn write_body(
     d: &mut DataSection,
     b: &StepBody<'_>,
     topo: &brep::Topo,
     face_names: bool,
+    ctx2d: &mut Option<u32>,
 ) -> Vec<u32> {
     let body = b.body;
+    // Surfaces first (pcurves name them): one per face, with its `u` origin turned.
+    let surf: Vec<u32> = topo
+        .faces
+        .iter()
+        .map(|tf| {
+            let face = body.face(tf.face).expect("face of the body");
+            match tf.u_origin {
+                Some(a) => geometry::surface(d, &brep::rotate_u(&face.surface, a)),
+                None => geometry::surface(d, &face.surface),
+            }
+        })
+        .collect();
+    let face_index: BTreeMap<FaceId, usize> = topo
+        .faces
+        .iter()
+        .enumerate()
+        .map(|(i, tf)| (tf.face, i))
+        .collect();
+    let with_pcurves = pcurve_faces(body, topo, &face_index);
     let mut used = vec![false; topo.vertices.len()];
     for e in &topo.edges {
         used[e.start] = true;
@@ -525,33 +551,39 @@ fn write_body(
     let mut seams: BTreeMap<usize, u32> = BTreeMap::new();
     let mut ec = Vec::with_capacity(topo.edges.len());
     for e in &topo.edges {
-        let curve = match e.curve {
-            brep::TCurve::Edge(eid) => match curves.get(&eid) {
-                Some(&c) => c,
-                None => {
-                    let edge = body.edge(eid).expect("edge of the body");
-                    let c = match topo.ring_start.get(&eid) {
-                        Some(&t) => geometry::ring_curve(
-                            d,
-                            &edge.curve,
-                            edge.t_range,
-                            t,
-                            topo.tolerance.max(edge.tolerance),
-                        ),
-                        None => geometry::curve(d, &edge.curve, edge.t_range),
-                    };
-                    curves.insert(eid, c);
-                    c
+        let geometry = match e.curve {
+            brep::TCurve::Edge(eid) => {
+                let edge = body.edge(eid).expect("edge of the body");
+                let c3 = *curves
+                    .entry(eid)
+                    .or_insert_with(|| geometry::curve(d, &edge.curve, edge.t_range));
+                let pcs = pcurves(
+                    d,
+                    body,
+                    topo,
+                    eid,
+                    e.t,
+                    &face_index,
+                    &with_pcurves,
+                    &surf,
+                    ctx2d,
+                );
+                if pcs.is_empty() {
+                    c3
+                } else {
+                    d.add(
+                        Args::new()
+                            .str("")
+                            .r(c3)
+                            .refs(&pcs)
+                            .raw(".CURVE_3D.")
+                            .entity("SURFACE_CURVE"),
+                    )
                 }
-            },
-            brep::TCurve::Seam(i) => match seams.get(&i) {
-                Some(&c) => c,
-                None => {
-                    let c = geometry::curve(d, &topo.seam_curves[i], (0.0, 0.0));
-                    seams.insert(i, c);
-                    c
-                }
-            },
+            }
+            brep::TCurve::Seam(i) => *seams
+                .entry(i)
+                .or_insert_with(|| geometry::curve(d, &topo.seam_curves[i], (0.0, 0.0))),
         };
         ec.push(
             d.add(
@@ -559,19 +591,15 @@ fn write_body(
                     .str("")
                     .r(vp[e.start])
                     .r(vp[e.end])
-                    .r(curve)
+                    .r(geometry)
                     .bool(true)
                     .entity("EDGE_CURVE"),
             ),
         );
     }
     let mut faces = Vec::with_capacity(topo.faces.len());
-    for tf in &topo.faces {
+    for (fi, tf) in topo.faces.iter().enumerate() {
         let face = body.face(tf.face).expect("face of the body");
-        let surf = match tf.u_origin {
-            Some(a) => geometry::surface(d, &brep::rotate_u(&face.surface, a)),
-            None => geometry::surface(d, &face.surface),
-        };
         let mut bounds = Vec::with_capacity(tf.bounds.len());
         for bd in &tf.bounds {
             let oes: Vec<u32> = bd
@@ -607,7 +635,7 @@ fn write_body(
                 Args::new()
                     .str(&name)
                     .refs(&bounds)
-                    .r(surf)
+                    .r(surf[fi])
                     .bool(tf.same_sense)
                     .entity("ADVANCED_FACE"),
             ),
@@ -662,6 +690,195 @@ fn write_body(
         }
     }
     out
+}
+
+/// A pcurve of one piece of a Forge edge on one face, as it is written.
+enum PcurvePlacement {
+    /// No pcurve needed (a plane: readers project exactly).
+    NotNeeded,
+    /// Cannot be written faithfully (no Forge pcurve, straddles a period, a turned
+    /// ellipse): the face gets no pcurves at all.
+    Unavailable,
+    /// The face, the pcurve with the reader's parameter, and the `(u, v)` shift.
+    Ready(usize, forge_core::geom::Curve2, (f64, f64)),
+}
+
+/// Place Forge's pcurve of coedge `cid` (on piece `t` of edge `eid`) in the written
+/// surface's parameters: the parameter moved by whole periods to the range readers derive
+/// from the vertices (`[0, 2π)` for a periodic curve), `u` less the face's `u` origin and by
+/// whole periods so the piece lies in `[0, 2π)` (and `v` in `[v_origin, v_origin + 2π)` on a
+/// ring torus).
+fn place_pcurve(
+    body: &Body,
+    topo: &brep::Topo,
+    eid: EdgeId,
+    t: (f64, f64),
+    cid: forge_core::topo::CoedgeId,
+    face_index: &BTreeMap<FaceId, usize>,
+) -> PcurvePlacement {
+    use forge_core::geom::{Curve3, Surface};
+    let tau = forge_core::math::TAU;
+    let (Some(edge), Some(co)) = (body.edge(eid), body.coedge(cid)) else {
+        return PcurvePlacement::Unavailable;
+    };
+    let Some(fid) = body.loop_(co.loop_id).map(|l| l.face) else {
+        return PcurvePlacement::Unavailable;
+    };
+    let (Some(&fi), Some(face)) = (face_index.get(&fid), body.face(fid)) else {
+        return PcurvePlacement::Unavailable;
+    };
+    if matches!(face.surface, Surface::Plane(_)) {
+        return PcurvePlacement::NotNeeded;
+    }
+    let Some(pc) = co.pcurve.as_ref() else {
+        return PcurvePlacement::Unavailable;
+    };
+    if let Curve3::Ellipse(el) = &edge.curve
+        && el.rx() < el.ry()
+    {
+        // Written with its frame turned: the STEP parameter is not Forge's.
+        return PcurvePlacement::Unavailable;
+    }
+    let tf = &topo.faces[fi];
+    // Readers take a periodic curve's parameters from its vertices in [0, 2π): move the
+    // pcurve's parameter by the same whole periods.
+    let delta = match edge.curve.period() {
+        Some(per) => {
+            let mut ts = forge_core::math::rem_euclid(t.0, per);
+            if ts >= per {
+                ts = 0.0;
+            }
+            ts - t.0
+        }
+        None => 0.0,
+    };
+    let Some(pc) = reparametrize(pc, delta) else {
+        return PcurvePlacement::Unavailable;
+    };
+    let t = (t.0 + delta, t.1 + delta);
+    let q = pc.eval(0.5 * (t.0 + t.1));
+    let mut shift = (0.0, 0.0);
+    if let Some(a) = tf.u_origin {
+        shift.0 = -a - tau * ((q.x - a) / tau).floor();
+    }
+    if let Some(b0) = tf.v_origin {
+        shift.1 = -tau * ((q.y - b0) / tau).floor();
+    }
+    // The whole piece must stay inside the chosen period.
+    let inside = (0..=16).all(|k| {
+        let p = pc.eval(t.0 + (t.1 - t.0) * f64::from(k) / 16.0);
+        let u_ok = tf.u_origin.is_none() || (-1e-9..=tau + 1e-9).contains(&(p.x + shift.0));
+        let v_ok = tf
+            .v_origin
+            .is_none_or(|b0| (b0 - 1e-9..=b0 + tau + 1e-9).contains(&(p.y + shift.1)));
+        u_ok && v_ok
+    });
+    if !inside || matches!(&pc, forge_core::geom::Curve2::Ellipse(e) if e.rx() < e.ry()) {
+        return PcurvePlacement::Unavailable;
+    }
+    PcurvePlacement::Ready(fi, pc, shift)
+}
+
+/// Faces that get pcurves: every non-planar face all of whose pieces place a pcurve (a
+/// reader mixing given and computed pcurves on one face could put them in different
+/// periods, so a face gets all or none).
+fn pcurve_faces(body: &Body, topo: &brep::Topo, face_index: &BTreeMap<FaceId, usize>) -> Vec<bool> {
+    let mut ok = vec![true; topo.faces.len()];
+    for e in &topo.edges {
+        let brep::TCurve::Edge(eid) = e.curve else {
+            continue;
+        };
+        let Some(edge) = body.edge(eid) else { continue };
+        for &cid in &edge.coedges {
+            match place_pcurve(body, topo, eid, e.t, cid, face_index) {
+                PcurvePlacement::Unavailable => {
+                    if let Some(fi) = body
+                        .coedge(cid)
+                        .and_then(|c| body.loop_(c.loop_id))
+                        .and_then(|l| face_index.get(&l.face))
+                    {
+                        ok[*fi] = false;
+                    }
+                }
+                PcurvePlacement::NotNeeded | PcurvePlacement::Ready(..) => {}
+            }
+        }
+    }
+    ok
+}
+
+/// The `PCURVE`s of one piece of a Forge edge: Forge's own pcurve on each adjacent
+/// non-planar face that takes pcurves ([`pcurve_faces`]), placed by [`place_pcurve`], so
+/// readers integrate over the same face domains Forge does instead of approximating them
+/// by projection.
+#[allow(clippy::too_many_arguments)]
+fn pcurves(
+    d: &mut DataSection,
+    body: &Body,
+    topo: &brep::Topo,
+    eid: EdgeId,
+    t: (f64, f64),
+    face_index: &BTreeMap<FaceId, usize>,
+    with_pcurves: &[bool],
+    surf: &[u32],
+    ctx2d: &mut Option<u32>,
+) -> Vec<u32> {
+    let Some(edge) = body.edge(eid) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for &cid in &edge.coedges {
+        let PcurvePlacement::Ready(fi, pc, shift) =
+            place_pcurve(body, topo, eid, t, cid, face_index)
+        else {
+            continue;
+        };
+        if !with_pcurves[fi] {
+            continue;
+        }
+        let Some(c2) = geometry::curve2d(d, &pc, shift) else {
+            continue;
+        };
+        let ctx = *ctx2d.get_or_insert_with(|| {
+            d.add(
+                "(GEOMETRIC_REPRESENTATION_CONTEXT(2) PARAMETRIC_REPRESENTATION_CONTEXT() \
+                 REPRESENTATION_CONTEXT('2D SPACE',''))"
+                    .to_string(),
+            )
+        });
+        let dr = d.add(
+            Args::new()
+                .str("")
+                .refs(&[c2])
+                .r(ctx)
+                .entity("DEFINITIONAL_REPRESENTATION"),
+        );
+        out.push(d.add(Args::new().str("").r(surf[fi]).r(dr).entity("PCURVE")));
+    }
+    out
+}
+
+/// `pc` with its parameter moved by `delta` (`pc'(t + delta) = pc(t)`); a circle or ellipse
+/// is 2π-periodic in its parameter and `delta` a whole number of periods, so it is kept.
+fn reparametrize(pc: &forge_core::geom::Curve2, delta: f64) -> Option<forge_core::geom::Curve2> {
+    use forge_core::geom::{Curve2, Line2, NurbsCurve2};
+    if delta == 0.0 {
+        return Some(pc.clone());
+    }
+    match pc {
+        Curve2::Line(l) => Line2::new(l.origin() - l.dir() * delta, l.dir())
+            .ok()
+            .map(Curve2::Line),
+        Curve2::Circle(_) | Curve2::Ellipse(_) => Some(pc.clone()),
+        Curve2::BSpline(n) => NurbsCurve2::new(
+            n.degree(),
+            n.knots().iter().map(|k| k + delta).collect(),
+            n.control_points().to_vec(),
+            n.weights().map(<[f64]>::to_vec),
+        )
+        .ok()
+        .map(Curve2::BSpline),
+    }
 }
 
 /// A colour for a solid; returns the `STYLED_ITEM`.

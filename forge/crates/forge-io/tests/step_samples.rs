@@ -201,6 +201,21 @@ fn the_verifier_rejects_broken_files() {
     // Not millimetres.
     let inches = text.replace("SI_UNIT(.MILLI.,.METRE.)", "SI_UNIT($,.METRE.)");
     assert!(verify_step(inches.as_bytes()).is_err());
+
+    // A pcurve moved off its edge (the cylinder's top ring runs along v = 30).
+    let (cyl, _) = export("cyl", &samples::cylinder(10.0, 30.0));
+    assert!(
+        cyl.contains("PCURVE("),
+        "the side face's rings carry pcurves"
+    );
+    let off = cyl.replacen(
+        "CARTESIAN_POINT('',(0.,30.))",
+        "CARTESIAN_POINT('',(0.,29.))",
+        1,
+    );
+    assert_ne!(off, cyl);
+    let e = verify_step(off.as_bytes()).expect_err("pcurve off its edge");
+    assert!(e.to_string().contains("pcurve"), "{e}");
 }
 
 proptest! {

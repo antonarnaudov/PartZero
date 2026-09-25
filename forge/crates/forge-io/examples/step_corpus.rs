@@ -2,6 +2,7 @@
 //!
 //! ```text
 //! cargo run --release -p forge-io --example step_corpus -- <out-dir> [cases per seed] [seed]...
+//! STEP_CHAINS=8x6 cargo run …   # also the results of 8 chained sequences of 6 operations
 //! uv run python -m aicad_oracle.step_check --dir <out-dir>      # from oracle/
 //! ```
 //!
@@ -34,6 +35,17 @@ fn main() {
     let mut all = step_corpus::samples();
     for seed in seeds {
         all.extend(step_corpus::corpus(seed, n));
+    }
+    // Chained operations (Forge's results as operands): STEP_CHAINS=<chains>x<steps>.
+    if let Some((c, k)) = std::env::var("STEP_CHAINS")
+        .ok()
+        .and_then(|v| {
+            v.split_once('x')
+                .map(|(a, b)| (a.parse().ok(), b.parse().ok()))
+        })
+        .and_then(|(a, b)| Some((a?, b?)))
+    {
+        all.extend(step_corpus::chained(2026, c, k));
     }
     {
         for b in all {
