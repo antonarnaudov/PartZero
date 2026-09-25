@@ -1800,6 +1800,101 @@ button.sb-item:hover {
   color: var(--text-faint);
   font-weight: 400;
 }
+
+/* Live operator: the plan and the narrated steps, one line each, as they land. */
+.live-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.live-plan summary {
+  cursor: pointer;
+  list-style: none;
+}
+.live-plan summary::-webkit-details-marker {
+  display: none;
+}
+.live-plan ol {
+  margin: 4px 0 2px;
+  padding-left: 18px;
+  font-size: 11px;
+  color: var(--text-faint);
+  display: grid;
+  gap: 1px;
+}
+.run-steps.live .step {
+  align-items: flex-start;
+  line-height: 15px;
+}
+.run-steps.live .step-label {
+  flex: 1;
+  min-width: 0;
+}
+.run-steps.live .step-done {
+  color: var(--text);
+}
+.run-steps.live .step-done:last-of-type {
+  animation: step-land 0.35s ease-out;
+}
+@keyframes step-land {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.step-refused {
+  color: var(--text-faint);
+  font-style: italic;
+}
+.step-refused .step-mark {
+  border-color: color-mix(in srgb, var(--warn) 60%, transparent);
+  color: var(--warn);
+}
+.step-undone {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+.step-undone .step-mark {
+  color: var(--text-faint);
+}
+.step-review-note,
+.approval-what {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text);
+}
+.step-review-check,
+.approval-reason {
+  margin: 0;
+}
+.question-card.approval {
+  border-color: color-mix(in srgb, var(--warn) 50%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+}
+.question-card.approval .question-title {
+  color: var(--warn);
+}
+.autonomy-dial {
+  height: 22px;
+  margin-left: auto;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.autonomy-dial:hover,
+.autonomy-dial:focus-visible {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
 .run-meta {
   display: flex;
   align-items: center;

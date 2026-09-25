@@ -43,6 +43,7 @@ import type { metricsV1 } from "@aicad/ir-types";
 import {
   EMPTY_HOST_STATE,
   hostStateEqual,
+  mergeApprovals,
   needsApproval,
   OpTransaction,
   OwnParams,
@@ -185,7 +186,7 @@ export class IrDocStore extends Store<IrDocState> {
   private readonly history: History;
   private readonly now: () => number;
   private queue: Promise<unknown> = Promise.resolve();
-  private groupState: { base: string; history: History; token: string; origin: OpOrigin; label: string } | null = null;
+  private groupState: { base: string; history: History; token: string; origin: OpOrigin; label: string; approvals: Approvals } | null = null;
   private groupSeq = 0;
   /** The parameters each agent origin added itself (ADR 0015 §2). */
   private readonly ownParams = new OwnParams();
@@ -294,7 +295,11 @@ export class IrDocStore extends Store<IrDocState> {
       const baseHost = this.getState().host;
       const origin = options.origin ?? "command";
       this.checkGroup(origin, label, options.group);
-      const approvals = needsApproval(origin) ? this.ownParams.approvalsFor(origin, options.approvals) : options.approvals;
+      // What the user allowed during the group (their answer to the agent's request) holds for the group's own transactions.
+      const gs = this.groupState;
+      const granted = gs && options.group === gs.token && origin === gs.origin ? gs.approvals : undefined;
+      const given = granted ? mergeApprovals(options.approvals ?? {}, granted) : options.approvals;
+      const approvals = needsApproval(origin) ? this.ownParams.approvalsFor(origin, given) : given;
       const t = new OpTransaction({
         engine: this.engine(),
         document: base,
@@ -404,7 +409,7 @@ export class IrDocStore extends Store<IrDocState> {
       if (this.groupState) throw new CommandEngineError("IR_GROUP_OPEN", `a group (“${this.getState().group?.label ?? ""}”) is already open; seal or abort it first`);
       const s = this.getState();
       const token = `g${++this.groupSeq}-${s.revision}`;
-      this.groupState = { base: snapshotText(this.document, s.host), history: this.newHistory(), token, origin: group.origin, label: group.label };
+      this.groupState = { base: snapshotText(this.document, s.host), history: this.newHistory(), token, origin: group.origin, label: group.label, approvals: {} };
       this.setState({ group: { label: group.label, origin: group.origin, steps: 0 }, history: this.historyState() });
       this.emit({ kind: "group-open", label: group.label, origin: group.origin, revision: s.revision });
       return { token };
@@ -437,6 +442,19 @@ export class IrDocStore extends Store<IrDocState> {
       [],
       { group: gs.label, groupOrigin: gs.origin, origin },
     );
+  }
+
+  /**
+   * Host code only (ADR 0015 §3): the user allowed the open group's agent to change these features,
+   * parameters or the rollback marker — their answer to the agent's request. Its transactions that
+   * carry the group's token get them for the rest of the group; nothing else does, and they end with
+   * the group. Refused (`IR_GROUP_CLOSED`) when `token` does not name the open group. Not a command:
+   * no agent, MCP client or tool can reach it.
+   */
+  approveForGroup(token: string, approvals: Approvals): void {
+    const gs = this.groupState;
+    if (!gs || gs.token !== token) throw new CommandEngineError("IR_GROUP_CLOSED", "that undo group was already sealed, aborted or its document replaced", [], { group: token.slice(0, 100) });
+    gs.approvals = mergeApprovals(gs.approvals, approvals);
   }
 
   /** Throws `IR_GROUP_CLOSED` when `token` does not name the open group. */

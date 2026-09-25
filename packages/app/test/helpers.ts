@@ -182,7 +182,13 @@ export class FakeSettingsBridge implements SettingsBridge {
   update(u: SettingsUpdate): Promise<AgentSettingsView> {
     const models = { ...this.view.models };
     for (const [role, m] of Object.entries(u.models ?? {})) models[role as keyof typeof models] = m ?? this.view.defaults[role as keyof typeof models];
-    this.view = { ...this.view, models, ...(u.budgetUsd !== undefined ? { budgetUsd: u.budgetUsd } : {}), ...(u.compatBaseUrl !== undefined ? { compatBaseUrl: u.compatBaseUrl } : {}) };
+    this.view = {
+      ...this.view,
+      models,
+      ...(u.budgetUsd !== undefined ? { budgetUsd: u.budgetUsd } : {}),
+      ...(u.compatBaseUrl !== undefined ? { compatBaseUrl: u.compatBaseUrl } : {}),
+      ...(u.autonomy !== undefined ? { autonomy: u.autonomy } : {}),
+    };
     return Promise.resolve(this.view);
   }
   setApiKey(r: SetApiKeyRequest): Promise<AgentSettingsView> {

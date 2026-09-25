@@ -239,6 +239,8 @@ export async function bootstrap(): Promise<Bootstrapped> {
     confirm: (message) => Promise.resolve(window.confirm(message)),
   };
   const commands = createCommandRegistry(() => services);
+  // The live operator applies the agent's ops through the same command registry, as the agent.
+  agent.attachLive({ services, commands });
 
   // Failures of user-initiated commands surface as toasts; programmatic callers get the result.
   commands.onDidExecute((r) => {

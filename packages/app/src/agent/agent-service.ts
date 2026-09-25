@@ -3,27 +3,42 @@
  * protocol events), the proposal under review (feature diff, per-feature accept/reject, the
  * variant's CadScript and its ghost preview) and the agent settings view.
  *
- * Commands (`agent.*`, `settings.*`) are thin wrappers over this service; the only document change
- * it makes is {@link AgentService.accept}, which applies the accepted variant as ONE undoable
- * transaction (`origin: "agent"`).
+ * On an IR v1 model the agent is the **live operator** (surface `ops`): it operates the command
+ * layer's op tools on the open document itself. Its ops arrive over the bridge (`onOpsRequest`) and
+ * are applied as the agent through the command registry inside the turn's undo group
+ * ({@link LiveSession}); each step shows up at once in the viewport, the timeline and — narrated —
+ * in the chat. Stop keeps what was built; the turn is one undo step ({@link AgentService.undoTurn});
+ * {@link AgentService.keepTurn} makes its features yours (ADR 0015). The CadScript proposal path is
+ * the fallback for documents that are not IR v1 models.
+ *
+ * Commands (`agent.*`, `settings.*`) are thin wrappers over this service; the document changes it
+ * makes are the live turn's (as the agent, in its group) and {@link AgentService.accept}, which
+ * applies an accepted proposal as ONE undoable transaction (`origin: "agent"`).
  */
 import type { IrDocument } from "@aicad/ir-types";
 import type {
+  AgentApprovalRequest,
   AgentBridge,
   AgentEvent,
   AgentModelInfo,
+  AgentOpsRequest,
   AgentPhase,
   AgentQuestion,
+  AgentQuestionKind,
   AgentRunResult,
   AgentSettingsView,
   AgentStartErrorCode,
+  AgentStepView,
+  AgentSurface,
   AgentTransportKind,
   ApiProviderId,
+  AutonomySetting,
   PlanUsageView,
   ProviderId,
   SettingsBridge,
   SettingsUpdate,
 } from "../agent-protocol";
+import { LiveSession, type LiveSessionEnv } from "./live-session";
 import type { CadScriptService } from "../cadscript/service";
 import type { DocStore } from "../doc/doc-store";
 import type { ForgeEngine, RenderBody } from "../engine/types";
@@ -66,10 +81,19 @@ export interface AgentRun {
   transport: AgentTransportKind | null;
   engine: string;
   draft: { source: string; applyIndex: number; verified: boolean } | null;
-  question: { questionId: string; kind: "clarify" | "budget"; questions: AgentQuestion[] } | null;
+  question: { questionId: string; kind: AgentQuestionKind; questions: AgentQuestion[]; step?: AgentStepView; approval?: AgentApprovalRequest } | null;
   result: AgentRunResult | null;
   error: { code: string; message: string } | null;
   lastSeq: number;
+  /** How the run changes the model (`ops`: live, on the open document). */
+  surface: AgentSurface;
+  autonomy: AutonomySetting | null;
+  /** Live steps in order (committed changes, refused attempts; an undone step is marked). */
+  steps: AgentStepView[];
+  /** The agent's plan. */
+  outline: string[];
+  /** Live turns: what happened to the turn's undo group when the run ended. */
+  turn: { label: string; kept: boolean; steps: number; resolution: "kept" | "undone" | null } | null;
 }
 
 export interface PreviewState {
@@ -159,6 +183,11 @@ function newRun(runId: string, prompt: string, chips: SelectionChip[]): AgentRun
     result: null,
     error: null,
     lastSeq: 0,
+    surface: "code",
+    autonomy: null,
+    steps: [],
+    outline: [],
+    turn: null,
   };
 }
 
@@ -175,7 +204,20 @@ export function reduceRun(run: AgentRun, e: AgentEvent): AgentRun {
       r.budgetUsd = e.budgetUsd;
       r.transport = e.transport;
       r.engine = e.engine;
+      if (e.surface) r.surface = e.surface;
+      if (e.autonomy) r.autonomy = e.autonomy;
       if (e.transport === "live" && Object.values(e.models).some((m) => m?.billing === "subscription")) r.notional = true;
+      break;
+    case "step": {
+      const s = e.step;
+      // An undone step replaces its committed entry; everything else is appended in order.
+      const at = s.undone ? r.steps.findIndex((x) => x.ok && !x.undone && x.index === s.index && x.label === s.label) : -1;
+      r.steps = at >= 0 ? r.steps.map((x, i) => (i === at ? { ...s } : x)) : [...r.steps.slice(-(MAX_ACTIVITY - 1)), { ...s }];
+      act({ kind: "tool", ok: s.ok, text: `${s.ok ? "step" : "refused"} ${s.index}: ${s.note}${s.code ? ` (${s.code})` : ""}` });
+      break;
+    }
+    case "outline":
+      r.outline = [...e.steps];
       break;
     case "phase":
       r.phase = e.phase;
@@ -203,7 +245,7 @@ export function reduceRun(run: AgentRun, e: AgentEvent): AgentRun {
       r.draft = { source: e.source, applyIndex: e.applyIndex, verified: e.verified };
       break;
     case "question":
-      r.question = { questionId: e.questionId, kind: e.kind, questions: e.questions };
+      r.question = { questionId: e.questionId, kind: e.kind, questions: e.questions, ...(e.step ? { step: e.step } : {}), ...(e.approval ? { approval: e.approval } : {}) };
       r.status = "question";
       break;
     case "answered":
@@ -246,10 +288,113 @@ export class AgentService extends Store<AgentState> {
     super({ available: deps.agent !== null, runs: [], activeRunId: null, review: null, codeTab: "code", settings: null, settingsError: null });
     this.#deps = deps;
     this.#unsubscribe = deps.agent?.onEvent((e) => this.handleEvent(e)) ?? null;
+    this.#unsubscribeOps = deps.agent?.onOpsRequest?.((r) => this.#onOpsRequest(r)) ?? null;
   }
 
   dispose(): void {
     this.#unsubscribe?.();
+    this.#unsubscribeOps?.();
+    this.#unsubscribeGroup?.();
+  }
+
+  // ─── The live operator (surface `ops`) ─────────────────────────────────────────────────────
+
+  #liveEnv: LiveSessionEnv | null = null;
+  #live: LiveSession | null = null;
+  #unsubscribeOps: (() => void) | null = null;
+  #unsubscribeGroup: (() => void) | null = null;
+
+  /**
+   * Connect the live operator to the open document: the app's services and command registry (the
+   * agent's ops go through `ir.apply` as the agent). Without it (or on a shell without the ops
+   * channel) every run takes the CadScript proposal path.
+   */
+  attachLive(env: LiveSessionEnv): void {
+    this.#liveEnv = env;
+    this.#unsubscribeGroup?.();
+    // A document opened over the turn closes its group: the run cannot go on, so it stops.
+    this.#unsubscribeGroup =
+      env.services.ir?.onDidChange((e) => {
+        const live = this.#live;
+        if (e.kind === "group-abort" && live && !live.closed && e.label === live.label) void this.stop();
+      }) ?? null;
+  }
+
+  /** Whether a run now would operate the open document live (an IR v1 model, a shell with the ops channel). */
+  get liveAvailable(): boolean {
+    const bridge = this.#deps.agent;
+    const ir = this.#liveEnv?.services.ir;
+    return !!bridge?.onOpsRequest && !!bridge.opsReply && !!ir && ir.getState().document !== null && this.#deps.doc.getState().format === "ir-v1";
+  }
+
+  #opsReply(reply: Parameters<NonNullable<AgentBridge["opsReply"]>>[0]): void {
+    void this.#deps.agent?.opsReply?.(reply).catch(() => undefined);
+  }
+
+  #onOpsRequest(req: AgentOpsRequest): void {
+    const live = this.#live;
+    if (!live) {
+      this.#opsReply({ v: 1, runId: req.runId, id: req.id, ok: false, error: { code: "IR_GROUP_CLOSED", message: "no agent turn is running in this window" } });
+      return;
+    }
+    live.handle(req);
+  }
+
+  /** The live turn ended: its group becomes one undo step (Stop keeps what was built), or is discarded after a lockdown violation. */
+  async #endLive(runId: string, abort: boolean): Promise<void> {
+    const live = this.#live;
+    if (!live || live.runId !== runId) return;
+    this.#live = null;
+    const r = await live.close(abort ? "abort" : "seal");
+    this.#patchRun(runId, () => ({ turn: { label: live.label, kept: r.changed, steps: r.steps, resolution: null } }));
+    if (abort) this.#deps.ui.addChatMessage("system", "The agent's CLI broke its lockdown: everything it did in this turn was taken back.", [], { tone: "error" });
+  }
+
+  #patchRun(runId: string, patch: (r: AgentRun) => Partial<AgentRun>): void {
+    this.setState((st) => ({ runs: st.runs.map((r) => (r.runId === runId ? { ...r, ...patch(r) } : r)) }));
+  }
+
+  /** Features a live turn added or edited that are still agent-authored (what Keep makes yours). */
+  #turnFeatures(run: AgentRun): string[] {
+    const ir = this.#liveEnv?.services.ir;
+    const doc = ir?.getState().document;
+    if (!doc) return [];
+    const touched = new Set(run.steps.filter((s) => s.ok && !s.undone).flatMap((s) => s.features ?? []));
+    const parsed = JSON.parse(doc) as { parts: Array<{ features: Array<{ id: string; author?: string }> }> };
+    return parsed.parts.flatMap((p) => p.features.filter((f) => touched.has(f.id) && f.author === "agent").map((f) => f.id));
+  }
+
+  /** Keep the live turn's features: they become yours (ADR 0015 §2), one undoable op. */
+  async keepTurn(runId?: string): Promise<{ kept: number }> {
+    const run = runId ? this.run(runId) : [...this.getState().runs].reverse().find((r) => r.surface === "ops" && r.turn);
+    const env = this.#liveEnv;
+    if (!run || !env || !run.turn) throw new AgentError("NO_TURN", "There is no agent turn to keep.");
+    const features = this.#turnFeatures(run);
+    if (features.length > 0) {
+      const r = await env.commands.execute({ id: "ir.setAuthor", args: { features, author: "user" } }, { source: "ui" });
+      if (!r.ok) throw new AgentError(r.error.code, r.error.message);
+    }
+    this.#patchRun(run.runId, (x) => ({ turn: x.turn ? { ...x.turn, resolution: "kept" } : null }));
+    return { kept: features.length };
+  }
+
+  /** Take the whole live turn back: one undo step, only while it is still the last one. */
+  async undoTurn(runId?: string): Promise<{ undone: boolean }> {
+    const run = runId ? this.run(runId) : [...this.getState().runs].reverse().find((r) => r.surface === "ops" && r.turn);
+    const env = this.#liveEnv;
+    if (!run || !env || !run.turn) throw new AgentError("NO_TURN", "There is no agent turn to undo.");
+    if (!run.turn.kept) return { undone: false };
+    const h = env.services.ir?.getState().history;
+    if (h?.undoLabel !== run.turn.label) throw new AgentError("NOT_LAST", "Other edits were made after the agent's turn: undo them first (Edit ▸ Undo), step by step.");
+    const r = await env.commands.execute({ id: "ir.undo", args: {} }, { source: "ui" });
+    if (!r.ok) throw new AgentError(r.error.code, r.error.message);
+    this.#patchRun(run.runId, (x) => ({ turn: x.turn ? { ...x.turn, resolution: "undone" } : null }));
+    return { undone: (r.value as { undone: boolean }).undone };
+  }
+
+  /** The autonomy dial: only the user sets it (Assistant header, Settings). */
+  setAutonomy(autonomy: AutonomySetting): Promise<AgentSettingsView> {
+    return this.updateSettings({ autonomy });
   }
 
   run(runId: string): AgentRun | undefined {
@@ -279,6 +424,7 @@ export class AgentService extends Store<AgentState> {
     const s = await doc.idle();
     const ir = s.compile?.ok ? s.compile.ir : (s.model?.ir ?? null);
     const selection = describeSelection(input.chips, ir);
+    if (this.liveAvailable) return this.#startLive(input, s.name, selection);
     // An IR v1 model reaches the designer as CadScript (its print; a model without features: none,
     // the designer starts from scratch). Its proposal comes back as a code edit (accept()).
     let source = s.source;
@@ -303,6 +449,44 @@ export class AgentService extends Store<AgentState> {
     return { runId: res.runId };
   }
 
+  /**
+   * A live turn: open the turn's undo group, start the run on the `ops` surface (no code is sent:
+   * the agent reads and edits the open model through the ops channel), bind the session to the run.
+   */
+  async #startLive(input: { prompt: string; chips: SelectionChip[] }, documentName: string, selection: ReturnType<typeof describeSelection>): Promise<{ runId: string }> {
+    const bridge = this.#deps.agent!;
+    const { ui } = this.#deps;
+    let live: LiveSession;
+    try {
+      live = await LiveSession.open(this.#liveEnv!, `Agent: ${shortLabel(input.prompt)}`, (r) => this.#opsReply(r));
+    } catch (e) {
+      const message = `The agent cannot edit the model right now: ${e instanceof Error ? e.message : String(e)}`;
+      ui.addChatMessage("system", message, [], { tone: "error" });
+      throw new AgentError("BUSY", message);
+    }
+    this.#live = live;
+    let res: Awaited<ReturnType<AgentBridge["start"]>>;
+    try {
+      res = await bridge.start({ v: 1, prompt: input.prompt, source: "", documentName, selection, surface: "ops" });
+    } catch (e) {
+      res = { ok: false, code: "UNAVAILABLE", message: e instanceof Error ? e.message : String(e) };
+    }
+    if (!res.ok) {
+      this.#live = null;
+      await live.close("seal");
+      ui.addChatMessage("system", res.message, [], { tone: "error", ...(SETTINGS_FIXES.has(res.code) ? { action: { label: "Open Settings", command: "settings.open" } } : {}) });
+      throw new AgentError(res.code, res.message);
+    }
+    const run: AgentRun = { ...newRun(res.runId, input.prompt, input.chips), surface: "ops" };
+    this.setState((st) => ({ runs: [...st.runs, run], activeRunId: res.runId }));
+    ui.addChatMessage("agent", "", [], { runId: res.runId });
+    live.bind(res.runId);
+    const early = this.#pendingEvents.get(res.runId);
+    this.#pendingEvents.delete(res.runId);
+    for (const e of early ?? []) this.handleEvent(e);
+    return { runId: res.runId };
+  }
+
   async stop(): Promise<{ stopped: boolean }> {
     const run = this.activeRun;
     if (!run || !this.#deps.agent) return { stopped: false };
@@ -315,6 +499,8 @@ export class AgentService extends Store<AgentState> {
     const q = run?.question;
     if (!run || !q || !this.#deps.agent) throw new AgentError("NO_QUESTION", "The agent is not waiting for an answer.");
     const full = q.questions.map((qq, i) => (answers[i]?.trim() ? answers[i]!.trim() : qq.default));
+    // The user allowed the agent to change their work: recorded on this turn's group before the agent hears it.
+    if (q.kind === "approval" && q.approval && full[0] === "Allow") this.#live?.approve(q.approval);
     const r = await this.#deps.agent.answer({ v: 1, runId: run.runId, questionId: q.questionId, answers: full });
     return { answered: r.ok };
   }
@@ -335,6 +521,11 @@ export class AgentService extends Store<AgentState> {
       runs: st.runs.map((r) => (r.runId === e.runId ? next : r)),
       activeRunId: terminal && st.activeRunId === e.runId ? null : st.activeRunId,
     }));
+    if (terminal && next.surface === "ops") {
+      void this.#endLive(e.runId, e.type === "result" && e.result.stopReason === "lockdown_violation");
+      if (e.type === "result" && e.result.status === "answered" && e.result.answer) this.#deps.ui.addChatMessage("assistant", e.result.answer);
+      return;
+    }
     if (e.type === "draft") this.#onDraft(next, e.source);
     else if (e.type === "result") this.#onResult(next, e.result);
     else if (e.type === "error") this.#dropDraft(e.runId);

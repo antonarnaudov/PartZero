@@ -175,7 +175,7 @@ describe("run reducer", () => {
   it("tracks phases, cost, questions and ignores duplicates", () => {
     const base = { v: 1 as const, runId: "r", t: 0 };
     let run = reduceRun(
-      { runId: "r", prompt: "p", chips: [], status: "running", phase: null, phases: [], detail: "", activity: [], spentUsd: 0, budgetUsd: 0, elapsedMs: 0, models: {}, transport: null, engine: "", draft: null, question: null, result: null, error: null, lastSeq: 0 },
+      { runId: "r", prompt: "p", chips: [], status: "running", phase: null, phases: [], detail: "", activity: [], spentUsd: 0, budgetUsd: 0, elapsedMs: 0, models: {}, transport: null, engine: "", draft: null, question: null, result: null, error: null, lastSeq: 0, surface: "code", autonomy: null, steps: [], outline: [], turn: null },
       { ...base, seq: 1, type: "phase", phase: "TRIAGE", detail: "" },
     );
     run = reduceRun(run, { ...base, seq: 2, t: 900, type: "cost", spentUsd: 0.02, budgetUsd: 1 });

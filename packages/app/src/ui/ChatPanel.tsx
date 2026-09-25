@@ -4,7 +4,7 @@
  * chips), selection chips that travel with the message, and the composer.
  */
 import { useEffect, useRef, useState, type ReactElement } from "react";
-import type { AgentPhase, AgentQuestion } from "../agent-protocol";
+import type { AgentApprovalRequest, AgentPhase, AgentQuestion, AgentQuestionKind, AgentStepView, AutonomySetting } from "../agent-protocol";
 import type { AgentRun } from "../agent/agent-service";
 import type { AppInvocation } from "../commands/commands";
 import { useSelectionChips as useModelSelectionChips } from "../selection/chips";
@@ -82,7 +82,58 @@ function CostMeter({ spent, budget, notional }: { spent: number; budget: number;
   );
 }
 
-function QuestionCard({ questionId, kind, questions }: { questionId: string; kind: "clarify" | "budget"; questions: AgentQuestion[] }): ReactElement {
+/** Ask at each step: the step that just landed, Keep or Undo. */
+function StepReviewCard({ step }: { step: AgentStepView | undefined }): ReactElement {
+  const { run } = useApp();
+  return (
+    <div className="question-card step-review" data-testid="agent-step-review">
+      <div className="question-title">
+        <Icon.Question size={13} /> Keep this step?
+      </div>
+      <p className="step-review-note">{step ? `${step.index}. ${step.note}` : "The agent's last step"}</p>
+      {step?.check && <p className="step-review-check mono muted small">{step.check}</p>}
+      <div className="question-actions">
+        <button type="button" className="ghost-btn" data-testid="agent-step-undo" onClick={() => run({ id: "agent.answer", args: { answers: ["Undo"] } })}>
+          Undo step
+        </button>
+        <button type="button" className="primary-btn small" data-testid="agent-step-keep" onClick={() => run({ id: "agent.answer", args: { answers: ["Keep"] } })}>
+          Keep
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** The agent asks to change the user's own work (ADR 0015 §3). */
+function ApprovalCard({ approval }: { approval: AgentApprovalRequest | undefined }): ReactElement {
+  const { run } = useApp();
+  const what = approval ? [...approval.features.map((f) => `feature ${f}`), ...approval.params.map((p) => `parameter ${p}`), ...(approval.rollback ? ["the rollback marker"] : [])].join(", ") : "your work";
+  return (
+    <div className="question-card approval" data-testid="agent-approval">
+      <div className="question-title">
+        <Icon.Warning size={13} /> The agent asks to change your work
+      </div>
+      <p className="approval-what">{what}</p>
+      {approval?.reason && <p className="approval-reason muted">{approval.reason}</p>}
+      <div className="question-actions">
+        <button type="button" className="ghost-btn" data-testid="agent-approval-deny" onClick={() => run({ id: "agent.answer", args: { answers: ["Don't allow"] } })}>
+          Don’t allow
+        </button>
+        <button type="button" className="primary-btn small" data-testid="agent-approval-allow" onClick={() => run({ id: "agent.answer", args: { answers: ["Allow"] } })}>
+          Allow for this task
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function QuestionCard({ questionId, kind, questions, step, approval }: { questionId: string; kind: AgentQuestionKind; questions: AgentQuestion[]; step?: AgentStepView; approval?: AgentApprovalRequest }): ReactElement {
+  if (kind === "step") return <StepReviewCard step={step} />;
+  if (kind === "approval") return <ApprovalCard approval={approval} />;
+  return <ChoiceQuestionCard questionId={questionId} kind={kind} questions={questions} />;
+}
+
+function ChoiceQuestionCard({ questionId, kind, questions }: { questionId: string; kind: AgentQuestionKind; questions: AgentQuestion[] }): ReactElement {
   const { run } = useApp();
   const [picked, setPicked] = useState<string[]>(() => questions.map((q) => q.default));
   const [other, setOther] = useState<string[]>(() => questions.map(() => ""));
@@ -150,9 +201,177 @@ const STOP_LABEL: Record<string, string> = {
   engine_unavailable: "Failed: no geometry engine",
   model_error: "Failed: model error",
   lockdown_violation: "Stopped: the CLI broke its lockdown",
+  wall_time: "Stopped: time limit",
 };
 
+const AUTONOMY_LABELS: Record<AutonomySetting, { label: string; title: string }> = {
+  ask: { label: "Ask each step", title: "The agent pauses after every step: you keep it or undo it before it goes on." },
+  review: { label: "Review turn", title: "The agent builds live; you keep or undo its whole turn when it finishes." },
+  auto: { label: "Auto", title: "The agent builds live and you get a notice. Your own features still change only with your approval." },
+};
+
+/** The autonomy dial (ADR 0015) in the Assistant header: only the user sets it. */
+function AutonomyDial(): ReactElement | null {
+  const { services, run } = useApp();
+  const settings = useStore(services.agent, (s) => s.settings);
+  const available = useStore(services.agent, (s) => s.available);
+  useEffect(() => {
+    if (available && settings === null) void services.agent.refreshSettings().catch(() => undefined);
+  }, [available, settings, services.agent]);
+  if (!available) return null;
+  const value: AutonomySetting = settings?.autonomy ?? "review";
+  return (
+    <select
+      className="autonomy-dial"
+      data-testid="agent-autonomy"
+      aria-label="Agent autonomy"
+      title={AUTONOMY_LABELS[value].title}
+      value={value}
+      onChange={(e) => run({ id: "settings.setAutonomy", args: { autonomy: e.target.value as AutonomySetting } })}
+    >
+      {(Object.keys(AUTONOMY_LABELS) as AutonomySetting[]).map((k) => (
+        <option key={k} value={k} title={AUTONOMY_LABELS[k].title}>
+          {AUTONOMY_LABELS[k].label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+const kept = (run: AgentRun): number => run.steps.filter((s) => s.ok && !s.undone).length;
+
+/** A live run's headline: what it is doing, or how it ended and what stayed. */
+function liveHeadline(run: AgentRun): string {
+  const n = kept(run);
+  const steps = `${n} step${n === 1 ? "" : "s"}`;
+  if (run.status === "failed") return n > 0 ? `Stopped — ${steps} kept` : "Failed";
+  if (run.status === "question") return run.question?.kind === "step" ? "Keep this step?" : run.question?.kind === "approval" ? "Asking to change your work" : "Waiting for your answer";
+  if (run.status === "running") {
+    const last = [...run.steps].reverse().find((s) => s.ok);
+    return last ? `Building — ${last.note}` : run.outline.length > 0 ? "Building…" : "Reading the model…";
+  }
+  const r = run.result!;
+  if (r.status === "answered") return "Answered";
+  if (r.status === "proposed") return n > 0 ? `Built — ${steps}` : "Done — no changes";
+  if (r.quota) return r.quota.kind === "quota_exhausted" ? "Stopped: plan usage limit reached" : "Stopped: rate limited";
+  const why = STOP_LABEL[r.stopReason] ?? `Stopped (${r.stopReason})`;
+  return n > 0 ? `${why} — ${steps} kept` : why;
+}
+
+/** The live operator's plan and its steps, narrated one line each (the chat side of "watch it build"). */
+function LiveSteps({ run }: { run: AgentRun }): ReactElement {
+  const live = run.status === "running" || run.status === "question";
+  return (
+    <div className="live-steps" data-testid="agent-live">
+      {run.outline.length > 0 && (
+        <details className="live-plan" open={run.steps.length === 0}>
+          <summary className="muted small">Plan · {run.outline.length} steps</summary>
+          <ol data-testid="agent-plan">
+            {run.outline.map((p, i) => (
+              <li key={`${i}:${p}`}>{p}</li>
+            ))}
+          </ol>
+        </details>
+      )}
+      <ol className="run-steps live" data-testid="agent-steps">
+        {run.steps.map((s, i) => {
+          const state = s.undone ? "undone" : s.ok ? "done" : "refused";
+          return (
+            <li key={`${i}:${s.index}:${s.label}`} className={`step step-${state}`} data-state={state} data-testid="agent-step" title={s.check ?? (s.code ? `refused: ${s.code}` : s.label)}>
+              <span className="step-mark" aria-hidden="true">
+                {s.undone ? <Icon.Close size={10} /> : s.ok ? <Icon.Check size={11} /> : <Icon.Warning size={10} />}
+              </span>
+              <span className="step-label">{s.ok ? s.note : `Tried: ${s.note}`}</span>
+              {s.undone && <span className="step-detail muted">undone</span>}
+              {!s.ok && s.code && <span className="step-detail mono muted">{s.code.split("/").at(-1)}</span>}
+            </li>
+          );
+        })}
+        {live && (
+          <li className="step step-active" data-state="active">
+            <span className="step-mark" aria-hidden="true">
+              <Icon.Spinner size={11} />
+            </span>
+            <span className="step-label muted">{run.status === "question" ? "Waiting for you" : run.steps.length === 0 ? "Planning" : "Working on the next step"}</span>
+          </li>
+        )}
+      </ol>
+    </div>
+  );
+}
+
+/** How a live turn ended: the summary, and Keep / Undo for the whole turn (one undo step). */
+function LiveResult({ run }: { run: AgentRun }): ReactElement | null {
+  const { run: exec, isMac } = useApp();
+  const r = run.result;
+  if (!r && !run.error) return null;
+  const n = kept(run);
+  const turn = run.turn;
+  return (
+    <div className="run-result live" data-testid="agent-result" data-result={r?.status ?? "failed"}>
+      {r?.quota && (
+        <p className="run-quota" data-testid="agent-quota" data-kind={r.quota.kind}>
+          <Icon.Warning size={12} /> {r.quota.kind === "quota_exhausted" ? "Your plan's usage limit is reached." : "The provider is rate limiting requests."}
+          {r.quota.resetsAt ? ` It resets ${resetTime(r.quota.resetsAt)}.` : " Try again later."}
+        </p>
+      )}
+      {r && r.status !== "answered" && <p className="run-summary">{r.summary}</p>}
+      {r && r.assumptions.length > 0 && (
+        <div className="assumptions" aria-label="Assumptions">
+          {r.assumptions.map((a) => (
+            <span key={a} className="assumption-chip" title="A value the agent chose">
+              {a}
+            </span>
+          ))}
+        </div>
+      )}
+      {r && r.knownIssues.length > 0 && (
+        <ul className="known-issues">
+          {r.knownIssues.map((k) => (
+            <li key={k}>
+              <Icon.Warning size={12} /> {k}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="run-facts muted">
+        {r?.verified ? "checked by Forge" : n > 0 ? "not fully checked" : ""}
+        {r ? ` · ${r.turns} turn${r.turns === 1 ? "" : "s"}` : ""}
+      </div>
+      {turn && turn.kept && (
+        <div className="run-review" data-testid="agent-turn">
+          {turn.resolution === null && (
+            <>
+              <span className="muted small">
+                {n} step{n === 1 ? "" : "s"} · one undo step{run.autonomy === "auto" ? "" : " · review it in the viewport"}
+              </span>
+              <span className="spacer" />
+              <button type="button" className="ghost-btn" data-testid="agent-undo-turn" onClick={() => exec({ id: "agent.undoTurn", args: { runId: run.runId } })}>
+                Undo turn
+              </button>
+              <button type="button" className="primary-btn small" data-testid="agent-keep" title="Make these features yours: they lose the AI mark" onClick={() => exec({ id: "agent.keep", args: { runId: run.runId } })}>
+                Keep
+              </button>
+            </>
+          )}
+          {turn.resolution === "kept" && (
+            <span className="resolution resolution-accepted" data-testid="agent-resolution">
+              Kept · the features are yours · undo with {isMac ? "⌘Z" : "Ctrl+Z"}
+            </span>
+          )}
+          {turn.resolution === "undone" && (
+            <span className="resolution resolution-rejected" data-testid="agent-resolution">
+              Undone — the model is back as before the turn.
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function headline(run: AgentRun): string {
+  if (run.surface === "ops") return liveHeadline(run);
   if (run.status === "failed") return "Failed";
   if (run.status === "question") return "Waiting for your answer";
   if (run.status === "running") {
@@ -273,17 +492,21 @@ function RunCard({ runId }: { runId: string }): ReactElement | null {
           </button>
         )}
       </header>
-      <ol className="run-steps" data-testid="agent-progress">
-        {steps.map((s) => (
-          <li key={s.id} className={`step step-${s.state}`} data-step={s.id} data-state={s.state}>
-            <span className="step-mark" aria-hidden="true">
-              {s.state === "done" ? <Icon.Check size={11} /> : s.state === "active" ? <Icon.Spinner size={11} /> : s.state === "failed" ? <Icon.Close size={10} /> : null}
-            </span>
-            <span className="step-label">{s.label}</span>
-            {s.detail && <span className="step-detail mono">{s.detail}</span>}
-          </li>
-        ))}
-      </ol>
+      {run.surface === "ops" ? (
+        <LiveSteps run={run} />
+      ) : (
+        <ol className="run-steps" data-testid="agent-progress">
+          {steps.map((s) => (
+            <li key={s.id} className={`step step-${s.state}`} data-step={s.id} data-state={s.state}>
+              <span className="step-mark" aria-hidden="true">
+                {s.state === "done" ? <Icon.Check size={11} /> : s.state === "active" ? <Icon.Spinner size={11} /> : s.state === "failed" ? <Icon.Close size={10} /> : null}
+              </span>
+              <span className="step-label">{s.label}</span>
+              {s.detail && <span className="step-detail mono">{s.detail}</span>}
+            </li>
+          ))}
+        </ol>
+      )}
       <div className="run-meta">
         <CostMeter spent={run.spentUsd} budget={run.budgetUsd} notional={run.notional === true} />
         <span className="run-model muted" title={Object.entries(run.models).map(([k, v]) => `${k}: ${v?.name ?? "?"}`).join("\n")}>
@@ -309,7 +532,7 @@ function RunCard({ runId }: { runId: string }): ReactElement | null {
           <Icon.Error size={12} /> {run.error.message}
         </div>
       )}
-      <ResultBlock run={run} />
+      {run.surface === "ops" ? <LiveResult run={run} /> : <ResultBlock run={run} />}
       {run.activity.length > 0 && (
         <details className="run-log">
           <summary>Activity ({run.activity.length})</summary>
@@ -398,6 +621,7 @@ export function ChatPanel(): ReactElement {
         <span className={`agent-state state-${state.replace(/\s+/g, "-")}`} data-testid="agent-state">
           <span className="dot" /> {state}
         </span>
+        <AutonomyDial />
         {available && (
           <button type="button" className="icon-btn" aria-label="Agent settings" title="Agent settings (models, CLI agents, local models, API keys, budget)" onClick={() => run({ id: "settings.open" })}>
             <Icon.Gear size={13} />

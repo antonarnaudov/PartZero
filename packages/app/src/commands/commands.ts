@@ -658,8 +658,55 @@ export const COMMANDS = {
     description: "Answer the agent's open clarifying question(s), one answer per question; empty answers take the default.",
     args: z.strictObject({ answers: z.array(z.string().max(2000)).min(1).max(10) }),
     palette: false,
-    run({ answers }, ctx) {
+    run({ answers }, ctx, meta) {
+      // The answers (and an approval among them) are the user's alone (ADR 0015).
+      refuseAgentCaller(meta, "agent.answer");
       return ctx.agent.answer(answers);
+    },
+  }),
+
+  "agent.keep": command({
+    id: "agent.keep",
+    title: "Keep the Agent's Changes",
+    category: "Agent",
+    description: "Make the features the last live agent turn added or edited yours (ADR 0015 Keep): they lose their AI mark, and the agent needs your approval to change them from now on. One undoable op.",
+    args: z.strictObject({ runId: z.string().max(100).optional() }),
+    palette: [{ title: "Agent: Keep the Last Turn's Changes", args: {} }],
+    run({ runId }, ctx, meta) {
+      refuseAgentCaller(meta, "agent.keep");
+      return ctx.agent.keepTurn(runId);
+    },
+  }),
+
+  "agent.undoTurn": command({
+    id: "agent.undoTurn",
+    title: "Undo the Agent's Turn",
+    category: "Agent",
+    description: "Take back everything the last live agent turn did (one undo step), while it is still the last edit.",
+    args: z.strictObject({ runId: z.string().max(100).optional() }),
+    palette: [{ title: "Agent: Undo the Last Turn", args: {} }],
+    run({ runId }, ctx, meta) {
+      refuseAgentCaller(meta, "agent.undoTurn");
+      return ctx.agent.undoTurn(runId);
+    },
+  }),
+
+  "settings.setAutonomy": command({
+    id: "settings.setAutonomy",
+    title: "Set Agent Autonomy",
+    category: "Settings",
+    description:
+      'The autonomy dial (ADR 0015): "ask" — the agent pauses after every step for Keep or Undo; "review" — it works live and you review the whole turn (Keep or Undo); "auto" — it works live and you get a notice. At every setting your own features change only with your approval. Only you set it.',
+    args: z.strictObject({ autonomy: z.enum(["ask", "review", "auto"]) }),
+    palette: [
+      { title: "Agent Autonomy: Ask at Each Step", args: { autonomy: "ask" } },
+      { title: "Agent Autonomy: Review at the End", args: { autonomy: "review" } },
+      { title: "Agent Autonomy: Auto", args: { autonomy: "auto" } },
+    ],
+    async run({ autonomy }, ctx, meta) {
+      refuseAgentCaller(meta, "settings.setAutonomy");
+      const view = await ctx.agent.setAutonomy(autonomy);
+      return { autonomy: view.autonomy ?? autonomy };
     },
   }),
 
