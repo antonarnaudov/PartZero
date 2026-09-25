@@ -2,15 +2,26 @@
  * Where a finished sketch goes: the seam to the command layer (plan §2.1–§2.3).
  *
  * The sketcher produces an IR v1 sketch feature ({@link SketchFinish}); a {@link SketchCommitSink}
- * turns it into domain ops on the document store. The integrator installs the real sink once
- * Phase C's `IrDocStore` and op catalogue are merged (see `docs/fm/sketcher.md`):
+ * turns it into domain ops on the document store.
+ *
+ * - **Today:** the CadScript bridge (`v0-bridge.ts`) writes it into the open IR v0 document through
+ *   the command layer's `doc.applyIr`.
+ * - **The IR v1 model** needs contract C1 part 1 (`addParam`, `addFeature`, `setField`): Phase C's
+ *   `IrDocStore` (`doc/v1/ir-doc-store.ts`) has `apply(op)` / `transaction(label, fn)`, but its
+ *   `IrOpSchema` has none of those ops yet. Once they exist (docs/fm/sketcher.md, wiring 1):
  *
  * ```ts
  * sketchMode.setSink({
  *   async commit(f) {
- *     const ops = sketchFinishToOps(f);            // addParam…, then addFeature | setField
- *     const r = await services.ir.transact(ops, { origin: "user", label: `Sketch ${f.feature.name}` });
- *     return r.ok ? { ok: true } : { ok: false, message: r.error.message };
+ *     try {
+ *       await services.ir.transaction(`Sketch ${f.feature.name}`, async (tx) => {
+ *         for (const op of sketchFinishToOps(f)) await tx.apply(op as IrOp);
+ *       }, { origin: "user" });
+ *       return { ok: true };
+ *     } catch (e) {
+ *       // The first refused op rejects the transaction (CommandEngineError: code, message, details).
+ *       return { ok: false, message: e instanceof Error ? e.message : String(e) };
+ *     }
  *   },
  * });
  * ```
@@ -55,8 +66,9 @@ export interface SketchCommitSink {
 }
 
 /**
- * The domain ops for a finished sketch, in the op catalogue v2 shape (plan §2.2): `addParam` for
- * each new parameter, then `addFeature` (new) or `setField` of the curves and constraints (edit).
+ * The domain ops for a finished sketch, in the op catalogue v2 shape (plan §2.2, C1 part 1, not in
+ * Phase C's `IrOpSchema` yet): `addParam` for each new parameter, then `addFeature` (new) or
+ * `setField` of the curves and constraints (edit: exact, and needs no `sketchEdit`, C1 part 2).
  * Plain objects: `@aicad/model-ops` owns their zod schemas (C1), and validates them on apply.
  */
 export function sketchFinishToOps(f: SketchFinish): Array<Record<string, unknown>> {
