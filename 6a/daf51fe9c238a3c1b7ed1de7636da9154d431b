@@ -1,0 +1,28 @@
+packages/app/src/ui/shell/install.ts
+  s_59c0dd2af30db2::t_1675839f364194 15,58
+packages/app/src/ui/shell/shortcut-docs.ts
+  s_59c0dd2af30db2::t_1675839f364194 48-62
+packages/app/src/ui/model/TimelineBar.tsx
+  s_59c0dd2af30db2::t_add88bff3e6fc3 28,144-145,389
+  s_59c0dd2af30db2::t_1675839f364194 70-78,194-197,229
+packages/app/src/ui/model/model.css
+  s_59c0dd2af30db2::t_add88bff3e6fc3 65-69
+packages/desktop/e2e/model-panels.e2e.ts
+  s_59c0dd2af30db2::t_59ae8b6fbe359d 438-439,461
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6adaf51fe9c238a3c1b7ed1de7636da9154d431b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
