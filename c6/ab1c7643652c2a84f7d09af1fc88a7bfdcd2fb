@@ -1,0 +1,35 @@
+packages/app/src/sketch/names.ts
+  s_59c0dd2af30db2::t_73ec1c121a66c1 1-28
+packages/app/src/sketch/controller.ts
+  s_59c0dd2af30db2::t_ff242b8011ee4e 37,75,78,82-83,291
+  s_59c0dd2af30db2::t_cdd9136ed7c686 154-155
+forge/crates/forge-sketch/src/session.rs
+  s_59c0dd2af30db2::t_1d67125569952b 727-741
+packages/app/src/sketch/integration.ts
+  s_59c0dd2af30db2::t_29cfdaac39e697 37-67
+  s_59c0dd2af30db2::t_a2cdc3d6685c01 7-9
+  s_59c0dd2af30db2::t_3dc5cc4fae7632 17-18
+packages/app/src/ui/sketch/SketchModeHost.tsx
+  s_59c0dd2af30db2::t_a2cdc3d6685c01 17,372
+packages/app/test/sketch/document.test.ts
+  s_59c0dd2af30db2::t_2fc6be30c61b45 1-102
+forge/crates/forge-sketch/tests/session.rs
+  s_59c0dd2af30db2::t_a8fe708f0f7e23 562-582
+  s_59c0dd2af30db2::t_aa09f0e674560d 561
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c6ab1c7643652c2a84f7d09af1fc88a7bfdcd2fb",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
