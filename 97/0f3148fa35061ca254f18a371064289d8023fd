@@ -1,0 +1,38 @@
+packages/app/src/viewport/keyboard.ts
+  s_59c0dd2af30db2::t_245bc2c63b5a37 17-22,25
+docs/fm/view-sel-followups.md
+  s_59c0dd2af30db2::t_4dadd059af5683 1-96
+packages/app/src/viewport/ViewToolbar.tsx
+  s_59c0dd2af30db2::t_bbaef04bc161bc 6
+  s_59c0dd2af30db2::t_ec3f3ec118bb71 101-126
+  s_59c0dd2af30db2::t_1cf3e0779d1de6 41-57,59
+  s_59c0dd2af30db2::t_87483e75ef97aa 38,40
+  s_59c0dd2af30db2::t_89ceb8335ce0b5 22-29
+packages/app/src/viewport/viewport.css
+  s_59c0dd2af30db2::t_a60ddb29e4538d 356-365
+packages/app/src/ui/Viewport.tsx
+  s_59c0dd2af30db2::t_3c138774459e05 381-383
+packages/desktop/e2e/viewport/display.e2e.ts
+  s_59c0dd2af30db2::t_a45ff8c1410854 158
+  s_59c0dd2af30db2::t_d81a439043b4c6 136,139,142-146,150-151
+packages/desktop/e2e/viewport/selection.e2e.ts
+  s_59c0dd2af30db2::t_e3093b65cd3f4e 136,141-144,146
+packages/app/src/selection/commands.ts
+  s_59c0dd2af30db2::t_91c36694f9e0a4 206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "970f3148fa35061ca254f18a371064289d8023fd",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
