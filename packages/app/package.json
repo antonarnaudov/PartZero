@@ -29,6 +29,7 @@
     "@aicad/cadscript": "workspace:*",
     "@aicad/forge-web": "workspace:*",
     "@aicad/ir-types": "workspace:*",
+    "@aicad/model-ops": "workspace:*",
     "monaco-editor": "^0.56.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

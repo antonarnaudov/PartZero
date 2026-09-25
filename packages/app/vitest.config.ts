@@ -7,6 +7,7 @@ export default defineConfig({
     alias: {
       "@aicad/ir-types": fileURLToPath(new URL("../ir-types/src/index.ts", import.meta.url)),
       "@aicad/cadscript": fileURLToPath(new URL("../cadscript/src/index.ts", import.meta.url)),
+      "@aicad/model-ops": fileURLToPath(new URL("../model-ops/src/index.ts", import.meta.url)),
     },
   },
   test: {

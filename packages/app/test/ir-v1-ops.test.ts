@@ -237,8 +237,8 @@ function textEngine(writeBack?: (ir: string) => Promise<WriteBackResult>): IrCom
   };
 }
 
-async function store(text: string, autoWriteBack = true): Promise<IrDocStore> {
-  const s = new IrDocStore({ engine: () => engine, autoWriteBack });
+async function store(text: string, autoWriteBack = true, failureRule = true): Promise<IrDocStore> {
+  const s = new IrDocStore({ engine: () => engine, autoWriteBack, failureRule });
   await s.load(text);
   return s;
 }
@@ -387,7 +387,8 @@ describe.skipIf(!hasWasm)("IR v1 command layer on Forge (forge-web WASM)", () =>
     });
 
     it("upgradeFeature (a changing upgrade, on a stub engine: the contract defines no v2 yet)", async () => {
-      const s = new IrDocStore({ engine: () => upgradeStub() });
+      // Stub engines do not evaluate: the failure rule (model-ops tests) is off here.
+      const s = new IrDocStore({ engine: () => upgradeStub(), failureRule: false });
       await s.load(plate());
       const op: IrOp = { op: "upgradeFeature", feature: "e1", to: 2 };
       // §9.2: the diff is shown before the upgrade is applied — without its token it is refused…
@@ -428,7 +429,8 @@ describe.skipIf(!hasWasm)("IR v1 command layer on Forge (forge-web WASM)", () =>
     it("is canonical: load stores canonical expressions and the setParam inverse is byte-exact", async () => {
       const doc = JSON.parse(program("params_plate.json")) as { params: Array<{ value: unknown }> };
       doc.params[1]!.value = "width/10";
-      const s = await store(JSON.stringify(doc));
+      // depth 7 makes the plate's features fail: this checks canonical bytes, not the failure rule.
+      const s = await store(JSON.stringify(doc), true, false);
       expect(s.document).toContain('"width / 10"');
       expect(s.document).not.toContain("width/10");
       const loaded = s.document;
@@ -694,7 +696,11 @@ describe.skipIf(!hasWasm)("IR v1 command layer on Forge (forge-web WASM)", () =>
       const load = await h.commands.execute({ id: "ir.load", args: { document: ambiguous() } }, { source: "agent" });
       expect(load.ok).toBe(true);
 
-      const set = await h.commands.execute({ id: "ir.setParam", args: { name: "t", value: "4 + 4" } }, { source: "agent" });
+      // ADR 0015: an agent may not change the user's parameters without approval…
+      const denied = await h.commands.execute({ id: "ir.setParam", args: { name: "t", value: "4 + 4" } }, { source: "agent" });
+      expect(!denied.ok && denied.error.detail?.code).toBe("unapproved_user_change");
+      // …the user may (the palette).
+      const set = await h.commands.execute({ id: "ir.setParam", args: { name: "t", value: "4 + 4" } }, { source: "palette" });
       expect(set.ok).toBe(true);
       if (set.ok) expect(set.value.ops[0]!.result).toMatchObject({ previous: 6, value: "4 + 4" });
 
@@ -705,7 +711,7 @@ describe.skipIf(!hasWasm)("IR v1 command layer on Forge (forge-web WASM)", () =>
       expect(amb.entry.code).toBe("REF_AMBIGUOUS");
       const repair = amb.repairs.find((o) => o.op === "acceptRefCandidate")!;
       expect(repair).toBeDefined();
-      const fixed = await h.commands.execute({ id: "ir.apply", args: { ops: [repair], label: "Repair t_amb" } }, { source: "agent" });
+      const fixed = await h.commands.execute({ id: "ir.apply", args: { ops: [repair], label: "Repair t_amb" } }, { source: "palette" });
       expect(fixed.ok).toBe(true);
 
       // A refused op: FAILED with the engine's machine-readable detail.
@@ -734,18 +740,35 @@ describe.skipIf(!hasWasm)("IR v1 command layer on Forge (forge-web WASM)", () =>
       const described = h.commands.describe().filter((c) => c.id.startsWith("ir."));
       expect(described.map((c) => c.id).sort()).toEqual(
         [
+          "ir.abortGroup",
           "ir.acceptRefCandidate",
           "ir.acceptRefProposal",
+          "ir.addFeature",
+          "ir.addParam",
           "ir.apply",
           "ir.captureRef",
+          "ir.deleteFeature",
+          "ir.deleteParam",
+          "ir.dependents",
           "ir.listRefs",
           "ir.load",
+          "ir.moveFeature",
+          "ir.openGroup",
+          "ir.paramUses",
           "ir.redo",
           "ir.renameCurve",
           "ir.renameFeature",
+          "ir.renameParam",
+          "ir.sealGroup",
+          "ir.setAppearance",
+          "ir.setAuthor",
+          "ir.setField",
           "ir.setParam",
+          "ir.setRollback",
+          "ir.setSuppressed",
           "ir.state",
           "ir.undo",
+          "ir.updateFeature",
           "ir.upgradeFeature",
           "ir.writeBackSolution",
         ].sort(),
@@ -857,7 +880,7 @@ describe.skipIf(!hasWasm)("IR v1 command layer on Forge (forge-web WASM)", () =>
 
 describe("IR v1 DocStore transactions (text engine)", () => {
   it("are atomic when a refused op was not awaited: the transaction rejects with its code and records nothing", async () => {
-    const s = new IrDocStore({ engine: () => textEngine() });
+    const s = new IrDocStore({ engine: () => textEngine(), failureRule: false });
     await s.load("DOC;");
     const e = await s
       .transaction("t", async (tx) => {
@@ -893,7 +916,7 @@ describe("IR v1 DocStore transactions (text engine)", () => {
   it("commit the edit without a write-back the engine refuses, and say why", async () => {
     const refuse = () =>
       Promise.reject(new CommandEngineError("COMMAND_NOT_EXACT", "no fixed point", [], { op: "writeBackSolution", reason: "no fixed point" }));
-    const s = new IrDocStore({ engine: () => textEngine(refuse) });
+    const s = new IrDocStore({ engine: () => textEngine(refuse), failureRule: false });
     await s.load("DOC;");
     const t = await s.apply({ op: "setParam", name: "a", value: 1 });
     expect(t.changed).toBe(true);

@@ -5,7 +5,11 @@
  */
 import { applyEdit, diffText, invertEdit, type TextEdit } from "./text-edit";
 
-export type TransactionOrigin = "user" | "command" | "agent" | "system";
+/**
+ * Who made a transaction (FULL-MODELING-PLAN §2.3): the IR v1 command layer's origins
+ * (`@aicad/model-ops` `OpOrigin`: `user`, `command`, `system`, `agent`, `cli`, `mcp:<client>`).
+ */
+export type TransactionOrigin = "user" | "command" | "agent" | "system" | "cli" | `mcp:${string}`;
 
 export interface Transaction {
   label: string;

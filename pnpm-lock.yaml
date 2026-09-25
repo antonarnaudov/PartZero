@@ -94,6 +94,9 @@ importers:
       '@aicad/ir-types':
         specifier: workspace:*
         version: link:../ir-types
+      '@aicad/model-ops':
+        specifier: workspace:*
+        version: link:../model-ops
       monaco-editor:
         specifier: ^0.56.0
         version: 0.56.0
