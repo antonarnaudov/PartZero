@@ -61,7 +61,8 @@ fn add(a: &mut Q5, b: Q5, w: f64) {
 fn angular(surface: &Surface) -> (bool, bool) {
     match surface {
         Surface::Plane(_) | Surface::BSpline(_) => (false, false),
-        Surface::Cylinder(_) | Surface::Cone(_) => (true, false),
+        // A helicoid's u is the angle about its axis (unwrapped over many turns).
+        Surface::Cylinder(_) | Surface::Cone(_) | Surface::Helicoid(_) => (true, false),
         Surface::Sphere(_) | Surface::Torus(_) => (true, true),
     }
 }

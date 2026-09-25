@@ -104,6 +104,15 @@ pub enum StepError {
         /// Why.
         detail: String,
     },
+    /// A body carries geometry STEP export cannot write yet (modelled-thread helicoids
+    /// and helices before their B-spline conversion exists).
+    #[error("body {body:?}: {detail}")]
+    UnsupportedGeometry {
+        /// The body's name.
+        body: String,
+        /// Why.
+        detail: String,
+    },
     /// A body's shell structure is not supported (sheets, lumps with voids).
     #[error("body {body:?}: {detail}")]
     UnsupportedTopology {
@@ -137,6 +146,7 @@ impl StepError {
             StepError::InvalidBody { .. } => "STEP_INVALID_BODY",
             StepError::UnsupportedSeam { .. } => "STEP_UNSUPPORTED_SEAM",
             StepError::UnsupportedTopology { .. } => "STEP_UNSUPPORTED_TOPOLOGY",
+            StepError::UnsupportedGeometry { .. } => "STEP_UNSUPPORTED_GEOMETRY",
             StepError::Syntax { .. } => "STEP_SYNTAX",
             StepError::SelfCheck { .. } => "STEP_SELF_CHECK",
         }
@@ -277,6 +287,23 @@ pub fn write_step(
         {
             return Err(StepError::InvalidOptions {
                 detail: format!("colour of {:?} must have components in [0, 1]", b.name),
+            });
+        }
+    }
+    for b in bodies {
+        let threaded = b
+            .body
+            .faces()
+            .values()
+            .any(|f| matches!(f.surface, forge_core::geom::Surface::Helicoid(_)))
+            || b.body
+                .edges()
+                .values()
+                .any(|e| matches!(e.curve, forge_core::geom::Curve3::Helix(_)));
+        if threaded {
+            return Err(StepError::UnsupportedGeometry {
+                body: b.name.to_string(),
+                detail: "modelled threads (helicoid faces, helix edges) are not written yet".into(),
             });
         }
     }
@@ -875,6 +902,8 @@ fn reparametrize(pc: &forge_core::geom::Curve2, delta: f64) -> Option<forge_core
             .ok()
             .map(Curve2::Line),
         Curve2::Circle(_) | Curve2::Ellipse(_) => Some(pc.clone()),
+        // Spirals are pcurves on planes only, which take no PCURVE entities.
+        Curve2::Spiral(_) => None,
         Curve2::BSpline(n) => NurbsCurve2::new(
             n.degree(),
             n.knots().iter().map(|k| k + delta).collect(),

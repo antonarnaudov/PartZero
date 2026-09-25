@@ -11,7 +11,8 @@
 //! # Point in shell
 //! A ray from the point is intersected with every face surface of the other shell in
 //! closed form (plane: linear; cylinder, cone, sphere: quadratic; torus, including
-//! spindle and horn tori: quartic), each crossing is mapped to `(u, v)` with the surface's
+//! spindle and horn tori: quartic; helicoid faces by certified branch and bound over their
+//! parameter box, `Helicoid::line_hits`), each crossing is mapped to `(u, v)` with the surface's
 //! own projection and kept if the face's trimmed domain contains it. The **nearest**
 //! crossing decides: the ray leaves the region the shell bounds there when the face's
 //! outward normal, times the sign of the shell's volume (an inverted shell's normals
@@ -136,6 +137,22 @@ fn ray_vote(
     // Candidate crossings of the carrying surfaces, nearest first.
     let mut cands: Vec<(f64, usize)> = Vec::new();
     for (i, (dom, _)) in shell.faces.iter().enumerate() {
+        if let Surface::Helicoid(h) = dom.surface {
+            // Certified crossings of the face's parameter box; a crossing that is not
+            // certified transversal (or an exhausted search) makes the ray abstain.
+            let hits = h
+                .line_hits(p, d, (0.0, reach), dom.u_extent(), dom.v_extent())
+                .ok()?;
+            for x in hits {
+                if x.tangent {
+                    return None;
+                }
+                if x.t > 0.0 {
+                    cands.push((x.t, i));
+                }
+            }
+            continue;
+        }
         for t in surface_crossings(dom.surface, p, d, reach) {
             cands.push((t, i));
         }
@@ -178,8 +195,9 @@ fn surface_crossings(surface: &Surface, p: Point3, d: Vec3, reach: f64) -> Vec<f
         Surface::Cone(s) => s.frame(),
         Surface::Sphere(s) => s.frame(),
         Surface::Torus(s) => s.frame(),
-        // The mass properties reject B-spline faces before nesting is checked.
-        Surface::BSpline(_) => return Vec::new(),
+        // The mass properties reject B-spline faces before nesting is checked; helicoids
+        // are intersected by `Helicoid::line_hits` in `ray_vote`.
+        Surface::Helicoid(_) | Surface::BSpline(_) => return Vec::new(),
     };
     let o = frame.to_local_point(p);
     let d = frame.to_local_vector(d);
@@ -220,7 +238,7 @@ fn surface_crossings(surface: &Surface, p: Point3, d: Vec3, reach: f64) -> Vec<f
                 dd * dd,
             ]
         }
-        Surface::BSpline(_) => return Vec::new(),
+        Surface::Helicoid(_) | Surface::BSpline(_) => return Vec::new(),
     };
     sign_changes(&c, 0.0, reach)
 }

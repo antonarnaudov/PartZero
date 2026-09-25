@@ -6,17 +6,20 @@
 //! - all vertices;
 //! - every edge's analytic extremes (lines: end points; circles and ellipses:
 //!   `t* = atan2(r_y·Y_i, r_x·X_i)` and `t* + π` when inside the edge range; B-splines:
-//!   roots of `C'_i` bracketed on a fine grid and refined by bisection);
+//!   roots of `C'_i` bracketed on a fine grid and refined by bisection; helices and
+//!   spirals: certified branch and bound on interval enclosures);
 //! - per face, the analytic critical points of spheres and tori (normal ∥ axis) that
 //!   lie inside the trimmed domain, and the singular points the face reaches (cone
 //!   apex, sphere poles, spindle-torus axis points, horn-torus centre). Planes,
-//!   cylinders and cones have no interior extremes besides the apex.
+//!   cylinders and cones have no interior extremes besides the apex; helicoids have none
+//!   (every critical point is a saddle).
 
 use std::collections::BTreeSet;
 
 use forge_core::geom::{Curve3, Surface};
 use forge_core::linalg::{Frame, Point3, Vec3};
 use forge_core::math;
+use forge_core::scalar::Interval;
 use forge_core::topo::{Body, EdgeId, ShellId};
 
 use crate::CheckError;
@@ -74,7 +77,7 @@ fn in_range(t: f64, t0: f64, t1: f64) -> bool {
     d <= t1 - t0 + ANGLE_RANGE_EPS * (1.0 + t1.abs())
 }
 
-fn add_edge(b: &mut Aabb, curve: &Curve3, t0: f64, t1: f64) {
+fn add_edge(b: &mut Aabb, curve: &Curve3, t0: f64, t1: f64) -> Result<(), CheckError> {
     b.add(curve.eval(t0));
     b.add(curve.eval(t1));
     let conic = |b: &mut Aabb, f: &Frame, rx: f64, ry: f64| {
@@ -95,6 +98,11 @@ fn add_edge(b: &mut Aabb, curve: &Curve3, t0: f64, t1: f64) {
         Curve3::Line(_) => {}
         Curve3::Circle(c) => conic(b, c.frame(), c.radius(), c.radius()),
         Curve3::Ellipse(e) => conic(b, e.frame(), e.rx(), e.ry()),
+        Curve3::Helix(_) => {
+            for p in curve_extreme_points(curve, t0, t1)? {
+                b.add(p);
+            }
+        }
         Curve3::BSpline(_) => {
             // Roots of each derivative component, bracketed on a fine grid.
             let n = 256;
@@ -129,6 +137,144 @@ fn add_edge(b: &mut Aabb, curve: &Curve3, t0: f64, t1: f64) {
             }
         }
     }
+    Ok(())
+}
+
+/// The points of `curve` over `[t0, t1]` where each world coordinate is smallest and
+/// largest (six points: `−x, +x, −y, +y, −z, +z`), by certified branch and bound on
+/// interval enclosures ([`extreme_on_range`]). For curves whose extremes have no closed
+/// form (helices and spirals); also used by forge-refs' per-edge boxes.
+pub fn curve_extreme_points(curve: &Curve3, t0: f64, t1: f64) -> Result<Vec<Point3>, CheckError> {
+    let mut out = Vec::with_capacity(6);
+    for i in 0..3 {
+        for sign in [-1.0, 1.0] {
+            let e = axis(i).lift::<Interval>() * Interval::point(sign);
+            let t = extreme_on_range(
+                |t: Interval| curve.eval(t).dot(e),
+                |t: Interval| curve.d1(t).dot(e),
+                |t: f64| sign * curve.eval(t).dot(axis(i)),
+                t0,
+                t1,
+            )
+            .ok_or(CheckError::Unsupported {
+                what: "bounding box of a curve (extreme search out of budget)",
+            })?;
+            out.push(curve.eval(t));
+        }
+    }
+    Ok(out)
+}
+
+/// Relative precision of [`extreme_on_range`]: the maximum found is within this (times
+/// `1 +` its magnitude) of the true maximum.
+const EXTREME_REL_TOL: f64 = 1e-14;
+
+/// Sub-intervals [`extreme_on_range`] may examine before giving up.
+const EXTREME_BUDGET: usize = 200_000;
+
+/// The parameter maximizing `f` over `[t0, t1]`, by branch and bound on the interval
+/// enclosure `fi` (certified: a piece is dropped only when its enclosure's upper bound is
+/// at most the best value found plus [`EXTREME_REL_TOL`]). Used where the extremes have no
+/// closed form (spirals and conical helices; circular helices too, for one code path).
+///
+/// The incumbent starts from a sample every π/32 of the parameter (an angle for every curve
+/// this serves), and the pieces are examined best-first (largest upper bound first, ties by
+/// creation order): only pieces around the maxima survive. `None` if [`EXTREME_BUDGET`] runs
+/// out.
+fn extreme_on_range(
+    fi: impl Fn(Interval) -> Interval,
+    dfi: impl Fn(Interval) -> Interval,
+    f: impl Fn(f64) -> f64,
+    t0: f64,
+    t1: f64,
+) -> Option<f64> {
+    // Upper bound of `f` over `[a, b]`: the better of the natural enclosure and the
+    // mean-value form `f(m) + f'([a, b])·([a, b] − m)`, which converges quadratically where
+    // the natural one (cos and sin enclosed separately) only converges linearly.
+    let upper = |a: f64, b: f64| -> f64 {
+        let m = 0.5 * (a + b);
+        let natural = fi(Interval::new(a, b)).hi();
+        let centred = fi(Interval::point(m))
+            + dfi(Interval::new(a, b)) * (Interval::new(a, b) - Interval::point(m));
+        natural.min(centred.hi())
+    };
+    use std::cmp::Ordering;
+    use std::collections::BinaryHeap;
+    #[derive(PartialEq)]
+    struct Piece {
+        hi: f64,
+        seq: usize,
+        a: f64,
+        b: f64,
+    }
+    impl Eq for Piece {}
+    impl PartialOrd for Piece {
+        fn partial_cmp(&self, o: &Self) -> Option<Ordering> {
+            Some(self.cmp(o))
+        }
+    }
+    impl Ord for Piece {
+        fn cmp(&self, o: &Self) -> Ordering {
+            self.hi.total_cmp(&o.hi).then(o.seq.cmp(&self.seq))
+        }
+    }
+    let n = (((t1 - t0) / (math::PI / 32.0)).ceil() as usize).clamp(8, 1 << 16);
+    let at = |k: usize| {
+        if k == n {
+            t1
+        } else {
+            t0 + (t1 - t0) * (k as f64 / n as f64)
+        }
+    };
+    let mut best = (t0, f(t0));
+    for k in 1..=n {
+        let t = at(k);
+        let v = f(t);
+        if v > best.1 {
+            best = (t, v);
+        }
+    }
+    let mut heap = BinaryHeap::new();
+    let mut seq = 0usize;
+    for k in 0..n {
+        let (a, b) = (at(k), at(k + 1));
+        heap.push(Piece {
+            hi: upper(a, b),
+            seq,
+            a,
+            b,
+        });
+        seq += 1;
+    }
+    let mut steps = 0usize;
+    while let Some(p) = heap.pop() {
+        let tol = EXTREME_REL_TOL * (1.0 + best.1.abs());
+        if p.hi <= best.1 + tol {
+            break; // every remaining piece is bounded by this one
+        }
+        steps += 1;
+        if steps > EXTREME_BUDGET {
+            return None;
+        }
+        let m = 0.5 * (p.a + p.b);
+        if !(m > p.a && m < p.b) {
+            continue; // resolution limit: the piece is a point
+        }
+        let fm = f(m);
+        if fm > best.1 {
+            best = (m, fm);
+        }
+        for (a, b) in [(p.a, m), (m, p.b)] {
+            heap.push(Piece {
+                hi: upper(a, b),
+                seq,
+                a,
+                b,
+            });
+            seq += 1;
+        }
+    }
+    Some(best.0)
 }
 
 /// Interior critical points `(u, v)` of the coordinate functions of a sphere or torus
@@ -206,6 +352,10 @@ fn add_face(b: &mut Aabb, dom: &FaceDomain<'_>) -> Result<(), CheckError> {
         Surface::Cone(_) => None,
         Surface::Sphere(sp) => Some((*sp.frame(), false)),
         Surface::Torus(t) => Some((*t.frame(), true)),
+        // A helicoid has no interior extreme of a coordinate: at a critical point of
+        // `e·S` the Hessian `[[v·k·e_z, h·sin(ψ − u)], [h·sin(ψ − u), 0]]` has negative
+        // determinant (a saddle) unless `e ⟂ z` and `v = 0` (the axis, outside faces).
+        Surface::Helicoid(_) => None,
         Surface::BSpline(_) => {
             return Err(CheckError::Unsupported {
                 what: "bounding box of B-spline faces",
@@ -250,7 +400,7 @@ pub(crate) fn body_box(body: &Body, gap_tol: f64) -> Result<Aabb, CheckError> {
         b.add(v.point);
     }
     for e in body.edges().values() {
-        add_edge(&mut b, &e.curve, e.t_range.0, e.t_range.1);
+        add_edge(&mut b, &e.curve, e.t_range.0, e.t_range.1)?;
     }
     for f in body.faces().values() {
         let dom = face_domain(body, f, gap_tol)?;
@@ -287,10 +437,87 @@ pub(crate) fn shell_box(body: &Body, shell: ShellId, gap_tol: f64) -> Result<Aab
                 b.add(v.point);
             }
         }
-        add_edge(&mut b, &e.curve, e.t_range.0, e.t_range.1);
+        add_edge(&mut b, &e.curve, e.t_range.0, e.t_range.1)?;
     }
     if b.is_empty() {
         return Err(CheckError::Empty);
     }
     Ok(b)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use forge_core::geom::Helix3;
+
+    fn dense_extremes(c: &Curve3, t0: f64, t1: f64) -> ([f64; 3], [f64; 3]) {
+        let mut lo = [f64::INFINITY; 3];
+        let mut hi = [f64::NEG_INFINITY; 3];
+        let n = 200_000;
+        for k in 0..=n {
+            let t = t0 + (t1 - t0) * k as f64 / n as f64;
+            let p = c.eval(t).to_array();
+            for i in 0..3 {
+                lo[i] = lo[i].min(p[i]);
+                hi[i] = hi[i].max(p[i]);
+            }
+        }
+        (lo, hi)
+    }
+
+    #[test]
+    fn helix_and_spiral_extremes_bound_a_dense_sampling_tightly() {
+        let tilted = Frame::from_normal_x(
+            Vec3::new(1.0, -2.0, 0.5),
+            Vec3::new(0.3, -0.2, 1.0),
+            Vec3::new(1.0, 1.0, 0.0),
+        )
+        .unwrap();
+        let axis = Frame::from_normal_x(
+            Vec3::new(0.0, 0.0, 10.0),
+            Vec3::new(0.0, 0.0, -1.0),
+            Vec3::new(1.0, 0.0, 0.0),
+        )
+        .unwrap();
+        for (c, t0, t1) in [
+            (
+                Curve3::from(Helix3::new(axis, 3.3, 0.0, 0.2).unwrap()),
+                -1.0,
+                49.0,
+            ),
+            (
+                Curve3::from(Helix3::new(tilted, 3.3, 0.0, -0.2).unwrap()),
+                3.0,
+                40.0,
+            ),
+            (
+                Curve3::from(Helix3::new(tilted, 20.0, -0.35, 0.0).unwrap()),
+                45.0,
+                47.2,
+            ),
+        ] {
+            let pts = curve_extreme_points(&c, t0, t1).expect("extremes");
+            let (lo, hi) = dense_extremes(&c, t0, t1);
+            for i in 0..3 {
+                let got_lo = pts
+                    .iter()
+                    .map(|p| p.to_array()[i])
+                    .fold(f64::INFINITY, f64::min);
+                let got_hi = pts
+                    .iter()
+                    .map(|p| p.to_array()[i])
+                    .fold(f64::NEG_INFINITY, f64::max);
+                assert!(
+                    got_lo <= lo[i] + 1e-13 && got_lo >= lo[i] - 1e-6,
+                    "{i}: {got_lo} vs {}",
+                    lo[i]
+                );
+                assert!(
+                    got_hi >= hi[i] - 1e-13 && got_hi <= hi[i] + 1e-6,
+                    "{i}: {got_hi} vs {}",
+                    hi[i]
+                );
+            }
+        }
+    }
 }

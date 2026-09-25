@@ -523,7 +523,7 @@ fn ringify_closed_edges(ub: &mut UBody) {
                 (e.range.1 - e.range.0 - math::TAU).abs() <= 1e-9 * math::TAU
             }
             Curve3::BSpline(nc) => nc.domain() == e.range,
-            Curve3::Line(_) => false,
+            Curve3::Line(_) | Curve3::Helix(_) => false,
         };
         let alone = ub.faces.iter().filter(|f| f.alive).all(|f| {
             f.loops
@@ -649,6 +649,8 @@ fn merge_one_edge_pair(
                     (tb, ta, b, a)
                 }
             }
+            // Helix edges (modelled threads) are never split by a boolean: nothing to merge.
+            Curve3::Helix(_) => continue,
             Curve3::BSpline(nc) => {
                 // Pieces of one (possibly closed) B-spline: contiguous in its parameter, or
                 // meeting across its closure (then concatenated, exactly).

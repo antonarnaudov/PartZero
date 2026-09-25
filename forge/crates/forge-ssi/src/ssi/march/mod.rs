@@ -182,7 +182,7 @@ fn rank(s: &Surface) -> u8 {
 /// Characteristic radius of a surface (feature size); planes have none.
 fn feature_radius(s: &Surface) -> f64 {
     match s {
-        Surface::Plane(_) | Surface::BSpline(_) => f64::INFINITY,
+        Surface::Plane(_) | Surface::Helicoid(_) | Surface::BSpline(_) => f64::INFINITY,
         Surface::Cylinder(c) => c.radius(),
         Surface::Sphere(c) => c.radius(),
         Surface::Torus(t) => t.minor(),

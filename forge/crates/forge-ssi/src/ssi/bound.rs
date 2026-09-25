@@ -195,6 +195,8 @@ pub(crate) fn curve_segments(c: &Curve3, t0: f64, t1: f64) -> Vec<HomSeg> {
             .map(|n| bezier_segments(&n))
             .unwrap_or_default(),
         Curve3::BSpline(n) => bezier_segments(n),
+        // No Bézier form: callers treat an empty segment list as uncertified.
+        Curve3::Helix(_) => Vec::new(),
     }
 }
 
@@ -345,7 +347,7 @@ fn seg_bound(seg: &HomSeg, surf: &Surface) -> Option<f64> {
                 .hi(),
             )
         }
-        Surface::BSpline(_) => None,
+        Surface::Helicoid(_) | Surface::BSpline(_) => None,
     }
 }
 

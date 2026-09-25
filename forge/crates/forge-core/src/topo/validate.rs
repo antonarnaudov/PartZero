@@ -996,6 +996,7 @@ impl<'a> Validator<'a> {
                 Surface::Cone(s) => Some(s.frame().origin()),
                 Surface::Sphere(s) => Some(s.frame().origin()),
                 Surface::Torus(s) => Some(s.frame().origin()),
+                Surface::Helicoid(s) => Some(s.frame().origin()),
                 Surface::BSpline(_) => None,
             };
             if let Some(o) = origin {
@@ -1006,6 +1007,7 @@ impl<'a> Validator<'a> {
             let centre = match &e.curve {
                 Curve3::Circle(c) => Some(c.frame().origin()),
                 Curve3::Ellipse(c) => Some(c.frame().origin()),
+                Curve3::Helix(c) => Some(c.frame().origin()),
                 Curve3::Line(_) | Curve3::BSpline(_) => None,
             };
             if let Some(o) = centre {

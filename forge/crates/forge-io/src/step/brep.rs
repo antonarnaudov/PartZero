@@ -488,7 +488,7 @@ impl<'a> Builder<'a> {
         };
         let sing_tol = 4.0 * self.tol;
         let (v_periodic, ends) = match s {
-            Surface::Plane(_) | Surface::BSpline(_) => return Ok(None),
+            Surface::Plane(_) | Surface::Helicoid(_) | Surface::BSpline(_) => return Ok(None),
             Surface::Cylinder(_) => (false, (open_lo, open_hi)),
             Surface::Cone(c) => {
                 let apex = End {
@@ -1864,7 +1864,7 @@ pub(crate) fn rotate_u(s: &Surface, a: f64) -> Surface {
             Some(p) => Torus::spindle(turned(t.frame()), t.major(), t.minor(), p),
         }
         .map_or_else(|_| s.clone(), Surface::Torus),
-        Surface::Plane(_) | Surface::BSpline(_) => s.clone(),
+        Surface::Plane(_) | Surface::Helicoid(_) | Surface::BSpline(_) => s.clone(),
     }
 }
 

@@ -122,6 +122,21 @@ fn curve_box(c: &Curve3, r: (f64, f64)) -> Option<Box3> {
                 .iter()
                 .map(|p| Point3::new(p[0], p[1], p[2])),
         ),
+        // Inside the cylinder of its largest radius around the axis segment it spans.
+        Curve3::Helix(h) => {
+            let f = h.frame();
+            let rad = h.radius_at(r.0).abs().max(h.radius_at(r.1).abs());
+            let mut pts = Vec::with_capacity(8);
+            for t in [r.0, r.1] {
+                let o = f.origin() + f.z() * (h.rise() * t);
+                for sx in [-rad, rad] {
+                    for sy in [-rad, rad] {
+                        pts.push(o + f.x() * sx + f.y() * sy);
+                    }
+                }
+            }
+            box_of(pts)
+        }
     }
 }
 
@@ -167,6 +182,19 @@ fn surface_box(surf: &Surface, b: &UvBox) -> Option<Box3> {
             local(t.frame(), r, r, -t.minor(), t.minor())
         }
         Surface::BSpline(n) => box_of(n.control_points().iter().copied()),
+        // Radius ≤ max |v|; the height p·u + k·v is linear, extreme at the box corners.
+        Surface::Helicoid(h) => {
+            let r = v0.abs().max(v1.abs());
+            let zs = [
+                h.height(u0, v0),
+                h.height(u0, v1),
+                h.height(u1, v0),
+                h.height(u1, v1),
+            ];
+            let z0 = zs.iter().copied().fold(f64::INFINITY, f64::min);
+            let z1 = zs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+            local(h.frame(), r, r, z0, z1)
+        }
     }
 }
 
@@ -261,7 +289,7 @@ fn patch_box(surf: &Surface, b: &UvBox) -> Option<Box3> {
                 t.minor() * s1,
             )
         }
-        Surface::BSpline(_) => surface_box(surf, b),
+        Surface::BSpline(_) | Surface::Helicoid(_) => surface_box(surf, b),
     }
 }
 
@@ -1327,7 +1355,7 @@ impl<'a> Checker<'a> {
                 c.radius_at(a.v.0).abs().max(c.radius_at(a.v.1).abs()),
                 1.0 / forge_core::math::cos(c.half_angle()),
             ),
-            Surface::BSpline(_) => return false,
+            Surface::BSpline(_) | Surface::Helicoid(_) => return false,
         };
         // The face's parameter box is padded past its boundary (`face_uvbox`: 1e-6 relative):
         // a patch may overhang the edge's range by that much (its points there are outside
@@ -1854,7 +1882,7 @@ pub(crate) fn rho_min(s: &Surface, b: &UvBox) -> f64 {
             };
             t.minor().min(other)
         }
-        Surface::BSpline(_) => 0.0,
+        Surface::BSpline(_) | Surface::Helicoid(_) => 0.0,
     }
 }
 
@@ -1884,7 +1912,7 @@ pub(crate) fn speed_min(s: &Surface, b: &UvBox) -> (f64, f64) {
             let (c0, _) = cos_range(b.v.0, b.v.1);
             ((t.major() + t.minor() * c0).max(0.0), t.minor())
         }
-        Surface::BSpline(_) => (0.0, 0.0),
+        Surface::BSpline(_) | Surface::Helicoid(_) => (0.0, 0.0),
     }
 }
 

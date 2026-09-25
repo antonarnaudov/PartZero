@@ -318,7 +318,7 @@ fn revolves_about(ctx: &Ctx, s: &Surface, ax: &Axis) -> bool {
             let own = own_axis(s).expect("has axis");
             ctx.parallel(own.z, ax.z) && on_axis(own.o)
         }
-        Surface::BSpline(_) => false,
+        Surface::Helicoid(_) | Surface::BSpline(_) => false,
     }
 }
 
@@ -382,7 +382,7 @@ fn meridian(s: &Surface, ax: &Axis) -> Vec<Prim> {
                 Some(SpindlePatch::Inner) => vec![far],
             }
         }
-        Surface::BSpline(_) => Vec::new(),
+        Surface::Helicoid(_) | Surface::BSpline(_) => Vec::new(),
     }
 }
 

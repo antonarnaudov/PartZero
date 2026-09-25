@@ -1229,6 +1229,13 @@ impl Steps {
                 du: tol.circle_step(t.major() + t.minor()),
                 dv: Some(tol.circle_step(t.minor())),
             },
+            // u is the angle about the axis at radius v (the rulings are straight): the
+            // circle step of the largest radius in the box, rows only for the length limit
+            // (a ruling is `√(1 + k²)` long per unit of v).
+            Surface::Helicoid(h) => Steps {
+                du: tol.circle_step(lo[1].abs().max(hi[1].abs())),
+                dv: len_rows(1.0 / math::hypot(1.0, h.slope())),
+            },
             Surface::BSpline(_) => {
                 let (mut muu, mut mvv, mut mu, mut mv) = (0.0f64, 0.0f64, 0.0f64, 0.0f64);
                 for i in 0..7 {

@@ -2,6 +2,7 @@
 
 use super::ellipse_proj;
 use super::error::{GeomError, check_positive};
+use super::helix::Helix3;
 use super::nurbs::NurbsCurve3;
 use super::quadrature;
 use crate::linalg::{Frame, Point3, Transform, Vec3};
@@ -184,6 +185,7 @@ impl Ellipse3 {
 /// | [`Line3`] | signed distance from `origin` along the unit `dir` | — |
 /// | [`Circle3`] | angle from `frame.x`, CCW about `frame.z` | 2π |
 /// | [`Ellipse3`] | eccentric angle from `frame.x`, CCW about `frame.z` | 2π |
+/// | [`Helix3`] | angle about `frame.z` from `frame.x` (unwrapped) | — |
 /// | [`NurbsCurve3`] | knot parameter in its domain | — |
 ///
 /// All evaluation methods are generic over [`Scalar`]: evaluate with
@@ -197,6 +199,8 @@ pub enum Curve3 {
     Circle(Circle3),
     /// Ellipse.
     Ellipse(Ellipse3),
+    /// Helix or planar spiral (a screw-thread edge).
+    Helix(Helix3),
     /// (Rational) B-spline.
     BSpline(NurbsCurve3),
 }
@@ -216,6 +220,11 @@ impl From<Ellipse3> for Curve3 {
         Curve3::Ellipse(c)
     }
 }
+impl From<Helix3> for Curve3 {
+    fn from(c: Helix3) -> Self {
+        Curve3::Helix(c)
+    }
+}
 impl From<NurbsCurve3> for Curve3 {
     fn from(c: NurbsCurve3) -> Self {
         Curve3::BSpline(c)
@@ -229,6 +238,7 @@ impl Curve3 {
             Curve3::Line(c) => c.eval(t),
             Curve3::Circle(c) => c.eval(t),
             Curve3::Ellipse(c) => c.eval(t),
+            Curve3::Helix(c) => c.eval(t),
             Curve3::BSpline(c) => c.eval(t),
         }
     }
@@ -238,6 +248,7 @@ impl Curve3 {
             Curve3::Line(c) => c.derivs2(t),
             Curve3::Circle(c) => c.derivs2(t),
             Curve3::Ellipse(c) => c.derivs2(t),
+            Curve3::Helix(c) => c.derivs2(t),
             Curve3::BSpline(c) => c.derivs2(t),
         }
     }
@@ -251,12 +262,14 @@ impl Curve3 {
     }
     /// Closest point `(t, distance)` over the curve's whole parameter range (periodic
     /// curves: `t ∈ [0, 2π)`). Analytic for lines and circles, Eberly's bisection for
-    /// ellipses, sampling + damped Newton for B-splines.
+    /// ellipses, bounded turn search + Newton for helices ([`Helix3::project`]), sampling +
+    /// damped Newton for B-splines.
     pub fn project(&self, p: Point3) -> (f64, f64) {
         match self {
             Curve3::Line(c) => c.project(p),
             Curve3::Circle(c) => c.project(p),
             Curve3::Ellipse(c) => c.project(p),
+            Curve3::Helix(c) => c.project(p),
             Curve3::BSpline(c) => c.project(p),
         }
     }
@@ -268,21 +281,22 @@ impl Curve3 {
     pub fn period(&self) -> Option<f64> {
         match self {
             Curve3::Circle(_) | Curve3::Ellipse(_) => Some(math::TAU),
-            Curve3::Line(_) | Curve3::BSpline(_) => None,
+            Curve3::Line(_) | Curve3::Helix(_) | Curve3::BSpline(_) => None,
         }
     }
     /// Natural parameter range: `(−∞, ∞)` for lines, `[0, 2π)` for periodic curves, the
-    /// knot domain for B-splines.
+    /// positive-radius interval for helices, the knot domain for B-splines.
     pub fn domain(&self) -> (f64, f64) {
         match self {
             Curve3::Line(_) => (f64::NEG_INFINITY, f64::INFINITY),
             Curve3::Circle(_) | Curve3::Ellipse(_) => (0.0, math::TAU),
+            Curve3::Helix(c) => c.domain(),
             Curve3::BSpline(c) => c.domain(),
         }
     }
     /// Length of the curve between `t0` and `t1` (order-insensitive). Exact for lines and
-    /// circles; composite 16-point Gauss–Legendre for ellipses (pieces of at most π/8)
-    /// and B-splines (per knot span).
+    /// circles and circular helices; composite 16-point Gauss–Legendre for ellipses and
+    /// spirals (pieces of at most π/8) and B-splines (per knot span).
     pub fn arc_length(&self, t0: f64, t1: f64) -> f64 {
         let span = (t1 - t0).abs();
         match self {
@@ -293,16 +307,18 @@ impl Curve3 {
                 let (lo, hi) = if t0 <= t1 { (t0, t1) } else { (t1, t0) };
                 quadrature::integrate(|t| e.derivs2(t)[1].norm(), lo, hi, pieces)
             }
+            Curve3::Helix(c) => c.arc_length(t0, t1),
             Curve3::BSpline(c) => c.arc_length(t0, t1),
         }
     }
-    /// Canonical type name used by the metrics spec: `"line"`, `"circle"`, `"ellipse"`
-    /// or `"bspline"`.
+    /// Canonical type name used by the metrics spec: `"line"`, `"circle"`, `"ellipse"`,
+    /// `"helix"` or `"bspline"`.
     pub fn kind_name(&self) -> &'static str {
         match self {
             Curve3::Line(_) => "line",
             Curve3::Circle(_) => "circle",
             Curve3::Ellipse(_) => "ellipse",
+            Curve3::Helix(_) => "helix",
             Curve3::BSpline(_) => "bspline",
         }
     }
@@ -322,6 +338,7 @@ impl Curve3 {
                 rx: c.rx,
                 ry: c.ry,
             }),
+            Curve3::Helix(c) => Curve3::Helix(c.transformed(t)),
             Curve3::BSpline(c) => Curve3::BSpline(c.transformed(t)),
         }
     }

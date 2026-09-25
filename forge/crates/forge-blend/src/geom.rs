@@ -162,6 +162,12 @@ pub(crate) fn param_tol(c: &Curve3) -> f64 {
         Curve3::Line(l) => l.dir().norm(),
         Curve3::Circle(k) => k.radius(),
         Curve3::Ellipse(e) => e.rx().max(e.ry()),
+        // |C'|² = a² + ρ² + p², bounded where the radius is largest (the edge's range is not
+        // known here: the radius at t = 0 plus a generous turn count of radius change).
+        Curve3::Helix(h) => {
+            let r = h.radius().abs() + 1e3 * h.radius_rate().abs();
+            (h.radius_rate() * h.radius_rate() + r * r + h.rise() * h.rise()).sqrt()
+        }
         Curve3::BSpline(n) => {
             let cp = n.control_points();
             let k = n.knots();

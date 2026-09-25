@@ -63,6 +63,10 @@ pub enum GeomKind {
     Ellipse,
     /// B-spline edge.
     BSplineCurve,
+    /// Helicoid face (a modelled thread flank).
+    Helicoid,
+    /// Helix or spiral edge (a modelled thread edge).
+    Helix,
 }
 
 impl GeomKind {
@@ -79,6 +83,8 @@ impl GeomKind {
             GeomKind::Circle => "circle",
             GeomKind::Ellipse => "ellipse",
             GeomKind::BSplineCurve => "bspline-curve",
+            GeomKind::Helicoid => "helicoid",
+            GeomKind::Helix => "helix",
         }
     }
 }
@@ -375,6 +381,7 @@ pub fn face_support(surface: &Surface, sense: bool) -> (GeomKind, Support) {
             },
         ),
         Surface::BSpline(_) => (GeomKind::BSplineSurface, Support::Free),
+        Surface::Helicoid(_) => (GeomKind::Helicoid, Support::Free),
     }
 }
 
@@ -401,6 +408,7 @@ pub fn edge_support(curve: &Curve3) -> (GeomKind, Support) {
         ),
         Curve3::Ellipse(_) => (GeomKind::Ellipse, Support::Free),
         Curve3::BSpline(_) => (GeomKind::BSplineCurve, Support::Free),
+        Curve3::Helix(_) => (GeomKind::Helix, Support::Free),
     }
 }
 

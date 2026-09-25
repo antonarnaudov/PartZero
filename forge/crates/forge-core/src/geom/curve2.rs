@@ -2,6 +2,7 @@
 
 use super::ellipse_proj;
 use super::error::{GeomError, check_positive};
+use super::helix::Spiral2;
 use super::nurbs::NurbsCurve2;
 use crate::linalg::{Point2, Vec2};
 use crate::math;
@@ -187,6 +188,8 @@ pub enum Curve2 {
     Circle(Circle2),
     /// Ellipse.
     Ellipse(Ellipse2),
+    /// Archimedean spiral (the pcurve of a planar thread edge on a plane).
+    Spiral(Spiral2),
     /// (Rational) B-spline.
     BSpline(NurbsCurve2),
 }
@@ -206,6 +209,11 @@ impl From<Ellipse2> for Curve2 {
         Curve2::Ellipse(c)
     }
 }
+impl From<Spiral2> for Curve2 {
+    fn from(c: Spiral2) -> Self {
+        Curve2::Spiral(c)
+    }
+}
 impl From<NurbsCurve2> for Curve2 {
     fn from(c: NurbsCurve2) -> Self {
         Curve2::BSpline(c)
@@ -219,6 +227,7 @@ impl Curve2 {
             Curve2::Line(c) => c.derivs2(t),
             Curve2::Circle(c) => c.derivs2(t),
             Curve2::Ellipse(c) => c.derivs2(t),
+            Curve2::Spiral(c) => c.derivs2(t),
             Curve2::BSpline(c) => c.derivs2(t),
         }
     }
@@ -228,6 +237,7 @@ impl Curve2 {
             Curve2::Line(c) => c.eval(t),
             Curve2::Circle(c) => c.eval(t),
             Curve2::Ellipse(c) => c.eval(t),
+            Curve2::Spiral(c) => c.eval(t),
             Curve2::BSpline(c) => c.eval(t),
         }
     }
@@ -246,6 +256,7 @@ impl Curve2 {
             Curve2::Line(c) => c.project(p),
             Curve2::Circle(c) => c.project(p),
             Curve2::Ellipse(c) => c.project(p),
+            Curve2::Spiral(c) => c.project(p),
             Curve2::BSpline(c) => c.project(p),
         }
     }
@@ -257,24 +268,26 @@ impl Curve2 {
     pub fn period(&self) -> Option<f64> {
         match self {
             Curve2::Circle(_) | Curve2::Ellipse(_) => Some(math::TAU),
-            Curve2::Line(_) | Curve2::BSpline(_) => None,
+            Curve2::Line(_) | Curve2::Spiral(_) | Curve2::BSpline(_) => None,
         }
     }
     /// Natural parameter range: `(−∞, ∞)` for lines, `[0, 2π)` for periodic curves, the
-    /// knot domain for B-splines.
+    /// positive-radius interval for spirals, the knot domain for B-splines.
     pub fn domain(&self) -> (f64, f64) {
         match self {
             Curve2::Line(_) => (f64::NEG_INFINITY, f64::INFINITY),
             Curve2::Circle(_) | Curve2::Ellipse(_) => (0.0, math::TAU),
+            Curve2::Spiral(c) => c.domain(),
             Curve2::BSpline(c) => c.domain(),
         }
     }
-    /// Canonical type name: `"line"`, `"circle"`, `"ellipse"` or `"bspline"`.
+    /// Canonical type name: `"line"`, `"circle"`, `"ellipse"`, `"spiral"` or `"bspline"`.
     pub fn kind_name(&self) -> &'static str {
         match self {
             Curve2::Line(_) => "line",
             Curve2::Circle(_) => "circle",
             Curve2::Ellipse(_) => "ellipse",
+            Curve2::Spiral(_) => "spiral",
             Curve2::BSpline(_) => "bspline",
         }
     }

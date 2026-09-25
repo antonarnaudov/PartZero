@@ -114,6 +114,16 @@ pub(crate) fn uv_of<S: Scalar>(surf: &Surface, p: Vec3<S>, u_ref: f64, v_ref: f6
                 )
             }
         }
+        // On the surface `u = (z − k·ρ)/p` exactly; the point's own angle, unwrapped next to
+        // that height estimate, stays exact nearby and picks the sheet by height. `u_ref`
+        // is not needed: the sheets are told apart by `z`.
+        Surface::Helicoid(h) => {
+            let l = to_local(h.frame(), p);
+            let rho = (l.x.square() + l.y.square()).sqrt();
+            let est = ((l.z - rho * S::from_f64(h.slope())) / S::from_f64(h.rise())).to_f64();
+            let _ = (u_ref, v_ref);
+            (angle_near(l.x, l.y, est), rho)
+        }
         Surface::BSpline(_) => (S::from_f64(f64::NAN), S::from_f64(f64::NAN)),
     }
 }

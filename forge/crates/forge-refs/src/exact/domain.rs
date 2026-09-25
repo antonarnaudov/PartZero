@@ -131,7 +131,7 @@ impl Piece<'_> {
         matches!(
             self.kind,
             PieceKind::Pcurve {
-                curve: Curve2::Circle(_) | Curve2::Ellipse(_),
+                curve: Curve2::Circle(_) | Curve2::Ellipse(_) | Curve2::Spiral(_),
                 ..
             }
         )

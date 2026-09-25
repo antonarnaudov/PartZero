@@ -34,6 +34,11 @@ fn surface_json(s: &Surface) -> Value {
             *t.frame(),
             json!({ "major": t.major(), "minor": t.minor() }),
         ),
+        Surface::Helicoid(h) => (
+            "helicoid",
+            *h.frame(),
+            json!({ "rise": h.rise(), "slope": h.slope() }),
+        ),
         Surface::BSpline(_) => ("bspline", forge_core::Frame::world(), json!({})),
     };
     let mut v = json!({

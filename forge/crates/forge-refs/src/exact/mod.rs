@@ -168,7 +168,7 @@ fn face_box(body: &Body, fid: FaceId, dom: &FaceDomain<'_>) -> Result<Box3, Chec
                 b.add(v.point);
             }
         }
-        bbox::add_edge(&mut b, &edge.curve, edge.t_range.0, edge.t_range.1);
+        bbox::add_edge(&mut b, &edge.curve, edge.t_range.0, edge.t_range.1)?;
     }
     bbox::add_face(&mut b, dom)?;
     Box3::from_aabb(&b).ok_or(CheckError::Empty)
@@ -184,7 +184,7 @@ pub fn edge_props(body: &Body, eid: EdgeId) -> Result<EdgeProps, CheckError> {
             b.add(v.point);
         }
     }
-    bbox::add_edge(&mut b, &e.curve, t0, t1);
+    bbox::add_edge(&mut b, &e.curve, t0, t1)?;
     let bbox = Box3::from_aabb(&b).ok_or(CheckError::Empty)?;
     let length = e.curve.arc_length(t0, t1);
     let centroid = curve_centroid(&e.curve, t0, t1, length);
@@ -272,7 +272,7 @@ fn add(a: &mut Q4, b: Q4, w: f64) {
 fn angular(surface: &Surface) -> (bool, bool) {
     match surface {
         Surface::Plane(_) | Surface::BSpline(_) => (false, false),
-        Surface::Cylinder(_) | Surface::Cone(_) => (true, false),
+        Surface::Cylinder(_) | Surface::Cone(_) | Surface::Helicoid(_) => (true, false),
         Surface::Sphere(_) | Surface::Torus(_) => (true, true),
     }
 }

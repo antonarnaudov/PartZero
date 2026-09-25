@@ -831,6 +831,16 @@ fn curve_box(c: &Curve3, range: (f64, f64)) -> (Point3, Point3) {
         Curve3::Line(_) => bounds(&[c.eval(range.0), c.eval(range.1)], 0.0),
         Curve3::Circle(k) => disk_box(k.frame().origin(), k.frame().z(), k.radius()),
         Curve3::Ellipse(k) => disk_box(k.frame().origin(), k.frame().z(), k.rx().max(k.ry())),
+        // Inside the cylinder of its largest radius around the axis segment it spans.
+        Curve3::Helix(h) => {
+            let f = h.frame();
+            let r = h.radius_at(range.0).abs().max(h.radius_at(range.1).abs());
+            let (a, b) = (
+                disk_box(f.origin() + f.z() * (h.rise() * range.0), f.z(), r),
+                disk_box(f.origin() + f.z() * (h.rise() * range.1), f.z(), r),
+            );
+            (a.0.min_components(b.0), a.1.max_components(b.1))
+        }
         Curve3::BSpline(n) => {
             let pts: Vec<Point3> = n
                 .control_points()

@@ -123,12 +123,12 @@ impl Piece<'_> {
         }
         spans
     }
-    /// `true` if the parameter itself is an angle (circle/ellipse pcurves).
+    /// `true` if the parameter itself is an angle (circle, ellipse and spiral pcurves).
     pub fn angular_parameter(&self) -> bool {
         matches!(
             self.kind,
             PieceKind::Pcurve {
-                curve: Curve2::Circle(_) | Curve2::Ellipse(_),
+                curve: Curve2::Circle(_) | Curve2::Ellipse(_) | Curve2::Spiral(_),
                 ..
             }
         )

@@ -571,6 +571,9 @@ pub(crate) fn pieces(pc: &Curve2, range: (f64, f64), fwd: bool) -> Option<Vec<Be
             t1,
         ),
         Curve2::BSpline(n) => nurbs(n, t0, t1)?,
+        // A spiral (a modelled thread's end on a plane) has no rational Bézier form:
+        // undecided, never assumed clear.
+        Curve2::Spiral(_) => return None,
     };
     if !fwd {
         out.reverse();
@@ -590,6 +593,11 @@ pub(crate) fn face_tol(surf: &Surface, lo: Point2, hi: Point2) -> f64 {
         Surface::Cone(c) => {
             let r = c.radius_at(lo.y).abs().max(c.radius_at(hi.y).abs());
             r.max(1.0 / math::cos(c.half_angle()))
+        }
+        // |S_u| = √(v² + p²), |S_v| = √(1 + k²).
+        Surface::Helicoid(h) => {
+            let v = lo.y.abs().max(hi.y.abs());
+            math::hypot(v, h.rise()).max(math::hypot(1.0, h.slope()))
         }
     };
     LINEAR_TOLERANCE / m.max(1.0)

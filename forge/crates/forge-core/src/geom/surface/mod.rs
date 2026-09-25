@@ -1,9 +1,11 @@
 //! Surfaces: the geometry carried by faces.
 
 mod analytic;
+mod helicoid;
 pub mod implicit;
 
 pub use analytic::{Cone, Cylinder, Plane, Sphere, SpindlePatch, Torus};
+pub use helicoid::{Helicoid, HelicoidLineHit, HelicoidLineHitsError, LINE_HITS_BUDGET};
 
 use super::nurbs::NurbsSurface;
 use crate::linalg::{Point3, Transform, Vec3};
@@ -44,6 +46,7 @@ pub const BSPLINE_NORMAL_DEGENERACY: f64 = 1e-8;
 /// | [`Cone`] | angle about z from x | height along z | (2π, —) | apex `v = −R/tan α` |
 /// | [`Sphere`] | longitude | latitude `∈ [−π/2, π/2]` | (2π, —) | poles `v = ±π/2` |
 /// | [`Torus`] | angle about z | angle around the tube | (2π, 2π); spindle patch (2π, —) | horn torus centre; spindle patch ends `v = ±v_s` |
+/// | [`Helicoid`] | angle about z (unwrapped, one sheet per lead) | distance from the axis | — | — |
 /// | [`NurbsSurface`] | knot parameter | knot parameter | — | where `S_u × S_v = 0` |
 ///
 /// The normal is always `normalize(S_u × S_v)` (or its limit at singular points). A
@@ -63,6 +66,8 @@ pub enum Surface {
     Sphere(Sphere),
     /// Torus.
     Torus(Torus),
+    /// Ruled helicoid (a screw-thread flank).
+    Helicoid(Helicoid),
     /// (Rational) B-spline surface.
     BSpline(NurbsSurface),
 }
@@ -76,7 +81,7 @@ macro_rules! impl_from_surface {
         }
     )*};
 }
-impl_from_surface!(Plane, Cylinder, Cone, Sphere, Torus);
+impl_from_surface!(Plane, Cylinder, Cone, Sphere, Torus, Helicoid);
 
 impl From<NurbsSurface> for Surface {
     fn from(s: NurbsSurface) -> Self {
@@ -93,6 +98,7 @@ impl Surface {
             Surface::Cone(s) => s.eval(u, v),
             Surface::Sphere(s) => s.eval(u, v),
             Surface::Torus(s) => s.eval(u, v),
+            Surface::Helicoid(s) => s.eval(u, v),
             Surface::BSpline(s) => s.eval(u, v),
         }
     }
@@ -104,6 +110,7 @@ impl Surface {
             Surface::Cone(s) => s.derivs2(u, v),
             Surface::Sphere(s) => s.derivs2(u, v),
             Surface::Torus(s) => s.derivs2(u, v),
+            Surface::Helicoid(s) => s.derivs2(u, v),
             Surface::BSpline(s) => {
                 let d = s.derivs(u, v, 2);
                 SurfaceDerivs {
@@ -152,6 +159,7 @@ impl Surface {
             Surface::Cone(s) => Some(s.normal(u, v)),
             Surface::Sphere(s) => Some(s.normal(u, v)),
             Surface::Torus(s) => Some(s.normal(u, v)),
+            Surface::Helicoid(s) => Some(s.normal(u, v)),
             Surface::BSpline(s) => bspline_normal(s, u, v),
         }
     }
@@ -159,7 +167,8 @@ impl Surface {
     ///
     /// Closed form for every analytic type (periodic parameters are returned in
     /// `[0, 2π)`, the sphere latitude in `[−π/2, π/2]`; the cone considers both nappes).
-    /// B-splines use grid seeding and damped Newton (see [`NurbsSurface::project`]).
+    /// Helicoids use Newton on the nearest sheets (see [`Helicoid::project`]); B-splines
+    /// use grid seeding and damped Newton (see [`NurbsSurface::project`]).
     pub fn project(&self, p: Point3) -> (f64, f64, f64) {
         match self {
             Surface::Plane(s) => s.project(p),
@@ -167,13 +176,14 @@ impl Surface {
             Surface::Cone(s) => s.project(p),
             Surface::Sphere(s) => s.project(p),
             Surface::Torus(s) => s.project(p),
+            Surface::Helicoid(s) => s.project(p),
             Surface::BSpline(s) => s.project(p),
         }
     }
     /// Periods in `(u, v)`; `None` for a non-periodic direction.
     pub fn periodicity(&self) -> (Option<f64>, Option<f64>) {
         match self {
-            Surface::Plane(_) | Surface::BSpline(_) => (None, None),
+            Surface::Plane(_) | Surface::Helicoid(_) | Surface::BSpline(_) => (None, None),
             Surface::Cylinder(_) | Surface::Cone(_) | Surface::Sphere(_) => (Some(math::TAU), None),
             Surface::Torus(t) if t.spindle_patch().is_some() => (Some(math::TAU), None),
             Surface::Torus(_) => (Some(math::TAU), Some(math::TAU)),
@@ -186,7 +196,7 @@ impl Surface {
         let inf = (f64::NEG_INFINITY, f64::INFINITY);
         let per = (0.0, math::TAU);
         match self {
-            Surface::Plane(_) => (inf, inf),
+            Surface::Plane(_) | Surface::Helicoid(_) => (inf, inf),
             Surface::Cylinder(_) | Surface::Cone(_) => (per, inf),
             Surface::Sphere(_) => (per, (-math::FRAC_PI_2, math::FRAC_PI_2)),
             Surface::Torus(t) => (per, t.spindle_v_range().unwrap_or(per)),
@@ -199,7 +209,7 @@ impl Surface {
         matches!(self, Surface::Sphere(_) | Surface::Torus(_))
     }
     /// Canonical type name used by the metrics spec: `"plane"`, `"cylinder"`, `"cone"`,
-    /// `"sphere"`, `"torus"` or `"bspline"`.
+    /// `"sphere"`, `"torus"`, `"helicoid"` or `"bspline"`.
     pub fn kind_name(&self) -> &'static str {
         match self {
             Surface::Plane(_) => "plane",
@@ -207,6 +217,7 @@ impl Surface {
             Surface::Cone(_) => "cone",
             Surface::Sphere(_) => "sphere",
             Surface::Torus(_) => "torus",
+            Surface::Helicoid(_) => "helicoid",
             Surface::BSpline(_) => "bspline",
         }
     }
@@ -218,6 +229,7 @@ impl Surface {
             Surface::Cone(s) => Surface::Cone(s.transformed(t)),
             Surface::Sphere(s) => Surface::Sphere(s.transformed(t)),
             Surface::Torus(s) => Surface::Torus(s.transformed(t)),
+            Surface::Helicoid(s) => Surface::Helicoid(s.transformed(t)),
             Surface::BSpline(s) => Surface::BSpline(s.transformed(t)),
         }
     }

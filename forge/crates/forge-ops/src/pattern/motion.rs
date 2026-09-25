@@ -162,6 +162,12 @@ pub(crate) fn move_curve(c: &Curve3, m: &Motion) -> Result<Curve3, PatternError>
             Curve3::BSpline(b) => Curve3::BSpline(
                 b.map_control_points(|p| m.point(Vec3::new(p[0], p[1], p[2])).to_array()),
             ),
+            // A mirrored thread changes hand: not a copy of the seed's geometry.
+            Curve3::Helix(_) => {
+                return Err(PatternError::internal(
+                    "mirroring a modelled thread (helix edge) is not supported",
+                ));
+            }
         },
     })
 }
@@ -216,6 +222,11 @@ fn move_surface(s: &Surface, m: &Motion) -> Result<MovedSurface, PatternError> {
             };
             rev(moved.map_err(geom)?.into())
         }
+        Surface::Helicoid(_) => {
+            return Err(PatternError::internal(
+                "mirroring a modelled thread (helicoid face) is not supported",
+            ));
+        }
         Surface::BSpline(b) => {
             let (du, dv) = b.degrees();
             let (ku, kv) = (b.knots_u().to_vec(), b.knots_v().to_vec());
@@ -247,7 +258,7 @@ fn mirror_pcurve_u(c: &Curve2) -> Option<Curve2> {
         Curve2::BSpline(b) => Some(Curve2::BSpline(
             b.map_control_points(|p| [tau - p[0], p[1]]),
         )),
-        Curve2::Circle(_) | Curve2::Ellipse(_) => None,
+        Curve2::Circle(_) | Curve2::Ellipse(_) | Curve2::Spiral(_) => None,
     }
 }
 

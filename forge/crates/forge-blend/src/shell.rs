@@ -269,7 +269,8 @@ fn offset_surface(f: &PF, d: f64, vr: Option<(f64, f64)>) -> Result<Surface, boo
                 }
             }
         }
-        Surface::BSpline(_) => Err(false),
+        // The offset of a helicoid is not a helicoid: shells of threaded bodies are unsupported.
+        Surface::BSpline(_) | Surface::Helicoid(_) => Err(false),
     }
 }
 

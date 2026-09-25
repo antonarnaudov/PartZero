@@ -146,11 +146,17 @@ pub(crate) fn curve_box(c: &Curve3, range: (f64, f64)) -> Aabb {
     b
 }
 
-/// `true` for the surface types the boolean supports: plane, cylinder, cone, sphere and
-/// ring torus.
+/// `true` for the surface types the boolean supports: plane, cylinder, cone, sphere,
+/// ring torus, and helicoid (modelled thread flanks) as long as nothing but rays meets it
+/// (forge-ssi intersects lines with helicoids; any other intersection with one is
+/// `SSI_UNSUPPORTED`).
 pub(crate) fn supported_surface(s: &Surface) -> bool {
     match s {
-        Surface::Plane(_) | Surface::Cylinder(_) | Surface::Cone(_) | Surface::Sphere(_) => true,
+        Surface::Plane(_)
+        | Surface::Cylinder(_)
+        | Surface::Cone(_)
+        | Surface::Sphere(_)
+        | Surface::Helicoid(_) => true,
         Surface::Torus(t) => t.minor() < t.major() && t.spindle_patch().is_none(),
         Surface::BSpline(_) => false,
     }
@@ -1163,6 +1169,15 @@ pub(crate) fn shift_curve2(c: &Curve2, d: Vec2) -> Curve2 {
         Curve2::Ellipse(e) => Ellipse2::new(e.center() + d, e.x_dir(), e.rx(), e.ry())
             .map(Into::into)
             .unwrap_or_else(|_| c.clone()),
+        Curve2::Spiral(s) => forge_core::geom::Spiral2::new(
+            s.center() + d,
+            s.x_dir(),
+            s.is_ccw(),
+            s.radius(),
+            s.radius_rate(),
+        )
+        .map(Into::into)
+        .unwrap_or_else(|_| c.clone()),
         Curve2::BSpline(b) => {
             let pts: Vec<[f64; 2]> = b
                 .control_points()

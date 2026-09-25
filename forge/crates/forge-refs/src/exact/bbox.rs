@@ -70,7 +70,7 @@ fn in_range(t: f64, t0: f64, t1: f64) -> bool {
     d <= t1 - t0 + ANGLE_RANGE_EPS * (1.0 + t1.abs())
 }
 
-pub(crate) fn add_edge(b: &mut Aabb, curve: &Curve3, t0: f64, t1: f64) {
+pub(crate) fn add_edge(b: &mut Aabb, curve: &Curve3, t0: f64, t1: f64) -> Result<(), CheckError> {
     b.add(curve.eval(t0));
     b.add(curve.eval(t1));
     let conic = |b: &mut Aabb, f: &Frame, rx: f64, ry: f64| {
@@ -91,6 +91,11 @@ pub(crate) fn add_edge(b: &mut Aabb, curve: &Curve3, t0: f64, t1: f64) {
         Curve3::Line(_) => {}
         Curve3::Circle(c) => conic(b, c.frame(), c.radius(), c.radius()),
         Curve3::Ellipse(e) => conic(b, e.frame(), e.rx(), e.ry()),
+        Curve3::Helix(_) => {
+            for p in forge_check::curve_extreme_points(curve, t0, t1)? {
+                b.add(p);
+            }
+        }
         Curve3::BSpline(_) => {
             // Roots of each derivative component, bracketed on a fine grid.
             let n = 256;
@@ -125,6 +130,7 @@ pub(crate) fn add_edge(b: &mut Aabb, curve: &Curve3, t0: f64, t1: f64) {
             }
         }
     }
+    Ok(())
 }
 
 /// Interior critical points `(u, v)` of the coordinate functions of a sphere or torus
@@ -202,6 +208,8 @@ pub(crate) fn add_face(b: &mut Aabb, dom: &FaceDomain<'_>) -> Result<(), CheckEr
         Surface::Cone(_) => None,
         Surface::Sphere(sp) => Some((*sp.frame(), false)),
         Surface::Torus(t) => Some((*t.frame(), true)),
+        // No interior extremes (see forge-check's bbox).
+        Surface::Helicoid(_) => None,
         Surface::BSpline(_) => {
             return Err(CheckError::Unsupported {
                 what: "bounding box of B-spline faces",

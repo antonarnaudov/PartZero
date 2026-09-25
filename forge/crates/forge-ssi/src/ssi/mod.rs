@@ -34,7 +34,8 @@ use crate::types::{
 /// curve point is within `tol.fit` of both surfaces.
 ///
 /// # Errors
-/// `SSI_UNSUPPORTED` (B-spline surfaces), `SSI_INVALID_DOMAIN`, `SSI_INVALID_TOLERANCE`,
+/// `SSI_UNSUPPORTED` (B-spline surfaces; helicoids unless the patches are disjoint),
+/// `SSI_INVALID_DOMAIN`, `SSI_INVALID_TOLERANCE`,
 /// and — never silently — `SSI_TANGENT_UNRESOLVED`, `SSI_NOT_CONVERGED`,
 /// `SSI_FIT_FAILED`, `SSI_BUDGET_EXCEEDED`, `SSI_INCONSISTENT` with diagnostics.
 pub fn intersect_surfaces(
@@ -68,6 +69,16 @@ pub fn intersect_surfaces(
     );
     if ctx.disjoint() {
         return Ok(IntersectionGraph::empty(Method::Disjoint));
+    }
+    // Helicoids (modelled thread flanks) bound their faces exactly but have no implicit
+    // form: disjoint patches are answered above, anything else is not supported yet.
+    for (s, op) in [(a, Operand::A), (b, Operand::B)] {
+        if matches!(s, Surface::Helicoid(_)) {
+            return Err(SsiError::Unsupported {
+                operand: op,
+                what: "helicoid surfaces (modelled thread flanks) in surface–surface intersection",
+            });
+        }
     }
     // Closed forms first; a closed-form result that fails its certificate falls back to
     // marching.
@@ -596,7 +607,7 @@ pub(crate) fn pcurve_error(
 fn initial_count(c: &Curve3, (t0, t1): (f64, f64)) -> usize {
     match c {
         Curve3::Line(_) => 4,
-        Curve3::Circle(_) | Curve3::Ellipse(_) => {
+        Curve3::Circle(_) | Curve3::Ellipse(_) | Curve3::Helix(_) => {
             (((t1 - t0) / (math::PI / 8.0)).ceil() as usize).max(2)
         }
         Curve3::BSpline(n) => (n.knots().len() / 2).max(4),

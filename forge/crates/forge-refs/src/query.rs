@@ -898,6 +898,7 @@ pub(crate) fn dihedral(scope: &Scope<'_>, e: Entity) -> Option<(f64, f64)> {
 fn type_of(scope: &Scope<'_>, e: Entity) -> Option<GeomTypeName> {
     let body = scope.body(e);
     match e.id {
+        // Thread flanks and helices have no `type` name (no predicate selects them).
         EntityId::Face(f) => Some(match body.face(f)?.surface {
             Surface::Plane(_) => GeomTypeName::Plane,
             Surface::Cylinder(_) => GeomTypeName::Cylinder,
@@ -905,12 +906,14 @@ fn type_of(scope: &Scope<'_>, e: Entity) -> Option<GeomTypeName> {
             Surface::Sphere(_) => GeomTypeName::Sphere,
             Surface::Torus(_) => GeomTypeName::Torus,
             Surface::BSpline(_) => GeomTypeName::Bspline,
+            Surface::Helicoid(_) => return None,
         }),
         EntityId::Edge(x) => Some(match body.edge(x)?.curve {
             Curve3::Line(_) => GeomTypeName::Line,
             Curve3::Circle(_) => GeomTypeName::Circle,
             Curve3::Ellipse(_) => GeomTypeName::Ellipse,
             Curve3::BSpline(_) => GeomTypeName::Bspline,
+            Curve3::Helix(_) => return None,
         }),
         _ => None,
     }

@@ -43,7 +43,8 @@ use crate::types::{
 /// Intersect a curve (restricted to `t_range`) with a surface (restricted to `domain`).
 ///
 /// See the crate docs ("Curve–surface") for the method and guarantees. Errors:
-/// `SSI_UNSUPPORTED` for B-spline surfaces, `SSI_INVALID_DOMAIN` for bad ranges,
+/// `SSI_UNSUPPORTED` for B-spline surfaces (and curves other than lines against helicoids,
+/// which are intersected by `Helicoid::line_hits`), `SSI_INVALID_DOMAIN` for bad ranges,
 /// `SSI_TANGENT_UNRESOLVED` if a near-tangency cannot be classified.
 pub fn intersect_curve_surface(
     curve: &Curve3,
@@ -60,6 +61,9 @@ pub fn intersect_curve_surface(
         });
     }
     domain.validate(surface, Operand::Surface)?;
+    if let Surface::Helicoid(h) = surface {
+        return helicoid_hits(curve, t_range, h, domain, tol);
+    }
     let (t0, t1) = t_range;
     let bad = |reason| SsiError::InvalidDomain {
         operand: Operand::Curve,
@@ -202,6 +206,79 @@ pub fn intersect_curve_surface(
     })
 }
 
+/// Line × helicoid (a ray of the boolean's point classification meeting a modelled
+/// thread flank): [`Helicoid::line_hits`], certified complete. Any other curve is
+/// `SSI_UNSUPPORTED` (a helicoid has no implicit form for the general method).
+fn helicoid_hits(
+    curve: &Curve3,
+    t_range: (f64, f64),
+    h: &forge_core::geom::Helicoid,
+    domain: UvBox,
+    tol: &SsiTolerance,
+) -> Result<CurveSurfaceHits, SsiError> {
+    let Curve3::Line(l) = curve else {
+        return Err(SsiError::Unsupported {
+            operand: Operand::Curve,
+            what: "curves other than lines against helicoid surfaces",
+        });
+    };
+    let (t0, t1) = t_range;
+    if !(t0.is_finite() && t1.is_finite()) || t1 < t0 {
+        return Err(SsiError::InvalidDomain {
+            operand: Operand::Curve,
+            param: "t",
+            lo: t0,
+            hi: t1,
+            reason: "bounds must be finite and ordered",
+        });
+    }
+    let hits = h
+        .line_hits(l.origin(), l.dir(), t_range, domain.u, domain.v)
+        .map_err(|e| match e {
+            forge_core::geom::HelicoidLineHitsError::PatchAtAxis => SsiError::Unsupported {
+                operand: Operand::Surface,
+                what: "helicoid patches reaching the axis",
+            },
+            forge_core::geom::HelicoidLineHitsError::Budget => SsiError::BudgetExceeded {
+                what: "line × helicoid subdivision",
+                limit: forge_core::geom::LINE_HITS_BUDGET,
+            },
+        })?;
+    let width = (t1 - t0).max(1.0);
+    let enc = 1e-13 * width;
+    let points = hits
+        .into_iter()
+        .map(|x| {
+            let point = curve.eval(x.t);
+            let gap = h.eval(x.u, x.v).distance(point);
+            CurveSurfaceHit {
+                t: x.t,
+                uv: Point2::new(x.u, x.v),
+                point,
+                contact: if x.tangent {
+                    Contact::Tangent {
+                        gap: gap.min(tol.fit),
+                    }
+                } else {
+                    Contact::Transversal
+                },
+                multiplicity: if x.tangent { 2 } else { 1 },
+                certificate: RootCertificate {
+                    t_enclosure: (x.t - enc, x.t + enc),
+                    residual: (-gap, gap),
+                    unique: !x.tangent,
+                    distance_bound: gap,
+                },
+            }
+        })
+        .collect();
+    Ok(CurveSurfaceHits {
+        points,
+        overlaps: Vec::new(),
+        certified_complete: true,
+    })
+}
+
 /// An upper bound of `|C'|` over the range (for converting lengths to parameters).
 fn curve_speed_bound(curve: &Curve3, t0: f64, t1: f64) -> f64 {
     let mut s: f64 = 0.0;
@@ -248,7 +325,7 @@ fn closed_form_candidates(curve: &Curve3, surface: &Surface, t0: f64, t1: f64) -
                 .filter(|&t| t >= t0 - 1e-12 && t <= t0 + w + 1e-12)
                 .collect()
         }
-        Curve3::BSpline(_) => Vec::new(),
+        Curve3::Helix(_) | Curve3::BSpline(_) => Vec::new(),
     }
 }
 

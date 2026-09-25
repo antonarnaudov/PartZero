@@ -123,6 +123,14 @@ pub(super) fn edge_reach(e: &Edge, p: Point3) -> f64 {
         Curve3::Line(_) => ends(),
         Curve3::Circle(c) => c.frame().origin().distance(p) + c.radius(),
         Curve3::Ellipse(c) => c.frame().origin().distance(p) + c.rx().abs().max(c.ry().abs()),
+        // Inside the cylinder of the largest radius around the axis segment it spans.
+        Curve3::Helix(h) => {
+            let f = h.frame();
+            let (t0, t1) = e.t_range;
+            let r = h.radius_at(t0).abs().max(h.radius_at(t1).abs());
+            let axis = |t: f64| f.origin() + f.z() * (h.rise() * t);
+            axis(t0).distance(p).max(axis(t1).distance(p)) + r
+        }
         Curve3::BSpline(n) => n
             .control_points()
             .iter()

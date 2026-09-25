@@ -115,6 +115,7 @@ fn edge_kinds(b: &Body, f: FaceId) -> Vec<&'static str> {
             Curve3::Line(_) => "line",
             Curve3::Circle(_) => "circle",
             Curve3::Ellipse(_) => "ellipse",
+            Curve3::Helix(_) => "helix",
             Curve3::BSpline(_) => "bspline",
         })
         .collect()

@@ -355,5 +355,14 @@ pub(crate) fn translate2(c: &Curve2, d: forge_core::linalg::Vec2) -> Curve2 {
             let m: NurbsCurve2 = n.map_control_points(|p| [p[0] + d.x, p[1] + d.y]);
             m.into()
         }
+        Curve2::Spiral(s) => forge_core::geom::Spiral2::new(
+            s.center() + d,
+            s.x_dir(),
+            s.is_ccw(),
+            s.radius(),
+            s.radius_rate(),
+        )
+        .map(Into::into)
+        .unwrap_or_else(|_| c.clone()),
     }
 }

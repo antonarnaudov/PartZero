@@ -165,6 +165,7 @@ fn axis(s: &Surface) -> (Point3, Vec3) {
         Surface::Cone(c) => c.frame(),
         Surface::Sphere(c) => c.frame(),
         Surface::Torus(c) => c.frame(),
+        Surface::Helicoid(c) => c.frame(),
         Surface::BSpline(_) => return (Point3::zero(), Vec3::unit_z()),
     };
     (f.origin(), f.z())

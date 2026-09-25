@@ -95,6 +95,8 @@ pub(crate) fn surface(d: &mut DataSection, s: &Surface) -> u32 {
             }
         }
         Surface::BSpline(n) => bspline_surface(d, n),
+        // `write_step` rejects bodies with thread geometry before any entity is written.
+        Surface::Helicoid(_) => d.add(Args::new().str("").entity("PLANE")),
     }
 }
 
@@ -222,6 +224,8 @@ pub(crate) fn curve(d: &mut DataSection, c: &Curve3, range: (f64, f64)) -> u32 {
             let trimmed = trim_nurbs(n, range.0, range.1);
             bspline_curve(d, trimmed.as_ref().unwrap_or(n))
         }
+        // `write_step` rejects bodies with thread geometry before any entity is written.
+        Curve3::Helix(_) => d.add(Args::new().str("").entity("LINE")),
     }
 }
 
@@ -271,6 +275,8 @@ pub(crate) fn curve2d(d: &mut DataSection, c: &Curve2, shift: (f64, f64)) -> Opt
             let a = d.add(Args::new().str("").r(p).r(x).entity("AXIS2_PLACEMENT_2D"));
             d.add(Args::new().str("").r(a).real(ci.radius()).entity("CIRCLE"))
         }
+        // Spirals are pcurves on planes only, which take no PCURVE entities.
+        Curve2::Spiral(_) => return None,
         Curve2::Ellipse(e) => {
             if e.rx() < e.ry() {
                 return None;

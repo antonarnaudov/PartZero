@@ -1300,6 +1300,7 @@ fn coordinate_scale(body: &Body) -> f64 {
             Surface::Cone(s) => Some(s.frame().origin()),
             Surface::Sphere(s) => Some(s.frame().origin()),
             Surface::Torus(s) => Some(s.frame().origin()),
+            Surface::Helicoid(s) => Some(s.frame().origin()),
             Surface::BSpline(_) => None,
         };
         if let Some(o) = o {

@@ -37,6 +37,7 @@ use forge_core::topo::{
 use forge_ir::BodyMetrics;
 use thiserror::Error;
 
+pub use bbox::curve_extreme_points;
 pub use domain::{PERIOD_EPS, SINGULAR_LINE_EPS};
 pub use mass::ANGULAR_PANEL;
 pub use nesting::{NESTING_GRAZING_COS, RAY_DIRECTIONS};

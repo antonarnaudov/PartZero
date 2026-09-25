@@ -5,7 +5,8 @@
 //! # Sampling
 //! 1. An initial partition from the curve type: a line needs only its endpoints; a
 //!    circle gets the uniform angular step meeting the chordal, angular and length limits
-//!    ([`Tol::circle_step`]); an ellipse starts from its major-radius circle; a B-spline
+//!    ([`Tol::circle_step`]); an ellipse starts from its major-radius circle, a helix or
+//!    spiral from the circle of its largest radius on the range; a B-spline
 //!    starts from its knot spans (each split into `degree` pieces). Ring edges start at
 //!    their range start (`t0`, deterministic) and get at least four samples.
 //! 2. Adaptive bisection of every segment `[a, b]` until all of these hold:
@@ -60,6 +61,14 @@ fn initial_params(edge: &Edge, tol: &Tol) -> Vec<f64> {
         }
         Curve3::Ellipse(e) => {
             let n = (span / tol.circle_step(e.rx().max(e.ry()))).ceil() as usize;
+            uniform(n.max(min_n))
+        }
+        // The parameter is the angle about the axis: the circle step of the largest radius
+        // on the range bounds the chord and turn of the circular component (the axial and
+        // radial rates only lengthen the radius of curvature); bisection does the rest.
+        Curve3::Helix(h) => {
+            let r = h.radius_at(t0).abs().max(h.radius_at(t1).abs());
+            let n = (span / tol.circle_step(r)).ceil() as usize;
             uniform(n.max(min_n))
         }
         Curve3::BSpline(b) => {

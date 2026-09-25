@@ -99,6 +99,8 @@ pub fn face_carrier(surface: &Surface, sense: bool) -> (FingerprintType, Carrier
             },
         ),
         Surface::BSpline(_) => (FingerprintType::Bspline, Carrier::Free),
+        // Modelled-thread flanks: no canonical type in the fingerprint vocabulary.
+        Surface::Helicoid(_) => (FingerprintType::Other, Carrier::Free),
     }
 }
 
@@ -125,6 +127,7 @@ pub fn edge_carrier(curve: &Curve3) -> (FingerprintType, Carrier) {
         ),
         Curve3::Ellipse(_) => (FingerprintType::Ellipse, Carrier::Free),
         Curve3::BSpline(_) => (FingerprintType::Bspline, Carrier::Free),
+        Curve3::Helix(_) => (FingerprintType::Other, Carrier::Free),
     }
 }
 

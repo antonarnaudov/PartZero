@@ -196,7 +196,7 @@ impl Torus {
 impl Surface {
     /// The distance form `d(p)` of an analytic surface (see the [module docs](self)):
     /// `dist(p, S) <= |d(p)|` everywhere, with equality near the surface. `None` for
-    /// B-spline surfaces.
+    /// helicoids (no single-valued implicit form) and B-spline surfaces.
     pub fn distance_form<S: Scalar>(&self, p: Vec3<S>) -> Option<S> {
         Some(match self {
             Surface::Plane(s) => s.distance_form(p),
@@ -204,11 +204,11 @@ impl Surface {
             Surface::Cone(s) => s.distance_form(p),
             Surface::Sphere(s) => s.distance_form(p),
             Surface::Torus(s) => s.distance_form(p),
-            Surface::BSpline(_) => return None,
+            Surface::Helicoid(_) | Surface::BSpline(_) => return None,
         })
     }
-    /// Gradient of the distance form (unit length near the surface). `None` for B-spline
-    /// surfaces.
+    /// Gradient of the distance form (unit length near the surface). `None` for helicoids
+    /// and B-spline surfaces.
     pub fn distance_form_grad<S: Scalar>(&self, p: Vec3<S>) -> Option<Vec3<S>> {
         Some(match self {
             Surface::Plane(s) => s.distance_form_grad(p),
@@ -216,10 +216,11 @@ impl Surface {
             Surface::Cone(s) => s.distance_form_grad(p),
             Surface::Sphere(s) => s.distance_form_grad(p),
             Surface::Torus(s) => s.distance_form_grad(p),
-            Surface::BSpline(_) => return None,
+            Surface::Helicoid(_) | Surface::BSpline(_) => return None,
         })
     }
-    /// The algebraic form `q(p)` (defining polynomial). `None` for B-spline surfaces.
+    /// The algebraic form `q(p)` (defining polynomial). `None` for helicoids (not
+    /// algebraic) and B-spline surfaces.
     pub fn algebraic_form<S: Scalar>(&self, p: Vec3<S>) -> Option<S> {
         Some(match self {
             Surface::Plane(s) => s.algebraic_form(p),
@@ -227,17 +228,17 @@ impl Surface {
             Surface::Cone(s) => s.algebraic_form(p),
             Surface::Sphere(s) => s.algebraic_form(p),
             Surface::Torus(s) => s.algebraic_form(p),
-            Surface::BSpline(_) => return None,
+            Surface::Helicoid(_) | Surface::BSpline(_) => return None,
         })
     }
     /// Degree of the algebraic form: 1 (plane), 2 (quadrics), 4 (torus); `None` for
-    /// B-spline surfaces.
+    /// helicoids and B-spline surfaces.
     pub fn algebraic_degree(&self) -> Option<u32> {
         match self {
             Surface::Plane(_) => Some(1),
             Surface::Cylinder(_) | Surface::Cone(_) | Surface::Sphere(_) => Some(2),
             Surface::Torus(_) => Some(4),
-            Surface::BSpline(_) => None,
+            Surface::Helicoid(_) | Surface::BSpline(_) => None,
         }
     }
 }

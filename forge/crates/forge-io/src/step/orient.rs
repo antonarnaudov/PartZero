@@ -212,7 +212,7 @@ impl Ctx<'_> {
                     }
                 }
             }
-            Curve3::Circle(_) | Curve3::Ellipse(_) => {
+            Curve3::Circle(_) | Curve3::Ellipse(_) | Curve3::Helix(_) => {
                 let n = ((hi - lo) / (0.25 * math::PI)).ceil().max(1.0) as usize;
                 for i in 1..n {
                     out.push(lo + (hi - lo) * i as f64 / n as f64);
