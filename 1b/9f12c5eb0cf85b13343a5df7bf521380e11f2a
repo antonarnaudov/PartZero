@@ -1,0 +1,23 @@
+packages/app/src/doc/timeline.ts
+  s_59c0dd2af30db2::t_97844af60b163a 10
+packages/app/src/doc/problems.ts
+  s_59c0dd2af30db2::t_bd5e4b7b37b939 52,57
+  s_59c0dd2af30db2::t_97844af60b163a 27-28,31-36,50-51,53-56,58-65,82-93
+  s_59c0dd2af30db2::t_f1f880fa160d83 94-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1b9f12c5eb0cf85b13343a5df7bf521380e11f2a",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
