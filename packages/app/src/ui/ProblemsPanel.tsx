@@ -23,17 +23,18 @@ export function ProblemsPanel({ problems }: { problems: readonly Problem[] }): R
         <span className={`count-pill${problems.length ? " has" : ""}`} data-testid="problems-count">
           {problems.length}
         </span>
+        {problems.length === 0 && (
+          <span className="problems-ok">
+            <Icon.Check size={12} /> No problems
+          </span>
+        )}
         <span className="spacer" />
         <button type="button" className="icon-btn" title="Hide problems (⌘J)" aria-label="Hide problems" onClick={() => run({ id: "view.togglePanel", args: { panel: "problems", visible: false } })}>
           <Icon.Close size={12} />
         </button>
       </header>
       <div className="panel-body problems-list" role="list">
-        {problems.length === 0 ? (
-          <div className="empty ok">
-            <Icon.Check size={13} /> No problems
-          </div>
-        ) : (
+        {problems.length === 0 ? null : (
           problems.map((p) => (
             <div key={p.key} className={`problem sev-${p.severity}`} role="listitem" data-testid="problem" onClick={() => reveal(p)} title={p.hint ?? p.message}>
               <span className="problem-icon">

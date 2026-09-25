@@ -38,9 +38,11 @@ export function StatusBar({ problems }: { problems: readonly Problem[] }): React
       <span className="sb-item" title="Viewport renderer">
         {viewport.kind === "none" ? "—" : `${viewport.kind === "placeholder" ? "Placeholder" : "forge-render"} · ${viewport.backend}`}
       </span>
-      <span className="sb-item" title="CadScript compile + type-check time">
-        compile {fmtMs(timings.compileMs)}
-      </span>
+      {timings.compileMs !== null && (
+        <span className="sb-item" title="CadScript compile + type-check time">
+          compile {fmtMs(timings.compileMs)}
+        </span>
+      )}
       <span className="sb-item" data-testid="eval-time" title="Forge evaluation time (including tessellation)">
         eval {fmtMs(timings.evalMs)}
       </span>

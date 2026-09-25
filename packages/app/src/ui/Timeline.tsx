@@ -268,10 +268,19 @@ export function Timeline({ timeline }: { timeline: TimelineModel }): ReactElemen
 
   return (
     <section className="panel timeline" aria-label="Feature timeline">
-      <header className="panel-header">
-        <Icon.Timeline size={14} />
-        <span className="panel-title">Timeline</span>
-        <span className="panel-meta">{timeline.featureCount > 0 ? `${timeline.featureCount} features` : ""}</span>
+      {/* The dock's tab titles the panel; this row says what is in it. */}
+      <header className="panel-header tl-header">
+        <span className="panel-meta" data-testid="timeline-count">
+          {timeline.featureCount > 0
+            ? `${timeline.featureCount} feature${timeline.featureCount === 1 ? "" : "s"}${timeline.parts.length > 1 ? ` · ${timeline.parts.length} parts` : ""}`
+            : "History"}
+        </span>
+        <span className="spacer" />
+        {timeline.rollback && (
+          <button type="button" className="link-button" onClick={() => run({ id: "ir.setRollback", args: { after: null } }, "ui")} title="Build every feature again">
+            Roll to end
+          </button>
+        )}
       </header>
       {timeline.stale && (
         <div className="panel-banner warn" data-testid="timeline-stale">
@@ -299,7 +308,18 @@ export function Timeline({ timeline }: { timeline: TimelineModel }): ReactElemen
       )}
       <div className="panel-body">
         {timeline.parts.length === 0 || timeline.featureCount === 0 ? (
-          <div className="empty">{!hasCompile || phase === "compiling" ? "Loading…" : "No features yet. Start with a Sketch (⇧S)."}</div>
+          !hasCompile || phase === "compiling" ? (
+            <div className="empty">Loading…</div>
+          ) : (
+            <div className="empty-state" data-testid="timeline-empty">
+              <ToolIcon name="sketch" size={28} />
+              <strong>No features yet</strong>
+              <span>Every sketch and feature lands here, in order. Double-click one to edit it.</span>
+              <span className="es-keys">
+                Start with <kbd>⇧S</kbd> Create Sketch
+              </span>
+            </div>
+          )
         ) : (
           <ul className="tl-tree" role="tree">
             {timeline.parts.map((part) => (
@@ -368,9 +388,11 @@ interface ParamRow {
 }
 
 /** The document's parameters (IR v1): values, inline editing (Enter sets), add and delete — all through `ir.*` commands. */
-export function ParametersPanel(): ReactElement {
+export function ParametersPanel({ docked = false }: { docked?: boolean } = {}): ReactElement {
   const { services, run } = useApp();
-  const [open, setOpen] = useState(false);
+  const [openState, setOpen] = useState(false);
+  // In its own dock tab the table is always open; under the timeline it folds.
+  const open = docked || openState;
   const v1 = useStore(services.doc, (s) => s.format === "ir-v1");
   const params = useStore(services.doc, (s) => (s.report as { params?: unknown } | null)?.params ?? null) as Array<{
     name: string;
@@ -392,19 +414,31 @@ export function ParametersPanel(): ReactElement {
     }
   }
   return (
-    <section className={`panel params${open ? " open" : ""}`} aria-label="Parameters" data-testid="params-panel">
-      <header className="panel-header clickable" onClick={() => setOpen(!open)}>
-        <span className={`chev${open ? " open" : ""}`}>
-          <Icon.Chevron size={12} />
-        </span>
-        <Icon.Params size={14} />
-        <span className="panel-title">Parameters</span>
-        <span className="panel-meta">{v1 ? `${rows.length}` : ""}</span>
-      </header>
+    <section className={`panel params${open ? " open" : ""}${docked ? " docked" : ""}`} aria-label="Parameters" data-testid="params-panel">
+      {docked ? (
+        <header className="panel-header tl-header">
+          <span className="panel-meta">{v1 ? (rows.length > 0 ? `${rows.length} parameter${rows.length === 1 ? "" : "s"}` : "Named values") : ""}</span>
+        </header>
+      ) : (
+        <header className="panel-header clickable" onClick={() => setOpen(!open)}>
+          <span className={`chev${open ? " open" : ""}`}>
+            <Icon.Chevron size={12} />
+          </span>
+          <Icon.Params size={14} />
+          <span className="panel-title">Parameters</span>
+          <span className="panel-meta">{v1 ? `${rows.length}` : ""}</span>
+        </header>
+      )}
       {open && (
         <div className="panel-body params-body">
           {!v1 && <p className="muted">Parameters need an IR v1 model (File ▸ New).</p>}
-          {v1 && rows.length === 0 && !adding && <p className="muted small">Name a value (like wall = 2 mm) and use it in any field or dimension.</p>}
+          {v1 && rows.length === 0 && !adding && (
+            <div className="empty-state compact">
+              <ToolIcon name="parameters" size={26} />
+              <strong>No parameters yet</strong>
+              <span>Name a value, like wall = 2 mm, and use it in any field or dimension. Change it here and the part follows.</span>
+            </div>
+          )}
           {v1 && rows.length > 0 && (
             <table className="params-table">
               <tbody>

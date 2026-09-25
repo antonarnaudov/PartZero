@@ -2,13 +2,14 @@
  * The PartZero window (plan §2.5 "Layout"):
  *
  * ```
- * ┌ title bar: brand · file · undo · document · search · theme · settings ────────────────┐
- * ├ tool ribbon: Sketch · Create · Modify · Pattern · Inspect · Construct ··· Print ─────┤
- * │ left dock       │ viewport (+ welcome over an empty document)  │ right dock           │
- * │ Timeline, …     │                                              │ Properties·Code·Prop.│
- * │                 │                                              ├──────────────────────┤
- * │                 │                                              │ Assistant (chat)     │
- * ├ Problems ──────────────────────────────────────────────────────────────────────────────┤
+ * ┌ title bar: brand · file · undo · [Solid|Sketch] · document · search · assistant · theme ┐
+ * ├ tool ribbon (Solid: Sketch · Create · Pattern · Modify · Construct · Inspect ··· Export,  ┤
+ * │              Open in Bambu Studio; Sketch: the sketcher's tools ··· Finish Sketch)       │
+ * │ left dock       │ viewport (+ welcome over an empty document)  │ right dock (narrow)  │
+ * │ Timeline ·      │ ┌ tool panel ┐ (floats at the top left      │ Code · Proposal      │
+ * │ Browser ·       │ └────────────┘  while a tool is open)       ├──────────────────────┤
+ * │ Parameters      │                                              │ Assistant (chat)     │
+ * ├ Problems (one row when there are none) ─────────────────────────────────────────────────┤
  * └ status bar ────────────────────────────────────────────────────────────────────────────┘
  * ```
  */
@@ -28,13 +29,18 @@ import { StatusBar } from "../StatusBar";
 import { Viewport } from "../Viewport";
 import { useShell, useShellState, usePanels } from "./context";
 import { Dock } from "./Dock";
+import { FloatingPropertyPanel } from "./panel-catalog";
 import { ShortcutsDialog } from "./ShortcutsDialog";
+import { useSketching, useWorkspace } from "./ribbon";
 import { TitleBar, ToolRibbon } from "./ShellToolbar";
 import { Welcome } from "./Welcome";
 
 type Sizes = { left: number; right: number; chat: number; problems: number };
 const SIZES_KEY = "aicad.layout";
-const DEFAULT_SIZES: Sizes = { left: 264, right: 420, chat: 280, problems: 112 };
+// The assistant docks narrow (the viewport is the work; the owner: "not a chat window").
+const DEFAULT_SIZES: Sizes = { left: 292, right: 348, chat: 280, problems: 132 };
+/** The Problems bar with nothing to show: one row (its count and "No problems"). */
+const PROBLEMS_COLLAPSED = 30;
 const LIMITS: Record<keyof Sizes, [number, number]> = { left: [180, 520], right: [320, 900], chat: [140, 700], problems: [60, 480] };
 
 function loadSizes(): Sizes {
@@ -110,6 +116,9 @@ export function AppShell(): ReactElement {
   const shellDialog = useShellState((s) => s.dialog);
   const problems = useProblems();
   const welcome = useWelcomeVisible();
+  const workspace = useWorkspace();
+  const sketching = useSketching();
+  const toolOpen = useShellState((s) => s.panel !== null);
   const [sizes, setSizes] = useState<Sizes>(loadSizes);
 
   useEffect(() => {
@@ -136,7 +145,7 @@ export function AppShell(): ReactElement {
   const rightStyle: CSSProperties = { gridTemplateRows: panels.chat && rightDock ? `minmax(160px, 1fr) 1px ${sizes.chat}px` : "1fr" };
 
   return (
-    <div className="app pz-shell" data-testid="app-shell">
+    <div className="app pz-shell" data-testid="app-shell" data-workspace={workspace} data-sketching={sketching ? "true" : undefined} data-tool-open={toolOpen ? "true" : undefined}>
       <TitleBar />
       <ToolRibbon />
       <div className="workspace" style={workspaceStyle}>
@@ -149,6 +158,7 @@ export function AppShell(): ReactElement {
         <main className="col-center">
           <Viewport />
           <SketchModeHost />
+          <FloatingPropertyPanel />
           {welcome && (
             <div className="welcome-layer">
               <Welcome />
@@ -164,9 +174,9 @@ export function AppShell(): ReactElement {
           </aside>
         )}
       </div>
-      {panels.problems && <Splitter axis="y" label="Resize problems" onDrag={(d) => resize("problems", -d)} />}
+      {panels.problems && problems.length > 0 && <Splitter axis="y" label="Resize problems" onDrag={(d) => resize("problems", -d)} />}
       {panels.problems && (
-        <div className="bottom" style={{ height: sizes.problems }}>
+        <div className={`bottom${problems.length === 0 ? " collapsed" : ""}`} style={{ height: problems.length > 0 ? sizes.problems : PROBLEMS_COLLAPSED }}>
           <ProblemsPanel problems={problems} />
         </div>
       )}

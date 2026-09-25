@@ -352,6 +352,10 @@ function Message({ m }: { m: ChatMessage }): ReactElement {
   );
 }
 
+/** Starting points in the composer before the first request (a click fills it; nothing is sent). */
+const SUGGEST_NEW = ["A 40 mm cube with a 10 mm hole through it", "A wall hook for a 20 mm rail", "A cable organiser with five slots"] as const;
+const SUGGEST_EDIT = ["Make the walls 2 mm thick", "Add four M3 holes 5 mm from the corners", "Round the vertical edges by 2 mm", "Will it fit my printer?"] as const;
+
 export function ChatPanel(): ReactElement {
   const { services, run, isMac } = useApp();
   const messages = useStore(services.ui, (s) => s.chat);
@@ -376,6 +380,7 @@ export function ChatPanel(): ReactElement {
   }, [messages, runs]);
 
   const busy = activeRunId !== null;
+  const hasBodies = useStore(services.doc, (s) => s.bodies.length > 0);
   const activeChips = chips.filter((c) => !excluded.has(`${c.kind}:${c.ref}`));
   const blocked = busy ? "The agent is working — stop it to send a new request" : reviewPending ? "Accept or reject the proposal first" : null;
   const send = (): void => {
@@ -410,6 +415,23 @@ export function ChatPanel(): ReactElement {
         ))}
       </div>
       <div className="chat-compose">
+        {available && !busy && !messages.some((m) => m.role === "user") && (
+          <div className="chat-suggest" data-testid="chat-suggestions">
+            <span className="chat-suggest-title">Try</span>
+            {(hasBodies ? SUGGEST_EDIT : SUGGEST_NEW).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => {
+                  setDraft(s);
+                  inputRef.current?.focus();
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
         {activeChips.length > 0 && (
           <div className="compose-chips" aria-label="Context from selection">
             {activeChips.map((c) => (

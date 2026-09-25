@@ -9,8 +9,9 @@ import { useApp, useStore } from "../context";
 import { useProblems, useTimeline } from "../doc-hooks";
 import { ProposalView } from "../ProposalView";
 import { ParametersPanel, Timeline } from "../Timeline";
+import { BrowserPanel } from "./BrowserPanel";
 import { useShellState } from "./context";
-import type { PanelRegistry } from "./panels";
+import type { PanelContext, PanelRegistry } from "./panels";
 import { PropertyPanel } from "./PropertyPanel";
 
 function TimelinePanel(): ReactElement {
@@ -19,15 +20,36 @@ function TimelinePanel(): ReactElement {
   return (
     <div className="dock-col">
       <Timeline timeline={timeline} />
-      <ParametersPanel />
     </div>
   );
 }
 
-function PropertiesPanel(): ReactElement {
+function ParamsTab(): ReactElement {
+  return (
+    <div className="dock-col">
+      <ParametersPanel docked />
+    </div>
+  );
+}
+
+/** The number of parameters of the open model (the Parameters tab's badge). */
+function paramCount(services: PanelContext["services"]): string | null {
+  const params = (services.doc.getState().report as { params?: unknown[] } | null)?.params;
+  return Array.isArray(params) && params.length > 0 ? String(params.length) : null;
+}
+
+/**
+ * The tool's property panel floats over the viewport's top left (plan §2.5 "Layout": as in Fusion
+ * and Shapr3D), not in a dock: AppShell mounts it while a tool is open.
+ */
+export function FloatingPropertyPanel(): ReactElement | null {
   const panel = useShellState((s) => s.panel);
-  if (!panel) return <div className="empty">Pick a tool in the toolbar to see its properties here.</div>;
-  return <PropertyPanel key={panel.id} session={panel} />;
+  if (!panel) return null;
+  return (
+    <div className="pz-float-panel" data-testid="floating-panel">
+      <PropertyPanel key={panel.id} session={panel} />
+    </div>
+  );
 }
 
 function CodeHeader(): ReactElement {
@@ -54,15 +76,8 @@ function CodeHeader(): ReactElement {
 
 export function registerBuiltinPanels(panels: PanelRegistry): void {
   panels.register({ id: "timeline", title: "Timeline", icon: "Timeline", area: "left", order: 10, component: TimelinePanel });
-  panels.register({
-    id: "properties",
-    title: "Properties",
-    icon: "Params",
-    area: "right",
-    order: 5,
-    component: PropertiesPanel,
-    visibleWhen: ({ shell }) => shell.getState().panel !== null,
-  });
+  panels.register({ id: "browser", title: "Browser", icon: "part", area: "left", order: 20, component: BrowserPanel });
+  panels.register({ id: "params", title: "Parameters", icon: "parameters", area: "left", order: 30, component: ParamsTab, badge: ({ services }) => paramCount(services), tabTestId: "dock-tab-parameters" });
   // Hidden by default (the owner's rule: no code in the default UI); View ▸ Show Code (view.toggleCode).
   panels.register({
     id: "code",

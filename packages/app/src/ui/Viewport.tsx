@@ -363,10 +363,12 @@ export function Viewport(): ReactElement {
 
   const busy = phase === "compiling" || phase === "evaluating" || phase === "pending";
   let empty: string | null = null;
+  const featureCount = (doc.getState().model?.ir?.parts ?? []).reduce((n, p) => n + p.features.length, 0);
   if (bodies.length === 0) {
     if (engineError) empty = engineError;
     else if (busy && !hasReport) empty = "Evaluating…";
-    else if (hasReport) empty = "No solid bodies — the document has sketches only, or every body-creating feature failed.";
+    else if (featureCount === 0) empty = "An empty part. Start with Create Sketch (⇧S), open a starter (Help ▸ Welcome), or describe the part to the assistant.";
+    else if (hasReport) empty = "No solid bodies yet: the part has sketches only, or every feature that makes a body failed.";
     else if (!busy) empty = "Nothing to show yet.";
   }
   const ir = doc.getState().model?.ir;
