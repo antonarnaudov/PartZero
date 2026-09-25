@@ -1,0 +1,68 @@
+packages/agent-tools/src/v1/playbooks.ts
+  s_59c0dd2af30db2::t_5d0b2de1a924b8 227-241,285-286,324,1436-1495,1832-1841
+packages/cadscript/std/v1/index.d.ts
+  s_59c0dd2af30db2::t_55112fb539cf0e 881,903,905-908
+  s_59c0dd2af30db2::t_9c58c07e5c68d5 889-890,901,904
+  s_59c0dd2af30db2::t_df95eb1cd01de9 880,888,902
+  s_59c0dd2af30db2::t_c75bab2723892f 909
+packages/ir-types/src/generated/ir-v1.ts
+  s_59c0dd2af30db2::t_5f92c336214a9b 2021-2025,2028-2035,2037-2044,2048-2049,2051-2052,2056-2059,2063-2066,2798-2911,2913,2915,3101-3102,3225,3247
+packages/agent-tools/test/fixtures/v1-forge-reports.json
+  s_59c0dd2af30db2::t_bebef95826ed6e 9450-12045,13995,14337,15155,15161,15166,15168,15173,15175,15180,15182,15189,15194,15196,15201,15203,15208,15210,17306,17642,24928-24929,26406-26554
+packages/app/src/tools/builtin/features.ts
+  s_59c0dd2af30db2::t_5e35b2def21265 258,263,326,331
+  s_59c0dd2af30db2::t_9a7547e58cd8b6 9-13,18,27,226-257,259-262,264-325,327-330,332-365,433
+packages/agent-tools/src/v1/summaries.ts
+  s_59c0dd2af30db2::t_f45b8f5098632f 190,193-198
+packages/cadscript/test/v1/diagnostics.test.ts
+  s_59c0dd2af30db2::t_fff2a611b6ed07 66-67
+packages/cadscript/src/v1/syntax.ts
+  s_59c0dd2af30db2::t_a22852bc3cb98e 42,68
+packages/cadscript/src/v1/json.ts
+  s_59c0dd2af30db2::t_8202b1164bbff0 177-187
+  s_59c0dd2af30db2::t_a22852bc3cb98e 471,534-544
+  s_59c0dd2af30db2::t_9d8bea550ebe66 545
+packages/agent-tools/test/v1/scenarios.ts
+  s_59c0dd2af30db2::t_09a21d2256c8b6 8,74,76
+  s_59c0dd2af30db2::t_bebef95826ed6e 75,77-81
+packages/cadscript/src/v1/compile.ts
+  s_59c0dd2af30db2::t_a22852bc3cb98e 1089-1091,1651,1658-1671,1801-1824
+  s_59c0dd2af30db2::t_557087ee6a86ac 1825-1827
+packages/cadscript/src/generated/std-v1-dts.ts
+  s_59c0dd2af30db2::t_df95eb1cd01de9 8
+packages/cadscript/src/v1/print.ts
+  s_59c0dd2af30db2::t_fa45a4e0815081 518
+  s_59c0dd2af30db2::t_92dfd104db400d 516-517,519-525,577-585
+packages/cadscript/src/v1/diagnostics.ts
+  s_59c0dd2af30db2::t_fff2a611b6ed07 128-129
+packages/ir-types/src/generated/metrics-v1.ts
+  s_59c0dd2af30db2::t_5f92c336214a9b 972-975,980-983,985-986,988-991,995-996,998,1272-1315,1370,1397,1656-1657
+corpus/v1/cadscript/threads.cad.ts
+  s_59c0dd2af30db2::t_89914788daeaf9 1-20
+packages/ir-types/src/generated/constants-v1.ts
+  s_59c0dd2af30db2::t_430661406f50c8 1939,2059
+  s_59c0dd2af30db2::t_5f92c336214a9b 1059-1151,1213-1214,1256-1257,2097-3089
+  s_59c0dd2af30db2::t_edf999977afe39 1258,3090
+packages/agent-tools/test/v1/playbooks-v1.test.ts
+  s_59c0dd2af30db2::t_f2a9b54bdc3bea 185-193
+packages/app/test/thread-tool.test.ts
+  s_59c0dd2af30db2::t_374babbb4df787 1-69
+packages/cadscript/src/v1/validate.ts
+  s_59c0dd2af30db2::t_6b29697129b12c 73-84,440-441,446-452,1035-1037,1553-1579,1586-1587,1608,1638-1643
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7cded0a335f8ff15caef58e1785f15e7f6d90ab5",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
