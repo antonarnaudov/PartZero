@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement } from "react";
 import { PREVIEW_TINT } from "../agent/agent-service";
 import type { RenderBody } from "../engine/types";
+import { useReferenceBodies } from "../file/ui/hooks";
 import { measureSelection } from "../measure/measure";
 import { MeasurePanel } from "../measure/MeasurePanel";
 import type { Rect } from "../selection/box-select";
@@ -87,7 +88,10 @@ export function Viewport(): ReactElement {
   const measureOpen = useSyncExternalStore(runtime.measure.subscribe, () => runtime.measure.getState().open);
   const reviewOpen = !!review && review.status === "ready" && review.resolution === null;
   const showPreview = reviewOpen && review.previewEnabled && review.preview.status === "ready";
-  const shown = showPreview ? review.preview.bodies : bodies;
+  // Reference meshes (imported STL/3MF/OBJ) are drawn with the document's bodies, never edited.
+  const refBodies = useReferenceBodies();
+  const docShown = showPreview ? review.preview.bodies : bodies;
+  const shown = useMemo(() => (refBodies.length ? [...docShown, ...refBodies] : docShown), [docShown, refBodies]);
   const extent = useMemo(() => zExtent(shown), [shown]);
 
   const run = useCallback((cmd: Cmd) => void routedExecute(services, commands, cmd, "ui"), [services, commands]);

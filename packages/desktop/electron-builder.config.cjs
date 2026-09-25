@@ -19,6 +19,9 @@
  */
 const { join } = require("node:path");
 const { assertBundleEdition } = require("./scripts/check-bundle-edition.cjs");
+const { documentTypes } = require("./file-associations.cjs");
+
+const docs = documentTypes({ productName: "aicad", appId: "dev.aicad.desktop" });
 
 module.exports = {
   appId: "dev.aicad.desktop",
@@ -42,6 +45,8 @@ module.exports = {
   ],
   asar: true,
   npmRebuild: false,
+  // `.partzero` documents open in the app (file-associations.cjs).
+  fileAssociations: docs.fileAssociations,
   // ADR 0016 §3: fail the build if a slicer, libslic3r or a slicer's profiles got into the app.
   // A function (not a path string, which electron-builder resolves against the cwd).
   afterPack: require("./scripts/slicer-gate-after-pack.cjs"),
@@ -69,6 +74,7 @@ module.exports = {
     // `disable-library-validation`, which lets unsigned dylibs load into the signed app.
     entitlements: "build/entitlements.mac.plist",
     entitlementsInherit: "build/entitlements.mac.plist",
+    extendInfo: docs.extendInfo,
   },
   dmg: { title: "aicad ${version}" },
   win: { target: [{ target: "nsis", arch: ["x64", "arm64"] }] },

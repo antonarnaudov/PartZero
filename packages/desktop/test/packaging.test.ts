@@ -61,7 +61,9 @@ describe("builder configs: the tested base and the local Alpha 0 build", () => {
     expect(alpha.productName).toBe("PartZero");
     expect(alpha.appId).toBe("ai.partzero.desktop");
     expect(alpha.extraMetadata?.["productName"]).toBe("PartZero");
-    expect(alpha.mac).toEqual({ target: [{ target: "dir", arch: ["arm64"] }], category: "public.app-category.graphics-design", identity: "-", hardenedRuntime: false, gatekeeperAssess: false });
+    // `extendInfo` declares the .partzero document type (file-associations.cjs; checked in documents.test.ts).
+    const { extendInfo: _docTypes, ...mac } = alpha.mac as BuilderConfig["mac"] & { extendInfo?: unknown };
+    expect(mac).toEqual({ target: [{ target: "dir", arch: ["arm64"] }], category: "public.app-category.graphics-design", identity: "-", hardenedRuntime: false, gatekeeperAssess: false });
     expect(alpha.directories.output).toBe("release/alpha-local");
   });
 

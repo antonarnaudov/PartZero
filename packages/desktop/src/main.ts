@@ -7,6 +7,9 @@
  *   isolation for SharedArrayBuffer / WASM threads) and a strict CSP; in dev, the Vite server
  *   (`AICAD_DEV_URL`, loopback only, same headers from vite.config.ts).
  * - Native menu → command layer; window state and recent files persist in userData.
+ * - Documents (windows.ts, ipc/files.ts, recovery.ts): one document per window, several windows, `.partzero` files
+ *   opened from the Finder (`open-file`) or the command line, atomic saves, the Save / Don't Save / Cancel prompt on
+ *   close and quit, and autosave snapshots offered for recovery after a crash.
  * - Packaged builds ignore every `AICAD_*` override (env.ts), have no DevTools and no renderer
  *   automation API, and refuse to start with a debugger switch such as `--remote-debugging-port`
  *   (debug-switches.ts); child processes get allowlisted environments.
@@ -22,7 +25,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { app, BrowserWindow, dialog, Menu, safeStorage, screen, session, shell, utilityProcess } from "electron";
-import type { AgentEvent, AppInfo, DocumentStateMessage, MenuCommandMessage } from "@aicad/app/bridge";
+import type { AgentEvent, AppInfo, MenuCommandMessage } from "@aicad/app/bridge";
 import type { WorkerHandle } from "./agent/host.js";
 import type { Cipher } from "./agent/keys.js";
 import { parseWorkerMessage, PROTOCOL_VERSION, scrubKeyLike } from "./agent/protocol.js";
@@ -31,9 +34,12 @@ import { DEV_BUILD_INFO, loginShellProviders, mcpShimExecutable, readBuildInfo, 
 import { bundledMcpShimPath } from "./bundle-paths.js";
 import { debugSwitchRefusal, forbiddenDebugSwitches } from "./debug-switches.js";
 import { agentWorkerEnv, cliChildHostEnv, cliDetectEnv, readDevOverrides, resolveWebRoot, withLoginNames } from "./env.js";
-import { documentStatePath, PathGrants, RecentFiles } from "./files.js";
+import { canonicalPath, documentPathsFromArgv, documentStatePath, PathGrants, RecentFiles, ThumbnailCache, type FaultHook } from "./files.js";
 import { findRepoRoot, forgeInfo, forgeSelfCheck, locateForgeBinary } from "./forge-cli.js";
 import { registerIpc } from "./ipc.js";
+import { registerFileIpc } from "./ipc/files.js";
+import { RecoveryStore } from "./recovery.js";
+import { DocumentWindows, type CloseAnswer } from "./windows.js";
 import { formatConsoleArgs, logFor, RotatingLog, type LogLevel } from "./log-file.js";
 import { buildMenuTemplate } from "./menu.js";
 import { agentConventionsLine, ProfileStore } from "./profiles.js";
@@ -102,11 +108,37 @@ function isTrustedSender(frameUrl: string | undefined): boolean {
   return isTrustedFrameUrl(frameUrl, devOrigin);
 }
 
-let mainWindow: BrowserWindow | null = null;
-let docState: DocumentStateMessage = { title: "untitled", path: null, dirty: false };
 const grants = new PathGrants();
 let recent: RecentFiles;
 let agent: AgentSetup | null = null;
+/** Every document window (one document each). Created in `start()`. */
+let windows: DocumentWindows<BrowserWindow>;
+/** The window whose agent run is current (agent events go there); null: the current window. */
+let agentContentsId: number | null = null;
+/** The recovery store (autosaves); null until the app is ready, and in a `--self-test` run. */
+let recovery: RecoveryStore | null = null;
+/** Documents the OS asked to open before the app was ready (`open-file`, argv). */
+const pendingOsOpens: string[] = [];
+let appReady = false;
+/**
+ * Test-only (unpackaged runs), set through Playwright's `app.evaluate`: `globalThis.__pzFaults` (a Set of fault
+ * points) makes the next save fail at that point, once (FULL-MODELING-PLAN C7); `globalThis.__pzHold` holds the next
+ * save at `point` (setting `reached`) until the test resolves `release`.
+ */
+const faultHook: FaultHook | undefined = isDev
+  ? (point) => {
+      const g = globalThis as { __pzFaults?: Set<string>; __pzHold?: { point: string; reached: boolean; release: Promise<void> } | undefined };
+      if (g.__pzFaults?.has(point)) {
+        g.__pzFaults.delete(point);
+        throw new Error(`simulated failure at ${point}`);
+      }
+      const hold = g.__pzHold;
+      if (hold?.point !== point) return;
+      g.__pzHold = undefined;
+      hold.reached = true;
+      return hold.release;
+    }
+  : undefined;
 /** The throwaway profile of a `--self-test` run (removed before it exits). */
 let selfTestProfile: string | null = null;
 /** The real profile a `--self-test` run reports (it only reads its `agent-settings.json`). */
@@ -174,12 +206,41 @@ function spawnAgentWorker(): WorkerHandle {
   };
 }
 
+/** Agent events go to the window that started the run (one agent host serves every window). */
 function sendAgentEvent(event: AgentEvent): void {
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("agent:event", event);
+  const target = (agentContentsId !== null ? windows.windowOf(agentContentsId) : null) ?? windows.current();
+  if (target && !target.isDestroyed()) target.webContents.send("agent:event", event);
 }
 
 function sendMenuCommand(message: MenuCommandMessage): void {
-  mainWindow?.webContents.send("menu:command", message);
+  windows.sendCommand(message);
+}
+
+/** The unsaved-changes prompt on close and quit. */
+async function askToSave(win: BrowserWindow, title: string): Promise<CloseAnswer> {
+  const r = await dialog.showMessageBox(win, {
+    type: "warning",
+    buttons: ["Save", "Don't Save", "Cancel"],
+    defaultId: 0,
+    cancelId: 2,
+    message: `Do you want to save the changes you made to “${title}”?`,
+    detail: "Your changes will be lost if you don't save them.",
+  });
+  return r.response === 0 ? "save" : r.response === 1 ? "discard" : "cancel";
+}
+
+/** A document the OS asked to open: granted like a document chosen in the open dialog, then opened in a window. */
+function openFromOs(path: string): void {
+  try {
+    grants.grantOpened(path);
+  } catch {
+    return;
+  }
+  if (!appReady) {
+    if (!pendingOsOpens.includes(path)) pendingOsOpens.push(path);
+    return;
+  }
+  windows.openFromOs(path);
 }
 
 function rebuildMenu(): void {
@@ -197,14 +258,19 @@ function rebuildMenu(): void {
   }
 }
 
-function createWindow(options: { hidden?: boolean } = {}): BrowserWindow {
+/**
+ * Create a document window (the `create` of {@link DocumentWindows}). The first window takes the saved bounds; later
+ * ones cascade from the current window (`bounds`).
+ */
+function createWindow(options: { hidden?: boolean; bounds?: { x: number; y: number; width: number; height: number } | null } = {}): BrowserWindow {
   const stateFile = join(app.getPath("userData"), "window-state.json");
   const workAreas = screen.getAllDisplays().map((d) => d.workArea);
   const saved = loadWindowState(stateFile, workAreas);
+  const b = options.bounds ?? null;
   const win = new BrowserWindow({
-    ...(saved.x !== undefined && saved.y !== undefined ? { x: saved.x, y: saved.y } : {}),
-    width: saved.width,
-    height: saved.height,
+    ...(b ? { x: b.x, y: b.y } : saved.x !== undefined && saved.y !== undefined ? { x: saved.x, y: saved.y } : {}),
+    width: b?.width ?? saved.width,
+    height: b?.height ?? saved.height,
     minWidth: MIN_SIZE.width,
     minHeight: MIN_SIZE.height,
     show: false,
@@ -214,7 +280,7 @@ function createWindow(options: { hidden?: boolean } = {}): BrowserWindow {
     // A hidden self-test window must not be throttled like a background one while it loads and evaluates.
     webPreferences: { ...mainWindowWebPreferences(join(here, "preload.cjs"), isDev), ...(options.hidden ? { backgroundThrottling: false } : {}) },
   });
-  if (saved.maximized && !options.hidden) win.maximize();
+  if (saved.maximized && !options.hidden && !b) win.maximize();
   if (!options.hidden) win.once("ready-to-show", () => win.show());
 
   // Persist bounds (debounced) and on close.
@@ -238,21 +304,18 @@ function createWindow(options: { hidden?: boolean } = {}): BrowserWindow {
     clearTimeout(timer);
     if (options.hidden) return;
     saveWindowState(stateFile, snapshot());
-    if (docState.dirty && !overrides.skipClosePrompt) {
-      const choice = dialog.showMessageBoxSync(win, {
-        type: "warning",
-        buttons: ["Discard Changes", "Cancel"],
-        defaultId: 1,
-        cancelId: 1,
-        message: `Discard unsaved changes to “${docState.title}”?`,
-        detail: "Your changes will be lost if you close the window.",
-      });
-      if (choice !== 0) event.preventDefault();
-    }
+    // Unsaved changes: Save / Don't Save / Cancel (windows.ts); the window closes itself once answered.
+    if (!windows.onClose(win)) event.preventDefault();
   });
+  win.on("focus", () => windows.focused(win));
+  const contentsId = win.webContents.id;
   win.on("closed", () => {
-    if (mainWindow === win) mainWindow = null;
-    agent?.host.stopAll();
+    windows.closed(win);
+    // The agent's runs belong to the window that started them.
+    if (agentContentsId === contentsId) {
+      agentContentsId = null;
+      agent?.host.stopAll();
+    }
   });
 
   // No new windows, no navigation away from the app; external links open in the browser.
@@ -264,8 +327,13 @@ function createWindow(options: { hidden?: boolean } = {}): BrowserWindow {
     if (!isTrustedSender(url)) event.preventDefault();
   });
   win.webContents.on("render-process-gone", (_event, details) => {
-    agent?.host.stopAll();
+    if (agentContentsId === contentsId) agent?.host.stopAll();
     console.error(`[aicad] renderer process gone: ${details.reason} (exit code ${details.exitCode})`);
+    // Crash recovery inside the session: reload the window and offer its last autosave.
+    if (details.reason === "clean-exit" || win.isDestroyed()) return;
+    const id = windows.recoveryIdOf(win);
+    const snapshot = id ? (recovery?.get(id) ?? null) : null;
+    if (windows.rendererGone(win, snapshot)) win.webContents.reload();
   });
   win.webContents.on("did-fail-load", (_event, code, description, url) => {
     console.error(`[aicad] failed to load ${url}: ${description} (${code})`);
@@ -323,11 +391,45 @@ function start(): void {
     app.quit();
     return;
   }
-  app.on("second-instance", () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
+  windows = new DocumentWindows<BrowserWindow>({
+    create: (o) => createWindow({ hidden: o.hidden, bounds: o.bounds }),
+    productName,
+    platform: process.platform,
+    askToSave,
+    skipClosePrompt: overrides.skipClosePrompt,
+    discardRecovery: (id) => recovery?.discard(id) ?? Promise.resolve(),
+    canonicalPath,
+    setRepresented: (win, path, dirty) => {
+      if (process.platform !== "darwin") return;
+      win.setDocumentEdited(dirty);
+      // ipc.ts already dropped an ungranted path; checked again because this is the sink.
+      win.setRepresentedFilename(documentStatePath(path, grants) ?? "");
+    },
+    requestQuit: () => setImmediate(() => app.quit()),
+    workArea: (bounds) => screen.getDisplayMatching(bounds).workArea,
+    log: (m) => console.warn(`[aicad] ${m}`),
+  });
+  // A second launch (Windows, Linux: double-clicking a document) hands its documents to this instance.
+  app.on("second-instance", (_event, argv, cwd) => {
+    const docs = documentPathsFromArgv(argv.slice(1), cwd);
+    for (const p of docs) openFromOs(p);
+    if (docs.length > 0 || !appReady) return;
+    const cur = windows.current();
+    if (cur) {
+      if (cur.isMinimized()) cur.restore();
+      cur.focus();
+    } else {
+      windows.open();
     }
+  });
+  // macOS: a document double-clicked in the Finder or dropped on the Dock icon (may arrive before `ready`).
+  app.on("open-file", (event, path) => {
+    event.preventDefault();
+    openFromOs(path);
+  });
+  if (!selfTest) for (const p of documentPathsFromArgv(process.argv.slice(app.isPackaged ? 1 : 2))) openFromOs(p);
+  app.on("before-quit", () => {
+    windows.quitting = true;
   });
 
   void app.whenReady().then(() => {
@@ -400,40 +502,69 @@ function start(): void {
         slicer: printSlicer,
         revealInFolder: (path) => shell.showItemInFolder(path),
       },
-      window: () => mainWindow,
+      // Dialogs belong to the current window.
+      window: () => windows.current(),
       isTrustedSender,
       grants,
       recent,
       forgeBin,
       appInfo: () => appInfo(forgeBin),
       onRecentChanged: () => rebuildMenu(),
-      onDocState: (state) => {
-        docState = state;
-        if (!mainWindow) return;
-        mainWindow.setTitle(`${state.title}${state.dirty ? " •" : ""} — ${productName}`);
-        if (process.platform === "darwin") {
-          mainWindow.setDocumentEdited(state.dirty);
-          // ipc.ts already dropped an ungranted path; checked again because this is the sink.
-          mainWindow.setRepresentedFilename(documentStatePath(state.path, grants) ?? "");
-        }
+      onDocState: (state, senderId) => windows.setDocState(senderId, state),
+      onAgentStart: (senderId) => {
+        agentContentsId = senderId;
+      },
+    });
+
+    // Documents: autosaves and what a crash left behind, thumbnails for the recent grid, the window protocol.
+    recovery = new RecoveryStore(join(app.getPath("userData"), "Recovery"));
+    const session0 = selfTest ? { uncleanExit: false, entries: [] } : recovery.beginSession();
+    if (session0.uncleanExit) console.warn(`[aicad] the previous session did not quit cleanly; ${session0.entries.length} unsaved document(s) to recover`);
+    registerFileIpc({
+      isTrustedSender,
+      grants,
+      recent,
+      thumbnails: new ThumbnailCache(join(app.getPath("userData"), "Thumbnails")),
+      recovery,
+      onRecentChanged: () => rebuildMenu(),
+      ...(faultHook ? { fault: faultHook } : {}),
+      windows: {
+        takeStartup: (id) => windows.takeStartup(id),
+        openDocument: (id, path, allowHere) => windows.openDocument(id, path, allowHere),
+        newWindow: (command) => void windows.open(command ? { command } : {}),
+        close: (id) => windows.windowOf(id)?.close(),
+        setDocInfo: (id, info) => windows.setDocInfo(id, info),
+        saveFinished: (id, requestId, saved) => windows.saveFinished(id, requestId, saved),
+        liveRecoveryIds: () => windows.liveRecoveryIds(),
       },
     });
 
     rebuildMenu();
-    mainWindow = createWindow({ hidden: selfTest });
     if (selfTest) {
-      runSelfTest(mainWindow, forgeBin, { mcpShimPath, mcpServerDir: mcpShimPath ? null : workspaceMcpServerDir(repoRoot), exePath: shimExe, workspaceRoot: agent.workspaceRoot }, { system: printSlicer, customPath: printProfiles.read().slicerPath }).catch((e: unknown) =>
+      const win = windows.open({}, { hidden: true });
+      runSelfTest(win, forgeBin, { mcpShimPath, mcpServerDir: mcpShimPath ? null : workspaceMcpServerDir(repoRoot), exePath: shimExe, workspaceRoot: agent.workspaceRoot }, { system: printSlicer, customPath: printProfiles.read().slicerPath }).catch((e: unknown) =>
         abortSelfTest(`the self-test failed: ${message(e)}`, SELF_TEST_EXIT.failed),
       );
       return;
     }
 
+    // The first window offers what the last session left unsaved; documents the OS asked for open in windows of
+    // their own (the first one in the first window).
+    appReady = true;
+    const [first, ...more] = pendingOsOpens.splice(0);
+    windows.open({ open: first ?? null, recovery: session0.entries, uncleanExit: session0.uncleanExit });
+    for (const p of more) windows.open({ open: p });
+
     app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow();
+      if (windows.count() === 0) windows.open();
     });
   });
 
-  app.on("will-quit", () => agent?.host.dispose());
+  app.on("will-quit", () => {
+    agent?.host.dispose();
+    // Every window closed (saved or discarded): a clean end of the session.
+    if (!selfTest) recovery?.endSession();
+  });
 
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();

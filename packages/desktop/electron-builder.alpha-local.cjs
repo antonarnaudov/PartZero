@@ -26,6 +26,9 @@ const editions = require("./editions.cjs");
 const { assertBundleEdition } = require("./scripts/check-bundle-edition.cjs");
 
 const edition = editions["alpha-local"];
+const { documentTypes } = require("./file-associations.cjs");
+
+const docs = documentTypes(edition);
 
 module.exports = {
   ...base,
@@ -37,6 +40,8 @@ module.exports = {
   copyright: "PartZero contributors (MPL-2.0)",
   directories: { ...base.directories, output: "release/alpha-local" },
   extraMetadata: { ...base.extraMetadata, productName: edition.productName },
+  // `.partzero` documents open in PartZero.app (file-associations.cjs).
+  fileAssociations: docs.fileAssociations,
   electronFuses: {
     ...base.electronFuses,
     runAsNode: true,
@@ -49,5 +54,6 @@ module.exports = {
     identity: "-",
     hardenedRuntime: false,
     gatekeeperAssess: false,
+    extendInfo: docs.extendInfo,
   },
 };

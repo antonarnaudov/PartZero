@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { ChatPanel } from "./ChatPanel";
+import { FileLayer } from "../file/ui/FileLayer";
 import { CodeEditor } from "./CodeEditor";
 import { CommandPalette } from "./CommandPalette";
 import { useApp, useStore } from "./context";
@@ -172,6 +173,7 @@ export function App(): ReactElement {
       {dialog === "templates" && <TemplateDialog />}
       {dialog === "about" && <AboutDialog />}
       {dialog === "settings" && <SettingsDialog />}
+      <FileLayer />
       <Toasts />
     </div>
   );
