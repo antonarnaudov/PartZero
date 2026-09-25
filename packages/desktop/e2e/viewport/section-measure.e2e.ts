@@ -90,21 +90,26 @@ test("measure: exact distance, diameter, area, vertex deltas and angle between s
   const panel = page.getByTestId("measure-panel");
   await expect(panel).toBeVisible();
   await expect(panel).toContainText("Select a vertex, edge, face or body");
+  // forge-web's render mesh (per-face vertices with exact normals) proves planes, cylinders and
+  // straight edges; the Forge CLI engine's OBJ (shared vertices, averaged normals) cannot, so the
+  // same values are flagged approximate there (the fallback build).
+  const proven = (await page.evaluate(() => window.__aicad!.idle())).engine === "forge-web";
+  const approx = proven ? "" : "≈ ";
   // The top face: exact area with the five holes subtracted.
   await clickWorld(page, [0, 18, 5]);
   const area = 2500 - Math.PI * 121 - 4 * Math.PI * 1.7 * 1.7;
   const num = async (id: string): Promise<number> => Number.parseFloat(((await page.getByTestId(id).textContent()) ?? "").replace("≈", ""));
-  await expect(page.getByTestId("measure-area")).toHaveText(/^\d+(\.\d+)? mm²$/);
+  await expect(page.getByTestId("measure-area")).toHaveText(proven ? /^\d+(\.\d+)? mm²$/ : /^≈ \d+(\.\d+)? mm²$/);
   expect(Math.abs((await num("measure-area")) - area)).toBeLessThan(0.01);
-  await expect(panel.locator('tr[data-measure="area"]')).toHaveAttribute("data-exact", "true");
+  await expect(panel.locator('tr[data-measure="area"]')).toHaveAttribute("data-exact", String(proven));
   // Shift-click the right side face: 90° and a dimension line.
   await clickWorld(page, [25, 0, 2.5], ["Shift"]);
-  await expect(page.getByTestId("measure-angle")).toHaveText("90°");
+  await expect(page.getByTestId("measure-angle")).toHaveText(`${approx}90°`);
   // The far wall of an M3 hole: exact 3.4 mm diameter.
   const a = Math.PI * 0.75;
   await clickWorld(page, [15.5 + 1.7 * Math.cos(a), 15.5 + 1.7 * Math.sin(a), 4]);
-  await expect(page.getByTestId("measure-diameter")).toHaveText("3.4 mm");
-  await expect(panel.locator('tr[data-measure="diameter"]')).toHaveAttribute("data-exact", "true");
+  await expect(page.getByTestId("measure-diameter")).toHaveText(`${approx}3.4 mm`);
+  await expect(panel.locator('tr[data-measure="diameter"]')).toHaveAttribute("data-exact", String(proven));
   // Two vertices: distance and deltas.
   await view(page, { id: "selection.filterOnly", args: { kind: "vertex" } });
   const v1 = await at(page, [25, 25, 5]);
@@ -123,7 +128,7 @@ test("measure: exact distance, diameter, area, vertex deltas and angle between s
   await view(page, { id: "selection.filterAll" });
   // Parallel faces: top and bottom are 5 mm apart (the bottom face picked from below).
   await view(page, { id: "selection.set", args: { items: [{ kind: "face", body: "plate/plate", key: "plate/cap:end" }, { kind: "face", body: "plate/plate", key: "plate/cap:start" }] } });
-  await expect(page.getByTestId("measure-distance")).toHaveText("5 mm");
+  await expect(page.getByTestId("measure-distance")).toHaveText(`${approx}5 mm`);
   await page.keyboard.press("i");
   await expect(panel).toHaveCount(0);
   expect(L.pageErrors).toEqual([]);
