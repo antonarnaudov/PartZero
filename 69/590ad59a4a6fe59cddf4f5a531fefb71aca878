@@ -1,0 +1,29 @@
+packages/app/src/tools/sketch/modify.ts
+  s_59c0dd2af30db2::t_9dbad692cbed69 13,210
+packages/app/src/sketch/ops.ts
+  s_59c0dd2af30db2::t_8cc99c2420e763 191,203,231,291,305,336,364
+  s_59c0dd2af30db2::t_c4413459e0c3dc 94-101
+  s_59c0dd2af30db2::t_73e0fd09961058 6-13
+  s_59c0dd2af30db2::t_af5aba569d497f 552-556,558,560-572
+  s_59c0dd2af30db2::t_97fc0ffd27d1db 42-47
+  s_59c0dd2af30db2::t_619d518aeba1de 591-662,674-677,681,685,689,691-692,696-701,704,709-713,717,720-724,726-727
+packages/app/test/sketch/ops.test.ts
+  s_59c0dd2af30db2::t_b0e0490299fe06 1-308,313-369
+  s_59c0dd2af30db2::t_6e04a5e164841d 309-312
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "69590ad59a4a6fe59cddf4f5a531fefb71aca878",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
