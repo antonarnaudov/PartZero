@@ -1,0 +1,22 @@
+packages/app/src/sketch/ops.ts
+  s_59c0dd2af30db2::t_a245069765f4b8 323-324,330
+packages/app/test/sketch/controller.test.ts
+  s_59c0dd2af30db2::t_a6a4308dd8bd57 363-366
+  s_59c0dd2af30db2::t_3bdfde1bd7260d 334-362,367-392
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "35e3e6b54da58a3cca15830ed2f834435ce40adc",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
