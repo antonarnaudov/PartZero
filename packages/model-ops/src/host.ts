@@ -83,6 +83,8 @@ export class MemoryOpsHost implements OpsHost {
   private readonly redoStack: Snapshot[] = [];
   private revision = 0;
   private queue: Promise<unknown> = Promise.resolve();
+  /** Parameters this session's own transactions added (it may change them; the user's need approval). */
+  private readonly ownParams = new Set<string>();
   private readonly listeners = new Set<(c: OpsCommit & { document: string }) => void>();
 
   private constructor(options: MemoryOpsHostOptions, document: string) {
@@ -131,7 +133,11 @@ export class MemoryOpsHost implements OpsHost {
           ...(this.options.autoWriteBack !== undefined ? { autoWriteBack: this.options.autoWriteBack } : {}),
           ...(this.options.failureRule !== undefined ? { failureRule: this.options.failureRule } : {}),
           ...(options.ack ? { ack: options.ack } : {}),
-          ...(this.options.approvals ? { approvals: this.options.approvals } : {}),
+          approvals: {
+            features: [...(this.options.approvals?.features ?? [])],
+            // Parameters have no author (ADR 0015 §2): those this session added are its own to change.
+            params: [...(this.options.approvals?.params ?? []), ...this.ownParams],
+          },
         },
         ops,
       );
@@ -140,6 +146,10 @@ export class MemoryOpsHost implements OpsHost {
         this.redoStack.length = 0;
         this.current = { document: t.document, host: t.host, label };
         this.revision++;
+        for (const o of t.ops) {
+          if (o.op.op === "addParam") this.ownParams.add(o.op.name);
+          if (o.op.op === "renameParam" && this.ownParams.delete(o.op.old)) this.ownParams.add(o.op.new);
+        }
       }
       const c = commitSummary(label, this.revision, t);
       if (t.changed) for (const l of [...this.listeners]) l({ ...c, document: t.document });

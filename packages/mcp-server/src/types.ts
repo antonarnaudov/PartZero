@@ -16,9 +16,14 @@
  */
 import type { ToolDef } from "@aicad/llm-gateway";
 
-export type McpScope = "spec" | "design" | "read" | "submit" | "ext-read" | "ext-edit" | "ext-export";
+/**
+ * Additive (not in the gateway's frozen list yet): `ops` / `ext-ops` — the command layer's op tools
+ * (`ops.ts`) over the live document for the in-app agent / an external client; `ops-read` their
+ * read-only subset.
+ */
+export type McpScope = "spec" | "design" | "read" | "submit" | "ext-read" | "ext-edit" | "ext-export" | "ops" | "ext-ops" | "ops-read";
 
-export const MCP_SCOPES: readonly McpScope[] = ["spec", "design", "read", "submit", "ext-read", "ext-edit", "ext-export"];
+export const MCP_SCOPES: readonly McpScope[] = ["spec", "design", "read", "submit", "ext-read", "ext-edit", "ext-export", "ops", "ext-ops", "ops-read"];
 
 export interface McpToolCall {
   seq: number;

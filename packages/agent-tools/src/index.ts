@@ -7,6 +7,9 @@
  *   validation, errors as results.
  * - {@link designTools}: the v0 tools (get_code, apply_cadscript, ir_summary, measure,
  *   set_spec_tests, submit_spec, run_tests, checkpoint, rollback, ask_user, propose).
+ * - {@link opTools}: the command layer's ops (`@aicad/model-ops`) as tools — add_feature, set_field,
+ *   delete_feature, add_param, … — over an `OpsHost` (the app's live document or an in-memory one):
+ *   the agent operates the modeling tools instead of writing code.
  * - {@link repairHint}: operation playbooks — an actionable, computed-where-possible hint for
  *   every error code.
  * - {@link v1}: IR v1 / CadScript v1 — `aicad.metrics/1` engines, the v1 playbooks (every code of
@@ -15,6 +18,7 @@
  *   sketch_edit, query, describe, …).
  */
 export * from "./format.js";
+export * from "./ops.js";
 export * from "./playbooks.js";
 export * from "./registry.js";
 export * from "./session.js";

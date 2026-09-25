@@ -12,6 +12,7 @@ export default defineConfig({
       "@aicad/evals": src("evals"),
       "@aicad/llm-gateway": src("llm-gateway"),
       "@aicad/agent-tools": src("agent-tools"),
+      "@aicad/model-ops": src("model-ops"),
     },
   },
   test: {

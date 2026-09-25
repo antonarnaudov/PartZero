@@ -6,7 +6,11 @@ import type { ToolDef } from "../types.js";
  * package. Every broker instance serves exactly one phase (or one completion call) of one run.
  */
 
-export type McpScope = "spec" | "design" | "read" | "submit" | "ext-read" | "ext-edit" | "ext-export";
+/**
+ * `ops`, `ext-ops`, `ops-read` (additive, FULL-MODELING-PLAN §2.1): the command layer's op tools over the live
+ * document (`@aicad/mcp-server` `ops.ts`).
+ */
+export type McpScope = "spec" | "design" | "read" | "submit" | "ext-read" | "ext-edit" | "ext-export" | "ops" | "ext-ops" | "ops-read";
 
 export interface McpToolCall {
   seq: number;

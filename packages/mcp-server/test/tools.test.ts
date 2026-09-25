@@ -21,7 +21,7 @@ describe("scopes", () => {
     expect(scopeToolNames("ext-read")).toEqual([...READ_ONLY_TOOLS].sort());
     expect(scopeToolNames("ext-edit")).toEqual(["apply_cadscript", "checkpoint", "get_code", "ir_summary", "measure", "propose", "rollback", "run_tests"]);
     expect(scopeToolNames("ext-export")).toEqual(["export_design"]);
-    expect(MCP_SCOPES).toEqual(["spec", "design", "read", "submit", "ext-read", "ext-edit", "ext-export"]);
+    expect(MCP_SCOPES).toEqual(["spec", "design", "read", "submit", "ext-read", "ext-edit", "ext-export", "ops", "ext-ops", "ops-read"]);
   });
 
   it("keeps ask_user only when the CLI's call timeout outlasts the question wait", () => {

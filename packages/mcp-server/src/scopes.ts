@@ -12,8 +12,11 @@
  * | `ext-edit`   | `DESIGNER_TOOLS` without `ask_user` (on an `mcp/<client>`  | external clients                 |
  * |              | branch; the external agent talks to its own user)         |                                  |
  * | `ext-export` | `export_design` (writes only inside the export directory) | external clients                 |
+ * | `ops`        | `OPS_TOOLS`: the command layer's ops (model-ops catalogue) | the agent on the live document   |
+ * | `ext-ops`    | `OPS_TOOLS` (as `mcp:<client>`: ADR 0015's checks apply)  | external clients                 |
+ * | `ops-read`   | `OPS_READ_TOOLS`                                          | read-only clients                |
  */
-import { DESIGNER_TOOLS, READ_ONLY_TOOLS, SPEC_WRITER_TOOLS, type DesignToolContext, type ToolRegistry } from "@aicad/agent-tools";
+import { DESIGNER_TOOLS, OPS_READ_TOOLS, OPS_TOOLS, READ_ONLY_TOOLS, SPEC_WRITER_TOOLS, type DesignToolContext, type ToolRegistry } from "@aicad/agent-tools";
 import type { McpScope, McpToolDef } from "./types.js";
 
 export const SUBMIT_TURN_TOOL = "submit_turn";
@@ -63,6 +66,13 @@ export function scopeToolNames(scope: McpScope, options: ScopeOptions = {}): str
     case "ext-export":
       names = [EXPORT_TOOL];
       break;
+    case "ops":
+    case "ext-ops":
+      names = OPS_TOOLS;
+      break;
+    case "ops-read":
+      names = OPS_READ_TOOLS;
+      break;
   }
   return [...names].sort();
 }
@@ -89,9 +99,9 @@ export function registryToolDefs(registry: ToolRegistry<DesignToolContext>, name
  * straight to the host would mark every tool `readOnlyHint: false` (§6.2).
  */
 export function withReadOnly(defs: readonly McpToolDef[]): McpToolDef[] {
-  const readOnly: ReadonlySet<string> = new Set(READ_ONLY_TOOLS);
+  const readOnly: ReadonlySet<string> = new Set([...READ_ONLY_TOOLS, ...OPS_READ_TOOLS]);
   return defs.map((d) => (typeof d.readOnly === "boolean" ? d : { ...d, readOnly: readOnly.has(d.name) }));
 }
 
 /** Scopes whose tools must all be read-only. */
-export const READ_SCOPES: ReadonlySet<McpScope> = new Set(["read", "ext-read"]);
+export const READ_SCOPES: ReadonlySet<McpScope> = new Set(["read", "ext-read", "ops-read"]);

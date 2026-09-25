@@ -35,6 +35,7 @@
     "@aicad/agent-tools": "workspace:*",
     "@aicad/evals": "workspace:*",
     "@aicad/llm-gateway": "workspace:*",
+    "@aicad/model-ops": "workspace:*",
     "zod": "^4.6.0"
   },
   "devDependencies": {

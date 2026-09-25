@@ -7,7 +7,7 @@
  *
  * This module has no runtime dependencies: the shim imports it.
  */
-import type { McpScope } from "./types.js";
+import { MCP_SCOPES, type McpScope } from "./types.js";
 
 export const BRIDGE_PROTOCOL = 1;
 
@@ -173,7 +173,7 @@ function isBrokerTool(v: unknown): v is BrokerTool {
   );
 }
 
-const SCOPES: ReadonlySet<string> = new Set(["spec", "design", "read", "submit", "ext-read", "ext-edit", "ext-export"]);
+const SCOPES: ReadonlySet<string> = new Set(MCP_SCOPES);
 const DENIALS: ReadonlySet<string> = new Set(["bad_ticket", "too_many_connections", "protocol", "closed"]);
 
 /** Validate one frame the broker sent (the shim treats anything else as a broken bridge). */

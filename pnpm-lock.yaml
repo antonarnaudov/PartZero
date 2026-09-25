@@ -66,6 +66,9 @@ importers:
       '@aicad/llm-gateway':
         specifier: workspace:*
         version: link:../llm-gateway
+      '@aicad/model-ops':
+        specifier: workspace:*
+        version: link:../model-ops
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
@@ -301,6 +304,9 @@ importers:
       '@aicad/llm-gateway':
         specifier: workspace:*
         version: link:../llm-gateway
+      '@aicad/model-ops':
+        specifier: workspace:*
+        version: link:../model-ops
       zod:
         specifier: ^4.6.0
         version: 4.6.5

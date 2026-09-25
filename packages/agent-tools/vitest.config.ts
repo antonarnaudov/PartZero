@@ -11,6 +11,7 @@ export default defineConfig({
       "@aicad/cadscript": src("cadscript"),
       "@aicad/evals": src("evals"),
       "@aicad/llm-gateway": src("llm-gateway"),
+      "@aicad/model-ops": src("model-ops"),
     },
   },
   test: {
