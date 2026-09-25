@@ -1697,6 +1697,23 @@ export const DraftFeatureSchema = z.strictObject({
 });
 
 /**
+ * How far an extrude goes when not by a `distance` (§6.2, amendment set F):
+ * `"through_all"` (a cut or intersect through every target) or `{ "up_to": PlaneRef }` (to a
+ * plane parallel to the sketch plane: a planar face, a datum plane or an origin plane).
+ */
+export type ExtrudeExtent = "through_all" | {
+  up_to: PlaneRef;
+};
+/**
+ * How far an extrude goes when not by a `distance` (§6.2, amendment set F):
+ * `"through_all"` (a cut or intersect through every target) or `{ "up_to": PlaneRef }` (to a
+ * plane parallel to the sketch plane: a planar face, a datum plane or an origin plane).
+ */
+export const ExtrudeExtentSchema = z.union([z.enum(["through_all"]), z.strictObject({
+  up_to: PlaneRefSchema,
+})]);
+
+/**
  * Which regions of the consumed sketch a body feature uses (§4.5): `"all"`, or the curve ids
  * whose region's outer loop contains them.
  */
@@ -1738,8 +1755,6 @@ export interface ExtrudeFeature {
   name: string;
   /** Id of an earlier sketch of the same part (`UNRESOLVED_SKETCH`). */
   sketch: string;
-  /** Length, > tol (`INVALID_DISTANCE`). */
-  distance: Scalar;
   /**
    * Not semantic (§6.0.1).
    *
@@ -1760,6 +1775,13 @@ export interface ExtrudeFeature {
   decision_ids?: string[];
   /** @default "normal" */
   direction?: SweepDirection;
+  /**
+   * Length, > tol (`INVALID_DISTANCE`). Required unless `extent` is given, and not with
+   * it (`EXTRUDE_EXTENT_CONFLICT`).
+   */
+  distance?: Scalar;
+  /** Amendment set F: through all, or up to a parallel plane, instead of a distance. */
+  extent?: ExtrudeExtent;
   /**
    * Not semantic (§6.0.1).
    *
@@ -1798,11 +1820,12 @@ export const ExtrudeFeatureSchema = z.strictObject({
   id: z.string(),
   name: z.string(),
   sketch: z.string(),
-  distance: ScalarSchema,
   assumptions: z.array(z.string()).exactOptional(),
   author: z.string().exactOptional(),
   decision_ids: z.array(z.string()).exactOptional(),
   direction: SweepDirectionSchema.exactOptional(),
+  distance: ScalarSchema.exactOptional(),
+  extent: ExtrudeExtentSchema.exactOptional(),
   intent: z.string().exactOptional(),
   note: z.string().exactOptional(),
   op: BodyOpSchema.exactOptional(),
@@ -2766,10 +2789,113 @@ export const TagFeatureSchema = z.strictObject({
   v: z.number().int().min(1).max(4294967295).exactOptional(),
 });
 
+/** The rotation of a `transform` (§6.13): `angle` degrees about an axis line (right-hand rule). */
+export interface TransformRotation {
+  axis: AxisRef;
+  /** Angle, degrees (any sign; `|angle| ≤ 360`, `INVALID_ANGLE`). */
+  angle: Scalar;
+}
+/** The rotation of a `transform` (§6.13): `angle` degrees about an axis line (right-hand rule). */
+export const TransformRotationSchema = z.strictObject({
+  axis: AxisRefSchema,
+  angle: ScalarSchema,
+});
+
+/**
+ * Transform (§6.13, set F): move, or copy, bodies by a rigid motion — the rotation first,
+ * then the translation. Moved bodies keep their origin and keys; copies are new bodies.
+ */
+export interface TransformFeature {
+  type: "transform";
+  /** Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`). */
+  id: string;
+  /** The CadScript `const` name; shares one namespace with parameters (§0.3). */
+  name: string;
+  /** Body, default `some`. */
+  bodies: Ref;
+  /**
+   * Not semantic (§6.0.1).
+   *
+   * @default []
+   */
+  assumptions?: string[];
+  /**
+   * Not semantic (§6.0.1).
+   *
+   * @default ""
+   */
+  author?: string;
+  /**
+   * Keep the originals and add moved copies (origin: this feature, the source member,
+   * instance `[1]`; keys `T/copy:{K}@1`, as a one-instance body pattern).
+   *
+   * @default false
+   */
+  copy?: BoolScalar;
+  /**
+   * Not semantic (§6.0.1).
+   *
+   * @default []
+   */
+  decision_ids?: string[];
+  /**
+   * Not semantic (§6.0.1).
+   *
+   * @default ""
+   */
+  intent?: string;
+  /**
+   * Not semantic (§6.0.1).
+   *
+   * @default ""
+   */
+  note?: string;
+  rotate?: TransformRotation;
+  /**
+   * Suppressed features are skipped and produce no report entry. Accepts a Bool
+   * expression ([W0-3]).
+   *
+   * @default false
+   */
+  suppressed?: BoolScalar;
+  /**
+   * Lengths; applied after the rotation.
+   *
+   * @default [0,0,0]
+   */
+  translate?: [Scalar, Scalar, Scalar];
+  /**
+   * Behavior version (§0.2): a feature type's semantics never change for a given `v`.
+   *
+   * @default 1
+   */
+  v?: number;
+}
+/**
+ * Transform (§6.13, set F): move, or copy, bodies by a rigid motion — the rotation first,
+ * then the translation. Moved bodies keep their origin and keys; copies are new bodies.
+ */
+export const TransformFeatureSchema = z.strictObject({
+  type: z.literal("transform"),
+  id: z.string(),
+  name: z.string(),
+  bodies: RefSchema,
+  assumptions: z.array(z.string()).exactOptional(),
+  author: z.string().exactOptional(),
+  copy: BoolScalarSchema.exactOptional(),
+  decision_ids: z.array(z.string()).exactOptional(),
+  intent: z.string().exactOptional(),
+  note: z.string().exactOptional(),
+  rotate: TransformRotationSchema.exactOptional(),
+  suppressed: BoolScalarSchema.exactOptional(),
+  translate: z.tuple([ScalarSchema, ScalarSchema, ScalarSchema]).exactOptional(),
+  v: z.number().int().min(1).max(4294967295).exactOptional(),
+});
+
 /** A feature in the timeline. `type` selects the variant. */
-export type Feature = SketchFeature | ExtrudeFeature | RevolveFeature | BooleanFeature | HoleFeature | FilletFeature | ChamferFeature | ShellFeature | DraftFeature | PatternFeature | DatumPlaneFeature | DatumAxisFeature | TagFeature;
+export type Feature = SketchFeature | ExtrudeFeature | RevolveFeature | BooleanFeature | HoleFeature | FilletFeature | ChamferFeature | ShellFeature | DraftFeature | PatternFeature | DatumPlaneFeature | DatumAxisFeature | TagFeature | TransformFeature;
 /** A feature in the timeline. `type` selects the variant. */
-export const FeatureSchema = z.discriminatedUnion("type", [SketchFeatureSchema, ExtrudeFeatureSchema, RevolveFeatureSchema, BooleanFeatureSchema, HoleFeatureSchema, FilletFeatureSchema, ChamferFeatureSchema, ShellFeatureSchema, DraftFeatureSchema, PatternFeatureSchema, DatumPlaneFeatureSchema, DatumAxisFeatureSchema, TagFeatureSchema]);
+export const FeatureSchema = z.discriminatedUnion("type", [SketchFeatureSchema, ExtrudeFeatureSchema, RevolveFeatureSchema, BooleanFeatureSchema, HoleFeatureSchema, FilletFeatureSchema, ChamferFeatureSchema, ShellFeatureSchema, DraftFeatureSchema, PatternFeatureSchema, DatumPlaneFeatureSchema, DatumAxisFeatureSchema, TagFeatureSchema, TransformFeatureSchema]);
 
 export interface Meta {
   /** @default "" */
@@ -2955,6 +3081,7 @@ export const IR_DEFAULTS = {
   SketchFeature: {"assumptions":[],"author":"","constraints":[],"decision_ids":[],"intent":"","note":"","suppressed":false,"v":1},
   SlotSketchCurve: {"construction":false},
   TagFeature: {"assumptions":[],"author":"","decision_ids":[],"intent":"","note":"","suppressed":false,"v":1},
+  TransformFeature: {"assumptions":[],"author":"","copy":false,"decision_ids":[],"intent":"","note":"","suppressed":false,"translate":[0,0,0],"v":1},
 } as const;
 
 // Compile-time guard: every TS type above is exactly what its zod schema accepts and returns.
@@ -3060,6 +3187,7 @@ type __SchemaTypeChecks = [
   AssertTrue<MutuallyAssignable<DatumPlaneFeature, z.infer<typeof DatumPlaneFeatureSchema>>>,
   AssertTrue<MutuallyAssignable<PullDirection, z.infer<typeof PullDirectionSchema>>>,
   AssertTrue<MutuallyAssignable<DraftFeature, z.infer<typeof DraftFeatureSchema>>>,
+  AssertTrue<MutuallyAssignable<ExtrudeExtent, z.infer<typeof ExtrudeExtentSchema>>>,
   AssertTrue<MutuallyAssignable<RegionSelection, z.infer<typeof RegionSelectionSchema>>>,
   AssertTrue<MutuallyAssignable<SweepDirection, z.infer<typeof SweepDirectionSchema>>>,
   AssertTrue<MutuallyAssignable<Targets, z.infer<typeof TargetsSchema>>>,
@@ -3098,6 +3226,8 @@ type __SchemaTypeChecks = [
   AssertTrue<MutuallyAssignable<SketchCurve, z.infer<typeof SketchCurveSchema>>>,
   AssertTrue<MutuallyAssignable<SketchFeature, z.infer<typeof SketchFeatureSchema>>>,
   AssertTrue<MutuallyAssignable<TagFeature, z.infer<typeof TagFeatureSchema>>>,
+  AssertTrue<MutuallyAssignable<TransformRotation, z.infer<typeof TransformRotationSchema>>>,
+  AssertTrue<MutuallyAssignable<TransformFeature, z.infer<typeof TransformFeatureSchema>>>,
   AssertTrue<MutuallyAssignable<Feature, z.infer<typeof FeatureSchema>>>,
   AssertTrue<MutuallyAssignable<Meta, z.infer<typeof MetaSchema>>>,
   AssertTrue<MutuallyAssignable<ParamUnit, z.infer<typeof ParamUnitSchema>>>,

@@ -39,6 +39,7 @@ export const FEATURE_BUILTINS: Readonly<Record<string, string>> = {
   datumPlane: "datum_plane",
   datumAxis: "datum_axis",
   tag: "tag",
+  transform: "transform",
 };
 
 export function isFeatureBuiltin(name: string): boolean {
@@ -59,6 +60,7 @@ export const HANDLE_METHODS: Readonly<Record<string, readonly string[]>> = {
   revolve: ["endcap", "side", "sides", "edgeAt", "body", "faces"],
   hole: ["wall", "tip", "floor", "cboreWall", "cboreFloor", "csink", "faces"],
   pattern: ["instance", "body", "faces"],
+  transform: ["body", "faces"],
   boolean: ["faces"],
   fillet: ["faces"],
   chamfer: ["faces"],

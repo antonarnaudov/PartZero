@@ -143,3 +143,26 @@ describe("-0 and every accepted expression of the conformance fixture round-trip
   });
 });
 
+describe("amendment set F (feature tools) round-trips", () => {
+  it("transform and the extrude extents print, compile back identically and type-check", () => {
+    const root = join(import.meta.dirname, "../../../..");
+    const doc = readJson(join(root, "forge/crates/forge-regen/tests/v1_programs/transforms.json")) as v1.IrDocument;
+    const ext = readJson(join(root, "forge/crates/forge-regen/tests/v1_programs/extents.json")) as v1.IrDocument;
+    for (const d of [doc, ext]) {
+      const canonical = canonicalDocument(d);
+      const source = printV1(canonical);
+      const r = compileV1(source, { base: canonical });
+      expect(errorsOf(r)).toEqual([]);
+      expect(r.ir).toStrictEqual(canonical);
+      expect(printV1(r.ir!)).toBe(source);
+      expect(typecheckV1(source)).toEqual([]);
+    }
+    const src = printV1(canonicalDocument(doc));
+    expect(src).toContain("const placed = transform(bracket, { translate: [shift, 0, 2], rotate: { axis: Z, angle: turn } });");
+    expect(src).toContain("copy: true");
+    const e = printV1(canonicalDocument(ext));
+    expect(e).toContain('const bore = extrude(boreSk, { throughAll: true, direction: "reverse", op: "cut", targets: "all" });');
+    expect(e).toContain("const boss = extrude(bossSk, { upTo: roofPlane,");
+  });
+});
+

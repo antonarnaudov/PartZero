@@ -465,8 +465,12 @@ export class Printer {
       case "revolve": {
         const sk = this.handle(f.sketch);
         const fields: string[] = [];
-        if (f.type === "extrude") fields.push(`distance: ${this.scalar(f.distance)}`);
-        else fields.push(`axis: { origin: ${this.vec(f.axis.origin)}, direction: ${this.vec(f.axis.direction)} }`, `angle: ${this.scalar(f.angle)}`);
+        if (f.type === "extrude") {
+          if (f.distance !== undefined) fields.push(`distance: ${this.scalar(f.distance)}`);
+          if (f.extent === "through_all") fields.push("throughAll: true");
+          else if (f.extent !== undefined) fields.push(`upTo: ${this.plane((f.extent as { up_to: unknown }).up_to as v1.PlaneRef)}`);
+        } else
+          fields.push(`axis: { origin: ${this.vec(f.axis.origin)}, direction: ${this.vec(f.axis.direction)} }`, `angle: ${this.scalar(f.angle)}`);
         if (f.direction !== undefined && f.direction !== "normal") fields.push(`direction: ${formatString(f.direction)}`);
         if (f.regions !== undefined && f.regions !== "all") fields.push(`regions: [${f.regions.map(formatString).join(", ")}]`);
         if (f.op !== undefined && f.op !== "new_body") fields.push(`op: ${formatString(f.op)}`);
@@ -513,6 +517,14 @@ export class Printer {
         return call("datumAxis", [opts(this.datumAxisFields(f))]);
       case "tag":
         return call("tag", common.length > 0 ? [this.ref(f.target), `{ ${common.join(", ")} }`] : [this.ref(f.target)]);
+      case "transform": {
+        const fields: string[] = [];
+        const tr = f.translate as unknown[] | undefined;
+        if (tr !== undefined && !tr.every((x) => x === 0)) fields.push(`translate: ${this.vec(tr)}`);
+        if (f.rotate !== undefined) fields.push(`rotate: { axis: ${this.axis(f.rotate.axis)}, angle: ${this.scalar(f.rotate.angle)} }`);
+        if (f.copy !== undefined && f.copy !== false) fields.push(`copy: ${this.bool(f.copy)}`);
+        return call("transform", [this.ref(f.bodies, true), opts(fields)]);
+      }
       default:
         return this.fail(`unknown feature type ${shownText(String((f as { type: string }).type), '"')}`);
     }

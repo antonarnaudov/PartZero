@@ -424,8 +424,10 @@ function feature(f: Obj): J {
     case "revolve":
       put("sketch");
       put("regions", (v) => v as J, eq("all"));
-      if (f["type"] === "extrude") put("distance");
-      else {
+      if (f["type"] === "extrude") {
+        put("distance");
+        put("extent", (v) => (isObj(v) && has(v, "up_to") ? ({ up_to: plane(v["up_to"]) } as J) : (v as J)));
+      } else {
         put("axis", (v) => (isObj(v) ? { origin: v["origin"], direction: v["direction"] } : v) as J);
         put("angle");
       }
@@ -438,6 +440,12 @@ function feature(f: Obj): J {
       put("targets", (v) => refJ(v as Obj, "some"));
       put("tools", (v) => refJ(v as Obj, "some"));
       put("keep_tools", (v) => v as J, eq(false));
+      break;
+    case "transform":
+      put("bodies", (v) => refJ(v as Obj, "some"));
+      put("translate", scalars, (v) => Array.isArray(v) && v.length === 3 && v.every((x) => isLiteral(x, 0)));
+      put("rotate", (v) => (isObj(v) ? ({ axis: axisRef(v["axis"]), angle: v["angle"] } as J) : ((v ?? null) as J)));
+      put("copy", (v) => v as J, eq(false));
       break;
     case "hole":
       put("on", plane);

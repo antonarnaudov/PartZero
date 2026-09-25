@@ -367,7 +367,8 @@ export class Walker {
         });
         break;
       case "extrude":
-        this.s(`${fp}/distance`, f["distance"], "length");
+        if (has(f, "distance")) this.s(`${fp}/distance`, f["distance"], "length");
+        if (isObj(f["extent"]) && has(f["extent"], "up_to")) this.plane(`${fp}/extent/up_to`, (f["extent"] as Obj)["up_to"]);
         this.targets(`${fp}/targets`, f["targets"]);
         break;
       case "revolve": {
@@ -382,6 +383,15 @@ export class Walker {
         this.r(`${fp}/targets`, f["targets"]);
         this.r(`${fp}/tools`, f["tools"]);
         this.b(`${fp}/keep_tools`, f["keep_tools"]);
+        break;
+      case "transform":
+        this.r(`${fp}/bodies`, f["bodies"]);
+        if (has(f, "translate")) this.p3(`${fp}/translate`, f["translate"], "length");
+        if (isObj(f["rotate"])) {
+          this.axis(`${fp}/rotate/axis`, (f["rotate"] as Obj)["axis"]);
+          this.s(`${fp}/rotate/angle`, (f["rotate"] as Obj)["angle"], "angle");
+        }
+        this.b(`${fp}/copy`, f["copy"]);
         break;
       case "hole": {
         this.plane(`${fp}/on`, f["on"]);
@@ -951,6 +961,17 @@ class Validator {
         this.regions(f["regions"], str(f["sketch"]), fp, ctx);
         const d = lit(f["distance"]);
         if (d !== undefined && d <= LINEAR_TOLERANCE) this.range("INVALID_DISTANCE", fp, "distance", d, tolText);
+        // Amendment set F (§6.2): exactly one of distance and extent; through_all cuts or
+        // intersects; up_to is one-sided.
+        const ext = f["extent"];
+        const conflict = (why: string, fields: string[]): void => this.err("EXTRUDE_EXTENT_CONFLICT", `${fp}/extent`, why, { field: "extent", fields });
+        if (ext === undefined && !has(f, "distance")) conflict("an extrude needs a distance or an extent", ["distance", "extent"]);
+        else if (ext !== undefined && has(f, "distance")) conflict("an extrude has a distance or an extent, not both", ["distance", "extent"]);
+        else if (ext === "through_all" && !["cut", "intersect"].includes(str(f["op"]) || "new_body")) conflict("through_all cuts or intersects (op cut or intersect)", ["extent", "op"]);
+        else if (isObj(ext) && has(ext, "up_to")) {
+          if (f["direction"] === "symmetric") conflict("up_to goes one way: not with direction symmetric", ["extent", "direction"]);
+          this.plane((ext as Obj)["up_to"], `${fp}/extent/up_to`, ctx);
+        }
         this.bodyOp(str(f["op"]) || "new_body", f["targets"], fp, ctx);
         break;
       }
@@ -973,6 +994,16 @@ class Validator {
         this.checkRef(f["targets"], `${fp}/targets`, BODY_SOME, ctx);
         this.checkRef(f["tools"], `${fp}/tools`, BODY_SOME, ctx);
         break;
+      case "transform": {
+        this.checkRef(f["bodies"], `${fp}/bodies`, BODY_SOME, ctx);
+        if (isObj(f["rotate"])) {
+          const r = f["rotate"] as Obj;
+          this.axis(r["axis"], `${fp}/rotate/axis`, ctx);
+          const a = lit(r["angle"]);
+          if (a !== undefined && !(Number.isFinite(a) && Math.abs(a) <= 360)) this.range("INVALID_ANGLE", fp, "rotate/angle", a, "in [-360, 360]");
+        }
+        break;
+      }
       case "hole":
         this.hole(f, fp, ctx);
         break;
@@ -1365,8 +1396,8 @@ class Validator {
   private query(q: unknown, path: string, ctx: PartCtx): string | undefined {
     if (!isObj(q)) return undefined;
     const SWEEPS = ["extrude", "revolve"];
-    const BODY_ORIGINS = ["extrude", "revolve", "pattern"];
-    const CREATORS = ["extrude", "revolve", "boolean", "hole", "fillet", "chamfer", "shell", "draft", "pattern"];
+    const BODY_ORIGINS = ["extrude", "revolve", "pattern", "transform"];
+    const CREATORS = ["extrude", "revolve", "boolean", "hole", "fillet", "chamfer", "shell", "draft", "pattern", "transform"];
     const feature = str(q["feature"]);
     const op = str(q["op"]);
     switch (op) {

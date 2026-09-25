@@ -59,6 +59,7 @@ const IR_CASES: Record<string, [string, string]> = {
   EXPR_TYPE_MISMATCH: [`const flag = param(true);\n${PLATE}const t = extrude(base, { distance: flag ? 5 : flag });`, "flag"],
   EXPR_UNIT_MISMATCH: [`const width = param(80);\nconst holes = param(4, { unit: "count" });\n${PLATE}const t = extrude(base, { distance: width + holes });`, "holes"],
   EXPR_UNKNOWN_NAME: [`${PLATE}const t = extrude(base, { distance: slab + 1 });`, "slab"],
+  EXTRUDE_EXTENT_CONFLICT: [`${PLATE}const t = extrude(base, { distance: 3, throughAll: true, op: "cut", targets: "all" });`, "true"],
   HOLE_DEPTH_REQUIRED: [`${PLATE}const h = hole(slab.cap("end"), { at: { a: [0, 0] }, d: 3 });`, `const h = hole(slab.cap("end"), { at: { a: [0, 0] }, d: 3 });`],
   HOLE_OPTIONS_CONFLICT: [`${PLATE}const h = hole(slab.cap("end"), { at: { a: [0, 0] }, size: "M3", depth: "through", cbore: "iso4762", csink: "iso10642" });`, '"iso10642"'],
   HOLE_SIZE_REQUIRED: [`${PLATE}const h = hole(slab.cap("end"), { at: { a: [0, 0] }, depth: "through" });`, `const h = hole(slab.cap("end"), { at: { a: [0, 0] }, depth: "through" });`],

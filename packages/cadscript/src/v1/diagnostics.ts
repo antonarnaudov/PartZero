@@ -125,6 +125,7 @@ const IR_HINTS: Readonly<Record<string, string>> = {
   HOLE_SIZE_REQUIRED: "give a size (\"M3\", …) or an explicit diameter d",
   HOLE_OPTIONS_CONFLICT: "at most one of cbore, csink, insert; presets need a size; thread excludes insert and close/loose fits; tip is for blind holes",
   HOLE_DEPTH_REQUIRED: 'give a depth: "through", { blind: 6 } or { upTo: face } (inserts set their own)',
+  EXTRUDE_EXTENT_CONFLICT: 'an extrude takes one of distance, throughAll: true (with op "cut" or "intersect") and upTo: plane (not with direction "symmetric")',
   CHAMFER_OPTIONS_CONFLICT: "a chamfer is { d }, { d, d2, side } or { d, angle, side }",
   PATTERN_SEED_UNSUPPORTED: "pattern seeds are extrude, revolve or hole features",
   INVALID_RADIUS: "the radius is a positive length in mm",

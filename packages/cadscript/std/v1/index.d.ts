@@ -460,7 +460,7 @@ export type BodySel = Bodies | Ref<"body">;
  * Bodies to operate on: a body query, or a feature handle meaning the bodies it created
  * (`targets: slab` is `slab.body()`).
  */
-export type BodyTargets = BodySel | Extrude | Revolve | Pattern;
+export type BodyTargets = BodySel | Extrude | Revolve | Pattern | Transform;
 
 /** Body targets of `op: "join" | "cut" | "intersect"`: bodies, or `"all"` (every body in scope). */
 export type Targets = BodyTargets | "all";
@@ -759,8 +759,12 @@ export type Regions = "all" | readonly string[];
 
 /** Options of {@link extrude}. */
 export interface ExtrudeOptions extends FeatureOptions {
-  /** Sweep length, mm, > 1e-6 (`INVALID_DISTANCE`). */
-  readonly distance: Scalar;
+  /** Sweep length, mm, > 1e-6 (`INVALID_DISTANCE`), or throughAll / upTo. */
+  readonly distance?: Scalar;
+  /** Cut through every target. */
+  readonly throughAll?: true;
+  /** End on a parallel plane (face, datum, XY/XZ/YZ). */
+  readonly upTo?: PlaneRef;
   readonly direction?: SweepDirection;
   readonly regions?: Regions;
   readonly op?: BodyOp;
@@ -990,6 +994,23 @@ export declare function circularPattern(
  * @example const otherArm = mirror([arm], { plane: YZ });
  */
 export declare function mirror(seed: PatternSeed, options: PatternOptions & { readonly plane: PlaneRef }): Pattern;
+
+// ─── Move / copy (amendment set F) ───────────────────────────────────────────────────────────
+
+/** The copies of a {@link transform} (`copy: true`). */
+export interface Transform extends Creates {
+  readonly [brand]: "transform";
+  body(member?: string): Bodies;
+}
+
+/**
+ * Move bodies, or add moved copies (`copy: true`): rotate first, then translate.
+ * @example const twin = transform(bracket, { rotate: { axis: Z, angle: 90 }, copy: true });
+ */
+export declare function transform(
+  bodies: BodyTargets,
+  options: FeatureOptions & { readonly translate?: Vec3; readonly rotate?: { readonly axis: AxisRef; readonly angle: Scalar }; readonly copy?: BoolScalar },
+): Transform;
 
 // ─── Datums and tags ─────────────────────────────────────────────────────────────────────────
 

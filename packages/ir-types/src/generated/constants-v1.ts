@@ -343,6 +343,31 @@ export const ERROR_CODES = {
     "since": "v1",
     "stage": "R"
   },
+  "EXTRUDE_EXTENT_CONFLICT": {
+    "details": [
+      "field",
+      "fields"
+    ],
+    "section": "§6.2",
+    "since": "v1",
+    "stage": "R"
+  },
+  "EXTRUDE_UP_TO_BEHIND": {
+    "details": [
+      "distance"
+    ],
+    "section": "§6.2",
+    "since": "v1",
+    "stage": "E"
+  },
+  "EXTRUDE_UP_TO_NOT_PARALLEL": {
+    "details": [
+      "angle"
+    ],
+    "section": "§6.2",
+    "since": "v1",
+    "stage": "E"
+  },
   "FILLET_EDGE_UNSUPPORTED": {
     "details": [
       "edges"
@@ -1117,7 +1142,8 @@ export const FEATURE_TYPES = [
   "pattern",
   "datum_plane",
   "datum_axis",
-  "tag"
+  "tag",
+  "transform"
 ] as const;
 
 export const FEATURE_VERSIONS = {
@@ -1158,6 +1184,9 @@ export const FEATURE_VERSIONS = {
     1
   ],
   "tag": [
+    1
+  ],
+  "transform": [
     1
   ]
 } as const;
@@ -1867,7 +1896,8 @@ export const RESERVED_NAMES = [
   "X",
   "Y",
   "Z",
-  "C"
+  "C",
+  "transform"
 ] as const;
 
 export const RESERVED_NAMES_V0 = [
@@ -1986,7 +2016,8 @@ export const RESERVED_NAMES_V1_BUILTINS = [
   "X",
   "Y",
   "Z",
-  "C"
+  "C",
+  "transform"
 ] as const;
 
 export const SOLVE_CHECK_TOLERANCE = 1e-9 as const;

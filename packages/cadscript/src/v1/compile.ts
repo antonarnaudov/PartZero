@@ -1073,6 +1073,9 @@ function lowerFeature(ctx: Ctx, stmt: ts.VariableStatement, nameNode: ts.Identif
     case "boolean":
       lf.ir = lowerBoolean(ctx, call, lf);
       break;
+    case "transform":
+      lf.ir = lowerTransform(ctx, call, lf);
+      break;
     case "hole":
       lf.ir = lowerHole(ctx, call, lf);
       break;
@@ -1511,7 +1514,16 @@ function lowerSweep(ctx: Ctx, call: ts.CallExpression, lf: LFeature, entry: Name
   const args = callArgs(ctx, call, lf.builtin, 2, 2, usage);
   if (!args) return ir;
   ir["sketch"] = readSketchRef(ctx, args[0]!, lf, entry);
-  const props = featureOptions(ctx, args[1], `${lf.builtin} options`, lf, isExtrude ? ["distance"] : ["axis", "angle"], ["direction", "regions", "op", "targets"], SWEEP_HINTS);
+  // Amendment set F: an extrude takes `distance`, or `throughAll: true`, or `upTo: plane`.
+  const props = featureOptions(
+    ctx,
+    args[1],
+    `${lf.builtin} options`,
+    lf,
+    isExtrude ? [] : ["axis", "angle"],
+    isExtrude ? ["distance", "throughAll", "upTo", "direction", "regions", "op", "targets"] : ["direction", "regions", "op", "targets"],
+    SWEEP_HINTS,
+  );
   if (!props) return ir;
   const reg = props.get("regions");
   if (reg) {
@@ -1532,8 +1544,23 @@ function lowerSweep(ctx: Ctx, call: ts.CallExpression, lf: LFeature, entry: Name
       ir["regions"] = ids;
     } else mismatch(ctx, reg.value, '"all" or an array of curve ids', "regions");
   }
-  if (isExtrude) put(ir, "distance", scalar(ctx, props, "distance", "/distance", lf));
-  else {
+  if (isExtrude) {
+    put(ir, "distance", scalar(ctx, props, "distance", "/distance", lf));
+    const all = props.get("throughAll");
+    const upTo = props.get("upTo");
+    if (all) {
+      lf.sink.paths.set("/extent", all.value);
+      if (readLiteralBool(ctx, all.value, "throughAll") === true) ir["extent"] = "through_all";
+    }
+    if (upTo) {
+      lf.sink.paths.set("/extent", upTo.value);
+      const plane = lowerPlane(ctx, upTo.value, lf.sink, "/extent/up_to");
+      if (plane !== undefined) ir["extent"] = { up_to: plane };
+    }
+    if (!props.has("distance") && !all && !upTo) {
+      ctx.report("CS_BAD_ARGUMENT", args[1]!, "extrude needs a distance, throughAll: true or upTo: a plane", "{ distance: 8 }, { throughAll: true, op: \"cut\", targets: \"all\" } or { upTo: roof }");
+    }
+  } else {
     const axis = props.get("axis");
     if (axis) {
       lf.sink.paths.set("/axis", axis.value);
@@ -1569,6 +1596,38 @@ function lowerBoolean(ctx: Ctx, call: ts.CallExpression, lf: LFeature): Record<s
   }
   const kt = props.get("keepTools");
   if (kt) put(ir, "keep_tools", lowerBoolScalar(ctx, kt.value, "keepTools", "/keep_tools", lf.sink));
+  return ir;
+}
+
+// ── transform (amendment set F) ──
+
+function lowerTransform(ctx: Ctx, call: ts.CallExpression, lf: LFeature): Record<string, unknown> {
+  const ir: Record<string, unknown> = {};
+  const usage = "const moved = transform(slab, { translate: [30, 0, 0], rotate: { axis: Z, angle: 90 }, copy: true })";
+  const args = callArgs(ctx, call, "transform", 2, 2, usage);
+  if (!args) return ir;
+  if (ts.isStringLiteral(args[0]!)) {
+    ctx.report("CS_BAD_ARGUMENT", args[0]!, "transform moves bodies, not a string", "use a body query or a feature, e.g. slab");
+    return ir;
+  }
+  put(ir, "bodies", lowerRef(ctx, args[0]!, lf.sink, "/bodies", { fallback: "body", bodyHandle: true }));
+  const props = featureOptions(ctx, args[1], "transform options", lf, [], ["translate", "rotate", "copy"]);
+  if (!props) return ir;
+  const t = props.get("translate");
+  if (t) put(ir, "translate", vec(ctx, t.value, 3, "translate", "/translate", lf.sink, "length"));
+  const r = props.get("rotate");
+  if (r) {
+    lf.sink.paths.set("/rotate", r.value);
+    const rp = readObject(ctx, r.value, "rotate", ["axis", "angle"], []);
+    if (rp) {
+      put(ir, "rotate", {
+        axis: lowerAxis(ctx, rp.get("axis")!.value, lf.sink, "/rotate/axis"),
+        angle: lowerScalar(ctx, rp.get("angle")!.value, "rotate angle", "/rotate/angle", lf.sink),
+      });
+    }
+  }
+  const c = props.get("copy");
+  if (c) put(ir, "copy", lowerBoolScalar(ctx, c.value, "copy", "/copy", lf.sink));
   return ir;
 }
 
