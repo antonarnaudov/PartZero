@@ -558,3 +558,39 @@
   left: 10px;
   font-family: var(--font-ui);
 }
+
+/* Settings ▸ Navigation */
+.nav-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 8px;
+}
+.nav-preset {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+}
+.nav-test-pad {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  padding: 8px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-2, transparent);
+  text-align: center;
+  overscroll-behavior: contain;
+}
+.nav-test-pad:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.nav-test-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 8px;
+}

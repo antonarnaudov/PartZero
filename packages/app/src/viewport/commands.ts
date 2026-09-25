@@ -12,6 +12,7 @@ import { defineCommand } from "../commands/registry";
 import type { AppServices } from "../services";
 import { BODY_SWATCHES, DISPLAY_MODE_LABELS, DISPLAY_MODES, hexToRgb, modeAvailable, rgbToHex } from "./display";
 import { viewportRuntime } from "./runtime";
+import { NAV_PRESETS } from "./navigation";
 import { STANDARD_VIEWS, standardViewOf } from "./view-camera";
 
 const command = defineCommand<AppServices>();
@@ -22,6 +23,7 @@ const DisplayModeSchema = z.enum(DISPLAY_MODES);
 const ToggleSchema = z.enum(["grid", "axes", "origin", "viewCube", "sketches"]);
 const SectionBaseSchema = z.enum(["XY", "XZ", "YZ", "face"]);
 const ColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, "a #rrggbb colour");
+const NavPresetSchema = z.enum(NAV_PRESETS);
 
 const VIEW_TITLES: Record<(typeof STANDARD_VIEWS)[number], string> = {
   iso: "Isometric",
@@ -189,6 +191,24 @@ export const VIEW_COMMANDS = {
       }
       r.view.setDisplay(mode);
       return { mode, drawn: r.effectiveDisplay() };
+    },
+  }),
+
+  "view.setNavigation": command({
+    id: "view.setNavigation",
+    title: "Navigation Device",
+    category: "View",
+    description:
+      "How the scroll wheel and two-finger scroll move the camera: auto (detect per gesture: a mouse wheel zooms, a trackpad scroll orbits, Shift+scroll pans), mouse (every scroll zooms) or trackpad (every scroll orbits). Pinch always zooms.",
+    args: z.strictObject({ device: NavPresetSchema }),
+    palette: [
+      { title: "Navigation: Detect Mouse or Trackpad", args: { device: "auto" } },
+      { title: "Navigation: Mouse (Scroll Zooms)", args: { device: "mouse" } },
+      { title: "Navigation: Trackpad (Scroll Orbits)", args: { device: "trackpad" } },
+    ],
+    run({ device }, ctx) {
+      rt(ctx).view.setNavigation(device);
+      return { device };
     },
   }),
 

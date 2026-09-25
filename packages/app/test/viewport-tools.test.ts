@@ -3,10 +3,11 @@ import type { RenderBody } from "../src/engine/types";
 import { displayBodies, edgeFlags, effectiveMode, hexToRgb, modeAvailable, rgbToHex } from "../src/viewport/display";
 import { angleAround, clamp, dragValue, gripPoint, perpendicular, rayLineParam, rayPlane, snap, unwrapDegrees } from "../src/viewport/manipulators/drag-math";
 import { ManipulatorHost } from "../src/viewport/manipulators/host";
-import { classifyWheel, dragRole, newWheelMemory, wheelDevice, type WheelLike } from "../src/viewport/navigation";
+import { classifyWheel, dragRole, newWheelMemory, wheelDevice, wheelSignal, type NavPreset, type WheelLike } from "../src/viewport/navigation";
 import { cubeCells, dirKey, visibleFaces } from "../src/viewport/view-cube-geometry";
 import { anglesLookingAlong, basis, cameraFrame, defaultCamera, viewAngles, type Vec3 } from "../src/viewport/view-camera";
 import { sectionPlane, ViewStore } from "../src/viewport/view-store";
+import { macContinuous, macNotched, SEQUENCES } from "./fixtures/wheel-sequences";
 
 const wheel = (p: Partial<WheelLike>): WheelLike => ({ deltaX: 0, deltaY: 0, deltaMode: 0, ctrlKey: false, shiftKey: false, timeStamp: 0, ...p });
 
@@ -38,6 +39,50 @@ describe("navigation: mouse and trackpad at the same time (FD3)", () => {
     // A purely vertical integer delta alone would read as a mouse; mid-gesture it stays an orbit.
     expect(classifyWheel(wheel({ deltaY: 4, timeStamp: 50 }), m)?.type).toBe("orbit");
     expect(classifyWheel(wheel({ deltaY: 4, timeStamp: 1000 }), m)?.type).toBe("zoom");
+  });
+
+  const run = (events: readonly WheelLike[], preset: NavPreset = "auto") => {
+    const m = newWheelMemory();
+    return events.map((e) => classifyWheel(e, m, preset)?.type ?? null);
+  };
+
+  for (const seq of SEQUENCES) {
+    it(`Auto reads Chromium's events right: ${seq.name}`, () => {
+      expect(run(seq.events)).toEqual(seq.events.map(() => seq.expect));
+    });
+  }
+
+  it("a Mac notch of exactly one line (40 px, wheelDelta 120) is a mouse, not the −3× trackpad signature", () => {
+    // Both rules match this event: it must not be read as a trackpad on its own.
+    const e = macNotched(1, 1, 0);
+    expect(wheelSignal(e)).toMatchObject({ device: "mouse", strong: false });
+    expect(classifyWheel(e, newWheelMemory())?.type).toBe("zoom");
+    // …while the same numbers inside a trackpad gesture keep orbiting.
+    const m = newWheelMemory();
+    classifyWheel(macContinuous(0, 12, 0), m);
+    expect(classifyWheel(macContinuous(0, 40, 16), m)?.type).toBe("orbit");
+    // Unambiguous: wheelDelta in notches without the ratio, or the ratio without notches.
+    expect(wheelSignal(macNotched(6554 / 65536, 1, 0))).toMatchObject({ device: "mouse", strong: true });
+    expect(wheelSignal(macContinuous(0, 7, 0))).toMatchObject({ device: "trackpad", strong: true });
+    // A sub-notch wheel event (wheelDelta 0) is never a Mac trackpad's.
+    expect(wheelSignal({ ...macNotched(6554 / 65536, 0, 0) })).toMatchObject({ device: "mouse", strong: false });
+  });
+
+  it("Settings presets force the device (pinch always zooms)", () => {
+    const trackpad = SEQUENCES.find((s) => s.expect === "orbit")!.events;
+    const mouse = SEQUENCES.find((s) => s.name.startsWith("mac notched mouse, slow"))!.events;
+    expect(new Set(run(trackpad, "mouse"))).toEqual(new Set(["zoom"]));
+    expect(new Set(run(mouse, "trackpad"))).toEqual(new Set(["orbit"]));
+    expect(new Set(run(mouse, "mouse"))).toEqual(new Set(["zoom"]));
+    const pinch = SEQUENCES.find((s) => s.name.startsWith("mac pinch"))!.events;
+    for (const p of ["auto", "mouse", "trackpad"] as const) expect(new Set(run(pinch, p))).toEqual(new Set(["zoom"]));
+  });
+
+  it("keeps the navigation preset as a preference", () => {
+    const store = new ViewStore({ persist: false });
+    expect(store.getState().navigation).toBe("auto");
+    store.setNavigation("trackpad");
+    expect(store.getState().navigation).toBe("trackpad");
   });
 
   it("maps pointer buttons: right orbits, middle pans, left selects (Alt+left navigates)", () => {

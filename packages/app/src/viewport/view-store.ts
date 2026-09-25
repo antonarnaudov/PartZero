@@ -5,6 +5,7 @@
  */
 import { Store } from "../store";
 import { DEFAULT_BODY_DISPLAY, type BodyDisplay, type DisplayMode, type Rgb } from "./display";
+import { NAV_PRESETS, type NavPreset } from "./navigation";
 import { add, normalize, scale, type Projection, type StandardView, type Vec3 } from "./view-camera";
 
 export type SectionBase = "XY" | "XZ" | "YZ" | "face";
@@ -39,6 +40,8 @@ export interface ViewState {
   projection: Projection;
   /** The standard view the camera was last set to (cleared by orbiting). */
   view: StandardView | null;
+  /** Settings ▸ Navigation: how wheel events are read (auto-detect, or a forced device). */
+  navigation: NavPreset;
 }
 
 const PREFS_KEY = "aicad.view";
@@ -51,6 +54,7 @@ interface Prefs {
   viewCube?: boolean;
   sketches?: boolean;
   projection?: Projection;
+  navigation?: NavPreset;
 }
 
 function readPrefs(): Prefs {
@@ -93,6 +97,7 @@ export class ViewStore extends Store<ViewState> {
       section: null,
       projection: p.projection ?? "perspective",
       view: "iso",
+      navigation: p.navigation && (NAV_PRESETS as readonly string[]).includes(p.navigation) ? p.navigation : "auto",
     });
     this.persist = options.persist !== false;
   }
@@ -102,7 +107,7 @@ export class ViewStore extends Store<ViewState> {
   private savePrefs(): void {
     if (!this.persist) return;
     const s = this.getState();
-    writePrefs({ display: s.display, grid: s.grid, axes: s.axes, origin: s.origin, viewCube: s.viewCube, sketches: s.sketches, projection: s.projection });
+    writePrefs({ display: s.display, grid: s.grid, axes: s.axes, origin: s.origin, viewCube: s.viewCube, sketches: s.sketches, projection: s.projection, navigation: s.navigation });
   }
 
   setDisplay(display: DisplayMode): void {
@@ -117,6 +122,11 @@ export class ViewStore extends Store<ViewState> {
 
   setProjection(projection: Projection): void {
     this.setState({ projection });
+    this.savePrefs();
+  }
+
+  setNavigation(navigation: NavPreset): void {
+    this.setState({ navigation });
     this.savePrefs();
   }
 

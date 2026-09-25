@@ -15,6 +15,7 @@ import type { AgentRoleId, AgentSettingsView, CliModeSetting, CliProviderStatus,
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
 import { PrintingSection } from "./PrintingSettings";
+import { NavigationSection } from "../viewport/NavigationSettings";
 
 const ROLES: Array<{ id: AgentRoleId; label: string; hint: string }> = [
   { id: "designer", label: "Designer", hint: "Main loop: plan, build, repair" },
@@ -581,6 +582,7 @@ export function SettingsDialog(): ReactElement {
           )}
           {/* Printing does not depend on the agent settings: it stays reachable while they load or fail (the a8 fix path). */}
           <PrintingSection />
+          <NavigationSection />
           {view?.transport === "live" && (
             <section className="settings-section">
               <h3>Advanced</h3>

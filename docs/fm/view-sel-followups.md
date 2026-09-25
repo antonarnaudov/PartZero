@@ -129,3 +129,16 @@ formula used"). A cheaper intermediate step:
   OBJ as comments for the CLI engine;
 - in `geometry.ts`, prefer the kernel's type and parameters when present (exact, any sampling),
   and keep today's mesh evidence as the fallback.
+
+## 8. Navigation: check Auto on real hardware (owner / QA, 5 minutes)
+
+FD3 needs a mouse wheel and a Mac trackpad to work at the same time, and a wheel event does not
+say which device sent it. `viewport/navigation.ts` reads Chromium's legacy `wheelDelta` the way
+Chromium builds Mac wheel events (a trackpad: whole pixels, `wheelDelta = −3 × delta`; a notched
+wheel: `delta = lines × 40`, `wheelDelta = −120 × notches`, so a one-line notch has the −3× ratio
+too and is treated as ambiguous). The unit fixtures (`test/fixtures/wheel-sequences.ts`) and the
+e2e events are **modelled on Chromium's source, not recorded**. To check on real devices: open
+Settings ▸ Navigation, scroll over the test pad with the mouse, then with the trackpad (and a
+pinch); each event shows what it was read as and why. If Auto misreads a device, pick Mouse or
+Trackpad there (persisted), and press "Copy events" to paste the recording into
+`wheel-sequences.ts` as a regression fixture (name the machine and the device).

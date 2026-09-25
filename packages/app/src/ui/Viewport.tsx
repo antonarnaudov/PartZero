@@ -277,7 +277,7 @@ export function Viewport(): ReactElement {
     };
     const onWheel = (e: WheelEvent): void => {
       e.preventDefault();
-      const a = classifyWheel(e as WheelEvent & { wheelDeltaX?: number; wheelDeltaY?: number }, wheelMem);
+      const a = classifyWheel(e as WheelEvent & { wheelDeltaX?: number; wheelDeltaY?: number }, wheelMem, runtime.view.getState().navigation);
       if (!a) return;
       const q = local(e);
       if (a.type === "zoom") adapter.zoomAt(q.x, q.y, a.factor);

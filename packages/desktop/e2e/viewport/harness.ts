@@ -36,7 +36,7 @@ interface ViewApi {
   camera(): { target: Vec3; distance: number; yaw: number; pitch: number; fovY: number; projection: string } | null;
   selection(): { items: Item[]; hover: Item | null; filter: Record<string, boolean>; revision: number };
   topology(): Array<{ body: string; faces: string[]; edges: string[]; vertices: Array<{ key: string; point: Vec3 }> }>;
-  view(): { display: string; drawn: string; grid: boolean; origin: boolean; section: unknown; view: string | null; nativeModes: string[]; bodies: Record<string, { visible: boolean; color: Vec3 | null }> };
+  view(): { display: string; drawn: string; grid: boolean; origin: boolean; section: unknown; view: string | null; navigation: string; nativeModes: string[]; bodies: Record<string, { visible: boolean; color: Vec3 | null }> };
   setAnimationMs(ms: number): void;
   showHandles(h: unknown[]): void;
   hideHandles(): void;
@@ -228,15 +228,28 @@ export async function pixels(page: Page): Promise<Pixels> {
 }
 
 /** Dispatch a synthetic wheel event on the canvas (pixel mode unless given). */
-export async function wheel(page: Page, e: { deltaX?: number; deltaY?: number; deltaMode?: number; ctrlKey?: boolean; shiftKey?: boolean }, where?: { x: number; y: number }): Promise<void> {
+/**
+ * Dispatch a wheel event on the canvas (or on `selector`). `wheelDeltaX/Y` are Chromium's legacy
+ * fields (Blink's `WheelEventInit` takes them; left out, Blink derives them as −delta): with them
+ * a spec reproduces what Chromium reports for a Mac trackpad (−3 × delta) or notched wheel
+ * (−120 per notch) — see packages/app/test/fixtures/wheel-sequences.ts.
+ */
+export async function wheel(
+  page: Page,
+  e: { deltaX?: number; deltaY?: number; deltaMode?: number; ctrlKey?: boolean; shiftKey?: boolean; wheelDeltaX?: number; wheelDeltaY?: number },
+  where?: { x: number; y: number },
+  selector = ".viewport-canvas",
+): Promise<void> {
   await page.evaluate(
-    ({ e, where }) => {
-      const c = document.querySelector(".viewport-canvas") as HTMLCanvasElement;
+    ({ e, where, selector }) => {
+      const c = document.querySelector(selector) as HTMLElement;
       const r = c.getBoundingClientRect();
       const x = where?.x ?? r.left + r.width / 2;
       const y = where?.y ?? r.top + r.height / 2;
-      c.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, clientX: x, clientY: y, deltaX: e.deltaX ?? 0, deltaY: e.deltaY ?? 0, deltaMode: e.deltaMode ?? 0, ctrlKey: !!e.ctrlKey, shiftKey: !!e.shiftKey }));
+      const init = { bubbles: true, cancelable: true, clientX: x, clientY: y, deltaX: e.deltaX ?? 0, deltaY: e.deltaY ?? 0, deltaMode: e.deltaMode ?? 0, ctrlKey: !!e.ctrlKey, shiftKey: !!e.shiftKey };
+      const legacy = { ...(e.wheelDeltaX !== undefined ? { wheelDeltaX: e.wheelDeltaX } : {}), ...(e.wheelDeltaY !== undefined ? { wheelDeltaY: e.wheelDeltaY } : {}) };
+      c.dispatchEvent(new WheelEvent("wheel", { ...init, ...legacy } as WheelEventInit));
     },
-    { e, where },
+    { e, where, selector },
   );
 }
