@@ -131,7 +131,7 @@ The parity survey tiered what users expect:
 | Fillets on edges between crossing cylinders, ellipse and B-spline edges | Same | FM8 | Needs B-spline surfaces in `forge-ssi` (KRN-B). Still F2, not F3 |
 | Fillet and chamfer features as pattern and mirror seeds | New (seeds must be extrude, revolve or hole: `PATTERN_SEED_UNSUPPORTED`, SPEC §6.10) | FM8 | Until then the pattern tool offers a body-seed pattern plus a join (FM4) |
 | Sketch splines | New | FM8 | Needs KRN-B first |
-| Draft | New (`draft` is refused at load, SPEC §6.9) | FM8 | Planar faces first |
+| Draft | **Planar walls between planar faces built** with the feature tools (forge-blend `draft`, the Draft tool, [fm/feature-tools.md](fm/feature-tools.md)); curved walls and walls next to curved faces are refused (`DRAFT_FAILED`) | FM8 | Curved faces and draft after rounding remain |
 | Text emboss and engrave | New | FM8 | Glyph outlines to splines; licence check for font parsing |
 | Split face, thicken, rib | New | FM8 | Split body by plane is T0 (FM5) |
 | Associative sketch offset, ellipse, sketch pattern | New | FM8 | |
