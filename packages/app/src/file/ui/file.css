@@ -178,10 +178,11 @@
   white-space: nowrap;
 }
 
-/* References panel: a small card over the bottom-left of the workspace. */
+/* References panel: a small card in the viewport's bottom-right corner (clear of the view toolbar, the renderer chip,
+   the hover readout and the proposal chip). */
 .pz-refs {
   position: fixed;
-  left: 12px;
+  right: 12px;
   bottom: 40px;
   z-index: 40;
   width: 260px;
@@ -193,6 +194,12 @@
   box-shadow: var(--shadow);
   font-size: 12px;
   overflow: hidden;
+}
+.pz-refs.in-viewport {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 5;
 }
 .pz-refs > header {
   display: flex;

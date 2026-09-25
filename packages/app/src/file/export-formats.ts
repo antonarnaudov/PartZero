@@ -66,6 +66,6 @@ registerExportFormat({
   label: "STEP",
   extensions: ["step", "stp"],
   description: "Exact B-rep (AP214) for other CAD programs.",
-  available: () => ({ ok: false, reason: "STEP export arrives with Forge's own STEP writer (FULL-MODELING-PLAN FM5)." }),
+  available: () => ({ ok: false, reason: "Coming with Forge's own STEP writer (planned for build FM5)." }),
   run: () => Promise.reject(new Error("STEP export is not available yet")),
 });

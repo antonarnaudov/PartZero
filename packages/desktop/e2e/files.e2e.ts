@@ -13,6 +13,12 @@ import { join } from "node:path";
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from "@playwright/test";
 import { appDir } from "./app-dir.js";
 import { boxStl, readPartZero } from "./partzero-files.js";
+import { testResultsDir } from "./screenshots.js";
+
+/** A screenshot of the window for review (git-ignored `test-results/files-<name>.png`). */
+async function shot(page: Page, name: string): Promise<void> {
+  await page.screenshot({ path: join(testResultsDir, `files-${name}.png`) });
+}
 
 interface Result {
   ok: boolean;
@@ -224,6 +230,7 @@ test("after a force quit, the next launch offers the unsaved document and restor
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText("did not quit normally");
     await expect(page.getByTestId("recovery-item")).toHaveCount(1);
+    await shot(page, "recovery");
     await page.getByTestId("recovery-restore").click();
     await expect(dialog).toBeHidden();
     await expect.poll(async () => (await page.evaluate(() => (window as unknown as AW).__aicad.idle())).dirty).toBe(true);
@@ -241,6 +248,35 @@ test("after a force quit, the next launch offers the unsaved document and restor
   // A clean quit ("Don't Save") leaves no snapshot and no session marker.
   expect(readdirSync(recoveryDir).filter((n) => n.endsWith(".partzero"))).toEqual([]);
   expect(existsSync(join(recoveryDir, "session.json"))).toBe(false);
+});
+
+test("a renderer crash reloads the window and offers its last autosave", async () => {
+  const userData = freshDir("profile-renderer-crash");
+  const marker = `// before the renderer crash ${Date.now()}`;
+  const { app, page } = await launch(userData, { AICAD_SKIP_CLOSE_PROMPT: "1" });
+  try {
+    await setCode(page, `${CODE}${marker}\n`);
+    expect(await exec(page, "file.flushRecovery")).toMatchObject({ ok: true, value: { written: true } });
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.webContents.forcefullyCrashRenderer());
+    // Driven through the main process: Playwright's page object does not survive a renderer crash. A script sent to the
+    // dead renderer never answers, so each call gives up after 2 s (and the poll tries again).
+    const inWindow = <T>(script: string): Promise<T> =>
+      app.evaluate(
+        ({ BrowserWindow }, s) =>
+          Promise.race([BrowserWindow.getAllWindows()[0]!.webContents.executeJavaScript(s), new Promise((_, reject) => setTimeout(() => reject(new Error("no answer")), 2000))]),
+        script,
+      ) as Promise<T>;
+    await expect.poll(() => inWindow<boolean>("document.querySelector('[data-testid=\"recovery-dialog\"]') !== null").catch(() => false), { timeout: 60_000 }).toBe(true);
+    await inWindow("document.querySelector('[data-testid=\"recovery-restore\"]').click()");
+    await expect
+      .poll(() => inWindow<string>("window.__aicad.execute({ id: 'file.status', args: {} }).then((r) => JSON.stringify(r.value))").catch(() => ""), { timeout: 30_000 })
+      .toContain('"dirty":true');
+    // Monaco renders spaces as no-break spaces.
+    const source = await inWindow<string>("window.__aicad.idle().then(() => (document.querySelector('.monaco-editor .view-lines')?.textContent ?? '').replace(/\\u00a0/g, ' '))");
+    expect(source).toContain(marker.slice(3));
+  } finally {
+    await app.close();
+  }
 });
 
 test("closing a window with unsaved changes asks Save / Don't Save / Cancel", async () => {
@@ -328,8 +364,11 @@ test("an STL imported as a reference is shown, measured, saved inside the .partz
     await expect(page.getByTestId("references-panel")).toBeVisible();
     await expect(page.getByTestId("reference-item")).toHaveCount(1);
     await expect(page.getByTestId("reference-size")).toHaveText("20 × 10 × 5 mm");
-    // The document now has unsaved changes (the reference), shown in the title.
-    await expect(page.getByTestId("doc-title")).toBeVisible();
+    await page.locator('[data-testid="reference-item"] .pz-ref-name').click();
+    await expect(page.getByTestId("reference-item")).toContainText("1,000 mm³");
+    await shot(page, "reference");
+    // The document now has unsaved changes (the reference), shown in the app and the window title.
+    await expect(page.getByTestId("doc-title").locator(".dirty-dot")).toBeVisible();
     await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle())).toMatch(/ • — /);
     await answerSave(app, file);
     expect(await exec(page, "file.save")).toMatchObject({ ok: true, value: { saved: true, format: "partzero" } });
@@ -344,6 +383,12 @@ test("an STL imported as a reference is shown, measured, saved inside the .partz
   }
   const again = await launch(userData, { AICAD_SKIP_CLOSE_PROMPT: "1" });
   try {
+    // The recent grid shows the saved document with its thumbnail (drawn from the reference mesh).
+    expect(await exec(again.page, "file.showRecent")).toMatchObject({ ok: true, value: { count: 1 } });
+    await expect(again.page.locator('[data-testid="recent-card"] img.pz-thumb-img')).toHaveCount(1);
+    await shot(again.page, "recent");
+    await again.page.keyboard.press("Escape");
+    await expect(again.page.getByTestId("recent-dialog")).toBeHidden();
     await answerOpen(again.app, file);
     expect(await exec(again.page, "file.open")).toMatchObject({ ok: true, value: { placement: "here" } });
     await expect(again.page.getByTestId("reference-size")).toHaveText("20 × 10 × 5 mm");
@@ -361,7 +406,8 @@ test("the export dialog lists 3MF, STL, OBJ and a STEP placeholder", async () =>
     const dialog = page.getByTestId("export-dialog");
     await expect(dialog).toBeVisible();
     await expect(page.getByTestId("export-format")).toHaveCount(4);
-    await expect(page.locator('[data-testid="export-format"][data-format="step"]')).toContainText("arrives with Forge's own STEP writer");
+    await expect(page.locator('[data-testid="export-format"][data-format="step"]')).toContainText("Coming with Forge's own STEP writer");
+    await shot(page, "export");
     await page.locator('[data-testid="export-format"][data-format="step"] input').check();
     await expect(page.getByTestId("export-run")).toBeDisabled();
     await page.keyboard.press("Escape");

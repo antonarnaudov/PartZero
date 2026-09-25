@@ -4,6 +4,7 @@
  * Everything it changes goes through `file.*` commands.
  */
 import { useEffect, useState, type ReactElement } from "react";
+import { createPortal } from "react-dom";
 import type { RecentDocument, RecoveryEntry } from "../../bridge";
 import { useApp } from "../../ui/context";
 import { Icon } from "../../ui/icons";
@@ -282,12 +283,20 @@ function ReferenceRow({ r }: { r: ReferenceMesh }): ReactElement {
   );
 }
 
+/**
+ * The References card sits in the viewport's bottom-right corner (a portal into the viewport, which positions its
+ * overlays), or bottom-right of the window when there is no viewport element.
+ */
 function ReferencesPanel({ refs }: { refs: ReferenceMesh[] }): ReactElement {
-  return (
-    <section className="pz-refs" aria-label="Reference meshes" data-testid="references-panel">
-      <header>
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setHost(document.querySelector<HTMLElement>('[data-testid="viewport"]'));
+  }, []);
+  const panel = (
+    <section className={`pz-refs${host ? " in-viewport" : ""}`} aria-label="Reference meshes" data-testid="references-panel">
+      <header title="Imported meshes: shown and measured, not editable, saved inside the .partzero">
         <span>References</span>
-        <span className="muted small">shown and measured, not editable</span>
+        <span className="muted small">{refs.length}</span>
       </header>
       <ul>
         {refs.map((r) => (
@@ -296,6 +305,7 @@ function ReferencesPanel({ refs }: { refs: ReferenceMesh[] }): ReactElement {
       </ul>
     </section>
   );
+  return host ? createPortal(panel, host) : panel;
 }
 
 export function FileLayer(): ReactElement | null {

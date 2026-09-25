@@ -465,6 +465,49 @@ describe("export", () => {
   });
 });
 
+describe("the desktop host", () => {
+  it("uses the files bridge when the shell has one, and degrades to text documents when it does not", async () => {
+    const calls: string[] = [];
+    const base = {
+      platform: "darwin",
+      showOpenDialog: () => Promise.resolve("/w/a.partzero"),
+      showSaveDialog: () => Promise.resolve("/w/b.partzero"),
+      readTextFile: () => Promise.resolve("text"),
+      writeFile: (p: string) => {
+        calls.push(`write:${p}`);
+        return Promise.resolve();
+      },
+      recentFiles: () => Promise.resolve(["/w/r.cad.ts"]),
+      clearRecentFiles: () => Promise.resolve(),
+    };
+    const { ElectronFileHost } = await import("../src/file/host");
+    const old = new ElectronFileHost(base as never);
+    expect(old.recovery).toBeNull();
+    expect(old.windows).toBeNull();
+    await expect(old.readBytes("/w/a.partzero")).rejects.toThrow(/update the app/);
+    expect(await old.writeDocument("/w/x.cad.ts", "abc", null)).toEqual({ bytes: 3, backup: null });
+    expect(await old.recent()).toEqual([{ path: "/w/r.cad.ts", name: "r.cad.ts", exists: true, modifiedMs: null, hasThumbnail: false }]);
+    const files = {
+      readBytes: () => Promise.resolve(new Uint8Array([1])),
+      writeDocument: (r: { path: string }) => {
+        calls.push(`atomic:${r.path}`);
+        return Promise.resolve({ bytes: 1, backup: null });
+      },
+      recent: () => Promise.resolve([]),
+      thumbnail: () => Promise.resolve(null),
+      recovery: new MemoryRecovery(),
+      window: new MemoryWindows(),
+      onEvent: () => () => undefined,
+    };
+    const current = new ElectronFileHost({ ...base, files } as never);
+    expect(current.recovery).toBe(files.recovery);
+    expect([...(await current.readBytes("/w/a.partzero"))]).toEqual([1]);
+    await current.writeDocument("/w/a.partzero", new Uint8Array([1]), null);
+    await current.writeExport("/w/a.stl", new Uint8Array([1]));
+    expect(calls).toEqual(["write:/w/x.cad.ts", "atomic:/w/a.partzero", "write:/w/a.stl"]);
+  });
+});
+
 describe("file commands in the registry", () => {
   it("installs over the old file commands without touching the shared command table", async () => {
     const h = await makeHarness({ source: BOX });
