@@ -693,7 +693,10 @@ describe.skipIf(!hasWasm)("IR v1 command layer on Forge (forge-web WASM)", () =>
     it("load, set a parameter, list and repair references, undo and redo through the registry", async () => {
       const h = await makeHarness();
       h.services.ir = new IrDocStore({ engine: () => engine });
-      const load = await h.commands.execute({ id: "ir.load", args: { document: ambiguous() } }, { source: "agent" });
+      // Loading a document is the user's (host-only): an agent cannot replace the model and its history.
+      const agentLoad = await h.commands.execute({ id: "ir.load", args: { document: ambiguous() } }, { source: "agent" });
+      expect(!agentLoad.ok && agentLoad.error.detail?.code).toBe("COMMAND_HOST_ONLY");
+      const load = await h.commands.execute({ id: "ir.load", args: { document: ambiguous() } }, { source: "palette" });
       expect(load.ok).toBe(true);
 
       // ADR 0015: an agent may not change the user's parameters without approval…

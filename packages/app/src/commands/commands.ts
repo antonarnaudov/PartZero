@@ -22,7 +22,7 @@ import { selectionChips } from "../selection/chips";
 import type { SelectionChip } from "../ui-store";
 import { VIEWPORT_COMMANDS } from "../viewport/registry";
 import { viewportRuntime } from "../viewport/runtime";
-import { IR_COMMANDS, originOf as irOriginOf, runOps } from "./ir-commands";
+import { IR_COMMANDS, originOf as irOriginOf, refuseAgentCaller, refuseAgentUndo, runOps } from "./ir-commands";
 import { CommandRegistry, defineCommand, type ExecuteMeta, type Invocation } from "./registry";
 
 const command = defineCommand<AppServices>();
@@ -294,7 +294,8 @@ export const COMMANDS = {
     category: "Edit",
     args: NoArgs,
     keys: ["Mod+Z"],
-    run(_args, ctx) {
+    run(_args, ctx, meta) {
+      if (ctx.doc.isV1) refuseAgentUndo(ctx, meta, "edit.undo");
       const label = ctx.doc.getState().history.undoLabel;
       return { undone: ctx.doc.undo(), label };
     },
@@ -306,7 +307,8 @@ export const COMMANDS = {
     category: "Edit",
     args: NoArgs,
     keys: ["Mod+Shift+Z", "Mod+Y"],
-    run(_args, ctx) {
+    run(_args, ctx, meta) {
+      if (ctx.doc.isV1) refuseAgentUndo(ctx, meta, "edit.redo");
       const label = ctx.doc.getState().history.redoLabel;
       return { redone: ctx.doc.redo(), label };
     },
@@ -317,7 +319,7 @@ export const COMMANDS = {
     title: "Set Source",
     category: "Model",
     description:
-      "Replace the CadScript source (one undoable transaction). `coalesceKey` merges rapid edits (typing). On an IR v1 model it is a code edit: the source (CadScript v1, or v0 which is migrated) compiles to the new model, applied as the `replaceDocument` op (authorship kept, the failure rule and the commit check applied).",
+      "Replace the CadScript source (one undoable transaction). `coalesceKey` merges rapid edits (typing). On an IR v1 model it is a code edit: the source (CadScript v1, or v0 which is migrated) compiles to the new model, applied as the `replaceDocument` op (authorship kept, the failure rule and the commit check applied). Host-only on an IR v1 model: agents and MCP clients operate the model with the ir.* ops, not by writing code.",
     args: z.strictObject({
       source: z.string().max(5_000_000),
       label: z.string().max(200).optional(),
@@ -326,6 +328,8 @@ export const COMMANDS = {
     palette: false,
     async run({ source, label, coalesceKey }, ctx, meta) {
       if (ctx.doc.isV1) {
+        // A code edit is replaceDocument, which is host-only (ADR 0015; the AI operates the tools).
+        refuseAgentCaller(meta, "doc.setSource");
         const changed = await ctx.doc.applyCode(source, { origin: irOriginOf(meta), ...(label !== undefined ? { label } : {}) });
         return { changed, revision: ctx.doc.getState().revision };
       }

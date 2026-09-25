@@ -86,18 +86,47 @@ function summary(t: TransactionOutcome, revision: number): IrTransactionResult {
 }
 
 const Ack = z.array(z.string().min(1).max(200)).max(1000).optional();
+const GroupToken = z.string().min(1).max(100).optional();
+
+/** Agents and MCP clients are not the user: refuse them what is the user's alone (ADR 0015, the owner's "the AI operates tools, not code"). */
+export function isAgentCaller(meta: ExecuteMeta): boolean {
+  return meta.source === "agent" || meta.source === "mcp";
+}
+
+/** `COMMAND_HOST_ONLY` for an agent or MCP caller of `what`. */
+export function refuseAgentCaller(meta: ExecuteMeta, what: string): void {
+  if (!isAgentCaller(meta)) return;
+  throw new CommandEngineError("COMMAND_HOST_ONLY", `${what} is the user's to do (ADR 0015); agents and MCP clients cannot issue it`, [], { op: what, source: meta.source });
+}
+
+/**
+ * Undo and redo for an agent or MCP caller: only its own steps, inside its own open group (undo
+ * outside it would take back the user's last edit).
+ */
+export function refuseAgentUndo(ctx: AppServices, meta: ExecuteMeta, what: string): void {
+  if (!isAgentCaller(meta)) return;
+  const g = ctx.ir?.getState().group;
+  if (g && g.origin === originOf(meta)) return;
+  throw new CommandEngineError("COMMAND_HOST_ONLY", `${what} outside the agent's own open group would take back the user's work; agents and MCP clients undo only their own steps`, [], {
+    op: what,
+    source: meta.source,
+  });
+}
 
 /**
  * Run `ops` as one transaction for a command. A user gesture refused only because features would
  * newly fail asks the user, and applies it acknowledged when they agree.
  */
-export async function runOps(ctx: AppServices, meta: ExecuteMeta, ops: readonly IrOp[], options: { label?: string; ack?: readonly string[] } = {}): Promise<IrTransactionResult> {
+export async function runOps(
+  ctx: AppServices,
+  meta: ExecuteMeta,
+  ops: readonly IrOp[],
+  options: { label?: string; ack?: readonly string[]; group?: string } = {},
+): Promise<IrTransactionResult> {
   const ir = store(ctx);
   const origin = originOf(meta);
   for (const op of ops) {
-    if (OP_CATALOGUE.find((o) => o.op === op.op)?.hostOnly && (meta.source === "agent" || meta.source === "mcp")) {
-      throw new CommandEngineError("COMMAND_HOST_ONLY", `${op.op} is the user's to do (ADR 0015); agents and MCP clients cannot issue it`, [], { op: op.op });
-    }
+    if (OP_CATALOGUE.find((o) => o.op === op.op)?.hostOnly) refuseAgentCaller(meta, op.op);
   }
   const parsed = ops.map((op) => IrOpSchema.parse(op));
   const label = options.label ?? (parsed.length === 1 ? undefined : `${parsed.length} edits`);
@@ -107,12 +136,14 @@ export async function runOps(ctx: AppServices, meta: ExecuteMeta, ops: readonly 
       async (tx) => {
         for (const op of parsed) await tx.apply(op);
       },
-      { origin, ...(ack ? { ack } : {}), ...(label !== undefined ? { label } : {}) },
+      { origin, ...(ack ? { ack } : {}), ...(label !== undefined ? { label } : {}), ...(options.group !== undefined ? { group: options.group } : {}) },
     );
   try {
     const t = await run(options.ack);
     return summary(t, ir.getState().revision);
   } catch (e) {
+    // Only a user gesture asks "Apply anyway?". An agent or MCP caller's own `ack` accepts failures
+    // of agent-authored features only (model-ops refuses breaking yours: unapproved_user_change).
     if (!(e instanceof CommandEngineError) || e.code !== "COMMAND_NEW_FAILURES" || options.ack || !USER_SOURCES.has(meta.source)) throw e;
     const features = (e.details["features"] as NewFailure[] | undefined) ?? [];
     const list = features.map((f) => `• ${f.name}: ${f.code}`).join("\n");
@@ -121,6 +152,14 @@ export async function runOps(ctx: AppServices, meta: ExecuteMeta, ops: readonly 
     const t = await run(features.map((f) => f.id));
     return summary(t, ir.getState().revision);
   }
+}
+
+/** An agent or MCP caller seals or aborts only a group of its own (aborting yours would discard your work). */
+function refuseForeignGroup(ctx: AppServices, meta: ExecuteMeta): void {
+  if (!isAgentCaller(meta)) return;
+  const g = ctx.ir?.getState().group;
+  if (!g || g.origin === originOf(meta)) return;
+  throw new CommandEngineError("COMMAND_HOST_ONLY", `the open group “${g.label}” is not this caller's to seal or abort`, [], { group: g.label, source: meta.source });
 }
 
 const enabled = (ctx: AppServices): boolean => ctx.ir !== undefined && ctx.ir.getState().document !== null;
@@ -165,7 +204,9 @@ export const IR_COMMANDS = {
       "Load an IR document (aicad.ir/1, or aicad.ir/0 which is migrated) as the IR v1 document of record. Without `document`, loads the migration of the current document's compiled IR. Clears the IR history.",
     args: z.strictObject({ document: z.string().max(20_000_000).optional() }),
     enabled: hasStore,
-    async run({ document }, ctx): Promise<IrLoadResult> {
+    async run({ document }, ctx, meta): Promise<IrLoadResult> {
+      // Replacing the whole document (and its history) is the user's (host-only, like replaceDocument).
+      refuseAgentCaller(meta, "ir.load");
       let text = document;
       if (text === undefined) {
         const s = await ctx.doc.idle();
@@ -207,7 +248,8 @@ export const IR_COMMANDS = {
     args: z.strictObject({}),
     palette: false,
     enabled: hasStore,
-    run(_args, ctx) {
+    run(_args, ctx, meta) {
+      refuseAgentUndo(ctx, meta, "ir.undo");
       const ir = store(ctx);
       const label = ir.getState().history.undoLabel;
       return { undone: ir.undo(), label, revision: ir.getState().revision };
@@ -221,7 +263,8 @@ export const IR_COMMANDS = {
     args: z.strictObject({}),
     palette: false,
     enabled: hasStore,
-    run(_args, ctx) {
+    run(_args, ctx, meta) {
+      refuseAgentUndo(ctx, meta, "ir.redo");
       const ir = store(ctx);
       const label = ir.getState().history.redoLabel;
       return { redone: ir.redo(), label, revision: ir.getState().revision };
@@ -233,12 +276,12 @@ export const IR_COMMANDS = {
     title: "Apply IR Ops",
     category: "Model",
     description:
-      "Apply several command-layer ops as ONE undoable transaction (atomic: if one is refused, none is applied). Ops: every op of the catalogue (addFeature, setField, updateFeature, deleteFeature, moveFeature, setSuppressed, renameFeature, addParam, setParam, renameParam, deleteParam, setRollback, setAppearance, writeBackSolution, captureRef, acceptRefCandidate, acceptRefProposal, renameCurve, upgradeFeature with its `confirm` token). `ack`: the ids of newly failing features to accept.",
-    args: z.strictObject({ ops: z.array(IrOpSchema).min(1).max(100), label: z.string().max(200).optional(), ack: Ack }),
+      "Apply several command-layer ops as ONE undoable transaction (atomic: if one is refused, none is applied). Ops: every op of the catalogue (addFeature, setField, updateFeature, deleteFeature, moveFeature, setSuppressed, renameFeature, addParam, setParam, renameParam, deleteParam, setRollback, setAppearance, writeBackSolution, captureRef, acceptRefCandidate, acceptRefProposal, renameCurve, upgradeFeature with its `confirm` token). `ack`: the ids of newly failing features to accept (an agent or MCP caller: its own features only). `group`: the token ir.openGroup returned (refused once that group is closed).",
+    args: z.strictObject({ ops: z.array(IrOpSchema).min(1).max(100), label: z.string().max(200).optional(), ack: Ack, group: GroupToken }),
     palette: false,
     enabled,
-    run({ ops, label, ack }, ctx, meta) {
-      return runOps(ctx, meta, ops, { ...(label !== undefined ? { label } : {}), ...(ack ? { ack } : {}) });
+    run({ ops, label, ack, group }, ctx, meta) {
+      return runOps(ctx, meta, ops, { ...(label !== undefined ? { label } : {}), ...(ack ? { ack } : {}), ...(group !== undefined ? { group } : {}) });
     },
   }),
 
@@ -314,13 +357,14 @@ export const IR_COMMANDS = {
     id: "ir.openGroup",
     title: "Open Undo Group",
     category: "Edit",
-    description: "Start an undo group: the transactions until ir.sealGroup become ONE undo step (an agent turn, an edited sketch); ir.abortGroup restores the document from before it.",
+    description:
+      "Start an undo group: the transactions until ir.sealGroup become ONE undo step (an agent turn, an edited sketch); ir.abortGroup restores the document from before it. While it is open, edits from other callers are refused (IR_GROUP_OPEN). Returns a `token`: pass it to ir.apply, ir.sealGroup and ir.abortGroup so nothing lands once the group was closed (IR_GROUP_CLOSED).",
     args: z.strictObject({ label: z.string().min(1).max(200) }),
     palette: false,
     enabled,
     async run({ label }, ctx, meta) {
-      await store(ctx).openGroup({ label, origin: originOf(meta) });
-      return { open: true, label };
+      const { token } = await store(ctx).openGroup({ label, origin: originOf(meta) });
+      return { open: true, label, token };
     },
   }),
 
@@ -328,11 +372,12 @@ export const IR_COMMANDS = {
     id: "ir.sealGroup",
     title: "Seal Undo Group",
     category: "Edit",
-    args: z.strictObject({}),
+    args: z.strictObject({ group: GroupToken }),
     palette: false,
     enabled,
-    run(_args, ctx) {
-      return store(ctx).sealGroup();
+    run({ group }, ctx, meta) {
+      refuseForeignGroup(ctx, meta);
+      return store(ctx).sealGroup(group);
     },
   }),
 
@@ -340,11 +385,12 @@ export const IR_COMMANDS = {
     id: "ir.abortGroup",
     title: "Abort Undo Group",
     category: "Edit",
-    args: z.strictObject({}),
+    args: z.strictObject({ group: GroupToken }),
     palette: false,
     enabled,
-    run(_args, ctx) {
-      return store(ctx).abortGroup();
+    run({ group }, ctx, meta) {
+      refuseForeignGroup(ctx, meta);
+      return store(ctx).abortGroup(group);
     },
   }),
 };

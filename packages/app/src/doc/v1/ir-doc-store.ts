@@ -19,6 +19,13 @@
  *   visible at once and is its own step on a local stack (undo inside the group undoes one step);
  *   `sealGroup()` collapses the group into ONE step on the main stack (an agent turn, an edited
  *   sketch); `abortGroup()` restores the document from before the group. Groups don't nest.
+ *   A group holds one author's work: while it is open, a transaction from another origin is
+ *   refused (`IR_GROUP_OPEN`; an agent group takes its own origin only, a user group user and host
+ *   code), so your edit is never sealed into the agent's undo step. `openGroup` returns a token;
+ *   transactions that carry it are refused (`IR_GROUP_CLOSED`) once the group is sealed, aborted or
+ *   the document is replaced (`load` while a group is open closes it with `group-abort`).
+ * - **Own parameters** (ADR 0015 §2): the parameters an agent origin added are its own to change
+ *   (`@aicad/model-ops` {@link OwnParams}, as in `MemoryOpsHost`); your edit of one makes it yours.
  * - The document of record is canonical: {@link IrDocStore.load} stores every expression in its
  *   canonical form and refuses a document whose canonical form would be rejected ([W0-20]).
  * - §0.6 write-back: after the ops of a transaction the store runs `writeBackSolution` inside the
@@ -36,7 +43,9 @@ import type { metricsV1 } from "@aicad/ir-types";
 import {
   EMPTY_HOST_STATE,
   hostStateEqual,
+  needsApproval,
   OpTransaction,
+  OwnParams,
   type Approvals,
   type HostState,
   type NewFailure,
@@ -90,8 +99,17 @@ export interface TransactionOptions {
   label?: string;
   /** Acknowledged newly failing features ("Apply anyway": the ids `COMMAND_NEW_FAILURES` listed). */
   ack?: readonly string[];
-  /** What an agent/MCP/CLI transaction may change of the user's (ADR 0015); host code only. */
+  /**
+   * What an agent/MCP/CLI transaction may change of the user's (ADR 0015); host code only. The
+   * store adds the parameters that origin added itself ({@link OwnParams}).
+   */
   approvals?: Approvals;
+  /**
+   * The group (agent turn) the transaction belongs to: the token {@link IrDocStore.openGroup}
+   * returned. Refused (`IR_GROUP_CLOSED`) once that group is sealed, aborted or its document
+   * replaced, so a turn's late ops never land elsewhere.
+   */
+  group?: string;
 }
 
 export interface TransactionOutcome {
@@ -167,7 +185,10 @@ export class IrDocStore extends Store<IrDocState> {
   private readonly history: History;
   private readonly now: () => number;
   private queue: Promise<unknown> = Promise.resolve();
-  private groupState: { base: string; history: History } | null = null;
+  private groupState: { base: string; history: History; token: string; origin: OpOrigin; label: string } | null = null;
+  private groupSeq = 0;
+  /** The parameters each agent origin added itself (ADR 0015 §2). */
+  private readonly ownParams = new OwnParams();
   private readonly reports = new Map<string, Promise<metricsV1.EvalReport>>();
   private readonly changeListeners = new Set<(e: IrDocChange) => void>();
 
@@ -231,15 +252,23 @@ export class IrDocStore extends Store<IrDocState> {
   /**
    * Load a document of either IR version (a v0 document is migrated, SPEC-v1 §9.1) as the new
    * document of record, every expression in canonical form (§2.4), with its host state (default
-   * none); clears the history and any group. Refused (the engine's rejection, e.g.
+   * none); clears the history. An open group is closed first (`group-abort`, so its owner stops,
+   * and its token is refused from then on). Refused (the engine's rejection, e.g.
    * `PARAM_OUT_OF_RANGE` at a site's path) when the document, or only its canonical form
    * ([W0-20]), would be rejected. Returns the canonical text and the migration's renames.
    */
   load(text: string, options: { host?: HostState } = {}): Promise<{ document: string; renames: metricsV1.IdRename[] }> {
     return this.serial(async () => {
       const m = await this.engine().canonicalize(text);
+      const open = this.groupState;
+      if (open) {
+        // The group's document is being replaced: close it (nothing to restore) and say so.
+        this.groupState = null;
+        this.setState({ group: null, history: this.historyState() });
+        this.emit({ kind: "group-abort", label: open.label, origin: open.origin, revision: this.getState().revision });
+      }
       this.history.clear();
-      this.groupState = null;
+      this.ownParams.clear();
       const host = options.host ?? EMPTY_HOST_STATE;
       this.setState((s) => ({ document: m.document, host, revision: s.revision + 1, last: null, group: null, history: this.historyState() }));
       this.emit({ kind: "load", label: "Open", origin: "system", revision: this.getState().revision });
@@ -264,6 +293,8 @@ export class IrDocStore extends Store<IrDocState> {
       const base = this.document;
       const baseHost = this.getState().host;
       const origin = options.origin ?? "command";
+      this.checkGroup(origin, label, options.group);
+      const approvals = needsApproval(origin) ? this.ownParams.approvalsFor(origin, options.approvals) : options.approvals;
       const t = new OpTransaction({
         engine: this.engine(),
         document: base,
@@ -273,7 +304,7 @@ export class IrDocStore extends Store<IrDocState> {
         failureRule: this.deps.failureRule ?? true,
         report: (d) => this.reportOf(d),
         ...(options.ack ? { ack: options.ack } : {}),
-        ...(options.approvals ? { approvals: options.approvals } : {}),
+        ...(approvals ? { approvals } : {}),
       });
       const tx: IrTransaction = {
         get document() {
@@ -312,6 +343,7 @@ export class IrDocStore extends Store<IrDocState> {
       };
       if (result.report) this.cacheReport(result.document, Promise.resolve(result.report));
       if (out.changed) {
+        this.ownParams.record(origin, result.ops);
         const g = this.getState().group;
         const h = this.groupState ? this.groupState.history : this.history;
         h.record(snapshotText(base, baseHost), snapshotText(result.document, result.host), { label, origin, time: this.now() });
@@ -367,19 +399,59 @@ export class IrDocStore extends Store<IrDocState> {
    * {@link sealGroup} makes the whole group ONE step (e.g. one agent turn) or {@link abortGroup}
    * restores the document from before it. Refused while another group is open.
    */
-  openGroup(group: { label: string; origin: OpOrigin }): Promise<void> {
+  openGroup(group: { label: string; origin: OpOrigin }): Promise<{ token: string }> {
     return this.serial(async () => {
       if (this.groupState) throw new CommandEngineError("IR_GROUP_OPEN", `a group (“${this.getState().group?.label ?? ""}”) is already open; seal or abort it first`);
       const s = this.getState();
-      this.groupState = { base: snapshotText(this.document, s.host), history: this.newHistory() };
+      const token = `g${++this.groupSeq}-${s.revision}`;
+      this.groupState = { base: snapshotText(this.document, s.host), history: this.newHistory(), token, origin: group.origin, label: group.label };
       this.setState({ group: { label: group.label, origin: group.origin, steps: 0 }, history: this.historyState() });
       this.emit({ kind: "group-open", label: group.label, origin: group.origin, revision: s.revision });
+      return { token };
     });
   }
 
-  /** Close the open group as ONE undo step (nothing is recorded when it changed nothing). */
-  sealGroup(): Promise<{ changed: boolean; steps: number }> {
+  /**
+   * Whether a transaction from `origin` (carrying `token`, if any) may run now: a token names a
+   * group that must still be open; an open group takes transactions of its own author only.
+   */
+  private checkGroup(origin: OpOrigin, label: string, token: string | undefined): void {
+    const gs = this.groupState;
+    if (token !== undefined && gs?.token !== token) {
+      throw new CommandEngineError(
+        "IR_GROUP_CLOSED",
+        `“${label}” belongs to an undo group that was sealed, aborted or whose document was replaced; nothing was changed`,
+        [],
+        { group: token.slice(0, 100) },
+      );
+    }
+    if (!gs) return;
+    const fits = needsApproval(gs.origin) ? origin === gs.origin : !needsApproval(origin);
+    if (fits) return;
+    const agentGroup = needsApproval(gs.origin);
+    throw new CommandEngineError(
+      "IR_GROUP_OPEN",
+      agentGroup
+        ? `“${gs.label}” (${gs.origin}) is editing the model as one undo step; stop it, or wait until it finishes, before “${label}”`
+        : `“${gs.label}” is open as one undo step of the user's; ${origin} edits wait until it is finished`,
+      [],
+      { group: gs.label, groupOrigin: gs.origin, origin },
+    );
+  }
+
+  /** Throws `IR_GROUP_CLOSED` when `token` does not name the open group. */
+  private requireGroupToken(token: string | undefined): void {
+    if (token === undefined || this.groupState?.token === token) return;
+    throw new CommandEngineError("IR_GROUP_CLOSED", "that undo group was already sealed, aborted or its document replaced", [], { group: token.slice(0, 100) });
+  }
+
+  /**
+   * Close the open group as ONE undo step (nothing is recorded when it changed nothing). With the
+   * group's `token`: refused (`IR_GROUP_CLOSED`) when that group is no longer open.
+   */
+  sealGroup(token?: string): Promise<{ changed: boolean; steps: number }> {
     return this.serial(async () => {
+      this.requireGroupToken(token);
       const g = this.getState().group;
       const gs = this.groupState;
       if (!g || !gs) return { changed: false, steps: 0 };
@@ -394,9 +466,10 @@ export class IrDocStore extends Store<IrDocState> {
     });
   }
 
-  /** Close the open group and restore the document from before it. */
-  abortGroup(): Promise<{ aborted: boolean }> {
+  /** Close the open group and restore the document from before it (with `token`: as {@link sealGroup}). */
+  abortGroup(token?: string): Promise<{ aborted: boolean }> {
     return this.serial(async () => {
+      this.requireGroupToken(token);
       const g = this.getState().group;
       const gs = this.groupState;
       if (!g || !gs) return { aborted: false };
