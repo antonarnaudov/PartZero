@@ -1,0 +1,35 @@
+packages/app/src/tools/catalog.ts
+  s_59c0dd2af30db2::t_4ba32bd6dd5c86 8-9,16-17
+packages/app/test/feature-tools.test.ts
+  s_59c0dd2af30db2::t_3ddaf46ba05e19 236-237,267
+  s_59c0dd2af30db2::t_bec508c58cb573 60,338
+  s_59c0dd2af30db2::t_ad939dd5611d28 1-59,61-235,238-266,268-337,339-421
+packages/app/src/tools/builtin/modify.ts
+  s_59c0dd2af30db2::t_5319e1d11c35c3 301,440
+  s_59c0dd2af30db2::t_b642583193214c 77-78
+  s_59c0dd2af30db2::t_babb8d80db3d54 1-76,79-300,302-439,441-511
+packages/app/src/tools/builtin/pattern.ts
+  s_59c0dd2af30db2::t_a6c0b86268b913 1-120,122-154,156-377,379-486
+  s_59c0dd2af30db2::t_5319e1d11c35c3 378
+  s_59c0dd2af30db2::t_b642583193214c 121,155
+packages/app/src/tools/builtin/feature-kit.ts
+  s_59c0dd2af30db2::t_b642583193214c 138-140,148,153-160
+  s_59c0dd2af30db2::t_db479a044cd41f 109-110
+  s_59c0dd2af30db2::t_75cf5e6646ef33 1-108,111-137,141-147,149-152,161-458
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1b4c95f6f31c1663901b97d80ccad09b38c95ab7",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
