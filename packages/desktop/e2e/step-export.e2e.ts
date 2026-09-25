@@ -158,9 +158,13 @@ test("File > Export > STEP… exports the open IR v1 document", async () => {
     !hasCommand,
     "file.exportStep is not registered yet: the Phase C integrator adds it to commands.ts (io/step-export-command.ts)",
   );
-  const opened = await page.evaluate(
-    (path) => (window as unknown as { __aicad: Automation }).__aicad.execute({ id: "file.open", args: { path } }),
-    V1_PROGRAM,
+  // Open it the user's way: the open dialog (stubbed to pick it) grants the read.
+  await app.evaluate(({ dialog }, path) => {
+    (dialog as unknown as { showOpenDialog: unknown }).showOpenDialog = () =>
+      Promise.resolve({ canceled: false, filePaths: [path] });
+  }, V1_PROGRAM);
+  const opened = await page.evaluate(() =>
+    (window as unknown as { __aicad: Automation }).__aicad.execute({ id: "file.open" }),
   );
   expect(opened.ok, opened.error?.message).toBe(true);
   await page.evaluate(() => (window as unknown as { __aicad: Automation }).__aicad.idle());
