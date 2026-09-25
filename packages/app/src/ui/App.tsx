@@ -9,6 +9,7 @@ import { Icon } from "./icons";
 import { ProblemsPanel } from "./ProblemsPanel";
 import { ProposalView } from "./ProposalView";
 import { SettingsDialog } from "./SettingsDialog";
+import { SketchModeHost } from "./sketch/SketchModeHost";
 import { StatusBar } from "./StatusBar";
 import { ParametersPanel, Timeline } from "./Timeline";
 import { Toolbar } from "./Toolbar";
@@ -107,6 +108,7 @@ export function App(): ReactElement {
         {panels.left && <Splitter axis="x" label="Resize timeline" onDrag={(d) => resize("left", d)} />}
         <main className="col-center">
           <Viewport />
+          <SketchModeHost />
         </main>
         {panels.right && <Splitter axis="x" label="Resize code panel" onDrag={(d) => resize("right", -d)} />}
         {panels.right && (

@@ -16,7 +16,12 @@
       "types": "./dist/worker.d.ts",
       "import": "./dist/worker.js"
     },
+    "./sketch": {
+      "types": "./dist/sketch.d.ts",
+      "import": "./dist/sketch.js"
+    },
     "./forge_wasm_bg.wasm": "./pkg/forge_wasm_bg.wasm",
+    "./forge_sketch_wasm_bg.wasm": "./pkg-sketch/forge_sketch_wasm_bg.wasm",
     "./package.json": "./package.json"
   },
   "files": [
@@ -25,17 +30,23 @@
     "pkg/forge_wasm.d.ts",
     "pkg/forge_wasm_bg.wasm",
     "pkg/forge_wasm_bg.wasm.d.ts",
-    "pkg/THIRD_PARTY_LICENSES.txt"
+    "pkg/THIRD_PARTY_LICENSES.txt",
+    "pkg-sketch/forge_sketch_wasm.js",
+    "pkg-sketch/forge_sketch_wasm.d.ts",
+    "pkg-sketch/forge_sketch_wasm_bg.wasm",
+    "pkg-sketch/forge_sketch_wasm_bg.wasm.d.ts",
+    "pkg-sketch/THIRD_PARTY_LICENSES.txt"
   ],
   "scripts": {
-    "build": "node scripts/build.mjs && tsc -p tsconfig.build.json",
+    "build": "node scripts/build.mjs && node scripts/build-sketch.mjs && tsc -p tsconfig.build.json",
     "build:wasm": "node scripts/build.mjs",
     "build:ts": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test test/*.test.mjs",
     "bench": "node scripts/bench.mjs",
-    "dev": "node scripts/build.mjs --allow-stale && tsc -p tsconfig.build.json && vite --config demo/vite.config.ts",
-    "demo:build": "vite build --config demo/vite.config.ts"
+    "dev": "node scripts/build.mjs --allow-stale && node scripts/build-sketch.mjs --skip-if-present && tsc -p tsconfig.build.json && vite --config demo/vite.config.ts",
+    "demo:build": "vite build --config demo/vite.config.ts",
+    "build:sketch": "node scripts/build-sketch.mjs"
   },
   "dependencies": {
     "@aicad/ir-types": "workspace:*"

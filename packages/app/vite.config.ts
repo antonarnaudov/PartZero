@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 import { forgeWebPlugin } from "./vite-plugin-forge-web.ts";
+import { forgeWebSketchPlugin } from "./vite-plugin-forge-web-sketch.ts";
 
 /**
  * Cross-origin isolation (COOP + COEP) makes SharedArrayBuffer — and with it WASM threads for
@@ -309,7 +310,7 @@ export default defineConfig({
   // Relative asset URLs: the bundle is served from app://aicad/ by the desktop shell (and can be
   // hosted under any path on the web).
   base: "./",
-  plugins: [react(), forgeWebPlugin(), notices.main],
+  plugins: [react(), forgeWebPlugin(), forgeWebSketchPlugin(), notices.main],
   worker: {
     format: "es",
     plugins: () => [forgeWebPlugin(), notices.worker()],

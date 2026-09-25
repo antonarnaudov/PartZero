@@ -1,0 +1,887 @@
+/* Sketch mode (SKUI). Colours are the app's tokens plus the sketch palette below. */
+
+:root,
+:root[data-theme="dark"] {
+  --sk-bg: #24272d;
+  --sk-free: #5b9bff;
+  --sk-fixed: #e8eaee;
+  --sk-conflict: #ff6b64;
+  --sk-construction: #d9a54a;
+  --sk-failed: #6b7280;
+  --sk-hover: #f0b35a;
+  --sk-select: #ffd166;
+  --sk-region: rgba(91, 155, 255, 0.1);
+  --sk-rubber: #7fb2ff;
+  --sk-guide: rgba(240, 179, 90, 0.85);
+  --sk-context: rgba(200, 206, 214, 0.18);
+  --sk-context-plane: rgba(200, 206, 214, 0.45);
+  --sk-axis-u: rgba(240, 112, 106, 0.55);
+  --sk-axis-v: rgba(79, 178, 134, 0.55);
+  --sk-dim: #c9d4e3;
+  --sk-glyph-bg: #30343c;
+}
+
+:root[data-theme="light"] {
+  --sk-bg: #f7f8fa;
+  --sk-free: #1f6fe0;
+  --sk-fixed: #15181d;
+  --sk-conflict: #d6362f;
+  --sk-construction: #b7791f;
+  --sk-failed: #9aa1ab;
+  --sk-hover: #e39a2d;
+  --sk-select: #d98e04;
+  --sk-region: rgba(31, 111, 224, 0.08);
+  --sk-rubber: #2f6fed;
+  --sk-guide: rgba(227, 154, 45, 0.9);
+  --sk-context: rgba(40, 50, 65, 0.16);
+  --sk-context-plane: rgba(40, 50, 65, 0.42);
+  --sk-axis-u: rgba(209, 59, 53, 0.5);
+  --sk-axis-v: rgba(36, 138, 90, 0.5);
+  --sk-dim: #364152;
+  --sk-glyph-bg: #eef1f5;
+}
+
+.sk-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: var(--sk-bg);
+  overflow: hidden;
+  user-select: none;
+}
+
+.sk-overlay.loading {
+  display: grid;
+  place-items: center;
+  background: var(--vp-overlay);
+}
+
+.sk-loading {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.sketch-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.sketch-canvas.tool-select {
+  cursor: default;
+}
+
+.sk-grid {
+  stroke: var(--vp-grid);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.sk-grid.major {
+  stroke: var(--vp-grid-major);
+}
+
+.sk-axis {
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.sk-axis.u {
+  stroke: var(--sk-axis-u);
+}
+
+.sk-axis.v {
+  stroke: var(--sk-axis-v);
+}
+
+.sk-origin {
+  fill: var(--sk-bg);
+  stroke: var(--text-muted);
+  stroke-width: 1.2;
+}
+
+.sk-context line {
+  stroke: var(--sk-context);
+  stroke-width: 1;
+}
+
+.sk-context line.on-plane {
+  stroke: var(--sk-context-plane);
+  stroke-width: 1.5;
+}
+
+.sk-region {
+  fill: var(--sk-region);
+  stroke: none;
+}
+
+.sk-curve {
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sk-curve.free {
+  stroke: var(--sk-free);
+}
+
+.sk-curve.fixed {
+  stroke: var(--sk-fixed);
+}
+
+.sk-curve.conflict {
+  stroke: var(--sk-conflict);
+  stroke-width: 2.2;
+}
+
+.sk-curve.failed {
+  stroke: var(--sk-failed);
+  stroke-dasharray: 2 3;
+}
+
+.sk-curve.construction {
+  stroke: var(--sk-construction);
+  stroke-dasharray: 6 4;
+  stroke-width: 1.2;
+}
+
+.sk-curve.hovered {
+  stroke: var(--sk-hover);
+  stroke-width: 2.6;
+}
+
+.sk-curve.selected {
+  stroke: var(--sk-select);
+  stroke-width: 2.8;
+}
+
+.sk-point {
+  stroke-width: 1.2;
+}
+
+.sk-point.free {
+  fill: var(--sk-free);
+  stroke: var(--sk-free);
+}
+
+.sk-point.fixed {
+  fill: var(--sk-fixed);
+  stroke: var(--sk-fixed);
+}
+
+.sk-point.failed {
+  fill: var(--sk-failed);
+  stroke: var(--sk-failed);
+}
+
+.sk-point.center {
+  fill: none;
+}
+
+.sk-point.construction {
+  fill: var(--sk-construction);
+  stroke: var(--sk-construction);
+}
+
+.sk-point.hovered {
+  fill: var(--sk-hover);
+  stroke: var(--sk-hover);
+}
+
+.sk-point.selected {
+  fill: var(--sk-select);
+  stroke: var(--sk-select);
+}
+
+.sk-glyph {
+  cursor: pointer;
+}
+
+.sk-glyph rect {
+  fill: var(--sk-glyph-bg);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.sk-glyph text {
+  fill: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+}
+
+.sk-glyph.state-conflicting rect,
+.sk-glyph.state-unsatisfied rect {
+  stroke: var(--sk-conflict);
+  fill: var(--err-weak);
+}
+
+.sk-glyph.state-redundant rect,
+.sk-glyph.state-partially_redundant rect {
+  stroke: var(--warn);
+}
+
+.sk-glyph.selected rect {
+  stroke: var(--sk-select);
+  stroke-width: 1.6;
+}
+
+.sk-dim-line {
+  stroke: var(--sk-dim);
+  stroke-width: 1;
+  fill: none;
+}
+
+.sk-dim-arrow {
+  fill: var(--sk-dim);
+}
+
+.sk-dim-label {
+  cursor: move;
+}
+
+.sk-dim-label rect {
+  fill: var(--panel);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.sk-dim-label text {
+  fill: var(--text);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.sk-dim.driven .sk-dim-label text {
+  fill: var(--text-muted);
+  font-style: italic;
+}
+
+.sk-dim.conflict .sk-dim-line,
+.sk-dim.conflict .sk-dim-arrow {
+  stroke: var(--sk-conflict);
+  fill: var(--sk-conflict);
+}
+
+.sk-dim.conflict .sk-dim-label rect {
+  stroke: var(--sk-conflict);
+}
+
+.sk-dim.selected .sk-dim-label rect {
+  stroke: var(--sk-select);
+  stroke-width: 1.6;
+}
+
+.sk-dim.pending {
+  opacity: 0.7;
+}
+
+.sk-rubber {
+  fill: none;
+  stroke: var(--sk-rubber);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 3;
+}
+
+.sk-rubber.construction {
+  stroke: var(--sk-construction);
+}
+
+.sk-rubber-point {
+  fill: var(--sk-rubber);
+}
+
+.sk-guide {
+  stroke: var(--sk-guide);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.sk-mark {
+  fill: none;
+  stroke: var(--sk-hover);
+  stroke-width: 1.5;
+}
+
+.sk-live-label {
+  fill: var(--text);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  paint-order: stroke;
+  stroke: var(--sk-bg);
+  stroke-width: 3px;
+}
+
+.sk-snap {
+  fill: none;
+  stroke: var(--sk-hover);
+  stroke-width: 1.6;
+}
+
+.sk-snap.sk-snap-dot,
+.sk-snap-onCurve,
+.sk-snap-grid,
+.sk-snap-axis {
+  fill: var(--sk-hover);
+  stroke: none;
+}
+
+.sk-box {
+  fill: var(--accent-weak);
+  stroke: var(--accent);
+  stroke-width: 1;
+}
+
+.sk-box.crossing {
+  stroke-dasharray: 4 3;
+  fill: rgba(79, 178, 134, 0.1);
+  stroke: var(--ok);
+}
+
+/* ── Chrome ─────────────────────────────────────────────────────────────── */
+
+.sk-header {
+  position: absolute;
+  top: 10px;
+  left: 56px;
+  right: 234px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.sk-header > * {
+  pointer-events: auto;
+}
+
+.sk-header .ghost-btn,
+.sk-header .primary-btn {
+  white-space: nowrap;
+  flex: none;
+}
+
+.sk-title {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-right: auto;
+  padding: 4px 8px;
+  background: var(--vp-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sk-title b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sk-palette {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px;
+  background: var(--vp-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  max-height: calc(100% - 60px);
+  overflow-y: auto;
+}
+
+.sk-palette-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sk-palette-group + .sk-palette-group {
+  border-top: 1px solid var(--border);
+  padding-top: 5px;
+}
+
+.sk-tool,
+.sk-con {
+  width: 30px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sk-tool:hover,
+.sk-con:hover:not(:disabled) {
+  background: var(--panel-3);
+}
+
+.sk-tool.active {
+  background: var(--accent-weak);
+  color: var(--accent-text);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.sk-constraint-bar {
+  position: absolute;
+  top: 46px;
+  left: 56px;
+  display: flex;
+  flex-wrap: wrap;
+  max-width: calc(100% - 300px);
+  gap: 1px;
+  padding: 3px;
+  background: var(--vp-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.sk-con {
+  width: 28px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sk-con:disabled {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.sk-inspector {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  max-height: calc(100% - 56px);
+  width: 214px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--vp-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.sk-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.sk-collapse {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.sk-inspector.collapsed {
+  width: auto;
+  min-width: 150px;
+}
+
+.sk-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--sk-free);
+}
+
+.sk-status.fixed .sk-status-dot {
+  background: var(--sk-fixed);
+}
+
+.sk-status.conflict {
+  color: var(--sk-conflict);
+}
+
+.sk-status.conflict .sk-status-dot {
+  background: var(--sk-conflict);
+}
+
+.sk-status.warn .sk-status-dot {
+  background: var(--warn);
+}
+
+.sk-section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+
+.sk-muted {
+  color: var(--text-muted);
+}
+
+.sk-error {
+  color: var(--sk-conflict);
+}
+
+.sk-conflict {
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--err-weak);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.sk-conflict-text {
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.sk-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sk-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.sk-row:hover {
+  background: var(--panel-3);
+}
+
+.sk-row.selected {
+  background: var(--accent-weak);
+}
+
+.sk-row.state-conflicting .sk-row-type,
+.sk-row.state-unsatisfied .sk-row-type {
+  color: var(--sk-conflict);
+}
+
+.sk-row.state-redundant .sk-row-type {
+  color: var(--warn);
+}
+
+.sk-row-type {
+  flex: none;
+  width: 82px;
+  color: var(--text);
+}
+
+.sk-row-args {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.sk-row-btn {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 3px;
+}
+
+.sk-row-btn:hover {
+  color: var(--text);
+}
+
+.sk-footer {
+  position: absolute;
+  left: 56px;
+  right: 234px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  font-size: 12px;
+}
+
+.sk-hint {
+  color: var(--text-muted);
+  padding: 3px 8px;
+  background: var(--vp-overlay);
+  border-radius: var(--radius-sm);
+}
+
+.sk-notice {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--vp-overlay);
+  border: 1px solid var(--border);
+}
+
+.sk-notice.error {
+  color: var(--sk-conflict);
+  border-color: var(--sk-conflict);
+}
+
+.sk-notice.warning {
+  color: var(--warn);
+}
+
+.sk-dim-editor {
+  position: absolute;
+  /* The input (120 px) is centred on the label; the help line hangs below. */
+  transform: translate(-60px, -13px);
+  width: 290px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  z-index: 6;
+}
+
+.sk-dim-input {
+  width: 120px;
+  padding: 4px 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+.sk-dim-input.err {
+  border-color: var(--sk-conflict);
+  box-shadow: 0 0 0 3px var(--err-weak);
+}
+
+.sk-dim-unit {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.sk-dim-error {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--sk-conflict);
+  font-size: 11px;
+  background: var(--panel);
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--sk-conflict);
+  max-width: 280px;
+}
+
+.sk-dim-help {
+  flex-basis: 100%;
+  color: var(--text-faint);
+  font-size: 10.5px;
+}
+
+.sk-typed {
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: 12px;
+}
+
+.sk-typed label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.sk-typed input {
+  width: 90px;
+  padding: 3px 6px;
+  font-family: var(--font-mono);
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.sk-typed-error {
+  color: var(--sk-conflict);
+}
+
+.sk-plane-picker {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.sk-card {
+  width: 360px;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sk-card-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sk-plane-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.sk-plane-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  text-align: left;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.sk-plane-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+}
+
+.sk-plane-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.sk-plane-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.sk-plane-hint {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.sk-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* (sketch.css loads before styles.css: two classes win over `.tb-btn`.) */
+.tb-btn.sk-tb-btn {
+  width: auto;
+  padding: 0 8px;
+  gap: 5px;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.tb-btn.sk-tb-btn.active {
+  color: var(--accent-text);
+  background: var(--accent-weak);
+}
+
+.sk-tb-label {
+  font-size: 12px;
+}
+
+/* The Finish follow-up: extrude the new sketch (until the feature tools' extrude exists). */
+.sk-extrude-offer {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 24px);
+  padding: 8px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+}
+
+.sk-extrude-title {
+  white-space: nowrap;
+}
+
+.sk-extrude-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sk-extrude-field input {
+  width: 64px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.sk-extrude-offer select {
+  font: inherit;
+}
+
+.sk-extrude-error {
+  flex-basis: 100%;
+  color: var(--sk-conflict);
+}

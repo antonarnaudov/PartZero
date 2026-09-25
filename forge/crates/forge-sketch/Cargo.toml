@@ -12,6 +12,10 @@ forge-core.workspace = true
 forge-ir.workspace = true
 forge-ops.workspace = true
 forge-solve = { path = "../forge-solve" }
+# The interactive session (src/session.rs) evaluates dimension expressions with the evaluator
+# of record (W1) and speaks JSON to the sketcher (serde derive).
+forge-params = { path = "../forge-params" }
+serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 
