@@ -1,0 +1,50 @@
+oracle/README.md
+  s_59c0dd2af30db2::t_be0c5338acb7da 421-427
+forge/crates/forge-io/tests/common/step_corpus.rs
+  s_59c0dd2af30db2::t_1cd19a08007e2e 80-90,92-101
+  s_59c0dd2af30db2::t_655e30460cd7c0 91
+forge/crates/forge-io/src/step/brep.rs
+  s_59c0dd2af30db2::t_f6f691f677826d 1223-1226
+  s_59c0dd2af30db2::t_655e30460cd7c0 1396,1836-1838
+  s_59c0dd2af30db2::t_c5d39b6b510711 1214-1218,1222
+  s_59c0dd2af30db2::t_836ef0d15adb6d 87-89,113-115,289,337,753,1036-1039,1074,1097-1103,1261-1262,1394-1395,1397,1423,1425-1429,1434,1445-1447,1449,1460,1609,1678,1685,1705,1833-1835,1839-1847
+  s_59c0dd2af30db2::t_5a528e671174f6 1141-1142,1163,1174,1209-1213,1219-1221,1227-1231
+  s_59c0dd2af30db2::t_6120c0e131c8a5 1232-1233,1848-1849
+forge/crates/forge-io/src/step/geometry.rs
+  s_59c0dd2af30db2::t_4b0c59c13277aa 24,229-231,246-259,261-335
+  s_59c0dd2af30db2::t_86bd562a45489a 4-5
+forge/crates/forge-io/tests/step_samples.rs
+  s_59c0dd2af30db2::t_2f9219c5d3ec9b 204-206,216-218
+  s_59c0dd2af30db2::t_f6f691f677826d 207-215
+forge/crates/forge-io/examples/step_corpus.rs
+  s_59c0dd2af30db2::t_655e30460cd7c0 42-45
+  s_59c0dd2af30db2::t_df501502f38067 5,39-41,46-48
+  s_59c0dd2af30db2::t_d24ea26e7430b8 49
+forge/crates/forge-io/src/step/mod.rs
+  s_59c0dd2af30db2::t_95143731a524fb 67,294,296,509-510,516,519-536,554-566,570-581,583-586,594,601,638,735-738,741-742,757,760-775,805,810,814-821,823-830,833-834,837-838,840-856
+  s_59c0dd2af30db2::t_55d8010a591a6d 696-734,740,756,777-803,831-832
+  s_59c0dd2af30db2::t_dce8a8688f6ed6 743-753,758-759,804,806,808,835,857,859-882
+  s_59c0dd2af30db2::t_d2280d1b2b2f7d 23-26,537,567-569,695,739,754-755,776,807,809,811-813,822,836,839,858,883
+forge/crates/forge-io/src/step/verify.rs
+  s_59c0dd2af30db2::t_655e30460cd7c0 11-13,22-23,317-468,622-623,686,694-696,735-736,801,817-827,829-830,832-834,872,875-876
+  s_59c0dd2af30db2::t_55d8010a591a6d 828
+  s_59c0dd2af30db2::t_5560b93626d44a 831,841-848,865-871,873-874
+forge/crates/forge-io/tests/golden/cylinder.p21
+  s_59c0dd2af30db2::t_d8687eb3e10904 26-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "634db3abe8a0908916a7ef93591eb5aa55563c53",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
