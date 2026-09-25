@@ -1,0 +1,20 @@
+packages/desktop/e2e/model-panels.e2e.ts
+  s_59c0dd2af30db2::t_35f5c37b32c8c3 1-244,249,251-420,422,425-444
+  s_59c0dd2af30db2::t_ff905ffa4c6207 245-248,250,421,423-424
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "45c9859a1297df213a63d8e03aae51928937644d",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
