@@ -1,0 +1,65 @@
+packages/app/src/agent/ops-host.ts
+  s_59c0dd2af30db2::t_748deb5350db03 1-50
+packages/app/test/v1-document.test.ts
+  s_59c0dd2af30db2::t_1b10eed83daf1f 1-224
+  s_59c0dd2af30db2::t_bd4e231990b0ef 225-238
+packages/app/src/commands/commands.ts
+  s_59c0dd2af30db2::t_08f355202d11ae 16
+  s_c60cfbd3ed1aa4::t_2a877e4393ebc9 268
+packages/app/src/bootstrap.ts
+  s_59c0dd2af30db2::t_ff41df08f40a65 22-23,41-45,284-287
+packages/app/src/bridge.ts
+  s_59c0dd2af30db2::t_88a069fdbd32f9 142-145
+packages/app/src/doc/v1/ir-doc-store.ts
+  s_59c0dd2af30db2::t_1104a838b653ae 156-164,301
+packages/app/src/engine/forge-cli-engine.ts
+  s_59c0dd2af30db2::t_da676ee126d6f1 12,50-56
+packages/app/src/engine/forge-web-contract.ts
+  s_59c0dd2af30db2::t_cb98e54d04299d 55
+packages/app/src/engine/forge-web-engine.ts
+  s_59c0dd2af30db2::t_223dadc2b72ec7 15,72,74
+packages/app/src/engine/forge-web.worker.ts
+  s_59c0dd2af30db2::t_71cc2dbecc0845 54
+packages/app/src/engine/types.ts
+  s_59c0dd2af30db2::t_effd4e63b2cc72 50-56,83-84
+packages/app/src/file/export-formats.ts
+  s_59c0dd2af30db2::t_a473538b225547 7,57-58
+packages/app/src/tools/starters.ts
+  s_59c0dd2af30db2::t_355a759a6be3d9 7-8,79-85,103-111
+packages/app/test/shell-inspect.test.ts
+  s_59c0dd2af30db2::t_22cb4589a08a0a 132,134
+packages/desktop/src/forge-cli.ts
+  s_59c0dd2af30db2::t_cd0cbfb6f61345 267-275
+packages/desktop/src/ipc.ts
+  s_59c0dd2af30db2::t_d0ea1e35bfacfe 171-184
+packages/desktop/src/print-handoff.ts
+  s_59c0dd2af30db2::t_fa328d2a3fac8a 8
+packages/desktop/src/profiles.ts
+  s_59c0dd2af30db2::t_7ce6d52a98d997 59-60
+packages/desktop/test/print.test.ts
+  s_59c0dd2af30db2::t_dffd1abbac75f9 68,383
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "428933768df96ac6e79b10ba0148c53a1648f626",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    },
+    "s_c60cfbd3ed1aa4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a54784cf18d534623",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
