@@ -56,7 +56,8 @@ export const BUILTIN_P2S: MachineProfile = Object.freeze({
   nozzleMaterial: "hardened steel",
   chamberHeater: false,
   exclusionZones: [],
-  printTessellation: Object.freeze({ deflection: 0.01, angular: 0.1 }),
+  // Print quality (owner's rule: round holes): 0.01 mm chordal, at most 5° (π/36 rad) between facet normals.
+  printTessellation: Object.freeze({ deflection: 0.01, angular: Math.PI / 36 }),
   source: Object.freeze({ kind: "builtin" as const, reference: "Bambu Lab P2S public spec sheet", read: "2026-09-24" }),
   // Not checked on the owner's printer yet (day-0 check, ALPHA-0-PLAN §4.2). The exclusion zones
   // are unverified too: "none" means none is known, not that the printer has none.

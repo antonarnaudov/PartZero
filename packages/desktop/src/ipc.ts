@@ -168,7 +168,20 @@ export function registerIpc(deps: IpcDeps): void {
     if (!MESH_FORMATS.includes(r.format)) throw new Error("invalid mesh format");
     const info = await forgeInfo(deps.forgeBin);
     if (!info.available) return { data: null, exitCode: null, stderr: "", error: info.detail };
-    return forgeExport(deps.forgeBin, { irJson: str(r.irJson, "IR", 32 * 1024 * 1024), format: r.format, allowPartial: r.allowPartial === true });
+    const tol = (v: unknown, name: string, max: number): number | undefined => {
+      if (v === undefined) return undefined;
+      if (typeof v !== "number" || !Number.isFinite(v) || v <= 0 || v > max) throw new Error(`invalid ${name}`);
+      return v;
+    };
+    const deflection = tol(r.deflection, "deflection", 10);
+    const angular = tol(r.angular, "angular", Math.PI / 2);
+    return forgeExport(deps.forgeBin, {
+      irJson: str(r.irJson, "IR", 32 * 1024 * 1024),
+      format: r.format,
+      allowPartial: r.allowPartial === true,
+      ...(deflection !== undefined ? { deflection } : {}),
+      ...(angular !== undefined ? { angular } : {}),
+    });
   });
 
   // ─── Design agent ─────────────────────────────────────────────────────────────────────────

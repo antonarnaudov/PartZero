@@ -52,7 +52,7 @@ export function normalizePick(raw: RawPick | null | undefined): PickResult | nul
 export interface ForgeWebModule {
   init(): Promise<void>;
   evaluate(irJson: string, tess?: TessellationOptions): { report: EvalReport; bodies: RenderBody[] };
-  exportMesh(irJson: string, format: MeshFormat): Uint8Array;
+  exportMesh(irJson: string, format: MeshFormat, options?: TessellationOptions): Uint8Array;
   Viewport: {
     create(canvas: HTMLCanvasElement | OffscreenCanvas, options?: object): Promise<ForgeWebViewport>;
   };

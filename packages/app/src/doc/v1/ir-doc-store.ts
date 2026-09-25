@@ -153,6 +153,15 @@ function parseSnapshot(text: string): { document: string; host: HostState } {
 
 const REPORT_CACHE = 6;
 
+/** A default label names what an added feature became: `Add extrude` → `Add extrude extrude1`. */
+function refinedLabel(label: string, ops: readonly OpOutcome[]): string {
+  const own = ops.filter((o) => o.op.op !== "writeBackSolution");
+  const o = own.length === 1 ? own[0]! : null;
+  if (!o || o.op.op !== "addFeature" || label !== opLabel(o.op)) return label;
+  const r = o.result as { type?: unknown; name?: unknown };
+  return typeof r.type === "string" && typeof r.name === "string" ? `Add ${r.type} ${r.name}` : label;
+}
+
 export class IrDocStore extends Store<IrDocState> {
   private readonly deps: IrDocStoreDeps;
   private readonly history: History;
@@ -289,6 +298,7 @@ export class IrDocStore extends Store<IrDocState> {
       if (this.getState().document !== base || !hostStateEqual(this.getState().host, baseHost)) {
         throw new CommandEngineError("IR_DOCUMENT_CHANGED", "the document changed while the edit was prepared; retry");
       }
+      label = refinedLabel(label, result.ops);
       const out: TransactionOutcome = {
         label,
         origin,

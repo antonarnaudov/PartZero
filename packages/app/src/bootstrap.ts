@@ -19,7 +19,8 @@ import { BrowserHost } from "./host/browser-host";
 import { ElectronHost } from "./host/electron-host";
 import type { AppHost } from "./host/host";
 import { BLANK_SOURCE, TEMPLATES } from "./host/templates";
-import { blankDocument } from "@aicad/model-ops";
+import { blankDocument, type IrOp } from "@aicad/model-ops";
+import { appOpsHost } from "./agent/ops-host";
 import { EditorController, ViewportController, type AppServices } from "./services";
 import { UiStore } from "./ui-store";
 
@@ -37,6 +38,11 @@ export interface AutomationApi {
   summary(): DocSummary;
   /** The agent's state: active run, last run, proposal under review. */
   agent(): AgentSummary;
+  /**
+   * The live document as an op host (`@aicad/model-ops` `OpsHost`), as the agent's op tools see it:
+   * `ops.apply([{ op: "addFeature", … }])` runs through the command layer as the agent.
+   */
+  ops: { document(): Promise<string>; apply(ops: unknown[], options?: { label?: string; ack?: string[] }): Promise<unknown> };
 }
 
 export interface AgentSummary {
@@ -275,6 +281,10 @@ export async function bootstrap(): Promise<Bootstrapped> {
       },
       summary: () => summarize(services),
       agent: () => summarizeAgent(services),
+      ops: (() => {
+        const host = appOpsHost(services, commands, "agent");
+        return { document: () => host.document(), apply: (ops, options) => host.apply(ops as IrOp[], options) };
+      })(),
     };
   }
 

@@ -13,6 +13,7 @@ import type { MeshFormat } from "../bridge";
 import type { DocFormat, DocState } from "../doc/doc-store";
 import { featureNameOfPick, findFeature } from "../doc/provenance";
 import type { EnginePreference } from "../engine/engine-manager";
+import { PRINT_TESSELLATION } from "../engine/types";
 import { baseName, docNameFromPath } from "../host/host";
 import { BLANK_SOURCE, findTemplate } from "../host/templates";
 import { makeExportStepCommand } from "../io/step-export-command";
@@ -264,7 +265,7 @@ export const COMMANDS = {
           filters: [{ name: MESH_LABEL[format], extensions: [format] }],
         }));
       if (!target) return { exported: false };
-      const bytes = await ctx.engines.active.exportMesh(JSON.stringify(ir), format);
+      const bytes = await ctx.engines.active.exportMesh(JSON.stringify(ir), format, PRINT_TESSELLATION);
       await ctx.host.writeFile(target, bytes);
       ctx.ui.toast("success", `Exported ${baseName(target)} (${formatBytes(bytes.length)})`);
       return { exported: true, path: target, format, bytes: bytes.length };

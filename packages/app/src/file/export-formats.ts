@@ -4,7 +4,7 @@
  * stream lands its writer: that stream replaces it with one call, `registerExportFormat(stepFormat)`, and the dialog,
  * the command (`file.export { format: "step" }`) and the menu pick it up unchanged.
  */
-import type { ForgeEngine, MeshFormat } from "../engine/types";
+import { PRINT_TESSELLATION, type ForgeEngine, type MeshFormat } from "../engine/types";
 
 export interface ExportContext {
   /** The compiled IR (JSON). */
@@ -54,7 +54,8 @@ function meshFormat(id: MeshFormat, label: string, description: string): ExportF
     extensions: [id],
     description,
     available: ({ engine }) => (engine.id === "none" ? { ok: false, reason: "No Forge engine is available to tessellate the bodies." } : { ok: true }),
-    run: ({ irJson, engine }) => engine.exportMesh(irJson, id),
+    // Print quality: ≈0.01 mm and ≤ 5°, so holes come out round in the slicer.
+    run: ({ irJson, engine }) => engine.exportMesh(irJson, id, PRINT_TESSELLATION),
   };
 }
 

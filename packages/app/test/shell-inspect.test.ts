@@ -129,9 +129,9 @@ describe("starter parts", () => {
   it("offers an example only when the document store compiles it, and never opens it half-compiled", async () => {
     const h = await makeHarness({ source: BLANK_SOURCE });
     const p5 = STARTERS.find((s) => s.id === "p5-electronics-box")!;
-    // This app's store is IR v0: the parametric (v1) example must say why it cannot open.
+    // This app's store is IR v0 (no IR v1 engine): the parametric (v1) example must say why it cannot open.
     const a = await exampleAvailability(h.services, p5);
-    expect(a).toMatchObject({ status: "unavailable", reason: expect.stringContaining("IR v1") });
+    expect(a).toMatchObject({ status: "unavailable", reason: expect.stringContaining("does not compile") });
     const r = await openExample(h.services, p5);
     expect(r.opened).toBe(false);
     expect(h.services.doc.getState().source).toBe(BLANK_SOURCE);

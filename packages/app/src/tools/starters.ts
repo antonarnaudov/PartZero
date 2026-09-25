@@ -4,8 +4,8 @@
  * build with committed features.
  *
  * An example opens only when the running document store can compile it: examples are IR v1
- * CadScript, so they open once IR v1 is in the app (Phase C) and say so until then. Nothing is
- * opened half-compiled.
+ * CadScript, compiled into an IR v1 model (the app's document model). Nothing is opened
+ * half-compiled.
  */
 import { z } from "zod";
 import type { AppServices } from "../services";
@@ -76,11 +76,13 @@ export function exampleAvailability(services: AppServices, starter: Starter): Pr
   const hit = cache.get(starter.id);
   if (hit) return hit;
   const source = starter.source;
-  const p = services.cadscript.compile(source).then(
-    (out): ExampleAvailability =>
-      out.ok && out.ir
-        ? { status: "ready" }
-        : { status: "unavailable", reason: "opens once IR v1 documents are in the app (it uses parameters)" },
+  // IR v1 models (the app's document model) open CadScript v1 examples; a CadScript (IR v0) host only v0 ones.
+  const p = (
+    services.doc.v1Available
+      ? services.cadscript.compileV1(source).then(async (v1): Promise<boolean> => v1.ok || (await services.cadscript.compile(source)).ok)
+      : services.cadscript.compile(source).then((out) => out.ok && out.ir !== null)
+  ).then(
+    (ok): ExampleAvailability => (ok ? { status: "ready" } : { status: "unavailable", reason: "its code does not compile in this build" }),
     (e: unknown): ExampleAvailability => ({ status: "unavailable", reason: e instanceof Error ? e.message : String(e) }),
   );
   cache.set(starter.id, p);
@@ -98,6 +100,15 @@ export async function openExample(services: AppServices, starter: Starter): Prom
   }
   const s = services.doc.getState();
   if (s.dirty && !(await services.confirm(`Discard unsaved changes to “${s.name}”?`))) return { opened: false, reason: "cancelled" };
+  if (services.doc.v1Available) {
+    const v1 = await services.cadscript.compileV1(starter.source);
+    const text = v1.ok && v1.irJson ? v1.irJson : await services.cadscript.compile(starter.source).then((c) => (c.ok && c.ir ? JSON.stringify(c.ir) : null));
+    if (text === null) return { opened: false, reason: "its code does not compile in this build" };
+    services.doc.load({ path: null, name: starter.id, format: "ir-v1", source: text });
+    const st = await services.doc.idle();
+    if (st.engineError && st.model === null) return { opened: false, reason: st.engineError };
+    return { opened: true };
+  }
   services.doc.load({ path: null, name: starter.id, format: "cadscript", source: starter.source });
   return { opened: true };
 }

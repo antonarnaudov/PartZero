@@ -12,7 +12,7 @@ import { EngineError } from "./types";
 export type ForgeWebRequest =
   | { type: "init" }
   | { type: "evaluate"; irJson: string; tess?: TessellationOptions }
-  | { type: "export"; irJson: string; format: MeshFormat }
+  | { type: "export"; irJson: string; format: MeshFormat; tess?: TessellationOptions }
   | { type: "command"; name: ForgeWebCommandName; args: unknown[] };
 
 /** The command layer over the worker: each method is one RPC; refusals keep their code, errors and details. */
@@ -69,9 +69,9 @@ export class ForgeWebEngine implements ForgeEngine {
     }
   }
 
-  async exportMesh(irJson: string, format: MeshFormat): Promise<Uint8Array> {
+  async exportMesh(irJson: string, format: MeshFormat, tessellation?: TessellationOptions): Promise<Uint8Array> {
     try {
-      return await this.rpc.call<Uint8Array>({ type: "export", irJson, format });
+      return await this.rpc.call<Uint8Array>({ type: "export", irJson, format, ...(tessellation ? { tess: tessellation } : {}) });
     } catch (e) {
       throw new EngineError("EXPORT_FAILED", `forge-web export: ${(e as Error).message}`);
     }

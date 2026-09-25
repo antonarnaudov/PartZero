@@ -139,6 +139,10 @@ export interface ForgeExportRequest {
   format: MeshFormat;
   /** Export the bodies that evaluated even when some features failed. */
   allowPartial?: boolean;
+  /** Chordal deviation, mm (`aicad export --deflection`; default the CLI's). */
+  deflection?: number;
+  /** Angle between neighbouring facet normals, radians (`--angular`). */
+  angular?: number;
 }
 
 // ─── Printing: machine profile and the slicer handoff (ALPHA-0-PLAN W5, ADR 0016) ──────────

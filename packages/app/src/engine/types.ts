@@ -47,6 +47,13 @@ export interface PickResult {
   edge?: string;
 }
 
+/**
+ * Print quality (the owner's rule: exported holes must be round): ≈0.01 mm chordal deviation and at
+ * most 5° between neighbouring facet normals. Every mesh export (3MF, STL, OBJ) and the printer
+ * handoff use it; the viewport keeps its coarser display tolerances.
+ */
+export const PRINT_TESSELLATION = Object.freeze({ chordalDeflection: 0.01, angularDeflection: (5 * Math.PI) / 180 });
+
 /** Tessellation tolerances (names as in `@aicad/forge-web`). */
 export interface TessellationOptions {
   /** Maximum distance between mesh and exact surface, mm. */
@@ -73,7 +80,8 @@ export interface ForgeEngine {
   /** Longer description (binary path, backend, reason unavailable). */
   readonly detail: string;
   evaluate(irJson: string): Promise<EvalResult>;
-  exportMesh(irJson: string, format: MeshFormat): Promise<Uint8Array>;
+  /** Watertight meshes of every body; `tessellation` defaults to the engine's (use {@link PRINT_TESSELLATION} for files). */
+  exportMesh(irJson: string, format: MeshFormat, tessellation?: TessellationOptions): Promise<Uint8Array>;
   /**
    * The IR v1 command layer's engine entry points (SPEC-v1 §0.6, §5.9, §9.2), when this engine
    * has them (forge-web; the CLI does not yet).

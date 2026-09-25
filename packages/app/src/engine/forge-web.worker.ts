@@ -51,7 +51,7 @@ serveRpc<ForgeWebRequest>(async (req) => {
     }
     case "export": {
       if (!mod) throw new Error("forge-web not initialised");
-      const bytes = mod.exportMesh(req.irJson, req.format);
+      const bytes = mod.exportMesh(req.irJson, req.format, req.tess);
       return { result: bytes, transfer: bytes.buffer instanceof ArrayBuffer ? [bytes.buffer] : [] };
     }
     case "command": {

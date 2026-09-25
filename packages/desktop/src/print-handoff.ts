@@ -5,7 +5,7 @@
  *
  * 1. **Check.** `aicad eval` must report the design `ok` with every body valid; nothing unchecked
  *    is exported (NORTH-STAR §2, ALPHA-0-PLAN W8 "Export gate").
- * 2. **Export.** `aicad export --bed …` tessellates for printing (the profile's 0.01 mm / 0.1 rad),
+ * 2. **Export.** `aicad export --bed …` tessellates for printing (the profile's 0.01 mm / 5°),
  *    refuses a design that does not fit the bed less the margin (`EXPORT_BED_FIT`, nothing
  *    written), and centres the build on the bed with z-min = 0 through the 3MF build-item
  *    transform. `Title` is the document name, `Application` is `PartZero <version>`.

@@ -264,7 +264,15 @@ export async function forgeExport(bin: string, req: ForgeExportRequest, timeoutM
   if (!MESH_FORMATS.includes(req.format)) throw new Error(`unsupported mesh format: ${String(req.format)}`);
   return withTempDoc(req.irJson, async (dir, docPath) => {
     const out = join(dir, `export.${req.format}`);
-    const args = ["export", docPath, "--out", out, ...(req.allowPartial ? ["--allow-partial"] : [])];
+    const args = [
+      "export",
+      docPath,
+      "--out",
+      out,
+      ...(req.allowPartial ? ["--allow-partial"] : []),
+      ...(req.deflection !== undefined ? [`--deflection=${req.deflection}`] : []),
+      ...(req.angular !== undefined ? [`--angular=${req.angular}`] : []),
+    ];
     const r = await run(bin, args, timeoutMs);
     let data: Uint8Array | null = null;
     if (r.code === 0) {

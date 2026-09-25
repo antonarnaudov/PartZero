@@ -9,7 +9,7 @@
 import { parseEvalReport } from "@aicad/ir-types";
 import type { AicadBridge, ForgeCliInfo } from "../bridge";
 import { parseObj } from "./obj";
-import { EngineError, type EvalResult, type ForgeEngine, type MeshFormat } from "./types";
+import { EngineError, type EvalResult, type ForgeEngine, type MeshFormat, type TessellationOptions } from "./types";
 
 export type ForgeCliBridge = AicadBridge["forge"];
 
@@ -47,8 +47,13 @@ export class ForgeCliEngine implements ForgeEngine {
     return { report, bodies };
   }
 
-  async exportMesh(irJson: string, format: MeshFormat): Promise<Uint8Array> {
-    const r = await this.bridge.export({ irJson, format });
+  async exportMesh(irJson: string, format: MeshFormat, tessellation?: TessellationOptions): Promise<Uint8Array> {
+    const r = await this.bridge.export({
+      irJson,
+      format,
+      ...(tessellation?.chordalDeflection !== undefined ? { deflection: tessellation.chordalDeflection } : {}),
+      ...(tessellation?.angularDeflection !== undefined ? { angular: tessellation.angularDeflection } : {}),
+    });
     if (r.error) throw new EngineError("EXPORT_FAILED", r.error);
     if (!r.data || r.exitCode !== 0) {
       const why = r.stderr.trim() || `exit code ${String(r.exitCode)}`;

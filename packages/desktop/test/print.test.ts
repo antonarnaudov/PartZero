@@ -65,7 +65,7 @@ describe("built-in profiles", () => {
     expect(BUILTIN_P2S.bed).toEqual({ x: 256, y: 256, z: 256 });
     expect(BUILTIN_P2S.nozzle).toBe(0.4);
     expect(BUILTIN_P2S.bedMargin).toBe(10);
-    expect(BUILTIN_P2S.printTessellation).toEqual({ deflection: 0.01, angular: 0.1 });
+    expect(BUILTIN_P2S.printTessellation).toEqual({ deflection: 0.01, angular: Math.PI / 36 });
     expect(BUILTIN_P2S.unverified).toEqual(expect.arrayContaining(["bed", "nozzle", "exclusionZones"]));
     expect(BUILTIN_P2S.exclusionZones).toEqual([]);
   });
@@ -380,7 +380,7 @@ describe.skipIf(!haveForge || !posix)("the handoff with the real aicad", () => {
       printer: { id: "builtin:bambu-p2s-0.4", bed: { x: 256, y: 256, z: 256 }, bedMargin: 10, unverified: expect.arrayContaining(["bed"]) },
       material: { id: "builtin:pla", clearances: { press: 0.05, slip: 0.2, running: 0.3, pressMetal: 0.05 }, clearanceSource: "default" },
       checks: { report: "ok", valid: true, watertight: true, bodies: 2, bedFit: { ok: true, usable: [236, 236, 256] }, layoutWarnings: [] },
-      tessellation: { deflection: 0.01, angular: 0.1 },
+      tessellation: { deflection: 0.01, angular: Math.PI / 36 },
       geometryHash: expect.stringMatching(/^fnv1a64:[0-9a-f]{16}$/),
     });
     // Centred on (128, 128) with z-min = 0.
