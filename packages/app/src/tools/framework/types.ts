@@ -1,23 +1,34 @@
 /**
- * The tool and property-panel contract (docs FULL-MODELING-PLAN §2.5, contract C3). Other workstreams
- * (feature tools, the sketcher, inspect tools) and the integrator build against this file; the shell
+ * The tool and property-panel contract (docs FULL-MODELING-PLAN §2.5, contract C3, **as amended** in
+ * `C3-AMENDMENT.md` next to this file: the plan's `ToolSpec` and this file differ in shape, and the
+ * amendment maps one onto the other for the owner and INT to approve). Other workstreams (feature
+ * tools, the sketcher, inspect tools) and the integrator build against this file; the shell
  * (`ui/shell/**`) renders it.
  *
  * A **tool** is a toolbar entry: `{ id, label, group, icon, shortcut, enabledWhen, activate }`.
  * `activate(ctx)` runs when the user clicks the button, presses the shortcut, picks the tool in the
- * command palette or an agent/test runs `tool.start { id }`. It usually opens a **property panel**:
- * either by returning a {@link PanelSpec} or by calling `ctx.openPanel(spec)`. A tool without a
- * panel (a one-shot action) does its work and returns nothing.
+ * command palette or an agent/test runs `tool.start { id, args }`. It usually opens a **property
+ * panel**: either by returning a {@link PanelSpec} or by calling `ctx.openPanel(spec)`. A tool without
+ * a panel (a one-shot action) does its work and returns nothing. A tool that makes a feature also
+ * re-edits it: `features` names the feature types and `fromFeature` opens the panel prefilled from one
+ * (`feature.edit { feature }`, the timeline's double-click).
  *
  * A **property panel** is described, not drawn: a list of typed {@link FieldSpec}s (numbers with
  * units and expressions, selection inputs with counts, dropdowns, toggles, text), plus callbacks:
- * - `preview(values, { signal })`: a live, checked preview. Called (debounced) after every valid
- *   change; a newer preview aborts the older one's `signal`, and stale results are dropped. It
- *   returns `{ ok: true, summary? }` or `{ ok: false, errors }`; errors name the field they belong to
- *   and may carry the **feasible range** Forge reports, shown inline with a one-click fix.
- * - `commit(values)`: OK (and Apply). It must make the change as **one transaction** through the
- *   command layer (plan §2.1: a tool never edits IR JSON or calls the engine to edit). It returns
- *   `{ ok: true }` or `{ ok: false, errors }` (the panel stays open and shows them).
+ * - `preview(values, { signal, revision })`: a live, checked preview. Called (debounced) after every
+ *   valid change **and after every document change** (undo, the code editor, an accepted agent
+ *   proposal). A newer preview aborts the older one's `signal`; stale results are dropped, bodies
+ *   included. It returns `{ ok: true, summary?, bodies? }` or `{ ok: false, errors }`; `bodies` are
+ *   drawn in the viewport (tinted) while they are current. Errors name the field they belong to and
+ *   may carry the **feasible range** Forge reports, shown inline with a one-click fix.
+ * - `toOps(values)`: OK (and Apply). **The** way a tool changes the document (plan §2.1, §2.5): it
+ *   returns domain ops ({@link ToolOp}); the framework applies them as **one transaction** against the
+ *   document as it is at OK time, so an edit made meanwhile by the user, undo or the agent is kept, not
+ *   overwritten. `commit(values)` is the escape hatch for a change the op catalogue can't express yet;
+ *   it must still be one transaction through the command layer, built from the document as it is when
+ *   `commit` runs (never from a copy captured in `activate`).
+ * - OK never commits values the live check has not passed: while a preview runs, OK waits for it and
+ *   commits only if it passes, against the current document revision.
  * - `cancel()`: Cancel / Esc. Remove preview state; the document must be unchanged.
  *
  * Keys in an open panel: Enter = OK, Esc = Cancel, Tab = next field (plan §2.5).
@@ -29,14 +40,14 @@
  * This file is framework-only: no React, no DOM. Tools stay testable without a browser.
  */
 import type { AppInvocation } from "../../commands/commands";
-import type { CommandResult } from "../../commands/registry";
+import type { CommandResult, CommandSource } from "../../commands/registry";
 import type { RenderBody } from "../../engine/types";
 import type { AppServices } from "../../services";
 
 // ─── Tool groups and modes ─────────────────────────────────────────────────────────────────────
 
-/** The toolbar groups, in toolbar order. */
-export type ToolGroupId = "sketch" | "create" | "modify" | "pattern" | "inspect" | "construct";
+/** The toolbar groups (plan §2.5: sketch | create | modify | construct | pattern | inspect | print). */
+export type ToolGroupId = "sketch" | "create" | "modify" | "pattern" | "inspect" | "construct" | "print";
 
 export interface ToolGroupInfo {
   id: ToolGroupId;
@@ -52,6 +63,7 @@ export const TOOL_GROUPS: readonly ToolGroupInfo[] = [
   { id: "pattern", label: "Pattern", description: "Repeat and mirror features and bodies" },
   { id: "inspect", label: "Inspect", description: "Measure and check the part" },
   { id: "construct", label: "Construct", description: "Datum planes and axes" },
+  { id: "print", label: "Print", description: "Get the part ready for the printer" },
 ];
 
 /**
@@ -101,6 +113,81 @@ export interface ParamsPort {
   list(): readonly ParamInfo[];
 }
 
+// ─── The document (revisions and features) ─────────────────────────────────────────────────────
+
+/** A feature of the document, as `fromFeature` gets it. */
+export interface FeatureInfo {
+  /** The feature id (`fillet1`). */
+  id: string;
+  /** The CadScript `const` name, when the IR has one. */
+  name?: string;
+  /** The IR feature type (`extrude`, `fillet`, …): picks the tool that re-edits it. */
+  type: string;
+  /** The id of the part it belongs to. */
+  part: string;
+  /** The feature's IR JSON (read it; change it only through `setField` ops). */
+  json: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * The document as tools see it. `revision()` changes with **every** change of the document or of its
+ * evaluation, from any origin: the user, undo/redo, the code editor, an accepted agent proposal, a
+ * re-evaluation. An open panel re-checks itself when it changes.
+ */
+export interface DocumentPort {
+  revision(): number;
+  /** Called after the revision changed; returns an unsubscribe function. */
+  subscribe(listener: () => void): () => void;
+  /** A feature by id (or CadScript name) in the current document; null when there is none. */
+  feature(idOrName: string): FeatureInfo | null;
+}
+
+// ─── Domain ops (plan §2.2, contract C1) ───────────────────────────────────────────────────────
+
+/** Set one field of a feature: `path` is a JSON pointer relative to the feature (`/distance`). */
+export interface SetFieldOp {
+  op: "setField";
+  feature: string;
+  path: string;
+  /** The new JSON value, or `{ expr }` for a parameter expression (IR v1 only). */
+  value: unknown;
+}
+
+export interface SetSuppressedOp {
+  op: "setSuppressed";
+  feature: string;
+  suppressed: boolean;
+}
+
+/**
+ * Add a feature to a part after `after` (a feature id or name; null: first). The id is `<type><n>`
+ * (C9: `fillet1`) unless the feature JSON has one; the name defaults to the id.
+ */
+export interface AddFeatureOp {
+  op: "addFeature";
+  part: string;
+  after: string | null;
+  feature: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * A domain op a tool commits (plan §2.2). The catalogue is C1's (`@aicad/model-ops`); until it
+ * lands, the ops the shell's default port applies are these three, and the integrator widens this
+ * type to C1's `IrOp` when it binds the IR v1 store (`Shell.bindPorts({ ops })`). An op the bound
+ * store doesn't know is refused with `COMMAND_NOT_IMPLEMENTED`, never ignored.
+ */
+export type ToolOp = SetFieldOp | SetSuppressedOp | AddFeatureOp;
+
+/** Applies a tool's ops (the command layer's transaction; C6 `IrDocStore.transaction` once bound). */
+export interface OpsPort {
+  /**
+   * Apply `ops` as **one** transaction (one undo step, labelled `label`) to the document **as it is
+   * now**. All or nothing: a refused op refuses the transaction (errors with `COMMAND_*` codes) and
+   * leaves the document unchanged.
+   */
+  apply(ops: readonly ToolOp[], meta: { label: string; source: CommandSource }): Promise<CommitOutcome>;
+}
+
 // ─── The tool ──────────────────────────────────────────────────────────────────────────────────
 
 /** Why a tool is disabled right now (shown as its tooltip), or `true` when it is enabled. */
@@ -143,28 +230,38 @@ export interface ToolDefinition {
   enabledWhen?(ctx: ToolContext): Enablement | boolean;
   /**
    * Start the tool. Return a {@link PanelSpec} (or call `ctx.openPanel`) to open its property panel.
-   * Throwing is reported to the user as an error toast; nothing is left open.
+   * Prefill from `ctx.selection` (selection fields do it by themselves). `tool.start { id, args }`
+   * values override the panel's initial values by field key. Throwing is reported to the user as an
+   * error toast; nothing is left open.
    */
   activate(ctx: ToolContext): void | PanelSpec | Promise<void | PanelSpec>;
+  /** The IR feature types this tool makes and re-edits with {@link fromFeature} (`["fillet"]`). */
+  features?: readonly string[];
+  /**
+   * Re-edit an existing feature (`feature.edit { feature }`, the timeline's double-click): return the
+   * panel prefilled from it, whose `toOps` emits `setField` ops for that feature.
+   */
+  fromFeature?(feature: FeatureInfo, ctx: ToolContext): PanelSpec | Promise<PanelSpec>;
 }
 
 /** What a tool gets. Everything goes through the app's services and command layer. */
 export interface ToolContext {
-  /** The app services (document, UI, host, engines, agent). Read them; change the document only through commands. */
+  /** The app services (document, UI, host, engines, agent). Read them; change the document only through ops or commands. */
   readonly services: AppServices;
-  /** Run an app command (source `ui`), e.g. `{ id: "doc.applyIr", args: { ir, label } }`. */
+  /**
+   * Run an app command (source `ui`). For document changes prefer a panel's `toOps`; a command that
+   * takes a whole document (`doc.applyIr`) overwrites edits made since you read it.
+   */
   run(cmd: AppInvocation): Promise<CommandResult<unknown>>;
   readonly selection: SelectionPort;
   readonly params: ParamsPort;
+  /** The document's revision and features. Read the document when you preview or commit, not in `activate`. */
+  readonly document: DocumentPort;
   readonly mode: ShellMode;
+  /** `tool.start { id, args }`'s args (empty from the toolbar, the keyboard and the palette). */
+  readonly args: Readonly<Record<string, unknown>>;
   /** Open (or replace) the property panel. Returns the live session. */
   openPanel(spec: PanelSpec): PanelSessionHandle;
-  /**
-   * Show preview geometry in the viewport instead of the document (tinted, like the agent's proposal
-   * preview), e.g. the bodies of `engines.active.evaluate(candidate)`; null shows the document again.
-   * The shell clears it when the tool's panel closes or another document loads.
-   */
-  showPreview(bodies: readonly RenderBody[] | null): void;
   /** A short notice (info / success / error toast). */
   notify(kind: "info" | "success" | "error", message: string): void;
 }
@@ -287,14 +384,27 @@ export interface SummaryRow {
 }
 
 export type PreviewOutcome =
-  | { ok: true; summary?: readonly SummaryRow[]; warnings?: readonly string[] }
+  | {
+      ok: true;
+      summary?: readonly SummaryRow[];
+      warnings?: readonly string[];
+      /**
+       * Preview geometry, drawn in the viewport (tinted) instead of the document, e.g. the bodies of
+       * `engines.active.evaluate(candidate)`. Shown only while this preview is current: a newer
+       * preview, a document change, Cancel or OK replace or remove it. While the next preview runs
+       * the viewport marks it stale.
+       */
+      bodies?: readonly RenderBody[];
+    }
   | { ok: false; errors: readonly FieldError[]; summary?: readonly SummaryRow[] };
 
 export type CommitOutcome = { ok: true; message?: string } | { ok: false; errors: readonly FieldError[] };
 
 export interface PreviewIO {
-  /** Aborted when a newer preview starts or the panel closes. */
+  /** Aborted when a newer preview starts, the document changes or the panel closes. */
   signal: AbortSignal;
+  /** The document revision ({@link DocumentPort.revision}) this preview checks against. */
+  revision: number;
 }
 
 export interface PanelSpec<V extends PanelValues = PanelValues> {
@@ -304,8 +414,11 @@ export interface PanelSpec<V extends PanelValues = PanelValues> {
   /** One line under the title. */
   description?: string;
   fields: readonly FieldSpec[];
-  /** Initial values by key (override field defaults and the selection). */
-  initial?: Partial<Record<string, FieldValue>>;
+  /**
+   * Initial values by key (override field defaults and the selection). Number fields also take a
+   * plain number. Checked when the panel opens: an unknown key or a value its field can't take throws.
+   */
+  initial?: Partial<Record<string, FieldValue | number>>;
   /** Label of the commit button (default `OK`). */
   okLabel?: string;
   /** Show "Apply" (commit and keep the panel open for another). Default false. */
@@ -316,7 +429,18 @@ export interface PanelSpec<V extends PanelValues = PanelValues> {
   validate?(values: V): readonly FieldError[];
   /** Live, checked preview (see the file comment). */
   preview?(values: V, io: PreviewIO): PreviewOutcome | Promise<PreviewOutcome>;
-  /** OK / Apply: one transaction through the command layer. */
+  /**
+   * OK / Apply: the domain ops of the change. The framework applies them as one transaction to the
+   * document as it is at OK time (an empty list changes nothing). A panel has `toOps` or `commit`,
+   * not both.
+   */
+  toOps?(values: V): readonly ToolOp[] | Promise<readonly ToolOp[]>;
+  /** The undo label of the `toOps` transaction (default: the panel title). */
+  label?(values: V): string;
+  /**
+   * OK / Apply for a change `toOps` can't express yet: one transaction through the command layer,
+   * built from the document as it is now (see the file comment).
+   */
   commit?(values: V): CommitOutcome | Promise<CommitOutcome>;
   /** Cancel / Esc / the panel was replaced: drop preview state. */
   cancel?(): void;
@@ -326,8 +450,8 @@ export interface PanelSpec<V extends PanelValues = PanelValues> {
 
 /**
  * - `collecting`: a required input is missing or a field is invalid;
- * - `previewing`: a preview is running;
- * - `ready`: everything checks (and the preview, if any, passed): OK is enabled;
+ * - `previewing`: a preview is scheduled or running (OK waits for it, then commits only if it passed);
+ * - `ready`: everything checks (and the preview, if any, passed at the current document revision);
  * - `invalid`: the preview or the last commit reported errors;
  * - `committing`: OK was pressed and the commit runs;
  * - `closed`: committed or cancelled.
@@ -338,6 +462,7 @@ export type PanelState = "collecting" | "previewing" | "ready" | "invalid" | "co
 export interface PanelSessionHandle {
   readonly id: number;
   set(key: string, value: FieldValue | string): void;
-  commit(): Promise<CommitOutcome>;
+  /** OK. `source`: who pressed it (default `ui`), for the transaction's origin. */
+  commit(source?: CommandSource): Promise<CommitOutcome>;
   cancel(): void;
 }

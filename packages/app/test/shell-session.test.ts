@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { staticParamsPort, staticSelectionPort } from "../src/tools/framework/ports";
-import { PanelSession, selectionNoun } from "../src/tools/framework/session";
-import type { NumberValue, PanelSpec, PreviewOutcome, SelectionItem } from "../src/tools/framework/types";
+import type { RenderBody } from "../src/engine/types";
+import { staticDocumentPort, staticParamsPort, staticSelectionPort } from "../src/tools/framework/ports";
+import { PanelSession, selectionNoun, type PanelSessionOptions } from "../src/tools/framework/session";
+import type { CommitOutcome, DocumentPort, NumberValue, OpsPort, PanelSpec, PreviewOutcome, SelectionItem } from "../src/tools/framework/types";
 
 const edge = (key: string): SelectionItem => ({ kind: "edge", part: "part", key, body: "part/slab" });
 const face = (key: string): SelectionItem => ({ kind: "face", part: "part", key, body: "part/slab" });
@@ -20,10 +21,48 @@ function filletSpec(overrides: Partial<PanelSpec> = {}): PanelSpec {
   };
 }
 
-function open(spec: PanelSpec, selection: SelectionItem[] = [], onClose = vi.fn()) {
+function open(spec: PanelSpec, selection: SelectionItem[] = [], onClose = vi.fn(), extra: Partial<PanelSessionOptions> = {}) {
   const sel = staticSelectionPort(selection);
-  const session = new PanelSession(spec, { id: 1, toolId: "feature.fillet", params: staticParamsPort([{ name: "wall", unit: "mm", value: 2 }]), selection: sel, onClose });
-  return { session, sel, onClose };
+  const doc = staticDocumentPort();
+  const drawn: Array<{ bodies: readonly RenderBody[] | null; stale: boolean }> = [];
+  const session = new PanelSession(spec, {
+    id: 1,
+    toolId: "feature.fillet",
+    params: staticParamsPort([{ name: "wall", unit: "mm", value: 2 }]),
+    selection: sel,
+    document: doc,
+    onClose,
+    onPreviewBodies: (bodies, stale) => drawn.push({ bodies, stale }),
+    ...extra,
+  });
+  return { session, sel, onClose, doc, drawn };
+}
+
+/** A stand-in render body, told apart by its name. */
+const bodyNamed = (name: string): RenderBody => ({ name, positions: new Float32Array(0), normals: new Float32Array(0), indices: new Uint32Array(0), faceRanges: [], edges: [] });
+
+/** A promise the test resolves by hand. */
+function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+}
+
+const tick = (ms = 5) => new Promise((r) => setTimeout(r, ms));
+
+/** A radius panel whose preview the test answers per value; `bodies` name the value they preview. */
+function radiusPanel(answers: Map<string, ReturnType<typeof deferred<PreviewOutcome>>>, over: Partial<PanelSpec> = {}): PanelSpec {
+  return {
+    title: "Fillet",
+    fields: [{ kind: "number", key: "r", label: "Radius", quantity: "length", default: "1" }],
+    previewDelayMs: 0,
+    preview: (values) => {
+      const text = (values["r"] as NumberValue).text;
+      const d = answers.get(text);
+      return d ? d.promise : Promise.resolve({ ok: true, bodies: [bodyNamed(`r=${text}`)] });
+    },
+    ...over,
+  };
 }
 
 describe("panel sessions", () => {
@@ -197,9 +236,214 @@ describe("panel sessions", () => {
     expect(session.values()["tools"]).toEqual([]);
   });
 
+  it("initial values (tool.start args) are checked: numbers may be numbers, unknown inputs are refused", () => {
+    const { session } = open(filletSpec({ initial: { r: 3, mode: "flat" } }), [edge("e1")]);
+    expect(session.values()["r"]).toMatchObject({ text: "3", value: 3 });
+    expect(session.values()["mode"]).toBe("flat");
+    expect(() => open(filletSpec({ initial: { radius: 3 } }))).toThrow(/has no input radius \(its inputs: edges, r, mode, chain\)/);
+    expect(() => open(filletSpec({ initial: { mode: "oval" } }))).toThrow(/not one of round, flat/);
+    expect(() => open(filletSpec({ initial: { edges: "e1" } }))).toThrow(/list of selected items/);
+    expect(() => open(filletSpec({ toOps: () => [], commit: () => ({ ok: true }) }))).toThrow(/both toOps and commit/);
+  });
+
   it("names selection counts", () => {
     expect(selectionNoun(["edge"], 1)).toBe("1 edge");
     expect(selectionNoun(["face"], 3)).toBe("3 faces");
     expect(selectionNoun(["edge", "face"], 2)).toBe("2 items");
+  });
+});
+
+describe("preview geometry follows only the current preview", () => {
+  it("a slow older preview never replaces a newer one's bodies", async () => {
+    const slow = deferred<PreviewOutcome>();
+    const { session, drawn } = open(radiusPanel(new Map([["5", slow]]), { fields: [{ kind: "number", key: "r", label: "Radius", quantity: "length", default: "5" }] }));
+    await tick();
+    expect(session.getState().state).toBe("previewing");
+    session.set("r", "6");
+    await session.settled();
+    expect(drawn.at(-1)).toEqual({ bodies: [bodyNamed("r=6")], stale: false });
+    // The 5 mm preview answers last: dropped, bodies included.
+    slow.resolve({ ok: true, bodies: [bodyNamed("r=5")] });
+    await tick();
+    expect(drawn.some((d) => d.bodies?.[0]?.name === "r=5")).toBe(false);
+    expect(drawn.at(-1)!.bodies![0]!.name).toBe("r=6");
+    expect(session.getState().state).toBe("ready");
+  });
+
+  it("a preview that answers after Cancel draws nothing", async () => {
+    const slow = deferred<PreviewOutcome>();
+    const { session, drawn } = open(radiusPanel(new Map([["1", slow]])));
+    await tick();
+    const before = drawn.length;
+    session.cancel();
+    slow.resolve({ ok: true, bodies: [bodyNamed("late")] });
+    await tick();
+    expect(drawn.length).toBe(before);
+    expect(drawn.some((d) => d.bodies?.[0]?.name === "late")).toBe(false);
+  });
+
+  it("marks the drawn bodies stale while newer values are checked, and draws nothing for values that don't check", async () => {
+    const slow = deferred<PreviewOutcome>();
+    const { session, drawn } = open(radiusPanel(new Map([["7", slow]]), { fields: [{ kind: "number", key: "r", label: "Radius", quantity: "length", min: 0, default: "1" }] }));
+    await session.settled();
+    expect(drawn.at(-1)).toEqual({ bodies: [bodyNamed("r=1")], stale: false });
+    session.set("r", "7");
+    expect(drawn.at(-1)).toEqual({ bodies: [bodyNamed("r=1")], stale: true });
+    slow.resolve({ ok: false, errors: [{ field: "r", code: "FILLET_TOO_LARGE", message: "too big" }] });
+    await session.settled();
+    expect(drawn.at(-1)).toEqual({ bodies: null, stale: false });
+    session.set("r", "-1");
+    expect(session.getState().state).toBe("collecting");
+    expect(drawn.at(-1)).toEqual({ bodies: null, stale: false });
+  });
+});
+
+describe("OK commits only checked values", () => {
+  it("OK while the preview runs waits for it, then commits the values it checked", async () => {
+    const slow = deferred<PreviewOutcome>();
+    const commit = vi.fn(async (): Promise<CommitOutcome> => ({ ok: true }));
+    const { session } = open(radiusPanel(new Map([["11", slow]]), { commit }));
+    await session.settled();
+    session.set("r", "11");
+    expect(session.getState().state).toBe("previewing");
+    const ok = session.commit();
+    await tick();
+    expect(session.getState().pendingCommit).toBe(true);
+    expect(commit).not.toHaveBeenCalled();
+    // A second OK meanwhile does nothing.
+    expect(await session.commit()).toMatchObject({ ok: false, errors: [{ code: "BUSY" }] });
+    slow.resolve({ ok: true });
+    expect(await ok).toEqual({ ok: true });
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect((commit.mock.calls[0] as unknown as [Record<string, NumberValue>])[0]["r"]!.value).toBe(11);
+    expect(session.closed).toBe(true);
+  });
+
+  it("OK while the preview runs does not commit when the check fails", async () => {
+    const slow = deferred<PreviewOutcome>();
+    const commit = vi.fn();
+    const { session } = open(radiusPanel(new Map([["11", slow]]), { commit }));
+    await session.settled();
+    session.set("r", "11");
+    const ok = session.commit();
+    slow.resolve({ ok: false, errors: [{ field: "r", code: "FILLET_TOO_LARGE", message: "The wall would vanish.", feasible: { max: 3.4 } }] });
+    expect(await ok).toMatchObject({ ok: false, errors: [{ code: "FILLET_TOO_LARGE" }] });
+    expect(commit).not.toHaveBeenCalled();
+    expect(session.getState()).toMatchObject({ state: "invalid", pendingCommit: false });
+    expect(session.closed).toBe(false);
+  });
+
+  it("OK runs a debounced preview at once instead of waiting for the delay", async () => {
+    const preview = vi.fn(async (): Promise<PreviewOutcome> => ({ ok: true }));
+    const commit = vi.fn(async (): Promise<CommitOutcome> => ({ ok: true }));
+    const { session } = open(radiusPanel(new Map(), { preview, commit, previewDelayMs: 60_000 }));
+    await tick();
+    const calls = preview.mock.calls.length;
+    session.set("r", "2");
+    const t0 = Date.now();
+    expect((await session.commit()).ok).toBe(true);
+    expect(Date.now() - t0).toBeLessThan(1000);
+    expect(preview.mock.calls.length).toBe(calls + 1);
+    expect(commit).toHaveBeenCalledTimes(1);
+  });
+
+  it("Cancel while OK waits: nothing is committed", async () => {
+    const slow = deferred<PreviewOutcome>();
+    const commit = vi.fn();
+    const { session } = open(radiusPanel(new Map([["11", slow]]), { commit }));
+    await session.settled();
+    session.set("r", "11");
+    const ok = session.commit();
+    await tick();
+    session.cancel();
+    expect(await ok).toMatchObject({ ok: false, errors: [{ code: "CLOSED" }] });
+    slow.resolve({ ok: true });
+    await tick();
+    expect(commit).not.toHaveBeenCalled();
+  });
+});
+
+describe("the panel follows the document", () => {
+  it("a document change re-runs the preview (a read-only panel refreshes its numbers)", async () => {
+    let volume = 100;
+    const { session, doc } = open({ title: "Body properties", readOnly: true, fields: [], previewDelayMs: 0, preview: () => ({ ok: true, summary: [{ label: "Volume", value: String(volume) }] }) });
+    await session.settled();
+    expect(session.getState().summary).toEqual([{ label: "Volume", value: "100" }]);
+    volume = 250; // e.g. undo
+    doc.bump();
+    await session.settled();
+    expect(session.getState().summary).toEqual([{ label: "Volume", value: "250" }]);
+  });
+
+  it("a document change aborts the preview running against the old document", async () => {
+    const slow = deferred<PreviewOutcome>();
+    const signals: AbortSignal[] = [];
+    const revisions: number[] = [];
+    const { session, doc, drawn } = open(
+      radiusPanel(new Map(), {
+        preview: (_v, io) => {
+          signals.push(io.signal);
+          revisions.push(io.revision);
+          return revisions.length === 1 ? slow.promise : Promise.resolve({ ok: true, bodies: [bodyNamed("new document")] });
+        },
+      }),
+    );
+    await tick();
+    doc.bump();
+    await session.settled();
+    expect(signals[0]!.aborted).toBe(true);
+    expect(revisions).toEqual([0, 1]);
+    slow.resolve({ ok: true, bodies: [bodyNamed("old document")] });
+    await tick();
+    expect(drawn.at(-1)!.bodies![0]!.name).toBe("new document");
+  });
+
+  it("OK re-checks a preview that passed against an older revision before committing", async () => {
+    let rev = 0;
+    // A port whose revision moves without telling (the check must not rely on the event alone).
+    const quiet: DocumentPort = { revision: () => rev, subscribe: () => () => undefined, feature: () => null };
+    const preview = vi.fn(async (): Promise<PreviewOutcome> => ({ ok: true }));
+    const commit = vi.fn(async (): Promise<CommitOutcome> => ({ ok: true }));
+    const { session } = open(radiusPanel(new Map(), { preview, commit }), [], vi.fn(), { document: quiet });
+    await session.settled();
+    expect(preview).toHaveBeenCalledTimes(1);
+    rev = 1;
+    expect((await session.commit()).ok).toBe(true);
+    expect(preview).toHaveBeenCalledTimes(2);
+    expect(commit).toHaveBeenCalledTimes(1);
+  });
+
+  it("toOps are applied as one transaction, labelled, with who pressed OK", async () => {
+    const apply = vi.fn(async (): Promise<CommitOutcome> => ({ ok: true }));
+    const ops: OpsPort = { apply };
+    const { session } = open(
+      radiusPanel(new Map(), { toOps: (v) => [{ op: "setField", feature: "fillet1", path: "/r", value: (v["r"] as NumberValue).value }], label: (v) => `Fillet ${(v["r"] as NumberValue).text} mm` }),
+      [],
+      vi.fn(),
+      { ops },
+    );
+    session.set("r", "2.5");
+    expect((await session.commit("agent")).ok).toBe(true);
+    expect(apply).toHaveBeenCalledWith([{ op: "setField", feature: "fillet1", path: "/r", value: 2.5 }], { label: "Fillet 2.5 mm", source: "agent" });
+  });
+
+  it("a commit refused because the part changed under it is checked again, and the user is told", async () => {
+    const apply = vi.fn(async (): Promise<CommitOutcome> => ({ ok: false, errors: [{ code: "COMMAND_STALE", message: "The part changed" }] }));
+    const preview = vi.fn(async (): Promise<PreviewOutcome> => ({ ok: true }));
+    const { session } = open(radiusPanel(new Map(), { preview, toOps: () => [{ op: "setSuppressed", feature: "f", suppressed: true }] }), [], vi.fn(), { ops: { apply } });
+    await session.settled();
+    const r = await session.commit();
+    expect(r).toMatchObject({ ok: false, errors: [{ code: "COMMAND_STALE" }] });
+    expect(session.getState().notice).toMatch(/changed while this change was being applied/);
+    await session.settled();
+    expect(session.getState().state).toBe("ready");
+    expect(preview).toHaveBeenCalledTimes(2);
+    session.set("r", "2");
+    expect(session.getState().notice).toBeNull();
+  });
+
+  it("toOps without an ops port is refused, not ignored", async () => {
+    const { session } = open(radiusPanel(new Map(), { toOps: () => [] }));
+    expect(await session.commit()).toMatchObject({ ok: false, errors: [{ code: "NO_OPS_PORT" }] });
   });
 });

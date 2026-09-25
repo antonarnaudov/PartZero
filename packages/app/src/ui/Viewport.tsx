@@ -10,7 +10,7 @@ import type { PickResult, RenderBody } from "../engine/types";
 import { createViewportAdapter, type ViewportAdapter, type ViewportColors } from "../viewport/adapter";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
-import { useToolPreviewBodies } from "./shell/tool-preview";
+import { useToolPreviewBodies, useToolPreviewStale } from "./shell/tool-preview";
 
 function readColors(el: HTMLElement): ViewportColors {
   const cs = getComputedStyle(el);
@@ -69,6 +69,7 @@ export function Viewport(): ReactElement {
   const review = useStore(services.agent, (s) => s.review);
   const reviewOpen = !!review && review.status === "ready" && review.resolution === null;
   const toolPreview = useToolPreviewBodies();
+  const toolPreviewStale = useToolPreviewStale();
   const showPreview = reviewOpen && review.previewEnabled && review.preview.status === "ready";
   // An open tool's live preview wins over the proposal preview; both are tinted.
   const tinted = toolPreview !== null || showPreview;
@@ -227,7 +228,7 @@ export function Viewport(): ReactElement {
   const setProjection = (projection: Projection): void => run({ id: "view.setProjection", args: { projection } });
 
   return (
-    <div className="viewport" data-testid="viewport" data-shown={toolPreview ? "tool-preview" : showPreview ? "proposal" : "current"} data-extent-z={extent}>
+    <div className="viewport" data-testid="viewport" data-shown={toolPreview ? "tool-preview" : showPreview ? "proposal" : "current"} data-preview-stale={toolPreview && toolPreviewStale ? "true" : undefined} data-extent-z={extent}>
       <div ref={containerRef} className="viewport-surface" />
       <div className="vp-toolbar" role="toolbar" aria-label="View">
         {VIEWS.map((v) => (

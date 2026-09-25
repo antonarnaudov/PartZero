@@ -1,6 +1,6 @@
 /**
- * The shell's commands (plan C3: `tool.start`, `tool.commit`, `tool.cancel`; plus the welcome screen
- * and the shortcuts map). They have the same shape as the app's `COMMANDS` so the integrator can
+ * The shell's commands (plan C3: `tool.start {id,args}`, `tool.commit`, `tool.cancel`, `feature.edit`;
+ * plus the welcome screen and the shortcuts map). They have the same shape as the app's `COMMANDS` so the integrator can
  * spread them into `commands/commands.ts` (one line); until then the shell runs them from a second
  * registry that the palette and the keyboard also read (`createShellCommandRegistry`).
  */
@@ -18,13 +18,27 @@ export const SHELL_COMMANDS = {
     title: "Start Tool",
     category: "Model",
     description:
-      "Start a toolbar tool by id (e.g. `inspect.bodyProperties`); it opens its property panel. `tool.list` lists the ids. Replaces an open tool panel.",
-    args: z.strictObject({ id: z.string().min(1).max(100) }),
+      "Start a toolbar tool by id (e.g. `inspect.bodyProperties`); it opens its property panel. `args` prefill the panel's inputs by field key (numbers as text or numbers: `{ \"r\": \"2 mm\" }`). `tool.list` lists the ids. Replaces an open tool panel.",
+    args: z.strictObject({ id: z.string().min(1).max(100), args: z.record(z.string().max(100), z.unknown()).optional() }),
     palette: false,
-    async run({ id }, ctx, meta) {
-      const r = await shellOf(ctx).startTool(id, meta.source);
+    async run({ id, args }, ctx, meta) {
+      const r = await shellOf(ctx).startTool(id, meta.source, args ?? {});
       if (!r.started) throw new Error(r.reason ?? `could not start ${id}`);
       return { started: true, panel: r.panel };
+    },
+  }),
+
+  "feature.edit": command({
+    id: "feature.edit",
+    title: "Edit Feature",
+    category: "Model",
+    description: "Re-edit a feature (by id or name) in the property panel of the tool that makes it, prefilled from the feature. OK changes that feature as one undoable transaction.",
+    args: z.strictObject({ feature: z.string().min(1).max(200) }),
+    palette: false,
+    async run({ feature }, ctx, meta) {
+      const r = await shellOf(ctx).editFeature(feature, meta.source);
+      if (!r.started) throw new Error(r.reason ?? `could not edit ${feature}`);
+      return { started: true, panel: r.panel, tool: r.tool ?? null };
     },
   }),
 
@@ -54,8 +68,8 @@ export const SHELL_COMMANDS = {
     args: NoArgs,
     palette: false,
     enabled: (ctx) => shellOf(ctx).getState().panel !== null,
-    async run(_args, ctx) {
-      const r = await shellOf(ctx).commitPanel();
+    async run(_args, ctx, meta) {
+      const r = await shellOf(ctx).commitPanel(meta.source);
       if (!r.ok) throw new Error(r.error.message);
       return r.value;
     },

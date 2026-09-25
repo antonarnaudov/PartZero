@@ -12,9 +12,10 @@ import type { RenderBody } from "../engine/types";
 import { BLANK_SOURCE } from "../host/templates";
 import type { AppServices } from "../services";
 import { Store } from "../store";
-import { docParamsPort, docSelectionPort } from "./framework/ports";
+import { docDocumentPort, docParamsPort, docSelectionPort } from "./framework/ports";
 import { PanelSession, type CloseReason } from "./framework/session";
-import type { Enablement, PanelSpec, ParamsPort, SelectionPort, ShellMode, ToolContext, ToolDefinition } from "./framework/types";
+import type { DocumentPort, Enablement, OpsPort, PanelSpec, ParamsPort, SelectionPort, ShellMode, ToolContext, ToolDefinition } from "./framework/types";
+import { v0OpsPort } from "./framework/v0-ops";
 import { ToolRegistry } from "./registry";
 
 export type RightTab = "properties" | "code" | "proposal" | (string & {});
@@ -39,13 +40,29 @@ export interface ShellState {
   dialog: "shortcuts" | null;
   /** Bumped to ask the property panel to focus its first field. */
   focusTick: number;
-  /** Bodies a tool's live preview shows in the viewport instead of the document's (null: none). */
+  /**
+   * Bodies the open panel's last passing preview shows in the viewport instead of the document's
+   * (null: none). Only the open panel's current preview sets them; closing it clears them.
+   */
   previewBodies: readonly RenderBody[] | null;
+  /** A newer check of the panel is running: the preview bodies may not match its fields any more. */
+  previewStale: boolean;
 }
 
 export interface ShellPorts {
   selection: SelectionPort;
   params: ParamsPort;
+  /** The document's revision and features (the IR v1 store's once bound). */
+  document: DocumentPort;
+  /** Where tools' ops are applied as one transaction (the IR v1 store's transaction once bound). */
+  ops: OpsPort;
+}
+
+/** What starting a tool did. */
+export interface StartResult {
+  started: boolean;
+  panel: boolean;
+  reason?: string;
 }
 
 /** Any command registry over the app services (the app's, or the shell's own until they merge). */
@@ -109,6 +126,7 @@ export class Shell extends Store<ShellState> {
       dialog: null,
       focusTick: 0,
       previewBodies: null,
+      previewStale: false,
     });
     this.services = options.services;
     this.commands = options.commands;
@@ -117,6 +135,8 @@ export class Shell extends Store<ShellState> {
     this.ports = {
       selection: options.ports?.selection ?? docSelectionPort(options.services.doc),
       params: options.ports?.params ?? docParamsPort(options.services.doc),
+      document: options.ports?.document ?? docDocumentPort(options.services.doc),
+      ops: options.ports?.ops ?? v0OpsPort(options.services, (cmd, source) => this.commands.executeUnknown(cmd, { source })),
     };
     this.tools.reserveKeys(this.commandKeymap());
     this.lastDocId = options.services.doc.getState().docId;
@@ -126,7 +146,7 @@ export class Shell extends Store<ShellState> {
       if (d.docId === this.lastDocId) return;
       this.lastDocId = d.docId;
       if (this.getState().welcome === "dismissed") this.setState({ welcome: "auto" });
-      this.showPreview(null);
+      this.setPreview(null, false);
       // A tool never outlives its document.
       this.getState().panel?.replace();
     });
@@ -161,7 +181,10 @@ export class Shell extends Store<ShellState> {
     return this.registries.flatMap((r) => r.paletteItems());
   }
 
-  /** Replace the selection or parameter source (the selection workstream, the IR v1 store). */
+  /**
+   * Replace the selection, parameter, document or ops source (the selection workstream, the IR v1
+   * store). Panels opened afterwards use the new ones.
+   */
   bindPorts(ports: Partial<ShellPorts>): void {
     this.ports = { ...this.ports, ...ports };
   }
@@ -174,17 +197,22 @@ export class Shell extends Store<ShellState> {
     return this.ports.params;
   }
 
+  get document(): DocumentPort {
+    return this.ports.document;
+  }
+
   // ─── Tools ────────────────────────────────────────────────────────────────────────────────
 
-  private context(toolId: string | null): ToolContext {
+  private context(toolId: string | null, args: Readonly<Record<string, unknown>> = {}): ToolContext {
     return {
       services: this.services,
       run: (cmd: AppInvocation): Promise<CommandResult<unknown>> => this.commands.executeUnknown(cmd, { source: "ui" }),
       selection: this.ports.selection,
       params: this.ports.params,
+      document: this.ports.document,
       mode: this.getState().mode,
-      openPanel: (spec) => this.openPanel(spec, toolId),
-      showPreview: (bodies) => this.showPreview(bodies),
+      args,
+      openPanel: (spec) => this.openPanel(spec, toolId, args),
       notify: (kind, message) => this.services.ui.toast(kind, message),
     };
   }
@@ -208,19 +236,39 @@ export class Shell extends Store<ShellState> {
 
   /**
    * Start a tool: the toolbar, its shortcut, the palette and `tool.start` all come here. Replaces an
-   * open panel (cancelling it). Resolves to what happened; never throws.
+   * open panel (cancelling it). `args` prefill the panel's inputs by field key (`tool.start { id,
+   * args }`). Resolves to what happened; never throws.
    */
-  async startTool(id: string, source: CommandSource = "ui"): Promise<{ started: boolean; panel: boolean; reason?: string }> {
+  startTool(id: string, source: CommandSource = "ui", args: Readonly<Record<string, unknown>> = {}): Promise<StartResult> {
     const tool = this.tools.get(id);
-    if (!tool) return { started: false, panel: false, reason: this.tools.isHidden(id) ? `${id} is not in this build yet (its flag is off)` : `unknown tool: ${id}` };
+    if (!tool) return Promise.resolve({ started: false, panel: false, reason: this.tools.isHidden(id) ? `${id} is not in this build yet (its flag is off)` : `unknown tool: ${id}` });
+    return this.launch(tool, source, args, (ctx) => tool.activate(ctx));
+  }
+
+  /**
+   * Re-edit a feature (`feature.edit`, the timeline's double-click): the tool whose `features` lists
+   * its type opens its panel prefilled with `fromFeature`. Resolves to what happened; never throws.
+   */
+  editFeature(idOrName: string, source: CommandSource = "ui"): Promise<StartResult & { tool?: string }> {
+    const feature = this.ports.document.feature(idOrName);
+    if (!feature) return Promise.resolve({ started: false, panel: false, reason: `there is no feature ${idOrName}` });
+    const tool = this.tools.list().find((t) => t.fromFeature && t.features?.includes(feature.type));
+    if (!tool?.fromFeature) return Promise.resolve({ started: false, panel: false, reason: `no tool edits ${feature.type} features yet` });
+    const fromFeature = tool.fromFeature.bind(tool);
+    return this.launch(tool, source, {}, (ctx) => fromFeature(feature, ctx)).then((r) => ({ ...r, tool: tool.id }));
+  }
+
+  private async launch(tool: ToolDefinition, source: CommandSource, args: Readonly<Record<string, unknown>>, open: (ctx: ToolContext) => void | PanelSpec | Promise<void | PanelSpec>): Promise<StartResult> {
+    const id = tool.id;
     const en = this.enablement(tool);
     if (en !== true) return { started: false, panel: false, reason: en.reason };
     this.getState().panel?.replace();
     this.setState({ startingToolId: id, lastToolId: id });
     const before = this.getState().panel;
     try {
-      const spec = await tool.activate(this.context(id));
-      if (spec && (!this.getState().panel || this.getState().panel === before)) this.openPanel(spec, id);
+      const spec = await open(this.context(id, args));
+      if (spec && (!this.getState().panel || this.getState().panel === before)) this.openPanel(spec, id, args);
+      else if (!spec && Object.keys(args).length > 0 && this.getState().panel === before) throw new Error(`${tool.label} has no inputs to set`);
     } catch (e) {
       // Nothing is left open: a panel the tool opened before failing is cancelled.
       const opened = this.getState().panel;
@@ -236,45 +284,57 @@ export class Shell extends Store<ShellState> {
   }
 
   /** Start the last tool again (Space in model mode, like Fusion's "repeat"). */
-  repeatLastTool(): Promise<{ started: boolean; panel: boolean; reason?: string }> {
+  repeatLastTool(): Promise<StartResult> {
     const last = this.getState().lastToolId;
     return last ? this.startTool(last) : Promise.resolve({ started: false, panel: false, reason: "no tool was used yet" });
   }
 
-  /** Open a property panel (replacing the current one) and show it. */
-  openPanel(spec: PanelSpec, toolId: string | null = null): PanelSession {
+  /**
+   * Open a property panel (replacing the current one) and show it. `args` override the spec's initial
+   * values by field key; an unknown key or a value a field can't take throws (nothing opens).
+   */
+  openPanel(spec: PanelSpec, toolId: string | null = null, args: Readonly<Record<string, unknown>> = {}): PanelSession {
     this.getState().panel?.replace();
     const icon = spec.icon ?? (toolId ? this.tools.get(toolId)?.icon : undefined);
-    const session = new PanelSession(icon && !spec.icon ? { ...spec, icon } : spec, {
+    const withArgs: PanelSpec = Object.keys(args).length > 0 ? { ...spec, initial: { ...spec.initial, ...(args as PanelSpec["initial"]) } } : spec;
+    // Assigned once constructed: the session reports its first (empty) preview state from its constructor.
+    let opened: PanelSession | null = null;
+    const session: PanelSession = new PanelSession(icon && !spec.icon ? { ...withArgs, icon } : withArgs, {
       id: this.panelSeq++,
       toolId,
       params: this.ports.params,
       selection: this.ports.selection,
+      document: this.ports.document,
+      ops: this.ports.ops,
       onClose: (reason: CloseReason, s: PanelSession) => this.onPanelClosed(reason, s),
+      // Only the open panel's current preview draws; a closed or replaced panel's late result is dropped.
+      onPreviewBodies: (bodies, stale) => {
+        if (opened !== null && this.getState().panel === opened && !opened.closed) this.setPreview(bodies, stale);
+      },
     });
+    opened = session;
     this.services.ui.setPanel("right", true);
     this.setState((s) => ({ panel: session, activeToolId: toolId, rightTab: "properties", focusTick: s.focusTick + 1 }));
     return session;
   }
 
-  /** Show a tool's preview bodies in the viewport (null: the document again). */
-  showPreview(bodies: readonly RenderBody[] | null): void {
-    this.setState({ previewBodies: bodies });
+  private setPreview(bodies: readonly RenderBody[] | null, stale: boolean): void {
+    this.setState({ previewBodies: bodies, previewStale: bodies !== null && stale });
   }
 
   private onPanelClosed(_reason: CloseReason, session: PanelSession): void {
     if (this.getState().panel !== session) return;
-    this.showPreview(null);
+    this.setPreview(null, false);
     // Back to what the code dock showed before (the agent may have opened its proposal meanwhile).
     const codeTab = this.services.agent.getState().codeTab;
     this.setState((s) => ({ panel: null, activeToolId: null, rightTab: s.rightTab === "properties" ? codeTab : s.rightTab }));
   }
 
   /** OK on the open panel. */
-  async commitPanel(): Promise<CommandResult<{ committed: boolean; message?: string }>> {
+  async commitPanel(source: CommandSource = "ui"): Promise<CommandResult<{ committed: boolean; message?: string }>> {
     const panel = this.getState().panel;
     if (!panel) return { ok: false, error: { code: "DISABLED", message: "No tool is active" } };
-    const r = await panel.commit();
+    const r = await panel.commit(source);
     if (r.ok) return { ok: true, value: { committed: true, ...(r.message ? { message: r.message } : {}) } };
     return { ok: false, error: { code: "FAILED", message: r.errors.map((e) => e.message).join(" ") || "The tool could not commit" } };
   }

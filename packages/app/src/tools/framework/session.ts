@@ -1,21 +1,35 @@
 /**
  * A property panel's live session: the values of its fields, their checks, the debounced live
- * preview (a newer preview aborts the older one, and stale results are dropped), and OK / Apply /
- * Cancel. React renders it (`ui/shell/PropertyPanel.tsx`); tests drive it directly.
+ * preview (a newer preview aborts the older one, and stale results are dropped, bodies included),
+ * and OK / Apply / Cancel. React renders it (`ui/shell/PropertyPanel.tsx`); tests drive it directly.
+ *
+ * Two guarantees the tools rely on:
+ * - **OK commits only checked values.** While a preview is scheduled or running, OK waits for it
+ *   (running a scheduled one at once) and commits only if it passes. A preview that passed at an
+ *   older document revision doesn't count: OK checks again first.
+ * - **The panel follows the document.** Any document change (undo, the code editor, an accepted
+ *   agent proposal, a new evaluation) aborts the running preview and checks again, so read-only
+ *   panels refresh and feature panels preview against the current part. `toOps` are applied to the
+ *   document as it is at OK time.
  */
+import type { CommandSource } from "../../commands/registry";
+import type { RenderBody } from "../../engine/types";
 import { Store } from "../../store";
 import { checkNumberText } from "./expr";
 import type {
   CommitOutcome,
+  DocumentPort,
   FieldError,
   FieldSpec,
   FieldValue,
   NumberValue,
+  OpsPort,
   PanelSessionHandle,
   PanelSpec,
   PanelState,
   PanelValues,
   ParamsPort,
+  PreviewOutcome,
   SelectionItem,
   SelectionKind,
   SelectionPort,
@@ -58,6 +72,10 @@ export interface PanelSessionState {
   revision: number;
   /** How the panel closed (null while open). */
   closedBy: "ok" | "cancel" | "replaced" | null;
+  /** OK was pressed while the preview ran: the commit waits for the check. */
+  pendingCommit: boolean;
+  /** A one-line note for the user (e.g. why OK did not close the panel); cleared by the next edit. */
+  notice: string | null;
 }
 
 export type CloseReason = "ok" | "cancel" | "replaced";
@@ -67,14 +85,52 @@ export interface PanelSessionOptions {
   toolId?: string | null;
   params: ParamsPort;
   selection: SelectionPort;
+  /** The document: a change re-checks the panel. */
+  document: DocumentPort;
+  /** Where `toOps` are applied (one transaction). Required for panels with `toOps`. */
+  ops?: OpsPort | null;
   /** Called once when the panel closes. */
   onClose?: (reason: CloseReason, session: PanelSession) => void;
+  /**
+   * The preview geometry to draw now: the last passing preview's bodies (null: the document).
+   * `stale`: a newer check is running, so they may not match the fields any more.
+   */
+  onPreviewBodies?: (bodies: readonly RenderBody[] | null, stale: boolean) => void;
 }
 
 const DEFAULT_PREVIEW_DELAY_MS = 150;
+/** How often OK checks again when the document keeps changing under it before giving up. */
+const MAX_COMMIT_CHECKS = 5;
 
 function numberValue(text: string): NumberValue {
   return { text, value: null, expression: false, canonical: null };
+}
+
+/** An initial value (`PanelSpec.initial`, `tool.start` args) as the field's value; throws when it can't be one. */
+function initialValue(f: FieldSpec, given: unknown): FieldValue {
+  switch (f.kind) {
+    case "number":
+      if (typeof given === "string") return numberValue(given);
+      if (typeof given === "number" && Number.isFinite(given)) return numberValue(String(given));
+      if (typeof given === "object" && given !== null && typeof (given as { text?: unknown }).text === "string") return numberValue((given as NumberValue).text);
+      throw new Error(`${f.key} takes a number or an expression, like "12" or "wall * 2"`);
+    case "selection":
+      if (!Array.isArray(given) || !given.every((x) => typeof x === "object" && x !== null && typeof (x as { kind?: unknown }).kind === "string")) {
+        throw new Error(`${f.key} takes a list of selected items`);
+      }
+      return given as readonly SelectionItem[];
+    case "choice": {
+      const v = String(given);
+      if (!f.options.some((o) => o.value === v)) throw new Error(`${f.key}: "${v}" is not one of ${f.options.map((o) => o.value).join(", ")}`);
+      return v;
+    }
+    case "toggle":
+      if (typeof given !== "boolean") throw new Error(`${f.key} takes true or false`);
+      return given;
+    case "text":
+      if (typeof given !== "string") throw new Error(`${f.key} takes text`);
+      return given;
+  }
 }
 
 function accepts(kinds: readonly SelectionKind[], item: SelectionItem): boolean {
@@ -125,45 +181,62 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
   private readonly params: ParamsPort;
   private readonly selectionPort: SelectionPort;
   private readonly onClose: ((reason: CloseReason, session: PanelSession) => void) | undefined;
+  private readonly onPreviewBodies: ((bodies: readonly RenderBody[] | null, stale: boolean) => void) | undefined;
+  private readonly document: DocumentPort;
+  private readonly ops: OpsPort | null;
   private readonly initialValues: Map<string, FieldValue>;
   private previewTimer: ReturnType<typeof setTimeout> | null = null;
   private previewAbort: AbortController | null = null;
   private previewSeq = 0;
   private unsubscribeSelection: (() => void) | null = null;
+  private unsubscribeDocument: (() => void) | null = null;
   /** The promise of the preview in flight (tests await it). */
   private previewPromise: Promise<void> = Promise.resolve();
+  /** The document revision the panel last saw. */
+  private seenRevision: number;
+  /** The document revision the last passing preview checked (null: none passed for these values). */
+  private checkedRevision: number | null = null;
+  /** The last passing preview's bodies (drawn while current). */
+  private bodies: readonly RenderBody[] | null = null;
+  /** The document changed while a commit ran. */
+  private changedWhileCommitting = false;
 
   constructor(spec: PanelSpec, options: PanelSessionOptions) {
+    if (spec.toOps && spec.commit) throw new Error(`panel "${spec.title}" has both toOps and commit; a panel commits one way`);
     const selected = options.selection.items();
     const fields: FieldState[] = [];
     let activeSelectionField: string | null = null;
+    const keys = new Set(spec.fields.map((f) => f.key));
+    const unknown = Object.keys(spec.initial ?? {}).filter((k) => !keys.has(k));
+    if (unknown.length > 0) throw new Error(`${spec.title} has no input ${unknown.join(", ")} (its inputs: ${[...keys].join(", ") || "none"})`);
     for (const f of spec.fields) {
       let value: FieldValue;
       let ignored = 0;
       const given = spec.initial?.[f.key];
-      switch (f.kind) {
-        case "number":
-          value = given !== undefined ? (typeof given === "string" ? numberValue(given) : (given as NumberValue)) : numberValue(f.default ?? "");
-          break;
-        case "selection": {
-          if (given !== undefined) value = given as readonly SelectionItem[];
-          else if (f.fromSelection !== false) {
-            value = selected.filter((s) => accepts(f.accepts, s));
-            ignored = selected.length - value.length;
-          } else value = [];
-          activeSelectionField ??= f.key;
-          break;
+      if (given !== undefined) value = initialValue(f, given);
+      else {
+        switch (f.kind) {
+          case "number":
+            value = numberValue(f.default ?? "");
+            break;
+          case "selection":
+            if (f.fromSelection !== false) {
+              value = selected.filter((s) => accepts(f.accepts, s));
+              ignored = selected.length - value.length;
+            } else value = [];
+            break;
+          case "choice":
+            value = f.default ?? f.options[0]?.value ?? "";
+            break;
+          case "toggle":
+            value = f.default ?? false;
+            break;
+          case "text":
+            value = f.default ?? "";
+            break;
         }
-        case "choice":
-          value = given !== undefined ? String(given) : (f.default ?? f.options[0]?.value ?? "");
-          break;
-        case "toggle":
-          value = given !== undefined ? Boolean(given) : (f.default ?? false);
-          break;
-        case "text":
-          value = given !== undefined ? String(given) : (f.default ?? "");
-          break;
       }
+      if (f.kind === "selection") activeSelectionField ??= f.key;
       fields.push({ key: f.key, spec: f, value, error: null, remoteError: null, resolved: null, visible: true, ignored });
     }
     super({
@@ -183,14 +256,21 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
       activeSelectionField,
       revision: 0,
       closedBy: null,
+      pendingCommit: false,
+      notice: null,
     });
     this.id = options.id;
     this.spec = spec;
     this.params = options.params;
     this.selectionPort = options.selection;
+    this.document = options.document;
+    this.ops = options.ops ?? null;
     this.onClose = options.onClose;
+    this.onPreviewBodies = options.onPreviewBodies;
     this.initialValues = new Map(fields.map((f) => [f.key, f.value]));
+    this.seenRevision = this.document.revision();
     if (activeSelectionField !== null) this.unsubscribeSelection = this.selectionPort.subscribe(() => this.followSelection());
+    this.unsubscribeDocument = this.document.subscribe(() => this.onDocumentChanged());
     this.revalidate(true);
   }
 
@@ -255,6 +335,7 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
       fields: s.fields.map((f) => (f.key === key ? { ...f, value: next, remoteError: null, ignored: f.spec.kind === "selection" ? 0 : f.ignored } : f)),
       revision: s.revision + 1,
       errors: [],
+      notice: null,
     }));
     this.revalidate(false);
   }
@@ -283,7 +364,22 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
       fields: s.fields.map((f) => (f.key === key ? { ...f, value: taken, remoteError: null, ignored } : f)),
       revision: s.revision + 1,
       errors: [],
+      notice: null,
     }));
+    this.revalidate(false);
+  }
+
+  /** The document changed (any origin): check again, against the new document. */
+  private onDocumentChanged(): void {
+    if (this.closed) return;
+    const rev = this.document.revision();
+    if (rev === this.seenRevision) return;
+    this.seenRevision = rev;
+    if (this.getState().state === "committing") {
+      // Usually the commit itself; the commit decides what to do next.
+      this.changedWhileCommitting = true;
+      return;
+    }
     this.revalidate(false);
   }
 
@@ -345,9 +441,19 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
     const panelErrors = crossErrors.filter((e) => !e.field);
     const blocked = localErrors.length > 0 || crossErrors.length > 0;
     this.cancelPreview();
+    this.checkedRevision = null;
     const state: PanelState = blocked ? "collecting" : this.spec.preview ? "previewing" : "ready";
     this.setState({ fields: withCross, errors: panelErrors, state, ...(blocked ? { summary: [] } : {}) });
+    // What the viewport draws meanwhile: nothing for values that don't check; the last preview,
+    // marked stale, while the next one runs.
+    if (blocked || !this.spec.preview) this.showBodies(null, false);
+    else this.showBodies(this.bodies, true);
     if (!blocked && this.spec.preview) this.schedulePreview(initial ? 0 : (this.spec.previewDelayMs ?? DEFAULT_PREVIEW_DELAY_MS));
+  }
+
+  private showBodies(bodies: readonly RenderBody[] | null, stale: boolean): void {
+    this.bodies = bodies;
+    if (!this.closed) this.onPreviewBodies?.(bodies, stale && bodies !== null);
   }
 
   private cancelPreview(): void {
@@ -366,26 +472,63 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
     }, delay);
   }
 
+  /** Run a scheduled preview now (OK doesn't wait for the debounce). */
+  private flushPreview(): void {
+    if (this.previewTimer === null) return;
+    clearTimeout(this.previewTimer);
+    this.previewTimer = null;
+    this.previewPromise = this.runPreview(this.previewSeq);
+  }
+
   private async runPreview(seq: number): Promise<void> {
     const preview = this.spec.preview;
     if (!preview || seq !== this.previewSeq || this.closed) return;
     const abort = new AbortController();
     this.previewAbort = abort;
-    let outcome;
+    const revision = this.document.revision();
+    let outcome: PreviewOutcome;
     try {
-      outcome = await preview(this.values(), { signal: abort.signal });
+      outcome = await preview(this.values(), { signal: abort.signal, revision });
     } catch (e) {
       if (abort.signal.aborted) return;
       outcome = { ok: false as const, errors: [{ code: "PREVIEW_FAILED", message: `The preview failed: ${e instanceof Error ? e.message : String(e)}` }] };
     }
     if (abort.signal.aborted || seq !== this.previewSeq || this.closed) return;
     this.previewAbort = null;
+    if (revision !== this.document.revision()) {
+      // The document changed under the preview and no newer one started yet: check again.
+      this.revalidate(true);
+      return;
+    }
     this.applyOutcomeErrors(outcome.ok ? [] : outcome.errors);
+    this.checkedRevision = outcome.ok ? revision : null;
     this.setState({
       state: outcome.ok ? "ready" : "invalid",
       summary: outcome.summary ?? [],
       warnings: outcome.ok ? (outcome.warnings ?? []) : [],
     });
+    this.showBodies(outcome.ok ? (outcome.bodies ?? null) : null, false);
+  }
+
+  /** Resolves when the check of the current values and document has finished (or the panel closed). */
+  private async waitForCheck(): Promise<void> {
+    for (let i = 0; i < MAX_COMMIT_CHECKS; i++) {
+      if (this.closed) return;
+      const s = this.getState();
+      if (s.state === "ready" && this.checkedRevision !== this.document.revision()) this.revalidate(true);
+      if (this.getState().state !== "previewing") return;
+      this.flushPreview();
+      await new Promise<void>((resolve) => {
+        const done = (): boolean => this.closed || this.getState().state !== "previewing";
+        if (done()) return resolve();
+        const off = this.subscribe(() => {
+          if (!done()) return;
+          off();
+          resolve();
+        });
+      });
+      if (this.closed || this.getState().state !== "ready" || this.checkedRevision === this.document.revision()) return;
+    }
   }
 
   private applyOutcomeErrors(errors: readonly FieldError[]): void {
@@ -405,22 +548,37 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
   // ─── OK / Apply / Cancel ─────────────────────────────────────────────────────────────────
 
   /** OK: commit as one transaction; closes on success. Read-only panels just close. */
-  commit(): Promise<CommitOutcome> {
-    return this.finish(false);
+  commit(source: CommandSource = "ui"): Promise<CommitOutcome> {
+    return this.finish(false, source);
   }
 
   /** Apply: commit, then start over with the initial values (the panel stays open). */
-  apply(): Promise<CommitOutcome> {
-    return this.finish(true);
+  apply(source: CommandSource = "ui"): Promise<CommitOutcome> {
+    return this.finish(true, source);
   }
 
-  private async finish(keepOpen: boolean): Promise<CommitOutcome> {
-    const s = this.getState();
-    if (s.state === "closed") return { ok: false, errors: [{ code: "CLOSED", message: "The panel is closed." }] };
-    if (s.state === "committing") return { ok: false, errors: [{ code: "BUSY", message: "Already committing." }] };
-    if (s.readOnly || !this.spec.commit) {
+  private async finish(keepOpen: boolean, source: CommandSource): Promise<CommitOutcome> {
+    const closedOutcome: CommitOutcome = { ok: false, errors: [{ code: "CLOSED", message: "The panel is closed." }] };
+    let s = this.getState();
+    if (s.state === "closed") return closedOutcome;
+    if (s.state === "committing" || s.pendingCommit) return { ok: false, errors: [{ code: "BUSY", message: "Already committing." }] };
+    if (s.readOnly || (!this.spec.commit && !this.spec.toOps)) {
       this.close("ok");
       return { ok: true };
+    }
+    // Only checked values are committed: wait for the preview of these values at this revision.
+    if (this.spec.preview && (s.state === "previewing" || (s.state === "ready" && this.checkedRevision !== this.document.revision()))) {
+      this.setState({ pendingCommit: true, notice: null });
+      try {
+        await this.waitForCheck();
+      } finally {
+        if (!this.closed) this.setState({ pendingCommit: false });
+      }
+      if (this.closed) return closedOutcome;
+      s = this.getState();
+      if (s.state === "ready" && this.checkedRevision !== this.document.revision()) {
+        return { ok: false, errors: [{ code: "DOCUMENT_BUSY", message: "The part keeps changing; press OK again when it settles." }] };
+      }
     }
     const blocking = s.fields.filter((f) => f.visible && f.error !== null).map((f) => f.error!);
     if (blocking.length > 0 || s.state === "collecting") {
@@ -430,20 +588,32 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
       const reported = [...s.errors, ...s.fields.flatMap((f) => (f.remoteError ? [f.remoteError] : []))];
       return { ok: false, errors: reported.length ? reported : [{ code: "INVALID", message: "The preview reported a problem; change a value first." }] };
     }
+    if (s.state !== "ready") return { ok: false, errors: [{ code: "NOT_READY", message: "The values are still being checked." }] };
     this.cancelPreview();
-    this.setState({ state: "committing" });
+    this.changedWhileCommitting = false;
+    this.setState({ state: "committing", notice: null });
     let outcome: CommitOutcome;
     try {
-      outcome = await this.spec.commit(this.values());
+      outcome = await this.runCommit(this.values(), source);
     } catch (e) {
       outcome = { ok: false, errors: [{ code: "COMMIT_FAILED", message: e instanceof Error ? e.message : String(e) }] };
     }
     if (this.closed) return outcome;
     if (!outcome.ok) {
+      this.showBodies(null, false);
+      if (this.changedWhileCommitting || outcome.errors.some((e) => e.code === "COMMAND_STALE")) {
+        // The part changed under the commit: nothing was applied. Check again against the new part.
+        this.changedWhileCommitting = false;
+        this.revalidate(true);
+        this.setState({ notice: "The part changed while this change was being applied, so it was not applied. It was checked again: press OK to apply it now." });
+        return outcome;
+      }
       this.applyOutcomeErrors(outcome.errors);
       this.setState({ state: "invalid" });
       return outcome;
     }
+    this.changedWhileCommitting = false;
+    this.seenRevision = this.document.revision();
     if (keepOpen) {
       this.setState((st) => ({
         fields: st.fields.map((f) => ({ ...f, value: this.initialValues.get(f.key) ?? f.value, remoteError: null })),
@@ -470,10 +640,21 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
     this.close("replaced");
   }
 
+  private async runCommit(values: PanelValues, source: CommandSource): Promise<CommitOutcome> {
+    if (this.spec.commit) return this.spec.commit(values);
+    const ops = await this.spec.toOps!(values);
+    if (this.closed) return { ok: false, errors: [{ code: "CLOSED", message: "The panel is closed." }] };
+    if (!this.ops) return { ok: false, errors: [{ code: "NO_OPS_PORT", message: "This window can't apply ops (no document store is bound)." }] };
+    const label = this.spec.label?.(values) ?? this.getState().title;
+    return this.ops.apply(ops, { label, source });
+  }
+
   private close(reason: CloseReason): void {
     this.cancelPreview();
     this.unsubscribeSelection?.();
     this.unsubscribeSelection = null;
+    this.unsubscribeDocument?.();
+    this.unsubscribeDocument = null;
     if (reason !== "ok") {
       try {
         this.spec.cancel?.();

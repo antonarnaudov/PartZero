@@ -293,8 +293,10 @@ export function PropertyPanel({ session }: { session: PanelSession }): ReactElem
   };
 
   const visible = s.fields.filter((f) => f.visible);
-  const canOk = s.readOnly || s.state === "ready" || s.state === "previewing";
-  const tone = s.state === "ready" ? "ok" : s.state === "invalid" ? "error" : s.state === "previewing" || s.state === "committing" ? "busy" : "idle";
+  // OK while the check runs waits for it and commits only if it passes (session.ts).
+  const canOk = s.readOnly || ((s.state === "ready" || s.state === "previewing") && !s.pendingCommit);
+  const tone = s.pendingCommit ? "busy" : s.state === "ready" ? "ok" : s.state === "invalid" ? "error" : s.state === "previewing" || s.state === "committing" ? "busy" : "idle";
+  const stateLabel = s.readOnly ? (s.state === "previewing" ? "Updating…" : "Read only") : s.pendingCommit ? "Checking, then applying…" : STATE_LABEL[s.state];
 
   return (
     <form
@@ -302,6 +304,7 @@ export function PropertyPanel({ session }: { session: PanelSession }): ReactElem
       className="property-panel"
       data-testid="property-panel"
       data-state={s.state}
+      data-pending-commit={s.pendingCommit ? "true" : undefined}
       data-tool={s.toolId ?? ""}
       aria-label={`${s.title} properties`}
       onSubmit={(e) => {
@@ -352,6 +355,11 @@ export function PropertyPanel({ session }: { session: PanelSession }): ReactElem
             <Icon.Warning size={12} /> {w}
           </div>
         ))}
+        {s.notice && (
+          <div className="pp-notice" role="status" data-testid="panel-notice">
+            <Icon.Info size={12} /> {s.notice}
+          </div>
+        )}
         {s.errors.map((e, i) => (
           <div key={`${e.code ?? ""}${i}`} className="pp-panel-error" role="alert" data-testid="panel-error">
             <Icon.Error size={12} />
@@ -365,7 +373,7 @@ export function PropertyPanel({ session }: { session: PanelSession }): ReactElem
       <footer className="pp-foot">
         <span className={`pp-state tone-${tone}`} data-testid="panel-state">
           {tone === "busy" ? <Icon.Spinner size={11} /> : <span className="dot" />}
-          {s.readOnly ? "Read only" : STATE_LABEL[s.state]}
+          {stateLabel}
         </span>
         <span className="spacer" />
         {!s.readOnly && (

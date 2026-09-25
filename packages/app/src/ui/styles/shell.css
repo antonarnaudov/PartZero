@@ -603,6 +603,31 @@
   flex: none;
   margin-top: 2px;
 }
+.pp-notice {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  line-height: 1.4;
+  background: var(--accent-weak);
+  color: var(--text);
+}
+.pp-notice svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* A tool preview that newer values are being checked against: dimmed until the check lands. */
+.viewport[data-preview-stale="true"] .viewport-surface {
+  opacity: 0.55;
+  transition: opacity 120ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .viewport[data-preview-stale="true"] .viewport-surface {
+    transition: none;
+  }
+}
 .pp-code {
   margin-left: 6px;
   font-size: 10px;

@@ -1,12 +1,13 @@
 /**
  * Default bindings of the tool ports to today's app: the document store's single selection (a
- * feature, or a picked body/face/edge) and the document's parameters as the last evaluation
- * reported them. The selection workstream (SEL, contract C2) and the IR v1 store replace these
- * with richer sources through `Shell.bindPorts` without touching any tool.
+ * feature, or a picked body/face/edge), the document's parameters as the last evaluation reported
+ * them, and the document's revision and features. The selection workstream (SEL, contract C2) and
+ * the IR v1 store replace these with richer sources through `Shell.bindPorts` without touching any
+ * tool.
  */
-import type { DocStore } from "../../doc/doc-store";
+import type { DocState, DocStore } from "../../doc/doc-store";
 import { findFeature } from "../../doc/provenance";
-import type { ParamInfo, ParamsPort, SelectionItem, SelectionPort } from "./types";
+import type { DocumentPort, FeatureInfo, ParamInfo, ParamsPort, SelectionItem, SelectionPort } from "./types";
 
 /** `part/feature#2` → `part`. */
 function partOfBody(body: string): string {
@@ -77,6 +78,62 @@ export function reportParams(report: unknown): ParamInfo[] {
 
 export function docParamsPort(doc: DocStore): ParamsPort {
   return { list: () => reportParams(doc.getState().report) };
+}
+
+/**
+ * The document store as a {@link DocumentPort}: the revision moves when another document loads, the
+ * source changes (edits, undo/redo, the code editor, accepted proposals) or a new evaluation report
+ * arrives. Selection changes don't move it.
+ */
+export function docDocumentPort(doc: DocStore): DocumentPort {
+  const key = (s: DocState) => ({ docId: s.docId, revision: s.revision, report: s.report });
+  let seen = key(doc.getState());
+  let rev = 0;
+  const revision = (): number => {
+    const s = doc.getState();
+    if (s.docId !== seen.docId || s.revision !== seen.revision || s.report !== seen.report) {
+      seen = key(s);
+      rev++;
+    }
+    return rev;
+  };
+  return {
+    revision,
+    subscribe: (listener) => {
+      let prev = revision();
+      return doc.subscribe(() => {
+        const r = revision();
+        if (r === prev) return;
+        prev = r;
+        listener();
+      });
+    },
+    feature: (idOrName) => {
+      const s = doc.getState();
+      const loc = findFeature(s.model?.ir, idOrName);
+      if (!loc) return null;
+      const info: FeatureInfo = { id: loc.feature.id, name: loc.feature.name, type: loc.feature.type, part: loc.part.id, json: structuredClone(loc.feature) as unknown as Record<string, unknown> };
+      return info;
+    },
+  };
+}
+
+/** A document whose revision a test moves by hand. */
+export function staticDocumentPort(features: readonly FeatureInfo[] = []): DocumentPort & { bump(): void } {
+  let rev = 0;
+  const listeners = new Set<() => void>();
+  return {
+    revision: () => rev,
+    subscribe: (l) => {
+      listeners.add(l);
+      return () => listeners.delete(l);
+    },
+    feature: (idOrName) => features.find((f) => f.id === idOrName) ?? features.find((f) => f.name === idOrName) ?? null,
+    bump: () => {
+      rev++;
+      for (const l of [...listeners]) l();
+    },
+  };
 }
 
 /** A fixed selection (tests, scripted tools). */

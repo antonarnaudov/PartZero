@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { createShellCommandRegistry } from "../src/tools/commands";
 import { staticSelectionPort } from "../src/tools/framework/ports";
-import type { PanelSpec, ToolDefinition } from "../src/tools/framework/types";
+import type { NumberValue, PanelSpec, PreviewOutcome, ToolDefinition } from "../src/tools/framework/types";
+import { TOOL_GROUPS } from "../src/tools/framework/types";
 import { ToolRegistry, ToolRegistryError } from "../src/tools/registry";
 import { attachShell, isBlankDocument, Shell, shellOf } from "../src/tools/shell";
 import { BLANK_SOURCE } from "../src/host/templates";
@@ -143,20 +144,55 @@ describe("the shell", () => {
     expect(shell.getState().panel).toBeNull();
   });
 
-  it("shows a tool's preview bodies until its panel closes or another document loads", async () => {
+  it("shows the open panel's preview bodies until it closes or another document loads", async () => {
     const { shell, engine, commands } = await shellHarness();
     const { bodies } = await engine.evaluate(JSON.stringify({ schema: "aicad.ir/0", parts: [{ id: "p", name: "p", features: [{ type: "extrude", id: "e", name: "e", sketch: "s" }] }] }));
-    shell.tools.register(tool({ id: "feature.offset", activate: (ctx) => {
-      ctx.showPreview(bodies);
-      return spec();
-    } }));
+    shell.tools.register(tool({ id: "feature.offset", activate: () => spec({ preview: () => ({ ok: true, bodies }) }) }));
     await shell.startTool("feature.offset");
-    expect(shell.getState().previewBodies).toBe(bodies);
+    await shell.getState().panel!.settled();
+    expect(shell.getState()).toMatchObject({ previewBodies: bodies, previewStale: false });
+    shell.getState().panel!.set("d", "3");
+    expect(shell.getState()).toMatchObject({ previewBodies: bodies, previewStale: true });
     shell.cancelPanel();
-    expect(shell.getState().previewBodies).toBeNull();
+    expect(shell.getState()).toMatchObject({ previewBodies: null, previewStale: false });
     await shell.startTool("feature.offset");
+    await shell.getState().panel!.settled();
     await commands.execute({ id: "file.new" });
     expect(shell.getState().previewBodies).toBeNull();
+  });
+
+  it("drops the late preview of a panel that was cancelled or replaced", async () => {
+    const { shell, engine } = await shellHarness();
+    const { bodies } = await engine.evaluate(JSON.stringify({ schema: "aicad.ir/0", parts: [{ id: "p", name: "p", features: [{ type: "extrude", id: "e", name: "e", sketch: "s" }] }] }));
+    let answer!: (o: PreviewOutcome) => void;
+    shell.tools.register(tool({ id: "feature.slow", activate: () => spec({ preview: () => new Promise<PreviewOutcome>((r) => (answer = r)) }) }));
+    shell.tools.register(tool({ id: "feature.other", label: "Other", activate: () => spec() }));
+    await shell.startTool("feature.slow");
+    await new Promise((r) => setTimeout(r, 5));
+    shell.cancelPanel();
+    answer({ ok: true, bodies });
+    await new Promise((r) => setTimeout(r, 5));
+    expect(shell.getState().previewBodies).toBeNull();
+    await shell.startTool("feature.slow");
+    await new Promise((r) => setTimeout(r, 5));
+    await shell.startTool("feature.other");
+    answer({ ok: true, bodies });
+    await new Promise((r) => setTimeout(r, 5));
+    expect(shell.getState().previewBodies).toBeNull();
+  });
+
+  it("tool.start args prefill the panel; an unknown input is refused and nothing opens", async () => {
+    const { shell, shellCommands } = await shellHarness();
+    shell.tools.register(tool({ id: "feature.offset", label: "Offset", activate: () => spec() }));
+    expect(await shellCommands.execute({ id: "tool.start", args: { id: "feature.offset", args: { d: 7.5 } } })).toEqual({ ok: true, value: { started: true, panel: true } });
+    expect(shell.getState().panel!.values()["d"]).toMatchObject({ text: "7.5", value: 7.5 });
+    const bad = await shellCommands.execute({ id: "tool.start", args: { id: "feature.offset", args: { depth: 1 } } });
+    expect(bad).toMatchObject({ ok: false, error: { message: expect.stringContaining("has no input depth") } });
+    expect(shell.getState().panel).toBeNull();
+  });
+
+  it("has the plan's toolbar groups, print included", () => {
+    expect(TOOL_GROUPS.map((g) => g.id)).toEqual(["sketch", "create", "modify", "pattern", "inspect", "construct", "print"]);
   });
 
   it("drives tools through the shell commands (tool.start / tool.commit / tool.cancel / tool.list)", async () => {
@@ -228,5 +264,113 @@ describe("the shell", () => {
     expect(r.ok).toBe(true);
     expect(services.agent.getState().activeRunId).not.toBeNull();
     expect(shell.welcomeVisible()).toBe(false);
+  });
+});
+
+/** A tool that sets the plate's thickness with a `setField` op, and re-edits extrudes (`fromFeature`). */
+function thicknessTool(): ToolDefinition {
+  const panel = (feature: string, distance: number): PanelSpec => ({
+    title: "Thickness",
+    fields: [{ kind: "number", key: "d", label: "Thickness", quantity: "length", min: 0, minExclusive: true, default: String(distance) }],
+    previewDelayMs: 0,
+    toOps: (v) => [{ op: "setField", feature, path: "/distance", value: (v["d"] as NumberValue).value }],
+    label: (v) => `Thickness ${(v["d"] as NumberValue).text} mm`,
+  });
+  return tool({
+    id: "feature.thickness",
+    label: "Thickness",
+    features: ["extrude"],
+    activate: (ctx) => {
+      const f = ctx.document.feature("plate");
+      if (!f) throw new Error("no plate");
+      return panel(f.id, f.json["distance"] as number);
+    },
+    fromFeature: (f) => panel(f.id, f.json["distance"] as number),
+  });
+}
+
+describe("tools change the document with ops, against the document as it is at OK time", () => {
+  it("OK applies the ops as one undo step", async () => {
+    const { shell, services } = await shellHarness();
+    shell.tools.register(thicknessTool());
+    await shell.startTool("feature.thickness");
+    shell.getState().panel!.set("d", "8");
+    expect((await shell.commitPanel()).ok).toBe(true);
+    await services.doc.idle();
+    expect(services.doc.getState().source).toContain("distance: 8");
+    expect(services.doc.getState().history.undoLabel).toBe("Thickness 8 mm");
+    services.doc.undo();
+    expect(services.doc.getState().source).toContain("distance: 5");
+  });
+
+  it("an edit made while the panel is open (the agent, the code editor) is kept, not overwritten by OK", async () => {
+    const { shell, services, commands } = await shellHarness();
+    shell.tools.register(thicknessTool());
+    await shell.startTool("feature.thickness");
+    const panel = shell.getState().panel!;
+    panel.set("d", "8");
+    await panel.settled();
+    // Someone else widens the outline while the panel is open.
+    const widened = services.doc.getState().source.replace(/25/g, "30");
+    expect((await commands.execute({ id: "doc.setSource", args: { source: widened, label: "Agent edit" } })).ok).toBe(true);
+    await services.doc.idle();
+    expect((await shell.commitPanel()).ok).toBe(true);
+    await services.doc.idle();
+    const src = services.doc.getState().source;
+    expect(src).toContain("distance: 8");
+    expect(src).toContain("[30, 30]");
+    expect(src).not.toContain("25");
+    // One undo step for the tool: the other edit stays.
+    services.doc.undo();
+    expect(services.doc.getState().source).toBe(widened);
+  });
+
+  it("feature.edit opens the tool that makes the feature, prefilled from it, and OK changes that feature", async () => {
+    const { shell, shellCommands, services } = await shellHarness();
+    shell.tools.register(thicknessTool());
+    expect(await shellCommands.execute({ id: "feature.edit", args: { feature: "plate" } })).toEqual({ ok: true, value: { started: true, panel: true, tool: "feature.thickness" } });
+    const panel = shell.getState().panel!;
+    expect(panel.values()["d"]).toMatchObject({ value: 5 });
+    panel.set("d", "6");
+    expect((await shellCommands.execute({ id: "tool.commit" })).ok).toBe(true);
+    await services.doc.idle();
+    expect(services.doc.getState().source).toContain("distance: 6");
+    expect(await shellCommands.execute({ id: "feature.edit", args: { feature: "outline" } })).toMatchObject({ ok: false, error: { message: "no tool edits sketch features yet" } });
+    expect(await shellCommands.execute({ id: "feature.edit", args: { feature: "nope" } })).toMatchObject({ ok: false, error: { message: "there is no feature nope" } });
+  });
+
+  it("an open panel re-checks when the document changes (undo, the agent)", async () => {
+    const { shell, services, commands } = await shellHarness();
+    const seen: number[] = [];
+    shell.tools.register(
+      tool({
+        id: "inspect.distance",
+        activate: (ctx) => ({
+          title: "Distance",
+          readOnly: true,
+          fields: [],
+          previewDelayMs: 0,
+          preview: async () => {
+            await ctx.services.doc.idle();
+            const d = ctx.document.feature("plate")!.json["distance"] as number;
+            seen.push(d);
+            return { ok: true, summary: [{ label: "Distance", value: String(d) }] };
+          },
+        }),
+      }),
+    );
+    await shell.startTool("inspect.distance");
+    const panel = shell.getState().panel!;
+    await panel.settled();
+    expect(panel.getState().summary).toEqual([{ label: "Distance", value: "5" }]);
+    await commands.execute({ id: "doc.setSource", args: { source: services.doc.getState().source.replace("distance: 5", "distance: 9") } });
+    await services.doc.idle();
+    await panel.settled();
+    expect(panel.getState().summary).toEqual([{ label: "Distance", value: "9" }]);
+    await commands.execute({ id: "edit.undo" });
+    await services.doc.idle();
+    await panel.settled();
+    expect(panel.getState().summary).toEqual([{ label: "Distance", value: "5" }]);
+    expect(seen.at(-1)).toBe(5);
   });
 });
