@@ -4,6 +4,12 @@
 - **Plan:** [FULL-MODELING-PLAN.md](../FULL-MODELING-PLAN.md) §2.7 (sketch mode), §3.4 C5 (SketchSession), T0 rows 3–7.
 - **Where a finished sketch goes today:** into the open **CadScript (IR v0) document**, through the command layer's `doc.applyIr` (the CadScript bridge, below). It shows in the timeline, extrudes, saves, undoes with ⌘Z, and reopens from the timeline. The IR v1 model cannot take it yet: that needs contract **C1 part 1** (`addParam`, `addFeature`, `setField`), which Phase C does not have and no stream builds tonight. **C1 is the critical path** for sketches in the v1 model.
 - Nothing here edits Phase C's hot paths. The seams below are where the integrator connects it.
+- **Integration status (branch `fm-integration`, 2026-09-25):** merged with Phase C and the other
+  streams. In the PartZero shell (`ui/shell/AppShell.tsx`) `SketchModeHost` is mounted in the
+  viewport column, the welcome makes way while sketch mode is open, and the old toolbar button is the
+  ribbon's **Sketch** tool (`tools/builtin/sketch.ts`, id `sketch.new`, ⇧S; e2e clicks
+  `tool-sketch.new`). Finish still goes through the CadScript bridge: the IR v1 wiring below (it
+  needs C1 part 1's `addParam` / `addFeature` / `setField`) and `commands/sketch.ts` are not done.
 
 ## What works
 

@@ -4,6 +4,14 @@ Branch: the VIEW/SEL overnight stream (FULL-MODELING-PLAN §2.4, §2.6, T0 items
 Everything below works on the branch as it is; these steps finish the wiring into files this
 stream was not allowed to edit (Phase C's hot paths). Each step is small and independent.
 
+**Integration status (branch `fm-integration`, 2026-09-25):** steps 1 and 2 are applied (the
+patch, with `...VIEWPORT_COMMANDS` after Phase C's `...IR_COMMANDS`); from step 3, only
+`chipsFromSelection` → `selectionChips`; step 5a is done (View menu: seven views, Zoom to
+Selection, Look At, Display, Section, Show, Measure). The palette goes through the shell
+(`shell.paletteItems()` / `shell.execute`), no longer `routedPaletteItems`. The toolbar's menus now
+sit above the view cube (`z-index: 1` on `.viewport .vp-toolbar`). Still open: the rest of 3
+(agent/MCP read-only tools, `vertex` chips), 4, 5, 6, 7, 8.
+
 **Do steps 1 and 2 in the same merge as this branch** — until then Hidden Line and X-ray are
 shown as unavailable on WebGPU, and the native menu, `window.__aicad` and anything else on the
 app registry cannot reach `view.*` / `selection.*` / `measure.*`. Both are in
