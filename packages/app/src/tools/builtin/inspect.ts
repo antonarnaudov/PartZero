@@ -177,11 +177,14 @@ export const bodyPropertiesTool: ToolDefinition = {
           key: "body",
           label: "Body",
           style: "dropdown",
-          options: [{ value: "*", label: bodies.length === 1 ? `${bodies[0]!.label} (the only body)` : `All ${bodies.length} bodies` }, ...(bodies.length > 1 ? bodies.map((b) => ({ value: b.key, label: b.label })) : [])],
+          // The panel follows the part (undo, code edits, the agent): "*" stays right however many bodies there are.
+          options: [{ value: "*", label: "All bodies" }, ...(bodies.length > 1 ? bodies.map((b) => ({ value: b.key, label: b.label })) : [])],
           default: picked && bodies.length > 1 ? picked.key : "*",
         },
       ],
-      preview: (values): PreviewOutcome => {
+      // Re-run on every document change: wait for its evaluation, so the numbers are the current part's.
+      preview: async (values): Promise<PreviewOutcome> => {
+        await ctx.services.doc.idle();
         const all = currentBodies(ctx.services);
         const which = values["body"] === "*" ? all : all.filter((b) => b.key === values["body"]);
         if (which.length === 0) return { ok: false, errors: [{ code: "BODY_GONE", message: "That body no longer exists (the part changed)." }] };
@@ -233,6 +236,7 @@ export const bedFitTool: ToolDefinition = {
       preview: async (): Promise<PreviewOutcome> => {
         if (!print) return { ok: false, errors: [{ code: "NO_PRINTER", message: "Printer profiles are in the desktop app." }] };
         const profile = await print.profile();
+        await ctx.services.doc.idle();
         const fit = bedFit(currentBodies(ctx.services), profile.printer.bed, profile.printer.bedMargin);
         if (!fit) return { ok: false, errors: [{ code: "NO_BODIES", message: "There are no bodies to place." }] };
         const axis = ["X", "Y", "Z"] as const;
