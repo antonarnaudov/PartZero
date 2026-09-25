@@ -1,0 +1,39 @@
+packages/app/src/io/step-export.ts
+  s_59c0dd2af30db2::t_0d3f83ebeff487 1-157
+packages/desktop/src/step-export.ts
+  s_59c0dd2af30db2::t_382d0203922a80 1-94
+packages/app/src/bridge.ts
+  s_59c0dd2af30db2::t_7903ea5dff077f 103-126
+  s_59c0dd2af30db2::t_4bebbf7d1d5e3d 293-294,319
+packages/desktop/e2e/step-export.e2e.ts
+  s_59c0dd2af30db2::t_6f939e3b428f3d 1-113
+packages/desktop/test/step-export.test.ts
+  s_59c0dd2af30db2::t_2cc3ae4d0b8270 52-77
+  s_59c0dd2af30db2::t_d64bce03cb8002 1-7,11,22-51,78-114
+  s_59c0dd2af30db2::t_d11cf258a30a60 8-10,12-21
+packages/desktop/src/ipc.ts
+  s_59c0dd2af30db2::t_d51d8783c3158b 27
+  s_59c0dd2af30db2::t_929bbffa56f22d 161-162
+packages/app/test/step-export.test.ts
+  s_59c0dd2af30db2::t_e4fa1d9d8fa0da 1-154
+packages/desktop/src/forge-cli.ts
+  s_59c0dd2af30db2::t_c6205d077c594d 69,76,103
+packages/desktop/src/preload.cts
+  s_59c0dd2af30db2::t_c767a3c2faea4c 42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4afc2321c0e32ce2a3b676ebb21aea9beea22028",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
