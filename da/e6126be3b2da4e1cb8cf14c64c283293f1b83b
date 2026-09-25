@@ -1,0 +1,23 @@
+packages/app/src/file/adapter.ts
+  s_59c0dd2af30db2::t_302c328714b59f 10-14,18,91-92,95-105,144-151,156-157,213-214,222-224,226,229,231,233,237-246,260-261,301,311,313,328,332,337,340-348,351,363-364
+packages/app/src/file/document-files.ts
+  s_59c0dd2af30db2::t_19b449888b6ed6 536,540,544-545,598-602,605-609,645,655,665-670
+packages/app/test/v1-document.test.ts
+  s_59c0dd2af30db2::t_bf34c4283ab3f2 21-23,27,287-416
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "dae6126be3b2da4e1cb8cf14c64c283293f1b83b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
