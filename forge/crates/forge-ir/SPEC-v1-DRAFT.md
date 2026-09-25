@@ -2092,6 +2092,8 @@ thread qualifies them with the position, `@p`).
 `forge_ir::v1::threads`): ISO metric coarse M1.6–M30 and fine (M1.6x0.2 … M30x1.5, the pitches both
 tables list), Unified coarse and fine #2–1" (UNC/UNF, ASME B1.1: major `0.060 + 0.013·N` in for
 numbered sizes). Nominal diameters only: tolerance classes and FDM compensation are not in the IR.
+The constants file writes every number rounded to 1e-12 mm (so every JSON reader parses the same
+`f64`); engines may use the unrounded values (they differ by < 5e-13 mm).
 
 ## 7. Evaluation and report (`aicad.metrics/1`)
 
