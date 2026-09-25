@@ -1,0 +1,51 @@
+packages/app/src/commands/model-commands.ts
+  s_59c0dd2af30db2::t_e1924d6a87d95b 60
+  s_59c0dd2af30db2::t_eb2a931fdf0219 15
+packages/app/src/tools/create/datum.ts
+  s_59c0dd2af30db2::t_ccbf663729ece3 103-104
+packages/app/test/create-tools.test.ts
+  s_59c0dd2af30db2::t_cd1a7a5b7f5fb7 229-247,250-268,426
+  s_59c0dd2af30db2::t_c55a27bf2fb0ff 393-425
+  s_59c0dd2af30db2::t_5f7dcf141dda1d 248-249
+  s_59c0dd2af30db2::t_79dc26627414bd 427-428
+packages/app/src/tools/create/extrude.ts
+  s_59c0dd2af30db2::t_8145491f7b035e 81,83-94,100
+  s_59c0dd2af30db2::t_5a5f19ef22415b 154-166
+  s_59c0dd2af30db2::t_074956c7b4e22a 194,197,199
+  s_59c0dd2af30db2::t_65e166f18a80b8 58-70
+  s_59c0dd2af30db2::t_7888745e4d17fb 110
+  s_59c0dd2af30db2::t_2d463c9166f0ca 11-12
+  s_59c0dd2af30db2::t_c46786ca7b68aa 111
+packages/app/src/tools/create/hole.ts
+  s_59c0dd2af30db2::t_954ede51e41659 151-152
+packages/app/src/tools/create/model.ts
+  s_59c0dd2af30db2::t_cb0b2a172df57d 71-79
+packages/app/src/tools/create/revolve.ts
+  s_59c0dd2af30db2::t_c05b270d454b9b 84-85
+packages/app/src/tools/create/move.ts
+  s_59c0dd2af30db2::t_03f1e62c6b26a3 57-58
+  s_59c0dd2af30db2::t_64b22bbcec57d1 1-49,55-56,59-170
+  s_59c0dd2af30db2::t_70a8f00445093e 50-54
+packages/app/src/tools/create/index.ts
+  s_59c0dd2af30db2::t_cc33ac7c4043e5 10,14
+  s_59c0dd2af30db2::t_c30426aff3b937 20
+packages/app/src/tools/create/kit.ts
+  s_59c0dd2af30db2::t_a50a459b6deaab 200-208
+  s_59c0dd2af30db2::t_67a9f8b75dc932 94-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6e1ab65a6135f4f7b4c2f53698303e7d7310d22c",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
