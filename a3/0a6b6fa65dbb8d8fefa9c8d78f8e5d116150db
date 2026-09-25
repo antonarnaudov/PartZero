@@ -1,0 +1,48 @@
+packages/app/src/viewport/viewport.css
+  s_59c0dd2af30db2::t_9205b761fac128 561-596
+packages/desktop/e2e/viewport/navigation.e2e.ts
+  s_59c0dd2af30db2::t_b1c5ac7109bd4a 118-121,124-186
+  s_59c0dd2af30db2::t_2502d05dbb8e12 122-123
+packages/app/src/viewport/commands.ts
+  s_59c0dd2af30db2::t_3ed1f2e4ca83d1 15,26,197-211
+  s_59c0dd2af30db2::t_30686231a6a21d 212-214
+packages/app/src/ui/Viewport.tsx
+  s_59c0dd2af30db2::t_3ed1f2e4ca83d1 280
+packages/app/src/ui/SettingsDialog.tsx
+  s_59c0dd2af30db2::t_9205b761fac128 18,585
+packages/desktop/e2e/viewport/harness.ts
+  s_59c0dd2af30db2::t_b1c5ac7109bd4a 231-242,244-245,249-251,253
+  s_59c0dd2af30db2::t_2699e93a782f68 39
+packages/app/src/viewport/view-store.ts
+  s_59c0dd2af30db2::t_3ed1f2e4ca83d1 8,43-44,57,100,110,127-129
+  s_59c0dd2af30db2::t_2e6ecff018f631 130-131
+packages/app/test/fixtures/wheel-sequences.ts
+  s_59c0dd2af30db2::t_e19230caa16553 1-97
+packages/app/src/viewport/navigation.ts
+  s_59c0dd2af30db2::t_7eb022032d6df2 12-21,23-34,39-42,71-72,78-107,109-112,119-120,123-128,131-136
+packages/app/src/viewport/NavigationSettings.tsx
+  s_59c0dd2af30db2::t_b92a5dca6aa77e 102
+  s_59c0dd2af30db2::t_b6d7b68632d089 1-61,63-101,103-111
+  s_59c0dd2af30db2::t_9205b761fac128 62
+packages/app/test/viewport-tools.test.ts
+  s_59c0dd2af30db2::t_d89d4a30cef5ab 6,10,44-86
+  s_59c0dd2af30db2::t_b0da344d9dec6d 87
+docs/fm/view-sel-followups.md
+  s_59c0dd2af30db2::t_b92a5dca6aa77e 132-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a30a6b6fa65dbb8d8fefa9c8d78f8e5d116150db",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
