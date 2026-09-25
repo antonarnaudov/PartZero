@@ -1,0 +1,25 @@
+packages/desktop/e2e/agent-operator-live.e2e.ts
+  s_59c0dd2af30db2::t_3625eda7ba89b5 1-113
+packages/agent-tools/test/ops-query.test.ts
+  s_59c0dd2af30db2::t_3aaec9021d1699 123-131
+packages/agent-tools/src/registry.ts
+  s_59c0dd2af30db2::t_b3deb882fb016d 185
+  s_59c0dd2af30db2::t_ee8de62cc73cde 91-93,95
+  s_59c0dd2af30db2::t_e9cfc864aeee19 86-90,94,96-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2b724cb43007880b2ea87a8b0f0c457a7a99fc0d",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
