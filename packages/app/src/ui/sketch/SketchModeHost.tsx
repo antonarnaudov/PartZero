@@ -19,8 +19,10 @@ import { installSketchWiring } from "../../sketch/v1-app";
 import { PlaneView } from "../../sketch/view";
 import { SKETCH_TOOLS, type ToolId } from "../../tools/sketch";
 import { useApp, useStore } from "../context";
+import { RibbonPortal } from "../shell/ribbon";
+import { ToolIcon as ToolIconByName } from "../shell/tool-icons";
 import { SketchCanvas } from "./SketchCanvas";
-import { ConstructionIcon, GridIcon, ToolIcon } from "./tool-icons";
+import { ConstraintIcon, ConstructionIcon, GridIcon, ToolIcon } from "./tool-icons";
 import "./sketch.css";
 
 const PLANES: Array<{ plane: NamedPlane; label: string; hint: string }> = [
@@ -80,40 +82,50 @@ function PlanePicker({ onPick }: { onPick: (c: SketchPlaneChoice) => void }): Re
   );
 }
 
+/**
+ * The sketch tools, grouped as in Fusion's SKETCH tab (Select · Create · Dimension · Modify ·
+ * Options). In the shell they render into the ribbon (`RibbonPortal`), each group captioned.
+ */
 function Palette({ mode, state }: { mode: SketchMode; state: SketchModeState }): ReactElement {
-  const groups: Array<{ id: string; tools: typeof SKETCH_TOOLS }> = [
-    { id: "select", tools: SKETCH_TOOLS.filter((t) => t.group === "select") },
-    { id: "draw", tools: SKETCH_TOOLS.filter((t) => t.group === "draw") },
-    { id: "dimension", tools: SKETCH_TOOLS.filter((t) => t.group === "dimension") },
-    { id: "modify", tools: SKETCH_TOOLS.filter((t) => t.group === "modify") },
+  const groups: Array<{ id: string; label: string; tools: typeof SKETCH_TOOLS }> = [
+    { id: "select", label: "Select", tools: SKETCH_TOOLS.filter((t) => t.group === "select") },
+    { id: "draw", label: "Create", tools: SKETCH_TOOLS.filter((t) => t.group === "draw") },
+    { id: "dimension", label: "Dimension", tools: SKETCH_TOOLS.filter((t) => t.group === "dimension") },
+    { id: "modify", label: "Modify", tools: SKETCH_TOOLS.filter((t) => t.group === "modify") },
   ];
   return (
     <div className="sk-palette" role="toolbar" aria-label="Sketch tools" data-testid="sketch-palette">
       {groups.map((g) => (
-        <div key={g.id} className="sk-palette-group">
-          {g.tools.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={`sk-tool${state.tool === t.id ? " active" : ""}`}
-              title={t.key ? `${t.label} (${t.key.toUpperCase()})` : t.label}
-              aria-label={t.label}
-              aria-pressed={state.tool === t.id}
-              data-testid={`sketch-tool-${t.id}`}
-              onClick={() => mode.setTool(t.id as ToolId)}
-            >
-              <ToolIcon id={t.id} />
-            </button>
-          ))}
+        <div key={g.id} className={`sk-palette-group sk-group-${g.id}`} role="group" aria-label={g.label}>
+          <div className="sk-group-tools">
+            {g.tools.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`sk-tool${state.tool === t.id ? " active" : ""}`}
+                title={t.key ? `${t.label} (${t.key.toUpperCase()})` : t.label}
+                aria-label={t.label}
+                aria-pressed={state.tool === t.id}
+                data-testid={`sketch-tool-${t.id}`}
+                onClick={() => mode.setTool(t.id as ToolId)}
+              >
+                <ToolIcon id={t.id} />
+              </button>
+            ))}
+          </div>
+          <span className="sk-group-caption">{g.label}</span>
         </div>
       ))}
-      <div className="sk-palette-group">
-        <button type="button" className={`sk-tool${state.construction ? " active" : ""}`} title="Construction (X)" aria-label="Construction" aria-pressed={state.construction} data-testid="sketch-construction" onClick={() => mode.toggleConstruction()}>
-          <ConstructionIcon />
-        </button>
-        <button type="button" className={`sk-tool${state.gridSnap ? " active" : ""}`} title="Snap to grid (G)" aria-label="Snap to grid" aria-pressed={state.gridSnap} data-testid="sketch-grid-snap" onClick={() => mode.toggleGrid()}>
-          <GridIcon />
-        </button>
+      <div className="sk-palette-group sk-group-options" role="group" aria-label="Options">
+        <div className="sk-group-tools">
+          <button type="button" className={`sk-tool${state.construction ? " active" : ""}`} title="Construction (X)" aria-label="Construction" aria-pressed={state.construction} data-testid="sketch-construction" onClick={() => mode.toggleConstruction()}>
+            <ConstructionIcon />
+          </button>
+          <button type="button" className={`sk-tool${state.gridSnap ? " active" : ""}`} title="Snap to grid (G)" aria-label="Snap to grid" aria-pressed={state.gridSnap} data-testid="sketch-grid-snap" onClick={() => mode.toggleGrid()}>
+            <GridIcon />
+          </button>
+        </div>
+        <span className="sk-group-caption">Options</span>
       </div>
     </div>
   );
@@ -124,20 +136,23 @@ function ConstraintBar({ mode, state }: { mode: SketchMode; state: SketchModeSta
   const ok = useMemo(() => new Set(applicableKinds(state.selection, curves)), [state.selection, curves]);
   return (
     <div className="sk-constraint-bar" role="toolbar" aria-label="Constraints" data-testid="sketch-constraints">
-      {CONSTRAINT_KINDS.map((c) => (
-        <button
-          key={c.kind}
-          type="button"
-          className="sk-con"
-          disabled={!ok.has(c.kind)}
-          title={c.key ? `${c.label} (${c.key.toUpperCase()})` : c.label}
-          aria-label={c.label}
-          data-testid={`sketch-constrain-${c.kind}`}
-          onClick={() => mode.constrain(c.kind)}
-        >
-          {c.glyph}
-        </button>
-      ))}
+      <div className="sk-group-tools">
+        {CONSTRAINT_KINDS.map((c) => (
+          <button
+            key={c.kind}
+            type="button"
+            className="sk-con"
+            disabled={!ok.has(c.kind)}
+            title={c.key ? `${c.label} (${c.key.toUpperCase()})` : `${c.label}${ok.has(c.kind) ? "" : "\nSelect what it applies to first"}`}
+            aria-label={c.label}
+            data-testid={`sketch-constrain-${c.kind}`}
+            onClick={() => mode.constrain(c.kind)}
+          >
+            <ConstraintIcon kind={c.kind} />
+          </button>
+        ))}
+      </div>
+      <span className="sk-group-caption">Constraints</span>
     </div>
   );
 }
@@ -488,24 +503,31 @@ export function SketchModeHost(): ReactElement | null {
         <span className="sk-title">
           Sketch <b>{state.sketchName}</b> on {state.plane?.label ?? ""}
         </span>
-        <button type="button" className="ghost-btn" data-testid="sketch-undo" title="Undo in sketch (⌘Z)" disabled={!state.snapshot?.canUndo} onClick={() => sketchMode.undo()}>
-          Undo
-        </button>
-        <button type="button" className="ghost-btn" data-testid="sketch-redo" title="Redo in sketch (⌘⇧Z)" disabled={!state.snapshot?.canRedo} onClick={() => sketchMode.redo()}>
-          Redo
-        </button>
-        <button type="button" className="ghost-btn" title="Fit (F)" onClick={() => sketchMode.fit()}>
-          Fit
-        </button>
-        <button type="button" className="ghost-btn" data-testid="sketch-cancel" onClick={() => sketchMode.cancel()}>
-          Cancel
-        </button>
-        <button type="button" className="primary-btn" data-testid="sketch-finish" onClick={() => void sketchMode.finish()}>
-          Finish sketch
-        </button>
+        <RibbonPortal slot="actions">
+          <div className="sk-actions">
+            <button type="button" className="ghost-btn" data-testid="sketch-undo" title="Undo in sketch (⌘Z)" disabled={!state.snapshot?.canUndo} onClick={() => sketchMode.undo()}>
+              Undo
+            </button>
+            <button type="button" className="ghost-btn" data-testid="sketch-redo" title="Redo in sketch (⌘⇧Z)" disabled={!state.snapshot?.canRedo} onClick={() => sketchMode.redo()}>
+              Redo
+            </button>
+            <button type="button" className="ghost-btn" title="Fit (F)" onClick={() => sketchMode.fit()}>
+              Fit
+            </button>
+            <button type="button" className="ghost-btn" data-testid="sketch-cancel" title="Cancel the sketch (Esc)" onClick={() => sketchMode.cancel()}>
+              Cancel
+            </button>
+            <button type="button" className="primary-btn sk-finish" data-testid="sketch-finish" title="Finish the sketch: it lands in the timeline" onClick={() => void sketchMode.finish()}>
+              <ToolIconByName name="finishSketch" size={16} />
+              Finish Sketch
+            </button>
+          </div>
+        </RibbonPortal>
       </div>
-      <Palette mode={sketchMode} state={state} />
-      <ConstraintBar mode={sketchMode} state={state} />
+      <RibbonPortal slot="tools">
+        <Palette mode={sketchMode} state={state} />
+        <ConstraintBar mode={sketchMode} state={state} />
+      </RibbonPortal>
       <Inspector mode={sketchMode} state={state} />
       <DimensionEditor mode={sketchMode} state={state} />
       <TypedBox mode={sketchMode} state={state} />
