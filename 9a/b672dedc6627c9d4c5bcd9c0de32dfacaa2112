@@ -1,0 +1,26 @@
+forge/crates/forge-cli/src/main.rs
+  s_59c0dd2af30db2::t_ee3a392120ea14 6,60,112-113,115-117,194-203,214,248,269-275,302,426-428,479
+forge/crates/forge-cli/src/step.rs
+  s_59c0dd2af30db2::t_c8c1a1d292458b 43
+  s_59c0dd2af30db2::t_62b6cecf4b03a0 1-42,44-306
+forge/crates/forge-cli/Cargo.toml
+  s_59c0dd2af30db2::t_ee3a392120ea14 15
+forge/Cargo.lock
+  s_59c0dd2af30db2::t_4a0c3af9d07482 337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9ab672dedc6627c9d4c5bcd9c0de32dfacaa2112",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
