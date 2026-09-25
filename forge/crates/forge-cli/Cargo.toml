@@ -12,6 +12,7 @@ name = "aicad"
 path = "src/main.rs"
 
 [dependencies]
+forge-core.workspace = true
 forge-ir.workspace = true
 forge-regen.workspace = true
 forge-mesh.workspace = true

@@ -334,6 +334,7 @@ name = "forge-cli"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "forge-core",
  "forge-io",
  "forge-ir",
  "forge-mesh",
