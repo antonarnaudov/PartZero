@@ -1,0 +1,31 @@
+packages/app/src/tools/starters.ts
+  s_59c0dd2af30db2::t_f483df2f9a5eb2 83
+  s_59c0dd2af30db2::t_77d4ce392f8ed8 1-82,84-103
+packages/app/test/gallery.test.ts
+  s_59c0dd2af30db2::t_70c547eb152222 2-151
+  s_59c0dd2af30db2::t_f60ad0ad8ddf32 1
+corpus/gallery/p2-phone-stand.cad.ts
+  s_59c0dd2af30db2::t_96e91364833ade 1-6,8-19,21-49
+  s_59c0dd2af30db2::t_faf6deb03c1013 7,20,50
+corpus/gallery/starters.json
+  s_59c0dd2af30db2::t_bfb71542cc401a 2,18,42
+  s_59c0dd2af30db2::t_b5ed606703242d 1,3-17,19-41,43-45
+corpus/gallery/p5-electronics-box.cad.ts
+  s_59c0dd2af30db2::t_fefd1272d92342 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0a4bd6d58dfc5468291468c34a99822eb54a81c9",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
