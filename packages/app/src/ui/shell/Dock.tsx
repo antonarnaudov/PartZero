@@ -20,6 +20,7 @@ function useVisibilityDeps(): void {
   const { services } = useApp();
   useStore(services.agent, (s) => s.review);
   useStore(services.doc, (s) => s.revision);
+  useStore(services.ui, (s) => s.panels);
   useShellState((s) => s.panel);
 }
 

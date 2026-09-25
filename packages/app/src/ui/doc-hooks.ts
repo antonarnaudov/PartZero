@@ -18,5 +18,8 @@ export function useTimeline(problems: readonly Problem[]): TimelineModel {
   const compile = useStore(services.doc, (s) => s.compile);
   const model = useStore(services.doc, (s) => s.model);
   const report = useStore(services.doc, (s) => s.report);
-  return useMemo(() => buildTimeline({ compile, model, report }, problems), [compile, model, report, problems]);
+  const format = useStore(services.doc, (s) => s.format);
+  const source = useStore(services.doc, (s) => s.source);
+  const v1 = useStore(services.doc, (s) => s.v1);
+  return useMemo(() => buildTimeline({ compile, model, report, format, source, v1 }, problems), [compile, model, report, format, source, v1, problems]);
 }

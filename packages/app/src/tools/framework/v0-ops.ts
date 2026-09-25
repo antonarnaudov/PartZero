@@ -17,7 +17,7 @@ import type { AppInvocation } from "../../commands/commands";
 import type { CommandResult, CommandSource } from "../../commands/registry";
 import { findFeature } from "../../doc/provenance";
 import type { AppServices } from "../../services";
-import type { CommitOutcome, OpsPort, ToolOp } from "./types";
+import type { CommitOutcome, OpsPort, ToolOp, V0ToolOp } from "./types";
 
 /** A refused op: a `COMMAND_*` code and a message naming what was wrong. */
 export class OpRefusal extends Error {
@@ -83,9 +83,11 @@ function nextFeatureId(ir: IrDocument, type: string): string {
   for (let n = 1; ; n++) if (!taken.has(`${type}${n}`)) return `${type}${n}`;
 }
 
-function applyOne(ir: IrDocument, op: ToolOp): void {
+function applyOne(ir: IrDocument, anyOp: ToolOp): void {
+  const op = anyOp as V0ToolOp | { op: string };
   switch (op.op) {
     case "setField": {
+      if (!("path" in op)) break;
       const loc = findFeature(ir, op.feature);
       if (!loc) throw new OpRefusal("COMMAND_UNKNOWN_FEATURE", `there is no feature ${op.feature}`);
       const segments = parsePointer(op.path);
@@ -98,6 +100,7 @@ function applyOne(ir: IrDocument, op: ToolOp): void {
       return;
     }
     case "setSuppressed": {
+      if (!("suppressed" in op)) break;
       const loc = findFeature(ir, op.feature);
       if (!loc) throw new OpRefusal("COMMAND_UNKNOWN_FEATURE", `there is no feature ${op.feature}`);
       if (op.suppressed) loc.feature.suppressed = true;
@@ -105,16 +108,18 @@ function applyOne(ir: IrDocument, op: ToolOp): void {
       return;
     }
     case "addFeature": {
-      const part = ir.parts.find((p) => p.id === op.part) ?? ir.parts.find((p) => p.name === op.part);
-      if (!part) throw new OpRefusal("COMMAND_UNKNOWN_PART", `there is no part ${op.part}`);
-      let index = 0;
-      if (op.after !== null) {
-        const i = part.features.findIndex((f) => f.id === op.after);
-        const j = i >= 0 ? i : part.features.findIndex((f) => f.name === op.after);
-        if (j < 0) throw new OpRefusal("COMMAND_UNKNOWN_FEATURE", `part ${part.name} has no feature ${op.after}`);
+      if (!("feature" in op)) break;
+      const add = op as { part?: string; after?: string | null; feature: Readonly<Record<string, unknown>> };
+      const part = add.part === undefined ? ir.parts[0] : (ir.parts.find((p) => p.id === add.part) ?? ir.parts.find((p) => p.name === add.part));
+      if (!part) throw new OpRefusal("COMMAND_UNKNOWN_PART", `there is no part ${add.part ?? "(the document has none)"}`);
+      let index = add.after === undefined ? part.features.length : 0;
+      if (add.after !== null && add.after !== undefined) {
+        const i = part.features.findIndex((f) => f.id === add.after);
+        const j = i >= 0 ? i : part.features.findIndex((f) => f.name === add.after);
+        if (j < 0) throw new OpRefusal("COMMAND_UNKNOWN_FEATURE", `part ${part.name} has no feature ${add.after}`);
         index = j + 1;
       }
-      const feature = structuredClone(op.feature) as Record<string, unknown>;
+      const feature = structuredClone(add.feature) as Record<string, unknown>;
       if (typeof feature["type"] !== "string") throw new OpRefusal("COMMAND_BAD_VALUE", "addFeature needs a feature with a type");
       const id = typeof feature["id"] === "string" ? feature["id"] : nextFeatureId(ir, feature["type"]);
       if (allFeatureIds(ir).has(id)) throw new OpRefusal("COMMAND_DUPLICATE_ID", `a feature with id ${id} already exists`);
@@ -123,11 +128,8 @@ function applyOne(ir: IrDocument, op: ToolOp): void {
       part.features.splice(index, 0, { ...feature, id, name } as unknown as IrDocument["parts"][number]["features"][number]);
       return;
     }
-    default: {
-      const unknownOp = (op as { op?: unknown }).op;
-      throw new OpRefusal("COMMAND_NOT_IMPLEMENTED", `the op ${String(unknownOp)} is not available on this document yet`);
-    }
   }
+  throw new OpRefusal("COMMAND_NOT_IMPLEMENTED", `the op ${String(op.op)} needs an IR v1 document (this one is CadScript, IR v0)`);
 }
 
 /**

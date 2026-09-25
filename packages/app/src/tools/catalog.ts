@@ -3,12 +3,14 @@
  * tool entry"). Each workstream adds **one line** here for its tool module: a function that
  * registers its tools, e.g. `registerFeatureTools` (FEAT) or `registerSketchTools` (SKUI).
  */
+import { registerFeatureTools } from "./builtin/features";
 import { registerInspectTools } from "./builtin/inspect";
 import { registerSketchTools } from "./builtin/sketch";
 import type { ToolRegistry } from "./registry";
 
 export const TOOL_MODULES: ReadonlyArray<(registry: ToolRegistry) => void> = [
   registerSketchTools,
+  registerFeatureTools,
   registerInspectTools,
 ];
 

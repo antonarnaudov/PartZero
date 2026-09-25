@@ -15,7 +15,8 @@ import { Store } from "../store";
 import { docDocumentPort, docParamsPort, docSelectionPort } from "./framework/ports";
 import { PanelSession, type CloseReason } from "./framework/session";
 import type { DocumentPort, Enablement, OpsPort, PanelSpec, ParamsPort, SelectionPort, ShellMode, ToolContext, ToolDefinition } from "./framework/types";
-import { v0OpsPort } from "./framework/v0-ops";
+import { featurePropertiesPanel } from "./builtin/features";
+import { appOpsPort } from "./framework/v1-ops";
 import { ToolRegistry } from "./registry";
 
 export type RightTab = "properties" | "code" | "proposal" | (string & {});
@@ -136,7 +137,7 @@ export class Shell extends Store<ShellState> {
       selection: options.ports?.selection ?? docSelectionPort(options.services.doc),
       params: options.ports?.params ?? docParamsPort(options.services.doc),
       document: options.ports?.document ?? docDocumentPort(options.services.doc),
-      ops: options.ports?.ops ?? v0OpsPort(options.services, (cmd, source) => this.commands.executeUnknown(cmd, { source })),
+      ops: options.ports?.ops ?? appOpsPort(options.services, (cmd, source) => this.commands.executeUnknown(cmd, { source })),
     };
     this.tools.reserveKeys(this.commandKeymap());
     this.lastDocId = options.services.doc.getState().docId;
@@ -253,7 +254,12 @@ export class Shell extends Store<ShellState> {
     const feature = this.ports.document.feature(idOrName);
     if (!feature) return Promise.resolve({ started: false, panel: false, reason: `there is no feature ${idOrName}` });
     const tool = this.tools.list().find((t) => t.fromFeature && t.features?.includes(feature.type));
-    if (!tool?.fromFeature) return Promise.resolve({ started: false, panel: false, reason: `no tool edits ${feature.type} features yet` });
+    if (!tool?.fromFeature) {
+      // No dedicated tool yet: the feature's own property panel (name, numbers, choices).
+      if (!this.services.doc.isV1) return Promise.resolve({ started: false, panel: false, reason: `no tool edits ${feature.type} features yet` });
+      this.openPanel(featurePropertiesPanel(feature), null);
+      return Promise.resolve({ started: true, panel: true, tool: "feature.properties" });
+    }
     const fromFeature = tool.fromFeature.bind(tool);
     return this.launch(tool, source, {}, (ctx) => fromFeature(feature, ctx)).then((r) => ({ ...r, tool: tool.id }));
   }

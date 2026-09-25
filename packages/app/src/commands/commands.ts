@@ -21,7 +21,7 @@ import { selectionChips } from "../selection/chips";
 import type { SelectionChip } from "../ui-store";
 import { VIEWPORT_COMMANDS } from "../viewport/registry";
 import { viewportRuntime } from "../viewport/runtime";
-import { IR_COMMANDS } from "./ir-commands";
+import { IR_COMMANDS, runOps } from "./ir-commands";
 import { CommandRegistry, defineCommand, type ExecuteMeta, type Invocation } from "./registry";
 
 const command = defineCommand<AppServices>();
@@ -354,10 +354,14 @@ export const COMMANDS = {
     id: "feature.setSuppressed",
     title: "Suppress Feature",
     category: "Model",
-    description: "Suppress or unsuppress a feature (by id or name). Edits the CadScript source.",
+    description: "Suppress or unsuppress a feature (by id or name): on an IR v1 model the `setSuppressed` op (ir.setSuppressed); on a CadScript document, a source edit.",
     args: z.strictObject({ feature: z.string().min(1), suppressed: z.boolean() }),
     palette: false,
     async run({ feature, suppressed }, ctx, meta) {
+      if (ctx.doc.isV1) {
+        const r = await runOps(ctx, meta, [{ op: "setSuppressed", feature, suppressed }]);
+        return { changed: r.changed, feature, suppressed };
+      }
       const { ir, state } = await currentIr(ctx, suppressed ? "suppress" : "unsuppress");
       const loc = findFeature(ir, feature);
       if (!loc) throw new Error(`no feature ${feature}`);
@@ -493,6 +497,22 @@ export const COMMANDS = {
       const next = visible ?? !ctx.ui.getState().panels[panel];
       ctx.ui.setPanel(panel, next);
       return { panel, visible: next };
+    },
+  }),
+
+  "view.toggleCode": command({
+    id: "view.toggleCode",
+    title: "Show Code",
+    category: "View",
+    description:
+      "Show or hide the code view (off by default): the model as CadScript, read-only for IR v1 models. PartZero is edited with its tools, the timeline and the assistant; the code is for reading and for power users.",
+    args: z.strictObject({ visible: z.boolean().optional() }),
+    palette: [{ title: "View: Show / Hide Code", args: {} }],
+    run({ visible }, ctx) {
+      const next = visible ?? !ctx.ui.getState().panels.code;
+      ctx.ui.setPanel("code", next);
+      if (next) ctx.ui.setPanel("right", true);
+      return { visible: next };
     },
   }),
 

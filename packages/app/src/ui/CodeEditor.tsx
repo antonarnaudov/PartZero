@@ -69,7 +69,7 @@ export function CodeEditor(): React.ReactElement {
     // Editor → store.
     subs.push(
       model.onDidChangeContent(() => {
-        if (applying) return;
+        if (applying || doc.isV1) return;
         run({ id: "doc.setSource", args: { source: model.getValue(), coalesceKey: "editor" } }, "ui");
       }),
     );
@@ -86,8 +86,35 @@ export function CodeEditor(): React.ReactElement {
     // Store → editor, markers and decorations.
     const selectionDecorations = editor.createDecorationsCollection();
     let lastDiagnosticsKey: unknown[] = [];
+    // An IR v1 model is edited through the command layer: the code view shows it as CadScript v1,
+    // read-only (View ▸ Show Code).
+    let printed: string | null = null;
+    const syncV1 = (source: string): void => {
+      editor.updateOptions({ readOnly: true });
+      if (printed === source) return;
+      printed = source;
+      void services.cadscript.printV1(source).then((code) => {
+        if (printed !== source) return;
+        const text = code ?? `// This model cannot be printed as CadScript yet; its IR:\n${source}`;
+        if (text === model.getValue()) return;
+        applying = true;
+        try {
+          // A model-level write: the editor is read-only, and `executeEdits` refuses then.
+          model.setValue(text);
+        } finally {
+          applying = false;
+        }
+        monaco.editor.setModelMarkers(model, "aicad", []);
+      });
+    };
     const sync = (): void => {
       const s = doc.getState();
+      if (s.format === "ir-v1") {
+        syncV1(s.source);
+        return;
+      }
+      printed = null;
+      editor.updateOptions({ readOnly: false });
       if (s.source !== model.getValue()) {
         applying = true;
         try {

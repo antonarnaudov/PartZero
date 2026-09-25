@@ -19,6 +19,7 @@ import { BrowserHost } from "./host/browser-host";
 import { ElectronHost } from "./host/electron-host";
 import type { AppHost } from "./host/host";
 import { BLANK_SOURCE, TEMPLATES } from "./host/templates";
+import { blankDocument } from "@aicad/model-ops";
 import { EditorController, ViewportController, type AppServices } from "./services";
 import { UiStore } from "./ui-store";
 
@@ -58,12 +59,16 @@ export interface AgentSummary {
 
 export interface DocSummary {
   name: string;
+  /** `ir-v1` (the document model), or `cadscript` / `ir-json` (IR v0). */
+  format: string;
+  /** IR v1: the rollback marker and appearance. */
+  rollback: string | null;
   path: string | null;
   dirty: boolean;
   phase: string;
   engine: string;
   reportStatus: string | null;
-  features: Array<{ part: string; name: string; type: string; status: string | null }>;
+  features: Array<{ part: string; name: string; type: string; status: string | null; id: string; author: "user" | "agent" }>;
   bodies: Array<{ name: string; faces: string[]; triangles: number; edges: number }>;
   problems: Array<{ code: string; severity: string; message: string }>;
   evalMs: number | null;
@@ -156,8 +161,17 @@ function summarize(services: AppServices): DocSummary {
     phase: s.phase,
     engine: services.engines.active.id,
     reportStatus: s.report?.status ?? null,
+    format: s.format,
+    rollback: s.v1?.host.rollback ?? null,
     features: (s.model?.ir?.parts ?? []).flatMap((p) =>
-      p.features.map((f) => ({ part: p.name, name: f.name, type: f.type, status: byName.get(`${p.name}/${f.name}`) ?? null })),
+      p.features.map((f) => ({
+        part: p.name,
+        name: f.name,
+        type: f.type,
+        status: byName.get(`${p.name}/${f.name}`) ?? null,
+        id: f.id,
+        author: (f as { author?: string }).author === "agent" ? "agent" : "user",
+      })),
     ),
     bodies: s.bodies.map((b) => ({
       name: b.name,
@@ -200,7 +214,10 @@ export async function bootstrap(): Promise<Bootstrapped> {
   });
 
   const ui = new UiStore({ agentAvailable: host.agent !== null });
-  const doc = new DocStore({ cadscript, engine: () => engines.active });
+  // The IR v1 store is the document of record of IR v1 documents (the app's document model); the
+  // DocStore mirrors it for the UI (timeline, viewport, files) and evaluates it.
+  const ir = new IrDocStore({ engine: () => engines.active.commands ?? null });
+  const doc = new DocStore({ cadscript, engine: () => engines.active, ir });
   const agent = new AgentService({ agent: host.agent, settings: host.settings, cadscript, engine: () => engines.active, doc, ui });
   const services: AppServices = {
     doc,
@@ -212,7 +229,7 @@ export async function bootstrap(): Promise<Bootstrapped> {
     viewport: new ViewportController(),
     templates: TEMPLATES,
     agent,
-    ir: new IrDocStore({ engine: () => engines.active.commands ?? null }),
+    ir,
     confirm: (message) => Promise.resolve(window.confirm(message)),
   };
   const commands = createCommandRegistry(() => services);
@@ -263,6 +280,8 @@ export async function bootstrap(): Promise<Bootstrapped> {
 
   // Pick the engine before the first evaluation, then open the starter document.
   await engines.select("auto");
-  doc.load({ path: null, name: "untitled", format: "cadscript", source: BLANK_SOURCE });
+  // New documents are IR v1 models; a host whose engine has no IR v1 command layer starts CadScript (IR v0).
+  if (doc.v1Available) doc.load({ path: null, name: "untitled", format: "ir-v1", source: blankDocument("untitled") });
+  else doc.load({ path: null, name: "untitled", format: "cadscript", source: BLANK_SOURCE });
   return { services, commands };
 }

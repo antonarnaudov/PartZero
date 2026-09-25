@@ -36,8 +36,8 @@ export function appDocPort(doc: DocStore, commands: AppCommandRegistry): CadScri
 }
 
 /** Route sketch mode through the CadScript document; returns the uninstaller. */
-export function installCadScriptBridge(mode: SketchMode, doc: DocStore, commands: AppCommandRegistry): () => void {
-  const sink = new CadScriptSketchSink(appDocPort(doc, commands));
+export function installCadScriptBridge(mode: SketchMode, doc: DocStore, commands: AppCommandRegistry, bridgeSink?: CadScriptSketchSink): () => void {
+  const sink = bridgeSink ?? new CadScriptSketchSink(appDocPort(doc, commands));
   mode.setSink(sink);
   documentSource.current = () => v0DocContext(doc.getState().model?.ir ?? null);
   editSketchSource.current = (idOrName) => {

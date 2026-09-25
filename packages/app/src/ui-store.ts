@@ -8,7 +8,8 @@ import type { PickResult } from "./engine/types";
 import { Store } from "./store";
 
 export type ThemePreference = "dark" | "light" | "system";
-export type PanelId = "left" | "right" | "chat" | "problems";
+/** `code`: the read-only code view (View ▸ Show Code), off by default: PartZero is not a code editor. */
+export type PanelId = "left" | "right" | "chat" | "problems" | "code";
 
 export interface SelectionChip {
   kind: "feature" | "face" | "edge" | "body";
@@ -91,7 +92,7 @@ function systemTheme(): "dark" | "light" {
   }
 }
 
-const DEFAULT_PANELS: Record<PanelId, boolean> = { left: true, right: true, chat: true, problems: true };
+const DEFAULT_PANELS: Record<PanelId, boolean> = { left: true, right: true, chat: true, problems: true, code: false };
 
 export const WELCOME_MESSAGE: ChatMessage = {
   id: "welcome",

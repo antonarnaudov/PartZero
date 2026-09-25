@@ -33,14 +33,21 @@ function PropertiesPanel(): ReactElement {
 function CodeHeader(): ReactElement {
   const { services } = useApp();
   const name = useStore(services.doc, (s) => s.name);
+  const v1 = useStore(services.doc, (s) => s.format === "ir-v1");
   const problems = useProblems();
   const errors = problems.filter((p) => p.severity === "error").length;
   return (
     <>
       <span className="panel-meta mono">{name}.cad.ts</span>
-      <span className={`lang-pill${errors ? " err" : ""}`} title="CadScript: compiled, never executed">
-        CadScript{errors ? ` · ${errors} error${errors === 1 ? "" : "s"}` : ""}
-      </span>
+      {v1 ? (
+        <span className="lang-pill" title="The model as CadScript v1, read-only: edit it with the tools, the timeline or the assistant">
+          CadScript · read-only
+        </span>
+      ) : (
+        <span className={`lang-pill${errors ? " err" : ""}`} title="CadScript: compiled, never executed">
+          CadScript{errors ? ` · ${errors} error${errors === 1 ? "" : "s"}` : ""}
+        </span>
+      )}
     </>
   );
 }
@@ -56,7 +63,18 @@ export function registerBuiltinPanels(panels: PanelRegistry): void {
     component: PropertiesPanel,
     visibleWhen: ({ shell }) => shell.getState().panel !== null,
   });
-  panels.register({ id: "code", title: "Code", icon: "Code", area: "right", order: 10, component: CodeEditor, keepMounted: true, headerExtra: CodeHeader });
+  // Hidden by default (the owner's rule: no code in the default UI); View ▸ Show Code (view.toggleCode).
+  panels.register({
+    id: "code",
+    title: "Code",
+    icon: "Code",
+    area: "right",
+    order: 10,
+    component: CodeEditor,
+    keepMounted: true,
+    headerExtra: CodeHeader,
+    visibleWhen: ({ services }) => services.ui.getState().panels.code,
+  });
   panels.register({
     id: "proposal",
     title: "Proposal",

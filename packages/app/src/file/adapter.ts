@@ -1,12 +1,18 @@
 /**
  * The seam between the document layer (saving, opening, recovery) and the document store. The file layer never
  * touches a store directly: it asks a {@link DocumentAdapter} for a snapshot to save and hands it what a file holds to
- * load. {@link DocStoreAdapter} is the adapter for today's store (CadScript source → compiled IR v0); the IR v1 store
- * (Phase C's `services.ir`) gets its own adapter behind the same interface.
+ * load. {@link DocStoreAdapter} is the adapter for the app's store:
+ * - **IR v1** (the document model, when the app has the IR v1 store and an engine with the command layer): every
+ *   document opens as an `aicad.ir/1` model — `.partzero` and `.json` files of either IR version (a v0 document is
+ *   migrated, SPEC-v1 §9.1), and code-only documents (templates, `.cad.ts` files: CadScript v1 first, else CadScript
+ *   v0, migrated). A `.partzero` stores the canonical v1 document, the rollback marker (`view.rollbackMarker`) and the
+ *   appearance (`annotations/appearance.json`); no code.
+ * - **CadScript / IR v0** (hosts without the IR v1 engine): CadScript source → compiled IR v0, as before.
  */
-import { IR_SCHEMA, safeParseIrDocument, type IrDocument } from "@aicad/ir-types";
+import { IR_SCHEMA, safeParseIrDocument, v1 as irV1, type IrDocument } from "@aicad/ir-types";
+import { blankDocument, rolledBack, type HostState } from "@aicad/model-ops";
 import type { CadScriptService } from "../cadscript/service";
-import type { DocFormat, DocState, DocStore } from "../doc/doc-store";
+import { v1ContentKey, type DocFormat, type DocState, type DocStore } from "../doc/doc-store";
 import type { RenderBody } from "../engine/types";
 import { BLANK_SOURCE } from "../host/templates";
 import { canonicalJson, type DocumentValidator } from "./partzero";
@@ -48,6 +54,8 @@ export interface DocumentSnapshot {
   /** Display bodies (for the thumbnail). */
   bodies: readonly RenderBody[];
   capture: SaveCapture;
+  /** IR v1 documents: the rollback marker and appearance (saved beside the IR). */
+  host?: HostState;
 }
 
 /** What a file holds, for the store to load. */
@@ -62,6 +70,8 @@ export interface LoadRequest {
    * request's content on top of it as an undoable, unsaved change.
    */
   recoveredFrom?: { base: LoadRequest | null };
+  /** The rollback marker and appearance the file holds (IR v1 documents). */
+  host?: HostState;
 }
 
 export interface DocumentAdapter {
@@ -87,6 +97,9 @@ export interface DocumentAdapter {
 }
 
 const EMPTY_IR: IrDocument = { schema: IR_SCHEMA, parts: [] };
+
+/** The IR v1 schema id. */
+export const IR_V1_SCHEMA = "aicad.ir/1";
 
 /** `plate.partzero`, `plate.cad.ts`, `plate.json` → `plate`. */
 export function documentName(path: string): string {
@@ -124,7 +137,12 @@ export class DocStoreAdapter implements DocumentAdapter {
   }
 
   readonly validateDocument: DocumentValidator = (json, irSchema) => {
-    if (irSchema !== IR_SCHEMA) return { ok: false, message: `this build reads ${IR_SCHEMA} documents, not ${irSchema}` };
+    if (irSchema === IR_V1_SCHEMA) {
+      // The shape here; the engine's rejection pipeline checks the rest when the model loads.
+      const r = irV1.IrDocumentSchema.safeParse(json);
+      return r.success ? { ok: true } : { ok: false, message: r.error.issues.slice(0, 3).map((i) => `/${i.path.join("/")}: ${i.message}`).join("; ") };
+    }
+    if (irSchema !== IR_SCHEMA) return { ok: false, message: `this build reads ${IR_V1_SCHEMA} and ${IR_SCHEMA} documents, not ${irSchema}` };
     const r = safeParseIrDocument(json);
     return r.success ? { ok: true } : { ok: false, message: r.error.message };
   };
@@ -145,6 +163,10 @@ export class DocStoreAdapter implements DocumentAdapter {
   async snapshot(): Promise<DocumentSnapshot> {
     // Everything below comes from this one settled state, so the capture describes exactly what is written.
     const s = await this.doc.idle();
+    if (s.format === "ir-v1" && s.v1) {
+      const capture: SaveCapture = { docId: s.docId, revision: s.revision, content: v1ContentKey(s.source, s.v1.host) };
+      return { documentJson: s.source, irSchema: IR_V1_SCHEMA, code: null, bodies: s.bodies, capture, host: s.v1.host };
+    }
     const capture = captureOf(s);
     const c = s.compile;
     if (c?.ok && c.ir) return { documentJson: irText(c.ir), irSchema: IR_SCHEMA, code: { source: s.source, matchesDocument: true }, bodies: s.bodies, capture };
@@ -159,7 +181,47 @@ export class DocStoreAdapter implements DocumentAdapter {
     return { source: await this.cadscript.print(ir), baseIr: ir, warnings: [] };
   }
 
+  /**
+   * The IR text an IR v1 model opens from, or null when the request is code that compiles neither as CadScript v1
+   * nor as CadScript v0 (it then opens as CadScript, errors shown).
+   */
+  private async v1Text(request: LoadRequest): Promise<{ text: string; warnings: string[] } | null> {
+    if (request.documentJson !== null) {
+      let schema: unknown;
+      try {
+        schema = (JSON.parse(request.documentJson) as { schema?: unknown }).schema;
+      } catch (e) {
+        throw new Error(`the document is not valid JSON: ${(e as Error).message}`);
+      }
+      const warnings = schema === IR_V1_SCHEMA ? [] : ["This document was made for an earlier model format (IR v0); it opened as an IR v1 model and saves in the new format."];
+      return { text: request.documentJson, warnings };
+    }
+    if (!request.code) return { text: blankDocument(request.name), warnings: [] };
+    const v1 = await this.cadscript.compileV1(request.code.source);
+    if (v1.ok && v1.irJson) return { text: v1.irJson, warnings: [] };
+    const v0 = await this.cadscript.compile(request.code.source);
+    if (v0.ok && v0.ir) return { text: JSON.stringify(v0.ir), warnings: [] };
+    return null;
+  }
+
   async load(request: LoadRequest): Promise<string[]> {
+    if (this.doc.v1Available) {
+      const plan = await this.v1Text(request);
+      if (plan) {
+        const base = request.recoveredFrom ? (request.recoveredFrom.base ? await this.v1Text(request.recoveredFrom.base) : { text: blankDocument(request.name), warnings: [] }) : null;
+        this.doc.load({
+          path: request.path,
+          name: request.name,
+          format: "ir-v1",
+          source: plan.text,
+          ...(request.host ? { host: request.host } : {}),
+          ...(base ? { savedV1: { source: base.text, ...(request.recoveredFrom?.base?.host ? { host: request.recoveredFrom.base.host } : {}) } } : {}),
+        });
+        const s = await this.doc.idle();
+        if (s.engineError && s.model === null) throw new Error(s.engineError);
+        return plan.warnings;
+      }
+    }
     const warnings: string[] = [];
     const format = formatOf(request.path);
     if (request.recoveredFrom) {
@@ -195,6 +257,18 @@ export class DocStoreAdapter implements DocumentAdapter {
   }
 
   async loadText(path: string, name: string, text: string): Promise<void> {
+    if (this.doc.v1Available) {
+      const isJson = /\.json$/i.test(path);
+      if (isJson) {
+        try {
+          JSON.parse(text);
+        } catch (e) {
+          throw new Error(`${name} is not valid JSON: ${(e as Error).message}`);
+        }
+      }
+      await this.load({ path, name, documentJson: isJson ? text : null, code: isJson ? null : { source: text, matchesDocument: false } });
+      return;
+    }
     if (/\.json$/i.test(path)) {
       let json: unknown;
       try {
@@ -212,10 +286,19 @@ export class DocStoreAdapter implements DocumentAdapter {
   }
 
   loadBlank(name = "untitled"): void {
-    this.doc.load({ path: null, name, format: "cadscript", source: BLANK_SOURCE });
+    if (this.doc.v1Available) this.doc.load({ path: null, name, format: "ir-v1", source: blankDocument(name) });
+    else this.doc.load({ path: null, name, format: "cadscript", source: BLANK_SOURCE });
   }
 
   async textFor(format: "cadscript" | "ir-json"): Promise<{ text: string; capture: SaveCapture }> {
+    const v = await this.doc.idle();
+    if (v.format === "ir-v1" && v.v1) {
+      const capture: SaveCapture = { docId: v.docId, revision: v.revision, content: v1ContentKey(v.source, v.v1.host) };
+      if (format === "ir-json") return { text: v.source.endsWith("\n") ? v.source : `${v.source}\n`, capture };
+      const code = await this.cadscript.printV1(v.source);
+      if (code === null) throw new Error("This model cannot be written as CadScript; save it as .partzero or .json.");
+      return { text: code, capture };
+    }
     if (format === "cadscript") {
       const s = this.doc.getState();
       return { text: s.source, capture: captureOf(s) };
@@ -231,6 +314,9 @@ export class DocStoreAdapter implements DocumentAdapter {
   }
 
   async exportIrJson(action: string): Promise<string> {
+    const s = await this.doc.idle();
+    // An IR v1 model exports what is built: the document up to its rollback marker.
+    if (s.format === "ir-v1" && s.v1) return rolledBack(s.source, s.v1.host.rollback);
     return JSON.stringify((await this.compiled(action)).ir);
   }
 

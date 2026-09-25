@@ -26,7 +26,7 @@ import { SettingsDialog } from "../SettingsDialog";
 import { SketchModeHost } from "../sketch/SketchModeHost";
 import { StatusBar } from "../StatusBar";
 import { Viewport } from "../Viewport";
-import { useShell, useShellState } from "./context";
+import { useShell, useShellState, usePanels } from "./context";
 import { Dock } from "./Dock";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { TitleBar, ToolRibbon } from "./ShellToolbar";
@@ -90,8 +90,20 @@ function useWelcomeVisible(): boolean {
   return !sketching && !hasReferences && shell.welcomeVisible();
 }
 
+/** Whether the right dock has a panel to show (the code view is hidden by default; tools and proposals open theirs). */
+function useRightDock(): boolean {
+  const { services } = useApp();
+  const { shell } = useShell();
+  const all = usePanels();
+  useStore(services.ui, (s) => s.panels);
+  useStore(services.agent, (s) => s.review);
+  useShellState((s) => s.panel);
+  return all.some((p) => p.area === "right" && (!p.visibleWhen || p.visibleWhen({ services, shell })));
+}
+
 export function AppShell(): ReactElement {
   const { services } = useApp();
+  const rightDock = useRightDock();
   const theme = useStore(services.ui, (s) => s.resolvedTheme);
   const panels = useStore(services.ui, (s) => s.panels);
   const dialog = useStore(services.ui, (s) => s.dialog);
@@ -121,7 +133,7 @@ export function AppShell(): ReactElement {
 
   const columns = [panels.left ? `${sizes.left}px 1px` : null, "minmax(260px, 1fr)", panels.right ? `1px ${sizes.right}px` : null].filter(Boolean).join(" ");
   const workspaceStyle: CSSProperties = { gridTemplateColumns: columns };
-  const rightStyle: CSSProperties = { gridTemplateRows: panels.chat ? `minmax(160px, 1fr) 1px ${sizes.chat}px` : "1fr" };
+  const rightStyle: CSSProperties = { gridTemplateRows: panels.chat && rightDock ? `minmax(160px, 1fr) 1px ${sizes.chat}px` : "1fr" };
 
   return (
     <div className="app pz-shell" data-testid="app-shell">
@@ -146,8 +158,8 @@ export function AppShell(): ReactElement {
         {panels.right && <Splitter axis="x" label="Resize the side panel" onDrag={(d) => resize("right", -d)} />}
         {panels.right && (
           <aside className="col-right" style={rightStyle} aria-label="Properties, code and assistant">
-            <Dock area="right" label="Properties and code" />
-            {panels.chat && <Splitter axis="y" label="Resize the assistant" onDrag={(d) => resize("chat", -d)} />}
+            {(rightDock || !panels.chat) && <Dock area="right" label="Properties and code" />}
+            {panels.chat && rightDock && <Splitter axis="y" label="Resize the assistant" onDrag={(d) => resize("chat", -d)} />}
             {panels.chat && <ChatPanel />}
           </aside>
         )}

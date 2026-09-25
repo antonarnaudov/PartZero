@@ -15,7 +15,7 @@ import { faceFrame, namedFrame, type NamedPlane } from "../../sketch/frames";
 import { fmt } from "../../sketch/geom";
 import { sketchMode } from "../../sketch/instance";
 import { documentSource, exposeSketchTestHooks, faceSource, newSketchOptions, quickExtrudeSource } from "../../sketch/integration";
-import { installCadScriptBridge } from "../../sketch/v0-app";
+import { installSketchWiring } from "../../sketch/v1-app";
 import { PlaneView } from "../../sketch/view";
 import { SKETCH_TOOLS, type ToolId } from "../../tools/sketch";
 import { useApp, useStore } from "../context";
@@ -441,7 +441,7 @@ export function SketchModeHost(): ReactElement | null {
 
   useEffect(() => exposeSketchTestHooks(sketchMode), []);
   // Finished sketches go into the open CadScript document (the interim sink, docs/fm/sketcher.md).
-  useEffect(() => installCadScriptBridge(sketchMode, services.doc, commands), [services.doc, commands]);
+  useEffect(() => installSketchWiring(sketchMode, services.doc, commands), [services.doc, commands]);
 
   const beginOn = useCallback(
     (plane: SketchPlaneChoice) => {

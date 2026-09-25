@@ -1,22 +1,33 @@
 /**
- * The DocStore: the open document's source (CadScript), its compiled IR, the evaluation report
- * and display bodies, plus selection and undo/redo.
+ * The DocStore: the open document as the UI sees it — its content, the model the timeline shows,
+ * the evaluation report and display bodies, plus selection and undo/redo.
  *
- * Every change is a transaction on the **source** (recorded with its inverse; see `history.ts`).
- * A change schedules the pipeline: compile + type-check (debounced while typing) → evaluate when
- * the IR actually changed. Results of superseded runs are dropped (revision check), so the state
- * always describes the latest source.
+ * Two kinds of documents:
+ * - **IR v1 documents** (`format: "ir-v1"`, the app's document model for new documents and every
+ *   `.partzero` it writes): the document of record is the {@link IrDocStore} (`deps.ir`), edited
+ *   only through the command layer's ops (FULL-MODELING-PLAN §2.1). This store mirrors it: `source`
+ *   is its canonical IR text, `v1.host` its rollback marker and appearance, `history` its undo
+ *   stack; undo/redo go to it. Every change schedules an evaluation of the document cut at the
+ *   rollback marker (features after it are not built), with the appearance applied to the bodies.
+ *   The code view is read-only (it is hidden by default: View ▸ Show Code).
+ * - **CadScript documents** (`cadscript`, `ir-json`; IR v0, kept for hosts without the IR v1
+ *   engine): every change is a transaction on the **source** (recorded with its inverse; see
+ *   `history.ts`), then compile + type-check (debounced while typing) → evaluate when the IR
+ *   changed.
  *
- * ADR 0010 foresees Immer now and a Loro CRDT later behind this interface; with source-level
- * transactions and small immutable snapshots, plain objects suffice for this spike.
+ * Results of superseded runs are dropped (revision check), so the state always describes the
+ * latest content.
  */
 import type { EvalReport, IrDocument } from "@aicad/ir-types";
+import { EMPTY_HOST_STATE, hostStateEqual, rolledBack, type HostState } from "@aicad/model-ops";
 import type { CadScriptService, CompileOutput } from "../cadscript/service";
 import type { ForgeEngine, PickResult, RenderBody } from "../engine/types";
 import { Store } from "../store";
 import { History, type TransactionOrigin } from "./history";
+import { featureNameOfBody } from "./provenance";
+import type { IrDocStore } from "./v1/ir-doc-store";
 
-export type DocFormat = "cadscript" | "ir-json";
+export type DocFormat = "cadscript" | "ir-json" | "ir-v1";
 
 export type SelectionOrigin = "timeline" | "viewport" | "code" | "command" | "agent";
 
@@ -36,6 +47,7 @@ export interface DocState {
   path: string | null;
   name: string;
   format: DocFormat;
+  /** The CadScript source; for an IR v1 document, its canonical IR text. */
   source: string;
   /** Source as last saved (or as loaded). */
   savedSource: string;
@@ -56,15 +68,22 @@ export interface DocState {
   timings: { compileMs: number | null; evalMs: number | null };
   selection: Selection;
   history: { canUndo: boolean; canRedo: boolean; undoLabel: string | null; redoLabel: string | null };
+  /** IR v1 documents: the host state (rollback marker, appearance) and what the file holds (see {@link v1ContentKey}). */
+  v1: { host: HostState; savedKey: string } | null;
 }
 
 export interface DocDescriptor {
   path: string | null;
   name: string;
   format: DocFormat;
+  /** CadScript source, or (`ir-v1`) IR JSON text of either version (a v0 document is migrated). */
   source: string;
   /** The IR the source was printed from (IR JSON files): its part/feature ids are kept on compile. */
   baseIr?: IrDocument;
+  /** `ir-v1`: the rollback marker and appearance saved with the document. */
+  host?: HostState;
+  /** `ir-v1`: load `source` as unsaved changes over this saved content (recovery). */
+  savedV1?: { source: string; host?: HostState };
 }
 
 export interface SetSourceOptions {
@@ -78,6 +97,8 @@ export interface DocStoreDeps {
   cadscript: CadScriptService;
   /** The current engine (the engine manager can swap it at runtime). */
   engine: () => ForgeEngine;
+  /** The IR v1 document store (the document of record of `ir-v1` documents). */
+  ir?: IrDocStore;
   /** Recompile delay after a coalesced (typing) edit, ms. Default 250. */
   debounceMs?: number;
   historyLimit?: number;
@@ -86,6 +107,36 @@ export interface DocStoreDeps {
 }
 
 const EMPTY_SELECTION: Selection = { featureId: null, entity: null, origin: null };
+const NO_HISTORY: DocState["history"] = { canUndo: false, canRedo: false, undoLabel: null, redoLabel: null };
+
+/** What an IR v1 document's file holds: its canonical text and its host state (dirty = this differs from the saved key). */
+export function v1ContentKey(source: string, host: HostState): string {
+  return hostStateEqual(host, EMPTY_HOST_STATE) ? source : `${source}\n\u0001${JSON.stringify({ rollback: host.rollback, appearance: host.appearance })}`;
+}
+
+/** `#rrggbb` → sRGB 0..1. */
+function rgb(hex: string): [number, number, number] | null {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  return m ? [parseInt(m[1]!, 16) / 255, parseInt(m[2]!, 16) / 255, parseInt(m[3]!, 16) / 255] : null;
+}
+
+/** Colour the bodies whose origin feature has an appearance (feature ids → the names bodies carry). */
+function applyAppearance(bodies: readonly RenderBody[], ir: IrDocument, appearance: Readonly<Record<string, string>>): RenderBody[] {
+  const entries = Object.entries(appearance);
+  if (entries.length === 0) return [...bodies];
+  const byName = new Map<string, [number, number, number]>();
+  for (const p of ir.parts) {
+    for (const f of p.features) {
+      const hex = appearance[f.id];
+      const c = hex ? rgb(hex) : null;
+      if (c) byName.set(f.name, c);
+    }
+  }
+  return bodies.map((b) => {
+    const c = byName.get(featureNameOfBody(b.name));
+    return c ? { ...b, color: c } : b;
+  });
+}
 
 export class DocStore extends Store<DocState> {
   private readonly deps: DocStoreDeps;
@@ -97,6 +148,8 @@ export class DocStore extends Store<DocState> {
   private disposed = false;
   /** Id base for the first compile after a load (until a compile succeeds). */
   private loadBase: IrDocument | null = null;
+  /** An IR v1 document being loaded into the IR store (the store's changes are ignored until it lands). */
+  private pendingV1: Promise<void> | null = null;
 
   constructor(deps: DocStoreDeps, initial?: DocDescriptor) {
     const doc = initial ?? { path: null, name: "Untitled", format: "cadscript" as const, source: "" };
@@ -119,7 +172,8 @@ export class DocStore extends Store<DocState> {
       engineError: null,
       timings: { compileMs: null, evalMs: null },
       selection: EMPTY_SELECTION,
-      history: { canUndo: false, canRedo: false, undoLabel: null, redoLabel: null },
+      history: NO_HISTORY,
+      v1: null,
     });
     this.deps = deps;
     this.debounceMs = deps.debounceMs ?? 250;
@@ -129,11 +183,30 @@ export class DocStore extends Store<DocState> {
       ...(deps.coalesceMs !== undefined ? { coalesceMs: deps.coalesceMs } : {}),
     });
     this.loadBase = initial?.baseIr ?? null;
-    if (initial) this.schedule(0);
+    deps.ir?.subscribe(() => this.onIrChange());
+    if (initial) {
+      if (initial.format === "ir-v1") this.load(initial);
+      else this.schedule(0);
+    }
+  }
+
+  /** Whether the open document is an IR v1 document (edited through the command layer). */
+  get isV1(): boolean {
+    return this.getState().format === "ir-v1";
+  }
+
+  /** Whether this app can hold IR v1 documents: it has the IR v1 store and an engine with the command layer. */
+  get v1Available(): boolean {
+    return this.deps.ir !== undefined && this.deps.engine().commands !== undefined;
   }
 
   /** Replace the document (open, new, template). Clears history and selection. */
   load(doc: DocDescriptor): void {
+    if (doc.format === "ir-v1") {
+      this.loadV1(doc);
+      return;
+    }
+    this.pendingV1 = null;
     this.history.clear();
     this.loadBase = doc.baseIr ?? null;
     const s = this.getState();
@@ -156,12 +229,112 @@ export class DocStore extends Store<DocState> {
       timings: { compileMs: null, evalMs: null },
       selection: EMPTY_SELECTION,
       history: this.historyState(),
+      v1: null,
     });
     this.schedule(0);
   }
 
-  /** Apply a source change as a transaction. Returns false when the source is unchanged. */
+  private loadV1(doc: DocDescriptor): void {
+    const ir = this.deps.ir;
+    const s = this.getState();
+    const docId = s.docId + 1;
+    const host = doc.host ?? EMPTY_HOST_STATE;
+    this.history.clear();
+    this.loadBase = null;
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
+    this.setState({
+      docId,
+      path: doc.path,
+      name: doc.name,
+      format: "ir-v1",
+      source: doc.source,
+      savedSource: doc.source,
+      dirty: false,
+      revision: s.revision + 1,
+      compile: null,
+      compiledRevision: 0,
+      model: null,
+      report: null,
+      bodies: [],
+      evaluatedIrJson: null,
+      engineError: null,
+      phase: "pending",
+      timings: { compileMs: null, evalMs: null },
+      selection: EMPTY_SELECTION,
+      history: NO_HISTORY,
+      v1: { host, savedKey: v1ContentKey(doc.source, host) },
+    });
+    if (!ir) {
+      this.setState({ phase: "idle", engineError: "This build has no IR v1 document store: the model cannot be opened." });
+      return;
+    }
+    const pending = (async () => {
+      let saved: { key: string } | null = null;
+      if (doc.savedV1) {
+        // Recovery: what the file holds, canonicalized, is the saved state; the recovered text is unsaved.
+        const savedHost = doc.savedV1.host ?? EMPTY_HOST_STATE;
+        const c = await ir.load(doc.savedV1.source, { host: savedHost });
+        saved = { key: v1ContentKey(c.document, savedHost) };
+      }
+      const m = await ir.load(doc.source, { host });
+      if (this.getState().docId !== docId) return;
+      const key = v1ContentKey(m.document, host);
+      const savedKey = saved?.key ?? key;
+      this.setState((st) => ({
+        source: m.document,
+        savedSource: saved ? st.savedSource : m.document,
+        v1: { host, savedKey },
+        dirty: key !== savedKey,
+        revision: st.revision + 1,
+        history: ir.getState().history,
+      }));
+    })();
+    this.pendingV1 = pending.then(
+      () => {
+        if (this.getState().docId !== docId) return;
+        this.pendingV1 = null;
+        this.schedule(0);
+      },
+      (e: unknown) => {
+        if (this.getState().docId !== docId) return;
+        this.pendingV1 = null;
+        this.setState({ phase: "idle", engineError: `The model could not be opened: ${errorMessage(e)}` });
+      },
+    );
+  }
+
+  /** The IR v1 store changed (a command, undo, redo): mirror it and re-evaluate. */
+  private onIrChange(): void {
+    const s = this.getState();
+    const ir = this.deps.ir;
+    if (!ir || s.format !== "ir-v1" || this.pendingV1 || !s.v1) return;
+    const irs = ir.getState();
+    if (irs.document === null) return;
+    const history = irs.history;
+    const sameHistory =
+      history.canUndo === s.history.canUndo && history.canRedo === s.history.canRedo && history.undoLabel === s.history.undoLabel && history.redoLabel === s.history.redoLabel;
+    if (irs.document === s.source && hostStateEqual(irs.host, s.v1.host)) {
+      if (!sameHistory) this.setState({ history });
+      return;
+    }
+    const host = irs.host;
+    this.setState((st) => ({
+      source: irs.document!,
+      v1: { host, savedKey: st.v1!.savedKey },
+      dirty: v1ContentKey(irs.document!, host) !== st.v1!.savedKey,
+      revision: st.revision + 1,
+      history,
+    }));
+    this.schedule(0);
+  }
+
+  /**
+   * Apply a source change as a transaction. Returns false when the source is unchanged, and for an
+   * IR v1 document (edited through the command layer's ops, never as text).
+   */
   setSource(source: string, options: SetSourceOptions = {}): boolean {
+    if (this.isV1) return false;
     const before = this.getState().source;
     if (source === before) return false;
     this.history.record(before, source, {
@@ -180,6 +353,7 @@ export class DocStore extends Store<DocState> {
   }
 
   undo(): boolean {
+    if (this.isV1) return this.deps.ir?.undo() ?? false;
     const r = this.history.undo(this.getState().source);
     if (!r) return false;
     this.applySource(r.text, 0);
@@ -187,6 +361,7 @@ export class DocStore extends Store<DocState> {
   }
 
   redo(): boolean {
+    if (this.isV1) return this.deps.ir?.redo() ?? false;
     const r = this.history.redo(this.getState().source);
     if (!r) return false;
     this.applySource(r.text, 0);
@@ -194,12 +369,18 @@ export class DocStore extends Store<DocState> {
   }
 
   /**
-   * After a successful save: `savedSource` (default: the current source) is what the file holds. A save that captured
-   * the source before an edit landed passes the captured source, so the document stays dirty with that edit.
+   * After a successful save: `savedSource` (default: the current content) is what the file holds. A save that captured
+   * the content before an edit landed passes the captured content, so the document stays dirty with that edit. For an
+   * IR v1 document the content is {@link v1ContentKey} (its text and host state).
    */
   markSaved(update: { path: string; name: string; format: DocFormat; savedSource?: string }): void {
     const { savedSource, ...rest } = update;
     this.setState((s) => {
+      if (s.format === "ir-v1" && s.v1) {
+        const now = v1ContentKey(s.source, s.v1.host);
+        const saved = savedSource ?? now;
+        return { ...rest, format: "ir-v1", savedSource: s.source, v1: { ...s.v1, savedKey: saved }, dirty: now !== saved };
+      }
       const saved = savedSource ?? s.source;
       return { ...rest, savedSource: saved, dirty: s.source !== saved };
     });
@@ -219,9 +400,16 @@ export class DocStore extends Store<DocState> {
     this.schedule(0);
   }
 
-  /** Resolves when the pipeline has settled for the current source. */
-  idle(timeoutMs = 60_000): Promise<DocState> {
-    return this.waitFor((s) => s.phase === "idle" && this.timer === null, timeoutMs);
+  /** Resolves when the pipeline has settled for the current content (an IR v1 document: its store's ops too). */
+  async idle(timeoutMs = 60_000): Promise<DocState> {
+    const t0 = Date.now();
+    for (;;) {
+      if (this.pendingV1) await this.pendingV1;
+      if (this.isV1) await this.deps.ir?.idle();
+      const s = await this.waitFor((st) => st.phase === "idle" && this.timer === null, Math.max(1, timeoutMs - (Date.now() - t0)));
+      // An op that landed while we waited moved the document on: wait for its evaluation too.
+      if (!this.pendingV1 && (!this.isV1 || !this.deps.ir?.getState().busy)) return s;
+    }
   }
 
   dispose(): void {
@@ -257,13 +445,60 @@ export class DocStore extends Store<DocState> {
     this.setState({ phase: "pending" });
     this.timer = setTimeout(() => {
       this.timer = null;
-      void this.run();
+      void (this.isV1 ? this.runV1() : this.run());
     }, delay);
   }
 
   private isStale(revision: number, docId: number): boolean {
     const s = this.getState();
     return this.disposed || s.revision !== revision || s.docId !== docId;
+  }
+
+  /** IR v1: the model is the document itself; evaluate it cut at the rollback marker, then colour its bodies. */
+  private async runV1(): Promise<void> {
+    const { revision, docId, source, v1 } = this.getState();
+    const host = v1?.host ?? EMPTY_HOST_STATE;
+    let ir: IrDocument;
+    try {
+      ir = JSON.parse(source) as IrDocument;
+    } catch (e) {
+      this.setState({ phase: "idle", engineError: `The model is not valid JSON: ${errorMessage(e)}` });
+      return;
+    }
+    const compile: CompileOutput = { ok: true, ir, diagnostics: [], spans: {}, partSpans: {}, ms: 0 };
+    this.setState({ compile, compiledRevision: revision, model: compile });
+    const text = rolledBack(source, host.rollback);
+    const key = `${text}\u0000${JSON.stringify(host.appearance)}`;
+    const s = this.getState();
+    if (!this.forceEval && key === s.evaluatedIrJson && (s.report !== null || s.engineError !== null)) {
+      this.setState({ phase: "idle" });
+      return;
+    }
+    this.forceEval = false;
+    this.setState({ phase: "evaluating" });
+    const t0 = performanceNow();
+    try {
+      const r = await this.deps.engine().evaluate(text);
+      if (this.isStale(revision, docId)) return;
+      this.setState((st) => ({
+        report: r.report,
+        bodies: applyAppearance(r.bodies, ir, host.appearance),
+        evaluatedIrJson: key,
+        engineError: null,
+        phase: "idle",
+        timings: { ...st.timings, evalMs: performanceNow() - t0 },
+      }));
+    } catch (e) {
+      if (this.isStale(revision, docId)) return;
+      this.setState((st) => ({
+        report: null,
+        bodies: [],
+        evaluatedIrJson: key,
+        engineError: errorMessage(e),
+        phase: "idle",
+        timings: { ...st.timings, evalMs: null },
+      }));
+    }
   }
 
   private async run(): Promise<void> {

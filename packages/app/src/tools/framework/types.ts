@@ -39,6 +39,7 @@
  *
  * This file is framework-only: no React, no DOM. Tools stay testable without a browser.
  */
+import type { IrOp } from "@aicad/model-ops";
 import type { AppInvocation } from "../../commands/commands";
 import type { CommandResult, CommandSource } from "../../commands/registry";
 import type { RenderBody } from "../../engine/types";
@@ -171,12 +172,15 @@ export interface AddFeatureOp {
 }
 
 /**
- * A domain op a tool commits (plan §2.2). The catalogue is C1's (`@aicad/model-ops`); until it
- * lands, the ops the shell's default port applies are these three, and the integrator widens this
- * type to C1's `IrOp` when it binds the IR v1 store (`Shell.bindPorts({ ops })`). An op the bound
- * store doesn't know is refused with `COMMAND_NOT_IMPLEMENTED`, never ignored.
+ * A domain op a tool commits (plan §2.2): any op of C1's catalogue (`@aicad/model-ops` `IrOp`).
+ * On an IR v1 document the shell's port applies them through the command layer (`ir.apply`, one
+ * transaction); on a CadScript (IR v0) document only `setField`, `setSuppressed` and `addFeature`
+ * apply, and any other op is refused with `COMMAND_NOT_IMPLEMENTED`, never ignored.
  */
-export type ToolOp = SetFieldOp | SetSuppressedOp | AddFeatureOp;
+export type ToolOp = IrOp;
+
+/** The three ops a CadScript (IR v0) document takes. */
+export type V0ToolOp = SetFieldOp | SetSuppressedOp | AddFeatureOp;
 
 /** Applies a tool's ops (the command layer's transaction; C6 `IrDocStore.transaction` once bound). */
 export interface OpsPort {

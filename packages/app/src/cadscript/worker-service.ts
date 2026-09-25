@@ -1,9 +1,11 @@
 import type { IrDocument } from "@aicad/ir-types";
 import { WorkerRpc } from "../worker-rpc";
-import type { CadScriptService, CompileOutput } from "./service";
+import type { CadScriptService, CompileOutput, CompileV1Output } from "./service";
 
 export type CadScriptRequest =
   | { type: "compile"; source: string; base: IrDocument | null }
+  | { type: "compileV1"; source: string }
+  | { type: "printV1"; irJson: string }
   | { type: "print"; ir: IrDocument }
   | { type: "applyIrEdit"; source: string; oldIr: IrDocument; newIr: IrDocument };
 
@@ -18,6 +20,14 @@ export class WorkerCadScriptService implements CadScriptService {
 
   compile(source: string, base?: IrDocument | null): Promise<CompileOutput> {
     return this.rpc.call<CompileOutput>({ type: "compile", source, base: base ?? null });
+  }
+
+  compileV1(source: string): Promise<CompileV1Output> {
+    return this.rpc.call<CompileV1Output>({ type: "compileV1", source });
+  }
+
+  printV1(irJson: string): Promise<string | null> {
+    return this.rpc.call<string | null>({ type: "printV1", irJson });
   }
 
   print(ir: IrDocument): Promise<string> {

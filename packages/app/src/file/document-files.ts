@@ -10,6 +10,7 @@
 import type { DocumentStateMessage, RecentDocument, RecoveryEntry } from "../bridge";
 import type { ForgeEngine, RenderBody } from "../engine/types";
 import { Store } from "../store";
+import type { HostState } from "@aicad/model-ops";
 import type { DocumentAdapter, LoadRequest, SaveCapture } from "./adapter";
 import { documentName } from "./adapter";
 import { exportFormat } from "./export-formats";
@@ -150,6 +151,30 @@ export interface UnsavedContentSource {
   /** True while it holds changes the adapter would not write. */
   hasUnsavedContent(): boolean;
   subscribe(listener: () => void): () => void;
+}
+
+/** The annotation that holds an IR v1 model's appearance (feature id → `#rrggbb`), until the IR has a colour field (FD4). */
+export const APPEARANCE_ANNOTATION = "appearance";
+
+/** The rollback marker and appearance a `.partzero` holds, or null when it holds neither. */
+export function hostStateOf(c: Pick<PartZeroContents, "view" | "annotations">): HostState | null {
+  const appearance: Record<string, string> = {};
+  const raw = c.annotations[APPEARANCE_ANNOTATION];
+  if (raw !== undefined) {
+    try {
+      const features = (JSON.parse(raw) as { features?: unknown }).features;
+      if (features && typeof features === "object") {
+        for (const [id, color] of Object.entries(features as Record<string, unknown>)) {
+          if (typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color) && /^[A-Za-z_][A-Za-z0-9_]{0,199}$/.test(id)) appearance[id] = color.toLowerCase();
+        }
+      }
+    } catch {
+      // An unreadable annotation: no appearance (the model is unaffected).
+    }
+  }
+  const rollback = c.view.rollbackMarker;
+  if (rollback === null && Object.keys(appearance).length === 0) return null;
+  return { rollback, appearance };
 }
 
 /** What a `.partzero` carries that this layer does not edit, kept from open to save. */
@@ -520,7 +545,8 @@ export class DocumentFiles extends Store<FilesState> {
   }
 
   private requestFrom(path: string | null, name: string, c: PartZeroContents): LoadRequest {
-    return { path, name, documentJson: c.document.json, code: c.code };
+    const host = hostStateOf(c);
+    return { path, name, documentJson: c.document.json, code: c.code, ...(host ? { host } : {}) };
   }
 
   /** The document as saved in `path` (any of the three formats), as a load request. */
@@ -652,16 +678,24 @@ export class DocumentFiles extends Store<FilesState> {
     const thumb = withThumbnail ? renderThumbnail([...snap.bodies, ...visibleRefs]) : null;
     const blobs: Record<string, Uint8Array> = {};
     for (const r of refs) blobs[r.entry.blob.slice("blobs/".length)] = r.bytes;
+    // An IR v1 model's host state: the rollback marker in the view, the appearance as an annotation.
+    const annotations = { ...this.carry.annotations };
+    let view = this.carry.view;
+    if (snap.host) {
+      view = { ...view, rollbackMarker: snap.host.rollback };
+      if (Object.keys(snap.host.appearance).length > 0) annotations[APPEARANCE_ANNOTATION] = JSON.stringify({ features: snap.host.appearance });
+      else delete annotations[APPEARANCE_ANNOTATION];
+    }
     const contents: PartZeroContents = {
       generator: { ...this.deps.generator, forgeBuild: null },
       document: { json: snap.documentJson, irSchema: snap.irSchema },
       code: snap.code,
       thumbnail: thumb,
-      annotations: this.carry.annotations,
+      annotations,
       blobs,
       cache: {},
       checkpoints: this.carry.checkpoints,
-      view: this.carry.view,
+      view,
       references: refs.map((r) => r.entry),
     };
     return { bytes: encodePartZero(contents), thumbnail: thumb?.png ?? null, capture: snap.capture, references: refs };

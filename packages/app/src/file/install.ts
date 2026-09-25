@@ -24,10 +24,11 @@
  * {@link failClosedSource}) so v1 edits are never lost silently, and the test "every document store in AppServices
  * is saved or guarded" fails.
  *
- * Wired (integration branch): main.tsx passes {@link documentStoreGuards}, a real {@link UnsavedContentSource} over
- * `services.ir` ({@link irStoreContentSource}). This build still writes only the IR v0 document, so while the v1 store
- * holds a document it loaded or edited, the window is dirty and saves refuse with FILE_UNSAVABLE_CONTENT; an empty v1
- * store (the app's own pipeline is IR v0) never blocks a save. An `IrDocumentAdapter` replaces it when v1 becomes the
+ * Wired: IR v1 is the document model. {@link DocStoreAdapter} saves `services.ir` whenever the window's document is
+ * an IR v1 model (`services.doc` mirrors the store; `.partzero` holds the v1 document). main.tsx still passes
+ * {@link documentStoreGuards}: its {@link UnsavedContentSource} over `services.ir` ({@link irStoreContentSource})
+ * reports unsaved content only on hosts without the IR v1 engine (a CadScript document) whose v1 store was loaded or
+ * edited through `ir.*` commands, which no file would hold. It replaced the stopgap when v1 became the
  * document of record.
  */
 import type { AppCommandRegistry } from "../commands/commands";
@@ -103,10 +104,16 @@ export function failClosedSource(label: string, store: unknown): UnsavedContentS
 export function irStoreContentSource(
   ir: { getState(): Pick<IrDocState, "document" | "revision">; subscribe(listener: () => void): () => void },
   label: string = OTHER_DOCUMENT_STORES["ir"] ?? "IR v1 model",
+  doc?: { getState(): { format: string }; subscribe(listener: () => void): () => void },
 ): UnsavedContentSource {
-  const base = ir.getState().revision;
+  // While the window's document is an IR v1 model, the IR store IS the document: the adapter saves it.
+  let base = ir.getState().revision;
   const unsaved = (): boolean => {
     const s = ir.getState();
+    if (doc?.getState().format === "ir-v1") {
+      base = s.revision;
+      return false;
+    }
     return s.document !== null && s.revision !== base;
   };
   return {
@@ -126,7 +133,7 @@ export function irStoreContentSource(
 
 /** The {@link installDocumentFiles} options that save or guard every document store in `services` besides `doc`. */
 export function documentStoreGuards(services: AppServices): Pick<InstallOptions, "protects" | "contentSources"> {
-  return services.ir ? { protects: ["ir"], contentSources: [irStoreContentSource(services.ir)] } : {};
+  return services.ir ? { protects: ["ir"], contentSources: [irStoreContentSource(services.ir, undefined, services.doc)] } : {};
 }
 
 export interface InstallOptions {
