@@ -33,7 +33,7 @@ const it_ = hasWasm ? it : it.skip;
 
 type Mod = ForgeWebCommandModule & {
   init(input: unknown): Promise<void>;
-  evaluate(ir: string, options?: object): { report: unknown; bodies: EvalResult["bodies"] };
+  evaluate(ir: string, options?: object): { report: unknown; bodies: RenderBody[] };
   exportMesh(ir: string, format: MeshFormat, options?: object): Uint8Array;
 };
 
@@ -95,6 +95,9 @@ const PLATE = {
   ],
 };
 const PLATE_JSON = JSON.stringify(PLATE);
+
+/** The plate evaluated for display at `tess`. */
+const renderBodies = (tess: TessellationOptions): RenderBody[] => (mod.evaluate(PLATE_JSON, tess) as unknown as { bodies: RenderBody[] }).bodies;
 
 type P3 = [number, number, number];
 
@@ -208,7 +211,7 @@ describe("display tessellation (pure)", () => {
 describe("round holes on the real engine", () => {
   it_("a 5 mm hole exports (STL and 3MF, print tolerances) with at least 72 segments", async () => {
     const engine = new NodeForgeEngine();
-    const display = mod.evaluate(PLATE_JSON, {});
+    const display = { bodies: renderBodies({}) };
     const plate = display.bodies.find((b) => b.name === "plate/slab");
     expect(plate, "the plate body").toBeTruthy();
     const axis = holeAxis(plate!);
@@ -227,13 +230,13 @@ describe("round holes on the real engine", () => {
   });
 
   it_("the viewport's tolerances give the hole at least 36 segments; Forge's default about 18", async () => {
-    const coarse = mod.evaluate(PLATE_JSON, {}).bodies[0]!;
+    const coarse = renderBodies({})[0]!;
     const axis = holeAxis(coarse);
     // 0.35 rad: 18 segments (plus one vertex where the cap's triangulation meets the rim).
     expect(rim(bodyPoints(coarse), axis, HOLE_D / 2, 5).length).toBeLessThanOrEqual(19);
-    const fine = mod.evaluate(PLATE_JSON, { ...DEFAULT_DISPLAY_TESSELLATION }).bodies[0]!;
+    const fine = renderBodies({ ...DEFAULT_DISPLAY_TESSELLATION })[0]!;
     expect(rim(bodyPoints(fine), axis, HOLE_D / 2, 5).length).toBeGreaterThanOrEqual(36);
-    const big = mod.evaluate(PLATE_JSON, { chordalDeflection: 0.05, angularDeflection: DISPLAY_ANGULAR_DEFLECTION }).bodies[0]!;
+    const big = renderBodies({ chordalDeflection: 0.05, angularDeflection: DISPLAY_ANGULAR_DEFLECTION })[0]!;
     expect(rim(bodyPoints(big), axis, HOLE_D / 2, 5).length).toBeGreaterThanOrEqual(36);
   });
 
