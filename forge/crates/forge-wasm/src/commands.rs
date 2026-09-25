@@ -2442,6 +2442,136 @@ fn ref_value(e: &RefReport, r: &Renamer, map: bool) -> Value {
             "proposal": e.proposal.is_some() })
 }
 
+// ---- refFor (a query: nothing is written) --------------------------------------------------
+
+/// `refFor` (FULL-MODELING-PLAN §2.2 "Queries"): a v1 Ref to picked entities, **verified** to
+/// resolve to exactly the picked set in the scope of a feature inserted into part `part` (an id
+/// or name) after feature `after` (an id or name of that part; `None`: at the end of the part).
+/// See [`forge_regen::v1::ref_for`] for picks, kind conversion and the checks.
+///
+/// `request`: `{ "kind": "face" | "edge" | "vertex" | "body", "picks": [{ "kind", "name"?,
+/// "key"?, "point"?: [x, y, z], "body"?: { feature, member, instance? } }], "card"? }`.
+/// Returns `{ ref, members: [{ key, name, probe }] }`. Refusals: `COMMAND_INVALID_ARGUMENT`,
+/// `COMMAND_UNKNOWN_FEATURE` (`after` not in the part), `COMMAND_PICK_NOT_FOUND`,
+/// `COMMAND_PICK_AMBIGUOUS`, `COMMAND_REF_NO_QUERY`, `COMMAND_REF_NOT_EXACT` (`details`).
+pub fn ref_for(
+    ir_json: &str,
+    part: &str,
+    after: Option<&str>,
+    request: &Value,
+) -> Result<Value, Rejection> {
+    use forge_ir::v1::metrics::Origin;
+    use forge_ir::v1::{Cardinality, EntityKind};
+    let doc = load(ir_json)?;
+    let Some(pi) = doc
+        .parts
+        .iter()
+        .position(|p| p.id == part || p.name == part)
+    else {
+        return Err(refusal(
+            "COMMAND_UNKNOWN_PART",
+            format!(
+                "{} is not the id or name of a part of the document",
+                shown(part)
+            ),
+            json!({ "part": id_value(part) }),
+        ));
+    };
+    let at = match after {
+        None => doc.parts[pi].features.len(),
+        Some(a) => match doc.parts[pi]
+            .features
+            .iter()
+            .position(|f| f.id() == a || f.name() == a)
+        {
+            Some(i) => i + 1,
+            None => {
+                return Err(refusal(
+                    "COMMAND_UNKNOWN_FEATURE",
+                    format!(
+                        "{} is not the id or name of a feature of part {}",
+                        shown(a),
+                        shown(part)
+                    ),
+                    json!({ "feature": id_value(a) }),
+                ));
+            }
+        },
+    };
+    let kind_of = |v: Option<&Value>, arg: &str| -> Result<EntityKind, Rejection> {
+        match v.and_then(Value::as_str) {
+            Some("face") => Ok(EntityKind::Face),
+            Some("edge") => Ok(EntityKind::Edge),
+            Some("vertex") => Ok(EntityKind::Vertex),
+            Some("body") => Ok(EntityKind::Body),
+            _ => Err(invalid_argument(
+                arg,
+                "one of \"face\", \"edge\", \"vertex\", \"body\"",
+            )),
+        }
+    };
+    let kind = kind_of(request.get("kind"), "kind")?;
+    let card: Option<Cardinality> =
+        match request.get("card") {
+            None | Some(Value::Null) => None,
+            Some(c) => Some(serde_json::from_value(c.clone()).map_err(|_| {
+                invalid_argument("card", "\"one\", \"some\", \"any\" or a count ≥ 1")
+            })?),
+        };
+    let Some(raw) = request.get("picks").and_then(Value::as_array) else {
+        return Err(invalid_argument("picks", "an array of picks"));
+    };
+    if raw.len() > 10_000 {
+        return Err(invalid_argument("picks", "at most 10000 picks"));
+    }
+    let mut picks = Vec::with_capacity(raw.len());
+    for p in raw {
+        let text = |k: &str| -> Result<Option<String>, Rejection> {
+            match p.get(k) {
+                None | Some(Value::Null) => Ok(None),
+                Some(Value::String(s))
+                    if s.len() <= 2048
+                        && s.chars()
+                            .all(|c| c.is_ascii_alphanumeric() || "_./:{}|@+%#".contains(c)) =>
+                {
+                    Ok(Some(s.clone()))
+                }
+                Some(_) => Err(invalid_argument(
+                    "picks",
+                    "names and keys are provenance strings",
+                )),
+            }
+        };
+        let point = match p.get("point") {
+            None | Some(Value::Null) => None,
+            Some(v) => {
+                let a: Option<[f64; 3]> = serde_json::from_value::<[f64; 3]>(v.clone())
+                    .ok()
+                    .filter(|a| a.iter().all(|x| x.is_finite()));
+                Some(a.ok_or_else(|| {
+                    invalid_argument("picks", "point is [x, y, z] (finite numbers)")
+                })?)
+            }
+        };
+        let body: Option<Origin> = match p.get("body") {
+            None | Some(Value::Null) => None,
+            Some(v) => Some(serde_json::from_value(v.clone()).map_err(|_| {
+                invalid_argument("picks", "body is an origin { feature, member, instance? }")
+            })?),
+        };
+        picks.push(forge_regen::v1::Pick {
+            kind: kind_of(p.get("kind"), "picks")?,
+            name: text("name")?,
+            key: text("key")?,
+            point,
+            body,
+        });
+    }
+    forge_regen::v1::ref_for(&doc, pi, at, kind, &picks, card)
+        .map(|r| r.to_json())
+        .map_err(|e| refusal(e.code, e.message, e.details))
+}
+
 #[cfg(test)]
 #[path = "commands_tests.rs"]
 mod tests;

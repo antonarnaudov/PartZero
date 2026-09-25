@@ -2512,3 +2512,87 @@ fn a_feature_evaluated_through_itself_reports_as_in_the_whole_document() {
         }
     }
 }
+
+// ---- refFor -------------------------------------------------------------------------------------
+
+fn ref_code(r: Result<Value, Rejection>) -> String {
+    match r {
+        Ok(v) => panic!("expected a refusal, got {v}"),
+        Err(e) => e.code,
+    }
+}
+
+#[test]
+fn ref_for_builds_a_captured_ref_a_fillet_added_after_the_marker_resolves_exactly() {
+    let text = plate();
+    let pick = json!({ "kind": "edge", "picks": [
+        { "kind": "edge", "name": "e1/edge:{e1/cap:end|e1/side:top}", "point": [0.0, 10.0, 6.0] }
+    ] });
+    // After the extrude (where the app's rollback marker would be): the tags are not built yet.
+    let r = ref_for(&text, "p1", Some("e1"), &pick).expect("a ref");
+    assert_eq!(r["members"].as_array().unwrap().len(), 1);
+    let key = r["members"][0]["key"].as_str().unwrap().to_string();
+    assert!(r["ref"]["capture"].is_object(), "{r}");
+    // By part name and at the end of the part (after the tags, which make no geometry): the same.
+    let at_end = ref_for(&text, "part", None, &pick).expect("a ref");
+    assert_eq!(at_end["members"][0]["key"].as_str(), Some(key.as_str()));
+    // The ref in a fillet: the engine resolves it to exactly that edge.
+    let mut v: Value = serde_json::from_str(&text).unwrap();
+    v["parts"][0]["features"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({
+        "type": "fillet", "id": "f1", "name": "f1", "r": 1, "edges": r["ref"].clone() }));
+    let rep = report(&v.to_string());
+    let e = entry(&rep, "f1", "/edges");
+    assert_eq!(e.status, RefStatus::Exact);
+    assert_eq!(
+        e.members.iter().map(|m| m.key.as_str()).collect::<Vec<_>>(),
+        vec![key.as_str()]
+    );
+}
+
+#[test]
+fn ref_for_refuses_unknown_parts_features_and_malformed_requests() {
+    let text = plate();
+    let ok = json!({ "kind": "face", "picks": [{ "kind": "face", "name": "e1/cap:end" }] });
+    assert_eq!(
+        ref_code(ref_for(&text, "p9", None, &ok)),
+        "COMMAND_UNKNOWN_PART"
+    );
+    assert_eq!(
+        ref_code(ref_for(&text, "p1", Some("nope"), &ok)),
+        "COMMAND_UNKNOWN_FEATURE"
+    );
+    assert_eq!(
+        ref_code(ref_for(
+            &text,
+            "p1",
+            None,
+            &json!({ "kind": "wire", "picks": [] })
+        )),
+        "COMMAND_INVALID_ARGUMENT"
+    );
+    assert_eq!(
+        ref_code(ref_for(&text, "p1", None, &json!({ "kind": "face" }))),
+        "COMMAND_INVALID_ARGUMENT"
+    );
+    let bad_name = json!({ "kind": "face", "picks": [{ "kind": "face", "name": "<script>" }] });
+    assert_eq!(
+        ref_code(ref_for(&text, "p1", None, &bad_name)),
+        "COMMAND_INVALID_ARGUMENT"
+    );
+    let bad_point = json!({ "kind": "face", "picks": [{ "kind": "face", "name": "e1/cap:end", "point": [0, "x", 0] }] });
+    assert_eq!(
+        ref_code(ref_for(&text, "p1", None, &bad_point)),
+        "COMMAND_INVALID_ARGUMENT"
+    );
+    // Before the extrude (after the sketch) nothing is there to pick.
+    assert_eq!(
+        ref_code(ref_for(&text, "p1", Some("s1"), &ok)),
+        "COMMAND_PICK_NOT_FOUND"
+    );
+    let body = json!({ "kind": "body", "picks": [{ "kind": "body", "body": { "feature": "e1", "member": "bottom" } }] });
+    let b = ref_for(&text, "p1", Some("e1"), &body).expect("a body ref");
+    assert_eq!(b["members"][0]["key"], json!("e1/body:bottom"));
+}

@@ -193,6 +193,19 @@ impl<'d> PartEval<'d> {
         self
     }
 
+    /// Evaluate the features before timeline index `at` (at most every feature), then run `f`
+    /// with the scope a feature at `at` would query (§5.3: the part's bodies in that input
+    /// state and the earlier features). The command layer's `refFor` reads its scope here.
+    pub(super) fn scope_at<R>(mut self, at: usize, f: impl FnOnce(&Scope<'_>) -> R) -> R {
+        let at = at.min(self.part.features.len());
+        for (fi, feat) in self.part.features.iter().enumerate().take(at) {
+            if let Some(entry) = self.feature(fi, feat) {
+                self.features.push(entry);
+            }
+        }
+        self.with_scope(at, f)
+    }
+
     /// Evaluate every feature in timeline order; returns the part's final state.
     pub(crate) fn run(self) -> (Vec<FeatureReport>, PartResult, Vec<String>) {
         let r = self.run_full();

@@ -65,6 +65,7 @@ mod error;
 mod hole;
 mod part;
 mod pattern;
+mod ref_for;
 
 use forge_ir::v1::metrics::{EvalReport, ParamReport, PartReport, ReportError, Status};
 use forge_ir::v1::{
@@ -76,6 +77,7 @@ pub use bodies::PartBody;
 pub use error::FeatureError;
 pub use forge_ir::v1::metrics::FeatureReport;
 pub use part::{NO_CHANGE_CODE, PartResult, SUPPORTED_FEATURE_TYPES, UNSUPPORTED_CODE};
+pub use ref_for::{Pick, RefFor, RefForError, RefForMember, ref_for};
 
 /// Optional IR v1 feature types this engine does not implement (SPEC-v1 §6.9: `draft`).
 /// [`load`] rejects documents that use them with `UNSUPPORTED_FEATURE` at the feature's `/type`

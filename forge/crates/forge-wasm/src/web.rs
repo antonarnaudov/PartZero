@@ -326,6 +326,29 @@ pub fn accept_ref_candidate(
     )
 }
 
+/// `refFor` (FULL-MODELING-PLAN §2.2): a Ref to picked entities, verified to resolve to exactly
+/// them in the scope of a feature inserted into `part` after `after` (`undefined`/`null`: at the
+/// end of the part). `requestJson`: `{ kind, picks: [{ kind, name?, key?, point?, body? }],
+/// card? }`. Returns `{ ref, members: [{ key, name, probe }] }`; throws a `code`d refusal
+/// (`COMMAND_PICK_NOT_FOUND`, `COMMAND_REF_NOT_EXACT`, …) with `details`.
+#[wasm_bindgen(js_name = refFor)]
+pub fn ref_for(
+    ir_json: &str,
+    part: &str,
+    after: Option<String>,
+    request_json: &str,
+) -> Result<JsValue, JsValue> {
+    let request = forge_ir::v1::json::parse(request_json).map_err(|_| {
+        rejection_js(crate::commands::invalid_argument(
+            "request",
+            "JSON text: { kind, picks: [...], card? }",
+        ))
+    })?;
+    let v = crate::commands::ref_for(ir_json, part, after.as_deref(), &request)
+        .map_err(rejection_js)?;
+    json_js(&v)
+}
+
 /// `renameCurve` (SPEC-v1 §5.9). Returns `{ document, changed, result: { sketch, old, new,
 /// rewritten, unverified } }`.
 #[wasm_bindgen(js_name = renameCurve)]
