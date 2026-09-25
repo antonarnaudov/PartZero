@@ -72,7 +72,7 @@ export interface FeasibleRange {
   max?: number;
   /** Why the range ends there (Forge's message: the face or wall that limits it), or why no maximum is known. */
   reason?: string;
-  /** Forge's code when the probe failed some other way (no maximum is claimed then). */
+  /** Forge's code of the failure that bounds the range when it is not a size limit (a blend running into another feature): with `max`, the largest size that built before it; without, no maximum is known. */
   code?: string;
 }
 
@@ -123,25 +123,67 @@ export async function feasibleRange(
   // Evaluate through the feature only (later features cannot change its range).
   const part = d.parts[partIndex]!;
   part.features = part.features.slice(0, index + 1);
-  (part.features[index] as JsonObject)[spec.field] = FEASIBLE_PROBE;
-  const report = await engine.report(JSON.stringify(d));
-  const entry = report.features.find((f) => f.feature_id === feature.id);
-  if (!entry) {
-    out.reason = "the feature was not evaluated (suppressed)";
-    return out;
+  const probe = async (v: number): Promise<Probe> => {
+    (part.features[index] as JsonObject)[spec.field] = v;
+    const report = await engine.report(JSON.stringify(d));
+    const entry = report.features.find((f) => f.feature_id === feature.id);
+    if (!entry) return { kind: "absent" };
+    if (entry.status !== "error" || !entry.error) return { kind: "ok" };
+    const details = isObject(entry.error.details) ? entry.error.details : {};
+    const max = details[spec.detail];
+    if (entry.error.code === spec.code && typeof max === "number" && Number.isFinite(max)) return { kind: "too-large", max, message: entry.error.message };
+    return { kind: "failed", code: entry.error.code, message: entry.error.message };
+  };
+  const first = await probe(FEASIBLE_PROBE);
+  if (first.kind === "absent") return { ...out, reason: "the feature was not evaluated (suppressed)" };
+  if (first.kind === "ok") return { ...out, reason: `no limit: it builds at ${FEASIBLE_PROBE} mm` };
+  if (first.kind === "too-large") return { ...out, max: first.max, reason: first.message };
+  // A failure no size changes (a reference, an unsupported edge): no search.
+  if (!SIZE_FAILURES.has(first.code)) return { ...out, code: first.code, reason: first.message };
+  // Forge failed another way at that size (a blend running into another feature is a capability
+  // gap, not a size limit, SPEC §6.6): find where the failures start. Quarter the size until it
+  // builds (or Forge names a maximum), then bisect between the largest size that built and the
+  // smallest that failed, to 0.001 mm. The value returned is one that was built.
+  let bad = FEASIBLE_PROBE;
+  let good: number | null = null;
+  let last: { code: string; message: string } = { code: first.code, message: first.message };
+  for (let i = 0; i < FEASIBLE_SEARCH_STEPS && good === null; i++) {
+    const v = bad / 4;
+    const r = await probe(v);
+    if (r.kind === "too-large") return { ...out, max: r.max, reason: r.message };
+    if (r.kind === "ok") good = v;
+    else if (r.kind === "failed") {
+      bad = v;
+      last = { code: r.code, message: r.message };
+    } else break;
   }
-  if (entry.status !== "error" || !entry.error) {
-    out.reason = `no limit: it builds at ${FEASIBLE_PROBE} mm`;
-    return out;
+  if (good === null) return { ...out, code: last.code, reason: last.message };
+  let built: number = good;
+  for (let i = 0; i < FEASIBLE_SEARCH_STEPS && bad - built > 0.0005; i++) {
+    const mid: number = (built + bad) / 2;
+    const r = await probe(mid);
+    if (r.kind === "too-large") return { ...out, max: r.max, reason: r.message };
+    if (r.kind === "ok") built = mid;
+    else {
+      bad = mid;
+      if (r.kind === "failed") last = { code: r.code, message: r.message };
+    }
   }
-  const details = isObject(entry.error.details) ? entry.error.details : {};
-  const max = details[spec.detail];
-  if (entry.error.code === spec.code && typeof max === "number" && Number.isFinite(max)) {
-    out.max = max;
-    out.reason = entry.error.message;
-    return out;
+  // Rounded down to 0.001 mm, and checked to build.
+  let max = Math.floor(built * 1000) / 1000;
+  for (let i = 0; i < 3 && max > 0 && max !== built; i++) {
+    const r = await probe(max);
+    if (r.kind === "ok") break;
+    max = Math.round((max - 0.001) * 1000) / 1000;
   }
-  out.code = entry.error.code;
-  out.reason = entry.error.message;
-  return out;
+  if (!(max > 0)) return { ...out, code: last.code, reason: last.message };
+  return { ...out, max, code: last.code, reason: `above ${max} mm: ${last.message}` };
 }
+
+/** Evaluations the fallback search of {@link feasibleRange} may spend per phase. */
+const FEASIBLE_SEARCH_STEPS = 24;
+
+/** Failures a smaller size can avoid (a blend or wall running into another feature), which the search looks below. */
+const SIZE_FAILURES: ReadonlySet<string> = new Set(["FILLET_FAILED", "CHAMFER_FAILED", "SHELL_FAILED", "INVALID_RESULT"]);
+
+type Probe = { kind: "absent" } | { kind: "ok" } | { kind: "too-large"; max: number; message: string } | { kind: "failed"; code: string; message: string };

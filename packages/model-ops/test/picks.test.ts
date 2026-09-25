@@ -95,6 +95,28 @@ describe("feasibleRange", () => {
     expect(sh).toMatchObject({ field: "thickness", max: 4.999 });
   });
 
+  it_("finds the largest radius that builds by bisection when a blend runs into another feature (a capability gap, not a size limit)", async () => {
+    // A 40 × 20 × 10 block with a 4 × 4 pocket at x = 10 in its top: the fillet of the top front
+    // edge (y = −10) reaches the pocket (y = −2) once r > 8.
+    const d = plate({
+      features: [
+        { type: "sketch", id: "s2", name: "pocket_sketch", plane: { origin: [0, 0, 10], normal: [0, 0, 1], x_dir: [1, 0, 0] }, curves: [{ kind: "rect", id: "p", center: [10, 0], w: 4, h: 4 }] },
+        { type: "extrude", id: "e2", name: "pocket", sketch: "s2", distance: 3, direction: "reverse", op: "cut", targets: "all" },
+      ],
+    }).replace('"value":5,"min":1', '"value":10,"min":1');
+    const topFront = { kind: "edge", q: { op: "between", a: { op: "cap", feature: "e1", end: "end" }, b: { op: "side", feature: "e1", curve: "r.bottom" } } };
+    const r = await feasibleRange(engine, d, { candidate: { type: "fillet", r: 1, edges: topFront }, after: "e2" });
+    expect(r.max).toBeGreaterThan(7);
+    expect(r.max).toBeLessThanOrEqual(8.001);
+    expect(r.code).toBe("FILLET_FAILED");
+    expect(r.reason).toMatch(/^above /);
+    // The value it suggests builds.
+    const host = await MemoryOpsHost.open({ engine, document: d, origin: "user" });
+    await host.apply([{ op: "addFeature", feature: { type: "fillet", r: r.max!, edges: topFront } }]);
+    const rep = await host.report();
+    expect(rep.features.at(-1)?.status).toBe("ok");
+  });
+
   it_("says so when a feature has no size field Forge bounds, and when it fails for another reason", async () => {
     const d = plate();
     const e = await refusal(feasibleRange(engine, d, { feature: "e1" }));
