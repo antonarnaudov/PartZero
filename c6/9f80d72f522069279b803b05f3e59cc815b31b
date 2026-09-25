@@ -1,0 +1,53 @@
+packages/mcp-server/src/ops.ts
+  s_59c0dd2af30db2::t_33577c293c9514 1-45
+packages/model-ops/src/host.ts
+  s_59c0dd2af30db2::t_c6c7e7c2888789 86-87
+  s_59c0dd2af30db2::t_61cd34b3ea5402 136-140,149-152
+packages/agent-tools/test/ops.test.ts
+  s_59c0dd2af30db2::t_7a5b66367a9c7c 1-146
+packages/mcp-server/test/ops.test.ts
+  s_59c0dd2af30db2::t_8caa272832af1f 1-110
+packages/agent-tools/src/ops.ts
+  s_59c0dd2af30db2::t_fda205a4017771 100,102-103,107
+  s_59c0dd2af30db2::t_7d444c3f45234f 1-99,101,104-106,108-286
+packages/agent-tools/package.json
+  s_59c0dd2af30db2::t_004ef6260f92e9 4,31
+packages/agent-tools/src/index.ts
+  s_59c0dd2af30db2::t_41514f14c4f97a 10-12,21
+packages/agent-tools/vitest.config.ts
+  s_59c0dd2af30db2::t_d1b7de4c062fe5 14
+packages/llm-gateway/src/cli/mcp.ts
+  s_59c0dd2af30db2::t_488fa024d4a657 9-13
+packages/mcp-server/package.json
+  s_59c0dd2af30db2::t_733cfd16e2df92 38
+packages/mcp-server/src/bridge-protocol.ts
+  s_59c0dd2af30db2::t_466d2b7a3cdabe 10,176
+packages/mcp-server/src/index.ts
+  s_59c0dd2af30db2::t_c92c3a06b850cd 10-11,19
+packages/mcp-server/src/scopes.ts
+  s_59c0dd2af30db2::t_81646fdcdb79ad 15-17,19,69-75,102,107
+packages/mcp-server/src/types.ts
+  s_59c0dd2af30db2::t_bffb7c30356509 19-24,26
+packages/mcp-server/test/tools.test.ts
+  s_59c0dd2af30db2::t_7ea5425e382669 24
+packages/mcp-server/vitest.config.ts
+  s_59c0dd2af30db2::t_fc9a2b105cb681 15
+pnpm-lock.yaml
+  s_59c0dd2af30db2::t_aa188c4c5d6ef4 69-71,307-309
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c69f80d72f522069279b803b05f3e59cc815b31b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
