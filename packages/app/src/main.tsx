@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { automationAllowed, bootstrap } from "./bootstrap";
 import { registerExportFormat } from "./file/export-formats";
-import { documentStoreGuards, installDocumentFiles } from "./file/install";
+import { documentFiles, documentStoreGuards, installDocumentFiles } from "./file/install";
 import { stepExportFormat } from "./io/step-export";
 import type { AppInvocation } from "./commands/commands";
 import type { CommandSource } from "./commands/registry";
@@ -31,7 +31,9 @@ bootstrap().then(
     const run = (cmd: AppInvocation, source: CommandSource = "ui"): void => {
       void shell.execute(cmd, source);
     };
-    installKeyboard(commands, isMac, () => services.ui.getState().dialog !== null || shell.getState().dialog !== null, shell);
+    // Modal dialogs (the app's, the shell's and the document layer's) own Escape and block the global keys.
+    const dialogOpen = (): boolean => services.ui.getState().dialog !== null || shell.getState().dialog !== null || (documentFiles()?.getState().dialog ?? null) !== null;
+    installKeyboard(commands, isMac, dialogOpen, shell);
     const value: AppContextValue = { services, commands, run, isMac };
     root.render(
       <StrictMode>

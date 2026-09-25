@@ -3,7 +3,7 @@
  * the export dialog, the recent-documents grid, and the References panel (imported meshes with their measures).
  * Everything it changes goes through `file.*` commands.
  */
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 import type { RecentDocument, RecoveryEntry } from "../../bridge";
 import { useApp } from "../../ui/context";
@@ -36,16 +36,20 @@ function useExec(): (id: string, args?: Record<string, unknown>) => void {
 
 /** Escape closes the dialog. Capture phase: the app's keyboard handler (also capture, registered first) stops propagation. */
 function useEscape(onClose: () => void): void {
+  // Registered once per dialog: re-registering on every render would drop an Escape that arrives while another
+  // window listener's update re-renders the dialog (listeners added during a dispatch never run).
+  const close = useRef(onClose);
+  close.current = onClose;
   useEffect(() => {
     const h = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
+        close.current();
       }
     };
     window.addEventListener("keydown", h, true);
     return () => window.removeEventListener("keydown", h, true);
-  }, [onClose]);
+  }, []);
 }
 
 function RecoveryDialog({ entries, uncleanExit }: { entries: RecoveryEntry[]; uncleanExit: boolean }): ReactElement {
