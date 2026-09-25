@@ -30,14 +30,7 @@ pub(crate) fn axis2(d: &mut DataSection, f: &Frame) -> u32 {
     let loc = d.point(f.origin());
     let z = d.direction(f.z());
     let x = d.direction(f.x());
-    d.add(
-        Args::new()
-            .str("")
-            .r(loc)
-            .r(z)
-            .r(x)
-            .entity("AXIS2_PLACEMENT_3D"),
-    )
+    d.axis2(loc, z, x)
 }
 
 /// A surface entity.
@@ -231,6 +224,94 @@ pub(crate) fn curve(d: &mut DataSection, c: &Curve3, range: (f64, f64)) -> u32 {
     }
 }
 
+/// A curve entity for a ring edge whose first vertex is at parameter `start`: a closed
+/// B-spline is re-parametrized to begin there (so every piece of the ring lies inside its
+/// domain, as readers require of non-periodic curves); periodic curves are written whole.
+pub(crate) fn ring_curve(
+    d: &mut DataSection,
+    c: &Curve3,
+    range: (f64, f64),
+    start: f64,
+    tol: f64,
+) -> u32 {
+    match c {
+        Curve3::BSpline(n) => {
+            // The ring may use only part of the curve's domain: trim to it first.
+            let trimmed = trim_nurbs(n, range.0, range.1);
+            let base = trimmed.as_ref().unwrap_or(n);
+            let rotated = rotate_closed_nurbs(base, start, tol);
+            bspline_curve(d, rotated.as_ref().unwrap_or(base))
+        }
+        _ => {
+            let (a, b) = c.domain();
+            curve(d, c, (a, b))
+        }
+    }
+}
+
+/// Fraction of a curve's domain length under which a cut parameter is moved onto an
+/// existing knot, so that cutting never creates a sliver span a few ulps wide (a sliver
+/// does not survive the parameter shift of [`rotate_closed_nurbs`]). The cut point moves by
+/// that fraction of the curve's parametric speed — far below any modelling tolerance.
+const KNOT_SNAP: f64 = 1e-12;
+
+/// `t`, or the nearest knot of `c` if one is within [`KNOT_SNAP`] of the domain length.
+fn snap_to_knot(c: &NurbsCurve3, t: f64) -> f64 {
+    let (a, b) = c.domain();
+    let near = KNOT_SNAP * (b - a);
+    c.knots()
+        .iter()
+        .copied()
+        .filter(|k| (k - t).abs() <= near)
+        .min_by(|x, y| (x - t).abs().total_cmp(&(y - t).abs()))
+        .unwrap_or(t)
+}
+
+/// The closed B-spline `c` re-parametrized to start at `t` (domain `[t, t + L]`, `L` the
+/// domain length): the pieces `[t, b]` and `[a, t]` (the latter shifted by `L`) joined at
+/// the closing point with a C0 knot. A curve closed within `tol` (its ends that far apart)
+/// is joined at the end of `[t, b]`, so the result stays within `tol` of it near the joint.
+/// `None` when `t` is the domain start already, the curve is not closed, or the result does
+/// not reproduce the curve.
+pub(crate) fn rotate_closed_nurbs(c: &NurbsCurve3, t: f64, tol: f64) -> Option<NurbsCurve3> {
+    let (a, b) = c.domain();
+    let p = c.degree();
+    let t = snap_to_knot(c, t);
+    if t <= a || t >= b {
+        return None;
+    }
+    let scale = 1.0 + c.eval(a).norm();
+    let gap = c.eval(a).distance(c.eval(b));
+    if gap > tol {
+        return None;
+    }
+    let right = trim_nurbs(c, t, b)?;
+    let left = trim_nurbs(c, a, t)?;
+    let len = b - a;
+    let wr = right.weight(right.control_points().len() - 1);
+    let wl = left.weight(0);
+    let mut knots: Vec<f64> = right.knots()[..right.knots().len() - 1].to_vec();
+    knots.extend(left.knots()[p + 1..].iter().map(|k| k + len));
+    let mut ctrl: Vec<[f64; 3]> = right.control_points().to_vec();
+    ctrl.extend_from_slice(&left.control_points()[1..]);
+    let weights = if c.is_rational() {
+        let mut w: Vec<f64> = (0..right.control_points().len())
+            .map(|i| right.weight(i))
+            .collect();
+        w.extend((1..left.control_points().len()).map(|i| left.weight(i) * wr / wl));
+        Some(w)
+    } else {
+        None
+    };
+    let out = NurbsCurve3::new(p, knots, ctrl, weights).ok()?;
+    let ok = (0..=64).all(|k| {
+        let s = t + len * f64::from(k) / 64.0;
+        let orig = if s <= b { s } else { s - len };
+        out.eval(s).distance(c.eval(orig)) <= gap + 1e-9 * scale
+    });
+    ok.then_some(out)
+}
+
 fn bspline_curve(d: &mut DataSection, n: &NurbsCurve3) -> u32 {
     let pts: Vec<u32> = n
         .control_points()
@@ -293,6 +374,7 @@ fn multiplicity(knots: &[f64], t: f64) -> usize {
 pub(crate) fn trim_nurbs(c: &NurbsCurve3, t0: f64, t1: f64) -> Option<NurbsCurve3> {
     let (a, b) = c.domain();
     let p = c.degree();
+    let (t0, t1) = (snap_to_knot(c, t0), snap_to_knot(c, t1));
     let (inner_start, inner_end) = (t0 > a, t1 < b);
     if t0 >= t1 || t0.is_nan() || t1.is_nan() || t0 < a || t1 > b || !(inner_start || inner_end) {
         return None;
@@ -391,6 +473,40 @@ mod tests {
         assert!(trim_nurbs(&c, 0.0, 1.0).is_none());
         assert!(trim_nurbs(&c, 0.5, 0.5).is_none());
         let _ = Vec3::new(0.0, 0.0, 0.0);
+    }
+
+    #[test]
+    fn a_closed_bspline_restarts_at_any_parameter_unchanged() {
+        // A closed rational quadratic (a circle through 4 arcs).
+        let s = std::f64::consts::FRAC_1_SQRT_2;
+        let c = NurbsCurve3::new(
+            2,
+            vec![0.0, 0.0, 0.0, 1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0, 4.0],
+            vec![
+                [1.0, 0.0, 0.0],
+                [1.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [-1.0, 1.0, 0.0],
+                [-1.0, 0.0, 0.0],
+                [-1.0, -1.0, 0.0],
+                [0.0, -1.0, 0.0],
+                [1.0, -1.0, 0.0],
+                [1.0, 0.0, 0.0],
+            ],
+            Some(vec![1.0, s, 1.0, s, 1.0, s, 1.0, s, 1.0]),
+        )
+        .expect("curve");
+        for t in [0.3, 1.0, 2.5, 3.9] {
+            let r = rotate_closed_nurbs(&c, t, 1e-9).expect("rotates");
+            let (d0, d1) = r.domain();
+            assert!((d0 - t).abs() < 1e-15 && (d1 - (t + 4.0)).abs() < 1e-12);
+            for k in 0..=40 {
+                let u = t + 4.0 * f64::from(k) / 40.0;
+                let orig = if u <= 4.0 { u } else { u - 4.0 };
+                assert!(r.eval(u).distance(c.eval(orig)) < 1e-12, "{t} at {u}");
+            }
+        }
+        assert!(rotate_closed_nurbs(&c, 0.0, 1e-9).is_none());
     }
 
     #[test]

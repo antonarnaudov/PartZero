@@ -360,10 +360,14 @@ dependencies = [
 name = "forge-io"
 version = "0.0.1"
 dependencies = [
+ "forge-check",
  "forge-core",
+ "forge-ir",
  "forge-mesh",
+ "forge-ops",
  "miniz_oxide",
  "proptest",
+ "serde_json",
  "thiserror",
 ]
 

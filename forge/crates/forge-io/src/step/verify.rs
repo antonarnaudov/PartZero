@@ -627,12 +627,22 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
                 d1.max(d2)
             )));
         }
-        let (a, b) =
-            edge_range(&e.curve, t1, t2, e.v.0 == e.v.1, e.same_sense).ok_or_else(|| {
-                fail(format!(
-                    "#{id}: the edge runs against its curve's direction"
-                ))
-            })?;
+        let closed = e.v.0 == e.v.1;
+        if closed && e.curve.period().is_none() {
+            // A closed edge on a non-periodic curve covers the whole curve: its vertex must be
+            // at both ends (readers take the curve's own range).
+            let (ca, cb) = e.curve.domain();
+            if e.curve.eval(ca).distance(p1) > tol || e.curve.eval(cb).distance(p1) > tol {
+                return Err(fail(format!(
+                    "#{id}: a closed edge's vertex is not at the ends of its non-periodic curve"
+                )));
+            }
+        }
+        let (a, b) = edge_range(&e.curve, t1, t2, closed, e.same_sense).ok_or_else(|| {
+            fail(format!(
+                "#{id}: the edge runs against its curve's direction"
+            ))
+        })?;
         for k in 0..=8 {
             let p = e.curve.eval(a + (b - a) * f64::from(k) / 8.0);
             for &(fi, _) in &e.uses {

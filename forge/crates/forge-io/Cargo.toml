@@ -16,6 +16,12 @@ miniz_oxide.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
+# STEP export tests and the corpus dump example: real Forge bodies (extrudes, revolves,
+# the boolean corpus) and their exact metrics. None of these depend on forge-io.
+forge-ops.workspace = true
+forge-ir.workspace = true
+forge-check.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

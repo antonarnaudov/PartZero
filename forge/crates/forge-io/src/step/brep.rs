@@ -29,7 +29,7 @@
 
 use std::collections::BTreeMap;
 
-use forge_core::geom::{Circle3, Curve3, Line3, Surface};
+use forge_core::geom::{Circle3, Cone, Curve3, Cylinder, Line3, Sphere, Surface, Torus};
 use forge_core::linalg::{Frame, Point3, Vec3};
 use forge_core::math;
 use forge_core::topo::{Body, EdgeId, FaceId, LoopId, VertexId};
@@ -44,6 +44,9 @@ const SAMPLES_PER_COEDGE: usize = 16;
 const MAX_PARAM_STEP: f64 = PI / 8.0;
 /// Refinement depth limit (bisections of one sample interval).
 const MAX_REFINE_DEPTH: u32 = 48;
+/// Radians by which a non-winding loop may exceed one full turn in the parameter plane
+/// (sampling and projection round-off) before its face counts as wrapping onto itself.
+const WRAP_SLACK: f64 = 1e-6;
 /// Number of evenly spaced fallback seam positions tried after the preferred ones.
 const GRID_CANDIDATES: usize = 48;
 
@@ -61,6 +64,9 @@ pub(crate) struct Topo {
     pub solids: Vec<TSolid>,
     /// Largest edge/vertex tolerance of the body (at least the IR's 1e-6 mm).
     pub tolerance: f64,
+    /// For each ring edge, the curve parameter of its first vertex (where a closed
+    /// non-periodic curve must start when written, so every piece lies in its domain).
+    pub ring_start: BTreeMap<EdgeId, f64>,
     /// What was synthesized.
     pub stats: TopoStats,
 }
@@ -102,6 +108,11 @@ pub(crate) struct TFace {
     /// `ADVANCED_FACE.same_sense`.
     pub same_sense: bool,
     pub bounds: Vec<TBound>,
+    /// For a face on a surface periodic in `u`: the `u` (in the Forge surface's
+    /// parametrization) that the written surface's frame puts at `u = 0` — the seam, or the
+    /// middle of the face's gap — so readers that project edges into `[0, 2π)` never see the
+    /// face straddle the period boundary.
+    pub u_origin: Option<f64>,
 }
 
 /// A face bound: oriented edges `(edge, forward)`.
@@ -275,6 +286,7 @@ struct Builder<'a> {
     pts: BTreeMap<EdgeId, Vec<(f64, usize)>>,
     seam_curves: Vec<Curve3>,
     plans: BTreeMap<FaceId, FacePlan>,
+    u_origin: BTreeMap<FaceId, f64>,
     stats: TopoStats,
 }
 
@@ -321,6 +333,7 @@ impl<'a> Builder<'a> {
             pts: BTreeMap::new(),
             seam_curves: Vec::new(),
             plans: BTreeMap::new(),
+            u_origin: BTreeMap::new(),
             stats: TopoStats::default(),
         })
     }
@@ -352,6 +365,13 @@ impl<'a> Builder<'a> {
             .body
             .edge(eid)
             .ok_or_else(|| invalid(self.ctx, "stale edge id".into()))?;
+        // Ring parameters live in [t0, t1); evaluate there (C(2π) is not exactly C(0)).
+        let t = if e.is_ring() {
+            let (t0, t1) = e.t_range;
+            t0 + math::rem_euclid(t - t0, t1 - t0)
+        } else {
+            t
+        };
         let p = e.curve.eval(t);
         let near = self.tol.max(e.tolerance);
         for v in [e.start, e.end].into_iter().flatten() {
@@ -367,12 +387,6 @@ impl<'a> Builder<'a> {
                 }
             }
         }
-        let t = if e.is_ring() {
-            let (t0, t1) = e.t_range;
-            t0 + math::rem_euclid(t - t0, t1 - t0)
-        } else {
-            t
-        };
         let vi = self.new_vertex(p);
         self.pts.entry(eid).or_default().push((t, vi));
         Ok(vi)
@@ -782,7 +796,11 @@ impl<'a> Builder<'a> {
             qq.fract() == 0.0
         };
         let mut out = Vec::new();
-        for i in 0..li.smp.len() - 1 {
+        let n = li.smp.len() - 1;
+        // Samples exactly on a line that a crossing accounts for (the closing sample is
+        // the first one again).
+        let mut consumed: Vec<usize> = Vec::new();
+        for i in 0..n {
             let (a, b) = (li.smp[i], li.smp[i + 1]);
             let (qa, qb) = (q(coord(&a)), q(coord(&b)));
             if on_line(coord(&a)) && on_line(coord(&b)) && qa.to_bits() == qb.to_bits() {
@@ -802,12 +820,23 @@ impl<'a> Builder<'a> {
             let line = c + TAU * la.max(lb);
             let other = |s: &Smp| if along_u { s.vv } else { s.uu };
             if up && qb.to_bits() == lb.to_bits() {
+                consumed.push((i + 1) % n);
                 out.push(self.cross_at_sample(li, &b, other(&b)));
             } else if !up && qa.to_bits() == la.to_bits() {
+                consumed.push(i);
                 out.push(self.cross_at_sample(li, &a, other(&a)));
             } else {
                 out.push(self.cross_between(ch, li, &a, &b, line, along_u)?);
             }
+        }
+        // A loop that touches a line without crossing it (at a vertex where it turns back)
+        // would put that vertex on the seam: not a valid seam position.
+        let touches = (0..n).any(|i| {
+            let s = &li.smp[i];
+            s.sing.is_none() && on_line(coord(s)) && !consumed.contains(&i)
+        });
+        if touches {
+            return None;
         }
         Some(out)
     }
@@ -1006,8 +1035,10 @@ impl<'a> Builder<'a> {
                     "a boundary loop winds more than once around the surface",
                 ));
             }
-            if li.wu == 0 && li.extent_u >= TAU - 1e-9
-                || (ch.v_periodic && li.wv == 0 && li.extent_v >= TAU - 1e-9)
+            // A loop spanning exactly one turn touches itself at a vertex (a band pinched
+            // at a point: a disc, no seam needed); more than one turn overlaps (helical).
+            if li.wu == 0 && li.extent_u > TAU + WRAP_SLACK
+                || (ch.v_periodic && li.wv == 0 && li.extent_v > TAU + WRAP_SLACK)
             {
                 return Err(self.seam_err(fid, "the face wraps more than once around its axis"));
             }
@@ -1044,6 +1075,7 @@ impl<'a> Builder<'a> {
                         "a torus face with only holes needs two seams (not supported)",
                     ));
                 }
+                self.u_origin.insert(fid, mid_gap(&loops));
                 return Ok(());
             };
             if wind.len() != 2 {
@@ -1066,6 +1098,8 @@ impl<'a> Builder<'a> {
             let vl = self.resolve(&loops[lo], &xl)?;
             let vh = self.resolve(&loops[hi], &xh)?;
             let curve = self.torus_seam(fid, surface, c, along_u)?;
+            self.u_origin
+                .insert(fid, if along_u { c } else { mid_gap(&loops) });
             let lower = SeamEnd::Loop {
                 lp: lo,
                 coedge: xl.coedge,
@@ -1089,12 +1123,14 @@ impl<'a> Builder<'a> {
             }
         };
         if !needs {
+            self.u_origin.insert(fid, mid_gap(&loops));
             return Ok(());
         }
         let (c, xs) = self
             .choose(&ch, &loops, &wind_u, true)
             .ok_or_else(|| self.seam_err(fid, "no seam position avoids the face's holes"))?;
         let curve = self.band_seam(fid, surface, c)?;
+        self.u_origin.insert(fid, c);
         let w_of = |i: usize| loops[i].wu * sign;
         let (lower, upper) = match wind_u.len() {
             0 => {
@@ -1341,6 +1377,7 @@ impl<'a> Builder<'a> {
         let mut edges: Vec<TEdge> = Vec::new();
         // Pieces of each Forge edge in curve order: (piece index).
         let mut pieces: BTreeMap<EdgeId, Vec<usize>> = BTreeMap::new();
+        let mut ring_start: BTreeMap<EdgeId, f64> = BTreeMap::new();
         for (eid, e) in body.edges().iter() {
             let mut pts = self.pts.get(&eid).cloned().unwrap_or_default();
             pts.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -1353,6 +1390,7 @@ impl<'a> Builder<'a> {
                         "internal: ring edge without a vertex".into(),
                     ));
                 }
+                ring_start.insert(eid, pts[0].0);
                 for i in 0..pts.len() {
                     edges.push(TEdge {
                         start: pts[i].1,
@@ -1440,6 +1478,7 @@ impl<'a> Builder<'a> {
             faces,
             solids,
             tolerance: self.tol,
+            ring_start,
             stats: self.stats,
         })
     }
@@ -1622,6 +1661,7 @@ impl<'a> Builder<'a> {
             face: fid,
             same_sense: face.sense != void,
             bounds,
+            u_origin: self.u_origin.get(&fid).copied(),
         })
     }
 
@@ -1733,6 +1773,41 @@ fn shell_volumes(body: &Body) -> Result<Vec<f64>, String> {
         return Err("cannot classify shells: a shell encloses no volume".into());
     }
     Ok(vol)
+}
+
+/// The middle of the `u` gap the face leaves (from its widest loop), as a `u` origin.
+fn mid_gap(loops: &[LoopInfo]) -> f64 {
+    let Some(widest) = loops
+        .iter()
+        .max_by(|a, b| a.extent_u.total_cmp(&b.extent_u))
+    else {
+        return 0.0;
+    };
+    let (lo, hi) = widest.smp.iter().fold((f64::MAX, f64::MIN), |(lo, hi), s| {
+        (lo.min(s.uu), hi.max(s.uu))
+    });
+    math::rem_euclid(0.5 * (lo + hi) + PI, TAU)
+}
+
+/// `s` with its frame turned about its axis so that the Forge parameter `u = a` becomes
+/// `u = 0` (the same point set and orientation; only the `u` origin moves).
+pub(crate) fn rotate_u(s: &Surface, a: f64) -> Surface {
+    let turned = |f: &Frame| Frame::from_normal_x(f.origin(), f.z(), e_r(f, a)).unwrap_or(*f);
+    match s {
+        Surface::Cylinder(c) => Cylinder::new(turned(c.frame()), c.radius())
+            .map_or_else(|_| s.clone(), Surface::Cylinder),
+        Surface::Cone(c) => Cone::new(turned(c.frame()), c.radius(), c.half_angle())
+            .map_or_else(|_| s.clone(), Surface::Cone),
+        Surface::Sphere(sp) => {
+            Sphere::new(turned(sp.frame()), sp.radius()).map_or_else(|_| s.clone(), Surface::Sphere)
+        }
+        Surface::Torus(t) => match t.spindle_patch() {
+            None => Torus::new(turned(t.frame()), t.major(), t.minor()),
+            Some(p) => Torus::spindle(turned(t.frame()), t.major(), t.minor(), p),
+        }
+        .map_or_else(|_| s.clone(), Surface::Torus),
+        Surface::Plane(_) | Surface::BSpline(_) => s.clone(),
+    }
 }
 
 fn invalid(ctx: &str, detail: String) -> StepError {

@@ -530,7 +530,16 @@ fn write_body(
                 Some(&c) => c,
                 None => {
                     let edge = body.edge(eid).expect("edge of the body");
-                    let c = geometry::curve(d, &edge.curve, edge.t_range);
+                    let c = match topo.ring_start.get(&eid) {
+                        Some(&t) => geometry::ring_curve(
+                            d,
+                            &edge.curve,
+                            edge.t_range,
+                            t,
+                            topo.tolerance.max(edge.tolerance),
+                        ),
+                        None => geometry::curve(d, &edge.curve, edge.t_range),
+                    };
                     curves.insert(eid, c);
                     c
                 }
@@ -559,7 +568,10 @@ fn write_body(
     let mut faces = Vec::with_capacity(topo.faces.len());
     for tf in &topo.faces {
         let face = body.face(tf.face).expect("face of the body");
-        let surf = geometry::surface(d, &face.surface);
+        let surf = match tf.u_origin {
+            Some(a) => geometry::surface(d, &brep::rotate_u(&face.surface, a)),
+            None => geometry::surface(d, &face.surface),
+        };
         let mut bounds = Vec::with_capacity(tf.bounds.len());
         for bd in &tf.bounds {
             let oes: Vec<u32> = bd

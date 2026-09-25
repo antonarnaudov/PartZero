@@ -240,6 +240,7 @@ pub(crate) struct DataSection {
     instances: Vec<String>,
     points: BTreeMap<[u64; 3], u32>,
     directions: BTreeMap<[u64; 3], u32>,
+    axes: BTreeMap<[u32; 3], u32>,
 }
 
 fn bits(v: Vec3) -> [u64; 3] {
@@ -286,6 +287,24 @@ impl DataSection {
                 .entity("DIRECTION"),
         );
         self.directions.insert(key, id);
+        id
+    }
+    /// An `AXIS2_PLACEMENT_3D` of a location and two directions (shared with identical
+    /// placements).
+    pub(crate) fn axis2(&mut self, loc: u32, axis: u32, ref_dir: u32) -> u32 {
+        let key = [loc, axis, ref_dir];
+        if let Some(&id) = self.axes.get(&key) {
+            return id;
+        }
+        let id = self.add(
+            Args::new()
+                .str("")
+                .r(loc)
+                .r(axis)
+                .r(ref_dir)
+                .entity("AXIS2_PLACEMENT_3D"),
+        );
+        self.axes.insert(key, id);
         id
     }
     /// Number of instances so far.
