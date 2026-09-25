@@ -5,12 +5,67 @@
  * memory (headless MCP, evals, tests) with the same transactions, checks and undo.
  */
 import type { metricsV1 } from "@aicad/ir-types";
-import { EMPTY_HOST_STATE, type HostState, type OpOrigin } from "./apply.js";
+import { EMPTY_HOST_STATE, needsApproval, type HostState, type OpOrigin, type OpOutcome } from "./apply.js";
 import type { IrOp } from "./catalogue.js";
 import { opLabel } from "./catalogue.js";
 import { requireCommandEngine, type IrCommandEngine } from "./engine.js";
 import type { Approvals, NewFailure } from "./rules.js";
 import { runTransaction, type TransactionResult } from "./transaction.js";
+
+/**
+ * The parameters each agent surface added itself (ADR 0015 §2): parameters have no author, so
+ * every existing one is yours, except those an agent, MCP client or the CLI added in this session;
+ * it may go on changing those. Shared by every host (the app's `IrDocStore`, {@link MemoryOpsHost})
+ * so an agent may do the same thing wherever it runs.
+ *
+ * - An `addParam` from an agent origin makes the parameter that origin's; its `renameParam` carries
+ *   the ownership over, its `deleteParam` ends it.
+ * - An op of yours (user, command) on a parameter makes it yours again: a set, rename, delete or a
+ *   code edit that touches it.
+ */
+export class OwnParams {
+  private readonly byOrigin = new Map<OpOrigin, Set<string>>();
+
+  /** The approvals of a transaction from `origin`: `approvals` plus the parameters `origin` added. */
+  approvalsFor(origin: OpOrigin, approvals: Approvals = {}): Approvals {
+    const own = needsApproval(origin) ? [...(this.byOrigin.get(origin) ?? [])] : [];
+    return { ...approvals, params: [...(approvals.params ?? []), ...own] };
+  }
+
+  /** The parameters `origin` owns now (sorted). */
+  owned(origin: OpOrigin): string[] {
+    return [...(this.byOrigin.get(origin) ?? [])].sort();
+  }
+
+  /** After a committed transaction from `origin`: record what it added, renamed or deleted. */
+  record(origin: OpOrigin, ops: readonly OpOutcome[]): void {
+    if (needsApproval(origin)) {
+      let own = this.byOrigin.get(origin);
+      if (!own) this.byOrigin.set(origin, (own = new Set()));
+      for (const o of ops) {
+        if (o.op.op === "addParam") own.add(o.op.name);
+        else if (o.op.op === "renameParam" && own.delete(o.op.old)) own.add(o.op.new);
+        else if (o.op.op === "deleteParam") own.delete(o.op.name);
+      }
+      return;
+    }
+    const yours = new Set<string>();
+    for (const o of ops) {
+      for (const p of o.touched.params) yours.add(p);
+      if (o.op.op === "addParam" || o.op.op === "setParam" || o.op.op === "deleteParam") yours.add(o.op.name);
+      else if (o.op.op === "renameParam") {
+        yours.add(o.op.old);
+        yours.add(o.op.new);
+      }
+    }
+    for (const own of this.byOrigin.values()) for (const p of yours) own.delete(p);
+  }
+
+  /** Forget everything (a new document). */
+  clear(): void {
+    this.byOrigin.clear();
+  }
+}
 
 /** A committed (or unchanged) transaction, as hosts report it: no document text. */
 export interface OpsCommit {
@@ -27,8 +82,18 @@ export interface OpsCommit {
 export interface OpsApplyOptions {
   /** The undo label (default: the first op's). */
   label?: string;
-  /** Acknowledged newly failing features (the ids a `COMMAND_NEW_FAILURES` refusal listed). */
+  /**
+   * Acknowledged newly failing features (the ids a `COMMAND_NEW_FAILURES` refusal listed). It
+   * accepts failures of agent-authored features only: making one of the user's features fail needs
+   * the user's approval (`unapproved_user_change`).
+   */
   ack?: readonly string[];
+  /**
+   * The undo group (agent turn) this transaction belongs to, from `ir.openGroup`: refused
+   * (`IR_GROUP_CLOSED`) once that group is sealed, aborted or its document replaced. Hosts without
+   * groups ({@link MemoryOpsHost}) ignore it.
+   */
+  group?: string;
 }
 
 export interface OpsHost {
@@ -84,7 +149,7 @@ export class MemoryOpsHost implements OpsHost {
   private revision = 0;
   private queue: Promise<unknown> = Promise.resolve();
   /** Parameters this session's own transactions added (it may change them; the user's need approval). */
-  private readonly ownParams = new Set<string>();
+  private readonly ownParams = new OwnParams();
   private readonly listeners = new Set<(c: OpsCommit & { document: string }) => void>();
 
   private constructor(options: MemoryOpsHostOptions, document: string) {
@@ -133,11 +198,8 @@ export class MemoryOpsHost implements OpsHost {
           ...(this.options.autoWriteBack !== undefined ? { autoWriteBack: this.options.autoWriteBack } : {}),
           ...(this.options.failureRule !== undefined ? { failureRule: this.options.failureRule } : {}),
           ...(options.ack ? { ack: options.ack } : {}),
-          approvals: {
-            features: [...(this.options.approvals?.features ?? [])],
-            // Parameters have no author (ADR 0015 §2): those this session added are its own to change.
-            params: [...(this.options.approvals?.params ?? []), ...this.ownParams],
-          },
+          // Parameters have no author (ADR 0015 §2): those this session added are its own to change.
+          approvals: this.ownParams.approvalsFor(this.options.origin, this.options.approvals),
         },
         ops,
       );
@@ -146,10 +208,7 @@ export class MemoryOpsHost implements OpsHost {
         this.redoStack.length = 0;
         this.current = { document: t.document, host: t.host, label };
         this.revision++;
-        for (const o of t.ops) {
-          if (o.op.op === "addParam") this.ownParams.add(o.op.name);
-          if (o.op.op === "renameParam" && this.ownParams.delete(o.op.old)) this.ownParams.add(o.op.new);
-        }
+        this.ownParams.record(this.options.origin, t.ops);
       }
       const c = commitSummary(label, this.revision, t);
       if (t.changed) for (const l of [...this.listeners]) l({ ...c, document: t.document });

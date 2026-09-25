@@ -226,13 +226,33 @@ export class OpTransaction {
       ...(this.writeBackSkipped ? { writeBackSkipped: this.writeBackSkipped } : {}),
       ...(this.withheld && this.withheld.length ? { writeBackWithheld: this.withheld } : {}),
     };
+    if (!changed) return result;
+    // ADR 0015's commit check, on the transaction's own ops (the write-back follows from them) and
+    // on the host state (a transaction that only recolours or moves the marker is checked too).
+    const setsRollback = this.outcomes.some((o) => o.op.op === "setRollback" && o.changed);
+    const rollback = setsRollback && this.workingHost.rollback !== this.baseHost.rollback ? { from: this.baseHost.rollback, to: this.workingHost.rollback } : null;
+    checkApprovals({
+      base: this.base,
+      after: this.beforeFinalWriteBack,
+      origin: this.settings.origin,
+      approvals: this.settings.approvals,
+      baseHost: this.baseHost,
+      afterHost: this.workingHost,
+      rollback,
+    });
     if (this.working === this.base) return result;
-    // ADR 0015's commit check, on the transaction's own ops (the write-back follows from them).
-    checkApprovals(this.base, this.beforeFinalWriteBack, this.settings.origin, this.settings.approvals);
     if (this.settings.failureRule ?? true) {
       const report = this.settings.report ?? ((d: string) => this.settings.engine.report(d));
       const [before, after] = await Promise.all([report(this.base), report(this.working)]);
-      const fresh = checkFailureRule({ before, after, touched: this.touched(), ack: this.settings.ack });
+      const fresh = checkFailureRule({
+        before,
+        after,
+        touched: this.touched(),
+        ack: this.settings.ack,
+        origin: this.settings.origin,
+        base: this.base,
+        approvals: this.settings.approvals,
+      });
       if (fresh.length) result.newFailures = fresh;
       result.report = after;
     }
