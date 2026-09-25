@@ -1,0 +1,26 @@
+oracle/src/aicad_oracle/v1/threads.py
+  s_59c0dd2af30db2::t_d71fff812903a6 311-313,326-338,351-401,414-417,419,423-425
+  s_59c0dd2af30db2::t_a1c33ba34fdb31 402-413,418,420-422,426-460,488
+oracle/src/aicad_oracle/v1/errcorpus.py
+  s_59c0dd2af30db2::t_e89299aac81929 651
+  s_59c0dd2af30db2::t_df974ace056f74 654-656
+  s_59c0dd2af30db2::t_4dbcb589f6acec 613-650,652-653
+docs/fm/threads.md
+  s_59c0dd2af30db2::t_2662aec23c7a11 65-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "dc297ea8a4fda2a52c3d4e3c00867d82fe405138",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
