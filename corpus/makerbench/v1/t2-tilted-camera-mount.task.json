@@ -1,0 +1,56 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-tilted-camera-mount",
+  "tier": "T2",
+  "title": "Tilted camera mount on a datum plane",
+  "prompt": "Desk mount for a small camera: a 60 × 40 × 5 mm base (X from −30 to 30, Y from 0 to 40, top face on Z = 0) and a 60 × 50 × 5 mm plate hinged on the base's front top edge (the X axis) that leans back over the base at 60° from horizontal, its front face starting on that edge and the plate joined to the base. Two M3 clearance holes through the plate, 20 mm apart (X = ±10) and 35 mm up the plate from the edge. Make the lean angle a parameter called tilt.",
+  "process": "fdm",
+  "tags": ["mount", "camera", "datum", "angled", "parametric"],
+  "requires": ["ir/1", "op/boolean", "op/hole", "plane/datum"],
+  "reference": "t2-tilted-camera-mount.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "Base and plate are one solid", "check": "body_count", "eq": 1 },
+    {
+      "id": "bbox_min",
+      "description": "Base from Z = −5, front edge on Y = 0",
+      "check": "bbox_min",
+      "approx": [-30, 0, -5],
+      "abs": 0.05
+    },
+    {
+      "id": "height",
+      "description": "The plate top reaches 50·sin 60° = 43.30 mm",
+      "check": "bbox_max",
+      "approx": [30, 40, 43.3013],
+      "abs": 0.05
+    },
+    {
+      "id": "holes",
+      "description": "Two Ø3.4 holes 35 mm up the plate, at X = ±10",
+      "check": "hole_positions",
+      "diameter": [3.35, 3.45],
+      "points": [[-10, 17.5, 30.3109], [10, 17.5, 30.3109]]
+    },
+    {
+      "id": "volume",
+      "description": "12000 + 15000 − overlap 433 − holes 90.8 = 26476 mm³ ±0.3%",
+      "check": "volume",
+      "approx": 26476.2,
+      "rel": 0.003
+    },
+    {
+      "id": "tilt_param",
+      "description": "tilt = 75 raises the plate top to 50·sin 75° = 48.30 mm",
+      "check": "param",
+      "set": { "tilt": 75 },
+      "test": { "check": "bbox_max", "axis": "z", "approx": 48.2963, "abs": 0.05 }
+    }
+  ],
+  "notes": "The plate's front face lies on the plane through the X axis at 60° (a datum plane: XZ rotated by tilt − 90 about X); the plate is 5 thick behind it, so its lower end dips into the base (overlap 60·∫₀⁵ t/tan 60° dt = 433.0 mm³)."
+}

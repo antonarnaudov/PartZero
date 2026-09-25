@@ -1,0 +1,56 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-pulley-lightening-holes",
+  "tier": "T1",
+  "title": "Pulley blank with lightening holes",
+  "prompt": "V-groove pulley blank: Ø60 mm, 12 mm thick, centred on the origin on Z = 0, with a symmetric 90° V-groove around the rim that is 4 mm deep at the bottom (groove bottom at R26, halfway up). An Ø8 bore through the centre, and six Ø10 lightening holes through it on a Ø36 circle, the first one on +X.",
+  "process": "fdm",
+  "tags": ["pulley", "groove", "pattern", "lightening-holes"],
+  "requires": ["ir/1", "op/boolean", "op/hole", "op/pattern"],
+  "reference": "t1-pulley-lightening-holes.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "size", "description": "Ø60 × 12 mm", "check": "bbox_size", "approx": [60, 60, 12], "abs": 0.05 },
+    {
+      "id": "lightening",
+      "description": "Six Ø10 holes on a Ø36 circle, the first on +X",
+      "check": "hole_positions",
+      "diameter": [9.95, 10.05],
+      "points": [
+        [18.0, 0.0, 6],
+        [9.0, 15.588457, 6],
+        [-9.0, 15.588457, 6],
+        [-18.0, 0.0, 6],
+        [-9.0, -15.588457, 6],
+        [9.0, -15.588457, 6]
+      ]
+    },
+    {
+      "id": "bore",
+      "description": "One Ø8 bore on the axis",
+      "check": "hole_positions",
+      "diameter": [7.95, 8.05],
+      "points": [[0, 0, 6]]
+    },
+    {
+      "id": "groove",
+      "description": "The groove's two 45° flanks are cones",
+      "check": "face_count",
+      "type": "cone",
+      "eq": 2
+    },
+    {
+      "id": "volume",
+      "description": "33929 − groove 2882 − bore 603 − 6·942.5 = 24789 mm³ ±0.3%",
+      "check": "volume",
+      "approx": 24789.26,
+      "rel": 0.003
+    }
+  ],
+  "notes": "The groove profile is a right isosceles triangle with its apex at R26 (4 mm deep from the Ø60 rim); the part of it inside the disc (R26–R30, 16 mm²) at mean radius 28.667 removes 2881.9 mm³."
+}

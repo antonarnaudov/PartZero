@@ -1,0 +1,74 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-rounded-box-chamfered-lid",
+  "tier": "T2",
+  "title": "Rounded box with a chamfered lid",
+  "prompt": "Small box with a lid, printed side by side: the box is 70 × 50 mm outside with R6 vertical corners, 25 mm tall, 2 mm walls and floor, open at the top, centred on the origin on Z = 0. The lid is a 3 mm thick plate with the same rounded 70 × 50 outline, centred at X = 80, with a 1 mm chamfer all the way round its top edge. Make the lid's chamfer a chamfer feature.",
+  "process": "fdm",
+  "tags": ["box", "lid", "chamfer", "shell", "multi-part"],
+  "requires": ["ir/1", "op/shell", "op/chamfer", "multi-part"],
+  "reference": "t2-rounded-box-chamfered-lid.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "lid_chamfer_on_top",
+      "description": "The lid's chamfer runs round its top edge: the lid's centroid sits at z = 1.4871 (1.5129 with the chamfer underneath)",
+      "check": "centroid",
+      "body": -1,
+      "axis": "z",
+      "approx": 1.48711,
+      "abs": 0.005
+    },
+    { "id": "bodies", "description": "Two solids: box and lid", "check": "body_count", "eq": 2 },
+    {
+      "id": "layout",
+      "description": "Side by side: X from −35 to 115",
+      "check": "bbox_size",
+      "approx": [150, 50, 25],
+      "abs": 0.05
+    },
+    {
+      "id": "box",
+      "description": "The box: 70 × 50 × 25, 17215 mm³",
+      "check": "bodies_matching",
+      "where": [
+        { "check": "bbox_size", "approx": [70, 50, 25], "abs": 0.05 },
+        { "check": "volume", "approx": 17215.33, "rel": 0.003 }
+      ],
+      "eq": 1
+    },
+    {
+      "id": "lid",
+      "description": "The lid: 70 × 50 × 3 at X = 80, 10293 mm³",
+      "check": "bodies_matching",
+      "where": [
+        { "check": "bbox_size", "approx": [70, 50, 3], "abs": 0.05 },
+        { "check": "centroid", "axis": "x", "approx": 80, "abs": 0.05 },
+        { "check": "volume", "approx": 10293.49, "rel": 0.003 }
+      ],
+      "eq": 1
+    },
+    {
+      "id": "chamfer",
+      "description": "The lid's top edge chamfered 1 mm all round (4 straight edges and 4 corner arcs)",
+      "check": "blend_edges",
+      "type": "chamfer",
+      "size": [0.99, 1.01],
+      "eq": 8
+    },
+    {
+      "id": "chamfer_faces",
+      "description": "Four conical chamfer faces at the lid's rounded corners",
+      "check": "face_count",
+      "type": "cone",
+      "eq": 4
+    },
+    { "id": "volume", "description": "27509 mm³ ±0.3%", "check": "volume", "approx": 27508.82, "rel": 0.003 }
+  ],
+  "notes": "Box: (70·50 − (4 − π)·36)·25 − (66·46 − (4 − π)·16)·23 = 86727.2 − 69511.8 = 17215.3. Lid: 3437.1·3 − chamfer (perimeter 202.7 × 0.5 mm²) ≈ 10293.5. Construction: chamfer reads the chamfer features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only that test."
+}

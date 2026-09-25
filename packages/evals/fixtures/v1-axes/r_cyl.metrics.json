@@ -1,0 +1,334 @@
+{
+ "schema": "aicad.metrics/1",
+ "engine": "forge 0.0.1",
+ "document": "revolved_hub_axes",
+ "status": "ok",
+ "params": [],
+ "features": [
+  {
+   "part": "r",
+   "feature": "rs",
+   "feature_id": "f_rs",
+   "type": "sketch",
+   "status": "ok",
+   "warnings": [],
+   "regions": [
+    {
+     "area": 150.0,
+     "loops": 1,
+     "outer_curves": [
+      "r_bot",
+      "r_in",
+      "r_out",
+      "r_top"
+     ]
+    }
+   ],
+   "sketch": {
+    "mode": "explicit",
+    "solved": [
+     {
+      "kind": "line",
+      "id": "r_bot",
+      "start": [
+       5.0,
+       0.0
+      ],
+      "end": [
+       20.0,
+       0.0
+      ]
+     },
+     {
+      "kind": "line",
+      "id": "r_out",
+      "start": [
+       20.0,
+       0.0
+      ],
+      "end": [
+       20.0,
+       10.0
+      ]
+     },
+     {
+      "kind": "line",
+      "id": "r_top",
+      "start": [
+       20.0,
+       10.0
+      ],
+      "end": [
+       5.0,
+       10.0
+      ]
+     },
+     {
+      "kind": "line",
+      "id": "r_in",
+      "start": [
+       5.0,
+       10.0
+      ],
+      "end": [
+       5.0,
+       0.0
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "part": "r",
+   "feature": "hub",
+   "feature_id": "f_hub",
+   "type": "revolve",
+   "status": "ok",
+   "warnings": [],
+   "bodies": [
+    {
+     "origin": {
+      "feature": "f_hub",
+      "member": "r_bot"
+     },
+     "change": "created",
+     "volume": 11780.972450961728,
+     "area": 3926.990816987246,
+     "centroid": [
+      1.2801499989018047e-15,
+      -1.368401267126344e-15,
+      5.0
+     ],
+     "bbox_min": [
+      -20.0,
+      -20.0,
+      0.0
+     ],
+     "bbox_max": [
+      20.0,
+      20.0,
+      10.0
+     ],
+     "faces": 4,
+     "edges": 4,
+     "shells": 1,
+     "face_types": {
+      "cylinder": 2,
+      "plane": 2
+     },
+     "edge_types": {
+      "circle": 4
+     },
+     "valid": true
+    }
+   ]
+  },
+  {
+   "part": "r",
+   "feature": "h",
+   "feature_id": "f_h",
+   "type": "hole",
+   "status": "ok",
+   "warnings": [],
+   "bodies": [
+    {
+     "origin": {
+      "feature": "f_hub",
+      "member": "r_bot"
+     },
+     "change": "modified",
+     "volume": 11710.286616255964,
+     "area": 4007.1014296537855,
+     "centroid": [
+      -0.07243460764587416,
+      -2.6815827353917487e-16,
+      5.0
+     ],
+     "bbox_min": [
+      -20.0,
+      -20.0,
+      0.0
+     ],
+     "bbox_max": [
+      20.0,
+      20.0,
+      10.0
+     ],
+     "faces": 5,
+     "edges": 6,
+     "shells": 1,
+     "face_types": {
+      "cylinder": 3,
+      "plane": 2
+     },
+     "edge_types": {
+      "circle": 6
+     },
+     "valid": true
+    }
+   ],
+   "refs": [
+    {
+     "field": "/on/face",
+     "status": "exact",
+     "members": [
+      {
+       "key": "f_hub/side:r_top",
+       "name": "hub/side:r_top",
+       "via": "named",
+       "status": "exact",
+       "probe": {
+        "kind": "face",
+        "point": [
+         -11.666666666666666,
+         -5.0,
+         10.0
+        ],
+        "normal": [
+         0.0,
+         0.0,
+         1.0
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "holes": [
+    {
+     "at": "a",
+     "center": [
+      12.0,
+      0.0,
+      10.0
+     ],
+     "axis": [
+      -0.0,
+      -0.0,
+      -1.0
+     ],
+     "d": 3.0,
+     "depth": null,
+     "kind": "simple"
+    }
+   ]
+  },
+  {
+   "part": "r",
+   "feature": "p",
+   "feature_id": "f_p",
+   "type": "pattern",
+   "status": "ok",
+   "warnings": [],
+   "bodies": [
+    {
+     "origin": {
+      "feature": "f_hub",
+      "member": "r_bot"
+     },
+     "change": "modified",
+     "volume": 11498.229112138655,
+     "area": 4247.433267653405,
+     "centroid": [
+      1.1184922341922362e-15,
+      -2.768453668091131e-16,
+      5.0
+     ],
+     "bbox_min": [
+      -20.0,
+      -20.0,
+      0.0
+     ],
+     "bbox_max": [
+      20.0,
+      20.0,
+      10.0
+     ],
+     "faces": 8,
+     "edges": 12,
+     "shells": 1,
+     "face_types": {
+      "cylinder": 6,
+      "plane": 2
+     },
+     "edge_types": {
+      "circle": 12
+     },
+     "valid": true
+    }
+   ],
+   "refs": [
+    {
+     "field": "/layout/circular/axis/cylinder",
+     "status": "exact",
+     "members": [
+      {
+       "key": "f_hub/side:r_out",
+       "name": "hub/side:r_out",
+       "via": "named",
+       "status": "exact",
+       "probe": {
+        "kind": "face",
+        "point": [
+         15.081117367284765,
+         -13.136205652858129,
+         5.0
+        ],
+        "normal": [
+         0.7540558683642382,
+         -0.6568102826429064,
+         0.0
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "pattern": {
+    "instances": 3
+   }
+  }
+ ],
+ "parts": [
+  {
+   "part": "r",
+   "part_id": "p_r",
+   "bodies": [
+    {
+     "origin": {
+      "feature": "f_hub",
+      "member": "r_bot"
+     },
+     "volume": 11498.229112138655,
+     "area": 4247.433267653405,
+     "centroid": [
+      1.1184922341922362e-15,
+      -2.768453668091131e-16,
+      5.0
+     ],
+     "bbox_min": [
+      -20.0,
+      -20.0,
+      0.0
+     ],
+     "bbox_max": [
+      20.0,
+      20.0,
+      10.0
+     ],
+     "faces": 8,
+     "edges": 12,
+     "shells": 1,
+     "face_types": {
+      "cylinder": 6,
+      "plane": 2
+     },
+     "edge_types": {
+      "circle": 12
+     },
+     "valid": true
+    }
+   ]
+  }
+ ]
+}

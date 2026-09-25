@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-m3-hex-standoff-v1",
+  "tier": "T1",
+  "title": "M3 hex standoff (IR v1)",
+  "prompt": "Hex standoff for M3: 5.5 mm across the flats, 12 mm tall, with a 2.5 mm hole through the middle so I can tap an M3 thread into it.",
+  "process": "fdm",
+  "tags": ["standoff", "fastener", "hex", "electronics", "thread"],
+  "requires": ["ir/1", "op/hole"],
+  "reference": "t1-m3-hex-standoff-v1.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "One solid body", "check": "body_count", "eq": 1 },
+    {
+      "id": "size",
+      "description": "5.5 mm across flats, 6.35 mm across corners, 12 mm tall",
+      "check": "bbox_sorted",
+      "approx": [5.5, 6.351, 12],
+      "abs": 0.05
+    },
+    {
+      "id": "hex_faces",
+      "description": "Eight flat faces: six hex sides plus the two ends",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 8
+    },
+    {
+      "id": "bore",
+      "description": "One cylindrical bore through the middle",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 1
+    },
+    {
+      "id": "tap_drill",
+      "description": "The bore is the 2.5 mm M3 tap drill",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [2.45, 2.55],
+      "eq": 1
+    },
+    {
+      "id": "volume",
+      "description": "(hexagon 26.20 mm² − Ø2.5)·12 ≈ 255.5 mm³ ±0.5%",
+      "check": "volume",
+      "approx": 255.46,
+      "rel": 0.005
+    }
+  ],
+  "notes": "IR v1 rewrite of t1-m3-hex-standoff: a polygon compound curve and a tapped hole (size M3 + thread: the tap drill 2.5 and a cosmetic M3×0.5 thread in the report)."
+}

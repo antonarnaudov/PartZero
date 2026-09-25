@@ -1,0 +1,87 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-cbore-m4-plate",
+  "tier": "T1",
+  "title": "Counterbored M4 mounting plate",
+  "prompt": "Mounting plate, 100 × 60 × 8 mm, centred on the origin and lying on Z = 0, with four holes for M4 socket head cap screws: standard clearance, counterbored from the top to the ISO 4762 size so the heads sit flush, on an 84 × 44 mm rectangle centred on the plate. Make the thickness a parameter called thick. Make them counterbored hole features with the M4 preset.",
+  "process": "fdm",
+  "tags": ["plate", "counterbore", "m4", "mounting", "parametric"],
+  "requires": ["ir/1", "op/hole"],
+  "reference": "t1-cbore-m4-plate.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "One solid body", "check": "body_count", "eq": 1 },
+    {
+      "id": "size",
+      "description": "100 × 60 × 8 mm on Z = 0",
+      "check": "bbox_min",
+      "approx": [-50, -30, 0],
+      "abs": 0.05
+    },
+    {
+      "id": "size_max",
+      "description": "100 × 60 × 8 mm",
+      "check": "bbox_max",
+      "approx": [50, 30, 8],
+      "abs": 0.05
+    },
+    {
+      "id": "cbores",
+      "description": "Four M4 counterbored holes: Ø4.5 normal clearance, ISO 4762 counterbore Ø8 × 4.4 deep, through, drilled from the top",
+      "check": "hole_count",
+      "hole": {
+        "kind": "counterbore",
+        "size": "M4",
+        "through": true,
+        "d": [4.49, 4.51],
+        "cbore_d": [7.99, 8.01],
+        "cbore_depth": [4.39, 4.41],
+        "dir": "-Z"
+      },
+      "eq": 4
+    },
+    {
+      "id": "positions",
+      "description": "Holes 8 mm in from both edges (84 × 44 rectangle)",
+      "check": "hole_positions",
+      "diameter": [4.4, 4.6],
+      "relative_to": "edges",
+      "points": [[8, 8], [8, 8], [8, 8], [8, 8]]
+    },
+    {
+      "id": "from_top",
+      "description": "The counterbores open in the top face (z = 8), where the prompt puts them",
+      "check": "hole_positions",
+      "diameter": [4.4, 4.6],
+      "entry": true,
+      "points": [[-42, -22, 8], [42, -22, 8], [42, 22, 8], [-42, 22, 8]]
+    },
+    {
+      "id": "round_faces",
+      "description": "Eight cylindrical faces: a hole and a counterbore wall per screw",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 8
+    },
+    {
+      "id": "volume",
+      "description": "48000 − 4·(π·2.25²·3.6 + π·4²·4.4) = 46886 mm³ ±0.3%",
+      "check": "volume",
+      "approx": 46886.31,
+      "rel": 0.003
+    },
+    {
+      "id": "thick_param",
+      "description": "thick = 10 thickens the plate and keeps the counterbore depth: 58759 mm³",
+      "check": "param",
+      "set": { "thick": 10 },
+      "test": { "check": "volume", "approx": 58759.07, "rel": 0.002 }
+    }
+  ],
+  "notes": "ISO 4762 M4 counterbore (DIN 974-1): Ø8.0 × 4.4; ISO 273 normal clearance 4.5 (SPEC-v1 §6.5). Construction: cbores reads the hole features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only that test."
+}

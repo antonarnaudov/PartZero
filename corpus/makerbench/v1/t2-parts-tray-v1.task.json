@@ -1,0 +1,49 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-parts-tray-v1",
+  "tier": "T2",
+  "title": "Three-compartment parts tray (IR v1)",
+  "prompt": "Parts tray: 128 x 80 mm outside, 25 mm tall, 2 mm floor, 2 mm outer walls, and two 2 mm thick divider walls across the short direction splitting it into three equal 40 mm compartments. Corner at the origin, Z up, long side along X.",
+  "process": "fdm",
+  "tags": ["tray", "organizer", "shell", "divider"],
+  "requires": ["ir/1", "op/boolean", "op/shell"],
+  "reference": "t2-parts-tray-v1.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "one_body",
+      "description": "One printable part (walls, floor and dividers joined)",
+      "check": "body_count",
+      "eq": 1
+    },
+    { "id": "size", "description": "128 × 80 × 25 mm", "check": "bbox_size", "approx": [128, 80, 25], "abs": 0.1 },
+    {
+      "id": "placement",
+      "description": "Corner at the origin",
+      "check": "bbox_min",
+      "approx": [0, 0, 0],
+      "abs": 0.05
+    },
+    {
+      "id": "faces",
+      "description": "21 flat faces: the outside, the rim, and three open compartments",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 21
+    },
+    {
+      "id": "centroid",
+      "description": "Dividers at x = 42–44 and 84–86 (equal 40 mm compartments): centroid on the tray's centre lines",
+      "check": "centroid",
+      "approx": [64, 40, 7.9637],
+      "abs": 0.03
+    },
+    { "id": "volume", "description": "46240 mm³ ±0.5%", "check": "volume", "approx": 46240, "rel": 0.005 }
+  ],
+  "notes": "IR v1 rewrite of t2-parts-tray: shell (open top) plus a joined divider sketch, one body. 128·80·25 − 3·40·76·23 = 46240. A divider 2 mm off moves the centroid x by 0.15 mm."
+}

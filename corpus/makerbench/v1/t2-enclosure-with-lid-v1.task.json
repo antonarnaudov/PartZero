@@ -1,0 +1,68 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-enclosure-with-lid-v1",
+  "tier": "T2",
+  "title": "Project box with lid (IR v1)",
+  "prompt": "Two-part project box, printed side by side. The box is 90 x 60 mm outside and 30 mm tall, open at the top, with a 2 mm floor and 2 mm walls. The lid is a flat 90 x 60 x 2 mm plate with a 4 mm tall, 1.2 mm thick locating lip on top that fits inside the box with 0.2 mm clearance all round (so the lip is 85.6 x 55.6 outside); I'll flip it over to use it. Put the box's corner at the origin and the lid 10 mm to the right (+X) of the box, everything sitting on Z = 0.",
+  "process": "fdm",
+  "tags": ["enclosure", "lid", "shell", "multi-part"],
+  "requires": ["ir/1", "op/boolean", "op/shell", "multi-part"],
+  "reference": "t2-enclosure-with-lid-v1.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "bodies",
+      "description": "Two solid parts: the box and the lid (the lip joined to the lid)",
+      "check": "body_count",
+      "eq": 2
+    },
+    {
+      "id": "layout",
+      "description": "Box and lid side by side span 190 × 60 × 30 mm",
+      "check": "bbox_size",
+      "approx": [190, 60, 30],
+      "abs": 0.3
+    },
+    {
+      "id": "origin",
+      "description": "Box corner at the origin, on Z = 0",
+      "check": "bbox_min",
+      "approx": [0, 0, 0],
+      "abs": 0.05
+    },
+    {
+      "id": "box",
+      "description": "A 90 × 60 × 30 open box with 2 mm walls and floor (27152 mm³)",
+      "check": "bodies_matching",
+      "where": [
+        { "check": "bbox_size", "approx": [90, 60, 30], "abs": 0.1 },
+        { "check": "volume", "approx": 27152, "rel": 0.005 }
+      ],
+      "eq": 1
+    },
+    {
+      "id": "lid",
+      "description": "The lid: 90 × 60, 6 mm high with its lip, 10 mm right of the box (12132 mm³)",
+      "check": "bodies_matching",
+      "where": [
+        { "check": "bbox_sorted", "approx": [6, 60, 90], "abs": 0.1 },
+        { "check": "bbox_min", "approx": [100, 0, 0], "abs": 0.1 },
+        { "check": "volume", "approx": 12132.48, "rel": 0.005 }
+      ],
+      "eq": 1
+    },
+    {
+      "id": "volume",
+      "description": "Total 39284 mm³ ±0.5%",
+      "check": "volume",
+      "approx": 39284.48,
+      "rel": 0.005
+    }
+  ],
+  "notes": "IR v1 rewrite of t2-enclosure-with-lid: the box is a shelled solid and the lip is joined to the lid, so there are exactly 2 bodies (v0 needed separate wall bodies). Box 90·60·30 − 86·56·28 = 27152; lid 10800 + lip (85.6·55.6 − 83.2·53.2)·4 = 1332.48."
+}

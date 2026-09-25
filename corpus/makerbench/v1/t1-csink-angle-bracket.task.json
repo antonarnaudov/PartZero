@@ -1,0 +1,52 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-csink-angle-bracket",
+  "tier": "T1",
+  "title": "Countersunk angle bracket",
+  "prompt": "Angle bracket: an L seen from the side, 50 mm along the floor and 40 mm tall, 5 mm thick, 40 mm wide, with a 4 mm radius fillet in the inside corner. Two countersunk holes for M4 flat-head screws (ISO 10642) in each leg, 20 mm apart across the width: in the floor leg 30 mm out from the back, in the upright 25 mm up from the floor, countersunk on the inside faces. Put the outside corner edge along the Y axis (back face on X = 0, bottom on Z = 0), centred on Y = 0, with the floor leg going +X. Make them countersunk hole features with the M4 preset.",
+  "process": "fdm",
+  "tags": ["bracket", "countersink", "m4", "fillet"],
+  "requires": ["ir/1", "op/hole", "op/fillet"],
+  "reference": "t1-csink-angle-bracket.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "One solid body", "check": "body_count", "eq": 1 },
+    {
+      "id": "placement",
+      "description": "Back on X = 0, bottom on Z = 0, centred on Y",
+      "check": "bbox_min",
+      "approx": [0, -20, 0],
+      "abs": 0.05
+    },
+    { "id": "size", "description": "50 × 40 × 40 mm", "check": "bbox_max", "approx": [50, 20, 40], "abs": 0.05 },
+    {
+      "id": "csinks",
+      "description": "Four M4 countersunk holes: Ø4.5 clearance, ISO 10642 countersink Ø9.18 × 90°",
+      "check": "hole_count",
+      "hole": { "kind": "countersink", "size": "M4", "through": true, "csink_d": [9.17, 9.19], "csink_angle": [89.9, 90.1] },
+      "eq": 4
+    },
+    {
+      "id": "positions",
+      "description": "Countersunk from the inside faces: the floor holes open at x = 30 on the shelf (z = 5), the upright holes at z = 25 on the inner face (x = 5), 20 mm apart",
+      "check": "hole_positions",
+      "diameter": [4.4, 4.6],
+      "entry": true,
+      "points": [[30, -10, 5], [30, 10, 5], [5, -10, 25], [5, 10, 25]]
+    },
+    { "id": "cones", "description": "Four countersink cones", "check": "face_count", "type": "cone", "eq": 4 },
+    {
+      "id": "fillet",
+      "description": "R4 inside-corner fillet adds (1 − π/4)·16·40 = 137.3 mm³: volume 16611 mm³ ±0.3%",
+      "check": "volume",
+      "approx": 16610.77,
+      "rel": 0.003
+    }
+  ],
+  "notes": "L area 425 mm² × 40 = 17000, + concave R4 fillet 137.35, − 4 countersunk through holes of 131.64 each (cone depth (9.18 − 4.5)/2 = 2.34) = 16610.8 mm³. Construction: csinks reads the hole features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only that test."
+}

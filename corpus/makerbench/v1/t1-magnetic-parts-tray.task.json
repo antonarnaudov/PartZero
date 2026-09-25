@@ -1,0 +1,93 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-magnetic-parts-tray",
+  "tier": "T1",
+  "title": "Magnetic parts tray",
+  "prompt": "Magnetic parts tray for the workbench: an 80 × 40 × 16 mm block centred on the origin on Z = 0, with a 64 × 24 mm pocket 10 mm deep in the top (a 6 mm floor). In the underside, two flat-bottomed pockets for Ø8 × 3 mm magnets (Ø8.2, 3.2 deep) at x = ±30 on the centre line. A Ø3 drain hole drilled up from the underside into the pocket at the centre. Two M4 mounting holes through the pocket floor at x = ±20 with a loose fit so the tray can be adjusted, and two pilot holes for M3 self-tapping lid screws (the M3 tap drill, 8 mm deep, not threaded) in the top of the end walls at x = ±36. Make the magnet pockets and every hole hole features.",
+  "process": "fdm",
+  "tags": ["tray", "magnets", "flat-bottom", "up-to", "flip", "loose-fit", "tap-drill"],
+  "requires": ["ir/1", "op/boolean", "op/hole"],
+  "reference": "t1-magnetic-parts-tray.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "size", "description": "80 × 40 × 16 mm", "check": "bbox_size", "approx": [80, 40, 16], "abs": 0.05 },
+    {
+      "id": "magnets",
+      "description": "Two Ø8.2 × 3.2 blind magnet pockets drilled up from the underside",
+      "check": "hole_count",
+      "hole": { "d": [8.19, 8.21], "through": false, "depth": [3.19, 3.21], "dir": "+Z" },
+      "eq": 2
+    },
+    {
+      "id": "magnets_underneath",
+      "description": "The magnet pockets open in the underside (z = 0) at x = ±30",
+      "check": "hole_positions",
+      "diameter": [8.15, 8.25],
+      "entry": true,
+      "points": [[-30, 0, 0], [30, 0, 0]]
+    },
+    {
+      "id": "flat_bottoms",
+      "description": "Only the two pilot holes end in a drill point: the magnet pockets (and the drain, drilled to the floor) are flat",
+      "check": "face_count",
+      "type": "cone",
+      "eq": 2
+    },
+    {
+      "id": "drain",
+      "description": "The Ø3 drain is drilled up from the underside and stops at the pocket floor (6 mm)",
+      "check": "hole_count",
+      "hole": { "d": [2.99, 3.01], "through": false, "depth": [5.99, 6.01], "dir": "+Z" },
+      "eq": 1
+    },
+    {
+      "id": "drain_position",
+      "description": "The drain is on the centre axis (a through-going hole has no geometric side; how it was drilled is the drain test's)",
+      "check": "hole_positions",
+      "diameter": [2.95, 3.05],
+      "points": [[0, 0, 0]]
+    },
+    {
+      "id": "loose_mounts",
+      "description": "Two M4 loose-fit (Ø4.8, ISO 273 coarse) through holes",
+      "check": "hole_count",
+      "hole": { "size": "M4", "through": true, "d": [4.79, 4.81] },
+      "eq": 2
+    },
+    {
+      "id": "mount_positions",
+      "description": "The mounting holes go through the pocket floor at x = ±20",
+      "check": "hole_positions",
+      "diameter": [4.75, 4.85],
+      "points": [[-20, 0, 3], [20, 0, 3]]
+    },
+    {
+      "id": "pilots",
+      "description": "Two M3 tap-drill pilots (Ø2.5, 8 deep, no cosmetic thread) drilled down into the end walls",
+      "check": "hole_count",
+      "hole": { "size": "M3", "d": [2.49, 2.51], "depth": [7.99, 8.01], "threaded": false, "dir": "-Z" },
+      "eq": 2
+    },
+    {
+      "id": "pilot_positions",
+      "description": "The pilots open in the top of the end walls at x = ±36",
+      "check": "hole_positions",
+      "diameter": [2.45, 2.55],
+      "entry": true,
+      "points": [[-36, 0, 16], [36, 0, 16]]
+    },
+    {
+      "id": "volume",
+      "description": "51200 − pocket 15360 − magnets 337.98 − drain 42.41 − mounts 217.15 − pilots 81.00 = 35161.5 mm³ ±0.1%",
+      "check": "volume",
+      "approx": 35161.46,
+      "rel": 0.001
+    }
+  ],
+  "notes": "Magnets 2·π·4.1²·3.2 = 337.98 (flat floors; a 118° drill point would add 2·43.4); drain π·1.5²·6 = 42.41 (drilled up_to the pocket floor, so it opens into the pocket); M4 loose Ø4.8 through the 6 mm floor: 2·π·2.4²·6 = 217.15; M3 tap Ø2.5 × 8 with a 118° point: 2·(39.27 + 1.23) = 81.00. The drain is a flipped hole on XY (XY's normal points into the part) or, equivalently, a hole on the bottom face; its depth is up_to the pocket floor. The oracle warns HOLE_BREAKS_THROUGH on that up_to hole and Forge does not: under SPEC §8.4 that is a CODE_MISMATCH between the engines, pending a contract ruling on §6.5 (the open W5 question, forge-ops hole/mod.rs); the real-engine differential reports it apart as an open contract question (evals v1/diff.ts OPEN_CONTRACT_QUESTIONS), and no hidden test reads warnings. Construction: magnets, drain, loose_mounts, pilots read the hole features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only those tests."
+}

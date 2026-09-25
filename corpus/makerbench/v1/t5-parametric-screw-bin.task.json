@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t5-parametric-screw-bin",
+  "tier": "T5",
+  "title": "Under-specified: parametric screw bin",
+  "prompt": "I need a small box to keep screws in, about hand-sized, with rounded corners. I'll want to resize it later.",
+  "process": "fdm",
+  "tags": ["bin", "storage", "underspecified", "parametric"],
+  "requires": ["ir/1", "op/shell"],
+  "reference": "t5-parametric-screw-bin.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "status_ok",
+      "description": "The model evaluates without feature or parameter errors",
+      "check": "status",
+      "eq": "ok"
+    },
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "One printable box", "check": "body_count", "eq": 1 },
+    {
+      "id": "hand_sized",
+      "description": "Hand-sized: fits within 200 × 150 × 80 mm and is at least 40 × 30 × 15",
+      "check": "bbox_sorted",
+      "between": [[15, 80], [30, 150], [40, 200]]
+    },
+    {
+      "id": "open_box",
+      "description": "A hollow, open box (inside and outside faces), not a solid block",
+      "check": "face_count",
+      "type": "plane",
+      "gte": 10
+    },
+    { "id": "rounded", "description": "Rounded corners", "check": "face_count", "type": "cylinder", "gte": 4 },
+    {
+      "id": "resizable",
+      "description": "The defaults became parameters: at least three length parameters (e.g. width, depth, height)",
+      "check": "param_count",
+      "type": "mm",
+      "gte": 3
+    }
+  ],
+  "clarify": {
+    "questions": [
+      "Roughly what outside size, or how many screws of which size should it hold?",
+      "Do you want a lid, dividers or stacking features?",
+      "What wall thickness and corner radius?"
+    ],
+    "assumptions": "90 × 60 × 40 mm outside, R8 corners, 2 mm walls and floor, open top, no dividers; width, depth, height, corner radius and wall are parameters."
+  }
+}

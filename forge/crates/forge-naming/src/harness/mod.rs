@@ -12,6 +12,7 @@
 
 pub mod models;
 pub mod mutate;
+pub mod ops;
 pub mod report;
 pub mod truth;
 pub mod v1;

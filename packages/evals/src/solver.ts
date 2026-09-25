@@ -8,9 +8,10 @@
  * Agent solvers (LLM providers, MCP clients) implement the same interface and must only use the
  * {@link PublicTask} they are given: they never see the reference or the hidden tests.
  */
-import { compile, print } from "@aicad/cadscript";
-import { mutateIr, type MutationKind } from "./mutate.js";
-import type { LoadedTask, PublicTask } from "./task.js";
+import { compile, print, v1 as cs } from "@aicad/cadscript";
+import { isMutationKind, mutateIr, type MutationKind } from "./mutate.js";
+import { isV1Task, type LoadedTask, type PublicTask } from "./task.js";
+import { isMutationKindV1, mutateIrV1, type MutationKindV1 } from "./v1/mutate.js";
 
 export interface SolverOutput {
   /** The candidate CadScript source (a whole `.cad.ts` file). */
@@ -62,12 +63,32 @@ export class ReferenceSolver implements Solver {
   }
 }
 
+/**
+ * The mutated CadScript of a task's reference, or null when the mutation does not apply. IR v0
+ * tasks use the v0 mutations (`mutate.ts`), IR v1 tasks the v1 ones (`v1/mutate.ts`); the source
+ * is printed from the mutated IR in the task's CadScript version.
+ */
+export function mutantSource(task: LoadedTask, kind: MutationKind | MutationKindV1): string | null {
+  if (isV1Task(task)) {
+    if (!isMutationKindV1(kind)) return null;
+    const r = cs.compile(task.referenceSource, { fileName: task.reference });
+    if (!r.ok || !r.ir) throw new Error(`${task.id}: reference does not compile`);
+    const m = mutateIrV1(r.ir, kind);
+    return m ? cs.print(m) : null;
+  }
+  if (!isMutationKind(kind)) return null;
+  const r = compile(task.referenceSource, { fileName: task.reference });
+  if (!r.ok || !r.ir) throw new Error(`${task.id}: reference does not compile`);
+  const m = mutateIr(r.ir, kind);
+  return m ? print(m) : null;
+}
+
 export class MutantSolver implements Solver {
   readonly name: string;
-  readonly kind: MutationKind;
+  readonly kind: MutationKind | MutationKindV1;
   private readonly tasks: Map<string, LoadedTask>;
 
-  constructor(tasks: readonly LoadedTask[], kind: MutationKind) {
+  constructor(tasks: readonly LoadedTask[], kind: MutationKind | MutationKindV1) {
     this.tasks = byId(tasks);
     this.kind = kind;
     this.name = `mutant:${kind}`;
@@ -75,10 +96,7 @@ export class MutantSolver implements Solver {
 
   /** The mutated CadScript for a task, or null when the mutation does not apply (e.g. no holes). */
   mutant(task: LoadedTask): string | null {
-    const r = compile(task.referenceSource, { fileName: task.reference });
-    if (!r.ok || !r.ir) throw new Error(`${task.id}: reference does not compile`);
-    const m = mutateIr(r.ir, this.kind);
-    return m ? print(m) : null;
+    return mutantSource(task, this.kind);
   }
 
   applicable(task: LoadedTask): boolean {

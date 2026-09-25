@@ -1,0 +1,69 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-walls-3mm",
+  "tier": "T4",
+  "title": "Edit: walls 3 mm",
+  "prompt": "Make the walls 3 mm thick (the shell feature's thickness); keep the fillet features.",
+  "context": "t4-walls-3mm.context.cad.ts",
+  "process": "fdm",
+  "tags": ["edit", "shell", "parameter", "set-param"],
+  "requires": ["ir/1", "op/fillet", "op/shell", "op/hole"],
+  "reference": "t4-walls-3mm.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "walls",
+      "description": "The shell is 3 mm thick",
+      "check": "shell_thickness",
+      "approx": 3,
+      "abs": 0.01
+    },
+    {
+      "id": "same_size",
+      "description": "The outside is unchanged",
+      "check": "bbox_size",
+      "approx": "$context",
+      "abs": 0.01
+    },
+    {
+      "id": "minimal",
+      "description": "One parameter changed (wall), no feature touched",
+      "check": "changed_params",
+      "eq": 1
+    },
+    {
+      "id": "no_feature_edits",
+      "description": "No feature was edited, added or removed",
+      "check": "changed_features",
+      "eq": 0
+    },
+    {
+      "id": "refs_stable",
+      "description": "Every reference (fillet edges, shell faces, hole face) still designates the same entities as before the edit (same keys), resolved exactly",
+      "check": "ref_stability",
+      "eq": 0
+    },
+    {
+      "id": "fillet_kept",
+      "description": "The R4 corner fillets are still there",
+      "check": "blend_edges",
+      "type": "fillet",
+      "size": [3.99, 4.01],
+      "eq": 4
+    },
+    {
+      "id": "cable_hole",
+      "description": "The Ø8 cable hole is still there, in the middle of the +X end",
+      "check": "hole_positions",
+      "diameter": [7.95, 8.05],
+      "points": [[40, 0, 15]]
+    },
+    { "id": "volume", "description": "31398 mm³ ±0.3%", "check": "volume", "approx": 31397.55, "rel": 0.003 }
+  ],
+  "notes": "Construction: walls, fillet_kept read the shell and fillet features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only those tests."
+}

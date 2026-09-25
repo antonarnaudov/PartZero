@@ -1,0 +1,133 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "ops_hole_plate",
+    "description": "Naming harness (holes, fillets): 100x60x10 plate, R5 vertical corners, three Ø6 holes and an M4 counterbore"
+  },
+  "parts": [
+    {
+      "id": "p_plate",
+      "name": "plate",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_base",
+          "name": "base",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "outline",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "w": 100.0,
+              "h": 60.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_plate",
+          "name": "plate",
+          "sketch": "f_base",
+          "distance": 10.0
+        },
+        {
+          "type": "fillet",
+          "id": "f_corners",
+          "name": "corners",
+          "edges": {
+            "kind": "edge",
+            "q": {
+              "op": "filter",
+              "of": {
+                "op": "edges",
+                "of": {
+                  "op": "sides",
+                  "feature": "f_plate"
+                }
+              },
+              "where": {
+                "parallel": "Z"
+              }
+            }
+          },
+          "r": 5.0
+        },
+        {
+          "type": "hole",
+          "id": "f_holes",
+          "name": "holes",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "f_plate",
+                "end": "end"
+              }
+            }
+          },
+          "at": {
+            "list": [
+              {
+                "id": "a",
+                "at": [
+                  -30.0,
+                  -15.0
+                ]
+              },
+              {
+                "id": "b",
+                "at": [
+                  30.0,
+                  -15.0
+                ]
+              },
+              {
+                "id": "c",
+                "at": [
+                  0.0,
+                  15.0
+                ]
+              }
+            ]
+          },
+          "d": 6.0,
+          "depth": "through"
+        },
+        {
+          "type": "hole",
+          "id": "f_screw",
+          "name": "screw",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "f_plate",
+                "end": "end"
+              }
+            }
+          },
+          "at": {
+            "list": [
+              {
+                "id": "m",
+                "at": [
+                  -30.0,
+                  15.0
+                ]
+              }
+            ]
+          },
+          "size": "M4",
+          "depth": "through",
+          "cbore": "iso4762"
+        }
+      ]
+    }
+  ]
+}

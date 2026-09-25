@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-spoked-wheel",
+  "tier": "T2",
+  "title": "Five-spoke wheel",
+  "prompt": "Five-spoke wheel, 100 mm diameter and 10 mm thick, centred on the origin on Z = 0: an 8 mm wide rim (so the opening goes out to R42), a Ø28 hub with an Ø8 axle hole, and five straight 8 mm wide spokes, evenly spaced, from the hub to the rim. Make the number of spokes a parameter called spokes.",
+  "process": "fdm",
+  "tags": ["wheel", "spokes", "pattern", "circular-pattern", "parametric"],
+  "requires": ["ir/1", "op/boolean", "op/pattern", "op/hole"],
+  "reference": "t2-spoked-wheel.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "Rim, spokes and hub are one solid", "check": "body_count", "eq": 1 },
+    { "id": "size", "description": "Ø100 × 10 mm", "check": "bbox_size", "approx": [100, 100, 10], "abs": 0.05 },
+    {
+      "id": "axle",
+      "description": "One Ø8 axle hole on the axis",
+      "check": "hole_positions",
+      "diameter": [7.95, 8.05],
+      "points": [[0, 0, 0]]
+    },
+    {
+      "id": "centroid",
+      "description": "Five evenly spaced spokes keep the centroid on the axis",
+      "check": "centroid",
+      "approx": [0, 0, 5],
+      "abs": 0.01
+    },
+    { "id": "volume", "description": "40029 mm³ ±0.3%", "check": "volume", "approx": 40028.71, "rel": 0.003 },
+    {
+      "id": "spokes_param",
+      "description": "spokes = 6 gives six spokes: 42279 mm³",
+      "check": "param",
+      "set": { "spokes": 6 },
+      "test": { "check": "volume", "approx": 42279.05, "rel": 0.002 }
+    }
+  ],
+  "notes": "Disc 78539.8 − window π(42² − 14²)·10 = 49260.2, + 5 spokes (the 8 mm band between R14 and R42, 2249.8 mm³ each), − axle π·4²·10 = 502.7. The prompt does not ask for the spokes' angle: a symmetric wheel measures the same at any rotation (bounding box, centroid, volume), so a stated angle could not be tested."
+}

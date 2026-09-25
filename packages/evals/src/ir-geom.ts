@@ -237,6 +237,41 @@ function segmentsOf(c: SketchCurve): [V2, V2][] {
 }
 
 /**
+ * Whether the closed loop made of `curves` (one circle, or lines and arcs joined end to end)
+ * strictly contains `p`: ray casting over the loop's polyline (arcs as 32 segments). Meant for a
+ * point on another loop of the same valid sketch, which never touches this one.
+ */
+export function loopContains(curves: readonly SketchCurve[], p: V2): boolean {
+  let crossings = 0;
+  for (const c of curves) {
+    if (c.kind === "circle") {
+      if (Math.hypot(p[0] - c.center[0], p[1] - c.center[1]) < c.radius) crossings++;
+      continue;
+    }
+    for (const [a, b] of segmentsOf(c)) {
+      if (a[1] > p[1] !== b[1] > p[1]) {
+        const x = a[0] + ((p[1] - a[1]) * (b[0] - a[0])) / (b[1] - a[1]);
+        if (x > p[0]) crossings++;
+      }
+    }
+  }
+  return crossings % 2 === 1;
+}
+
+/** The area of the axis-aligned box around a loop's polyline: nested loops have nested boxes. */
+export function loopBoxArea(curves: readonly SketchCurve[]): number {
+  const pts: V2[] = [];
+  for (const c of curves) {
+    if (c.kind === "circle") pts.push([c.center[0] - c.radius, c.center[1] - c.radius], [c.center[0] + c.radius, c.center[1] + c.radius]);
+    else for (const [a, b] of segmentsOf(c)) pts.push(a, b);
+  }
+  if (pts.length === 0) return 0;
+  const xs = pts.map((q) => q[0]);
+  const ys = pts.map((q) => q[1]);
+  return (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys));
+}
+
+/**
  * Number of the sketch's other loops that contain point `p`: ray casting over every line/arc
  * (closed loops, so the crossing parity sums per loop) plus circle containment.
  */

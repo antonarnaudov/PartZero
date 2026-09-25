@@ -1,0 +1,74 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-knob-v1",
+  "tier": "T1",
+  "title": "Potentiometer knob (IR v1)",
+  "prompt": "Simple round knob for a potentiometer with a 6 mm round shaft: 30 mm diameter, 15 mm tall, a 6 mm hole 10 mm deep from the bottom for the shaft, and a 2 mm 45° chamfer around the top edge.",
+  "process": "fdm",
+  "tags": ["knob", "chamfer", "blind-hole"],
+  "requires": ["ir/1", "op/chamfer", "op/hole"],
+  "reference": "t1-knob-v1.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "One solid body", "check": "body_count", "eq": 1 },
+    { "id": "size", "description": "Ø30 × 15 mm", "check": "bbox_sorted", "approx": [15, 30, 30], "abs": 0.1 },
+    {
+      "id": "chamfer",
+      "description": "One conical face: the 45° chamfer",
+      "check": "face_count",
+      "type": "cone",
+      "eq": 1
+    },
+    {
+      "id": "chamfer_on_top",
+      "description": "The chamfer is around the top edge (the bore's end): the centroid sits at z = 7.448 (7.691 with the chamfer at the bottom)",
+      "check": "centroid",
+      "axis": "z",
+      "approx": 7.448466,
+      "abs": 0.02
+    },
+    {
+      "id": "blind_bore",
+      "description": "Three flat faces: top, bottom ring and the flat bottom of the blind bore",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 3
+    },
+    {
+      "id": "round_faces",
+      "description": "Two cylindrical faces: the outside and the bore",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 2
+    },
+    {
+      "id": "bore",
+      "description": "One Ø6 bore (a hole feature or a circle)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [5.95, 6.05],
+      "eq": 1
+    },
+    {
+      "id": "bore_from_bottom",
+      "description": "The shaft bore opens in the bottom face (z = 0), where the shaft goes in",
+      "check": "hole_positions",
+      "diameter": [5.95, 6.05],
+      "entry": true,
+      "points": [[0, 0, 0]]
+    },
+    {
+      "id": "volume",
+      "description": "π·15²·15 − chamfer ring − bore ≈ 10140 mm³ ±0.5%",
+      "check": "volume",
+      "approx": 10140.01,
+      "rel": 0.005
+    }
+  ],
+  "notes": "IR v1 rewrite of t1-knob: extrude + chamfer + blind flat-bottom hole instead of one revolved profile."
+}

@@ -1,0 +1,232 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "ops_pattern_rail",
+    "description": "Naming harness (patterns): 120x40x6 rail with a linear pattern of bosses with holes, and a circular pattern of pockets on a disc"
+  },
+  "parts": [
+    {
+      "id": "p_rail",
+      "name": "rail",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_railSk",
+          "name": "railSk",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "rail",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "w": 120.0,
+              "h": 40.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_rail",
+          "name": "rail",
+          "sketch": "f_railSk",
+          "distance": 6.0
+        },
+        {
+          "type": "sketch",
+          "id": "f_bossSk",
+          "name": "bossSk",
+          "plane": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "f_rail",
+                "end": "end"
+              }
+            }
+          },
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "ring",
+              "center": [
+                -45.0,
+                0.0
+              ],
+              "radius": 5.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_boss",
+          "name": "boss",
+          "sketch": "f_bossSk",
+          "distance": 8.0,
+          "op": "join",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "f_rail"
+            }
+          }
+        },
+        {
+          "type": "hole",
+          "id": "f_bore",
+          "name": "bore",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "f_boss",
+                "end": "end"
+              }
+            }
+          },
+          "at": {
+            "list": [
+              {
+                "id": "p",
+                "at": [
+                  -45.0,
+                  0.0
+                ]
+              }
+            ]
+          },
+          "d": 4.0,
+          "depth": {
+            "blind": 10.0
+          },
+          "tip": "flat"
+        },
+        {
+          "type": "pattern",
+          "id": "f_row",
+          "name": "row",
+          "seed": {
+            "features": [
+              "f_boss",
+              "f_bore"
+            ]
+          },
+          "layout": {
+            "linear": {
+              "dir": "X",
+              "count": 4.0,
+              "spacing": 22.0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "p_disc",
+      "name": "disc",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_discSk",
+          "name": "discSk",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "rim",
+              "center": [
+                0.0,
+                80.0
+              ],
+              "radius": 30.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_disc",
+          "name": "disc",
+          "sketch": "f_discSk",
+          "distance": 8.0
+        },
+        {
+          "type": "sketch",
+          "id": "f_pocketSk",
+          "name": "pocketSk",
+          "plane": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "f_disc",
+                "end": "end"
+              }
+            }
+          },
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "pocket",
+              "center": [
+                18.0,
+                80.0
+              ],
+              "w": 10.0,
+              "h": 6.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_pocket",
+          "name": "pocket",
+          "sketch": "f_pocketSk",
+          "distance": 3.0,
+          "direction": "reverse",
+          "op": "cut",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "f_disc"
+            }
+          }
+        },
+        {
+          "type": "pattern",
+          "id": "f_ring",
+          "name": "ring",
+          "seed": {
+            "features": [
+              "f_pocket"
+            ]
+          },
+          "layout": {
+            "circular": {
+              "axis": {
+                "line": {
+                  "origin": [
+                    0.0,
+                    80.0,
+                    0.0
+                  ],
+                  "direction": [
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                }
+              },
+              "count": 5.0
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

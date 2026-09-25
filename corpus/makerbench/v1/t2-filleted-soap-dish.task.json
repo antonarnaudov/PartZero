@@ -1,0 +1,64 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-filleted-soap-dish",
+  "tier": "T2",
+  "title": "Filleted, then shelled soap dish",
+  "prompt": "Soap dish, 90 × 60 mm and 20 mm tall, centred on the origin on Z = 0. Round the four vertical corners to R8 and all the bottom edges to R3, then hollow it out to 2 mm walls with the top open, so the inside follows the same rounded shape. Keep the wall thickness as a parameter called wall. Use fillet features for the rounds and a shell feature to hollow it.",
+  "process": "fdm",
+  "tags": ["dish", "fillet", "shell", "feature-order", "parametric"],
+  "requires": ["ir/1", "op/fillet", "op/shell"],
+  "reference": "t2-filleted-soap-dish.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "One solid", "check": "body_count", "eq": 1 },
+    { "id": "size", "description": "90 × 60 × 20 mm", "check": "bbox_size", "approx": [90, 60, 20], "abs": 0.05 },
+    {
+      "id": "bottom_fillets",
+      "description": "The bottom edges (4 lines and 4 corner arcs) rounded R3",
+      "check": "blend_edges",
+      "type": "fillet",
+      "size": [2.99, 3.01],
+      "eq": 8
+    },
+    {
+      "id": "shelled",
+      "description": "Hollowed to 2 mm walls",
+      "check": "shell_thickness",
+      "approx": 2,
+      "abs": 0.01
+    },
+    {
+      "id": "open_top",
+      "description": "Exactly one face opened by the shell: the top",
+      "check": "shell_open_faces",
+      "eq": 1
+    },
+    {
+      "id": "tori",
+      "description": "Eight toroidal corner faces: the rounded bottom corners outside and inside (the inside follows the fillets)",
+      "check": "face_count",
+      "type": "torus",
+      "eq": 8
+    },
+    {
+      "id": "volume",
+      "description": "20283 mm³ ±0.3% (fillets before the shell)",
+      "check": "volume",
+      "approx": 20283.16,
+      "rel": 0.003
+    },
+    {
+      "id": "wall_param",
+      "description": "wall = 2.5 thickens the walls: 25013 mm³",
+      "check": "param",
+      "set": { "wall": 2.5 },
+      "test": { "check": "volume", "approx": 25012.87, "rel": 0.002 }
+    }
+  ],
+  "notes": "Feature order matters: shelling before the fillets would leave square inside corners (no inside tori, a different volume). The inside surfaces are the offsets of the outside: R6 corners and R1 bottom rounds. Construction: bottom_fillets, shelled, open_top read the fillet and shell features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only those tests (candidate --pocketed-not-shelled)."
+}

@@ -1,0 +1,77 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-hole-sampler-plate",
+  "tier": "T1",
+  "title": "Hole test coupon",
+  "prompt": "Test coupon to check how my printer does holes: a 120 × 40 × 10 mm plate centred on the origin (Z = 0 to 10) with four holes on the centre line, 30 mm apart, from left to right: a plain 5 mm through hole, an M3 socket-head hole counterbored to the ISO 4762 size, an M4 flat-head hole countersunk to the ISO 10642 size, and a hole for a standard M3 heat-set insert. All from the top. Make every hole a hole feature, with the presets for the M3 and M4 ones.",
+  "process": "fdm",
+  "tags": ["test", "calibration", "counterbore", "countersink", "heat-set-insert"],
+  "requires": ["ir/1", "op/hole"],
+  "reference": "t1-hole-sampler-plate.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "size",
+      "description": "120 × 40 × 10 mm",
+      "check": "bbox_size",
+      "approx": [120, 40, 10],
+      "abs": 0.05
+    },
+    {
+      "id": "plain",
+      "description": "One plain Ø5 through hole",
+      "check": "hole_positions",
+      "diameter": [4.95, 5.05],
+      "points": [[-45, 0, 10]]
+    },
+    {
+      "id": "cbore",
+      "description": "One M3 ISO 4762 counterbored hole (Ø3.4, counterbore Ø6.5 × 3.4)",
+      "check": "hole_count",
+      "hole": { "kind": "counterbore", "size": "M3", "cbore_d": [6.49, 6.51], "cbore_depth": [3.39, 3.41], "dir": "-Z" },
+      "eq": 1
+    },
+    {
+      "id": "csink",
+      "description": "One M4 ISO 10642 countersunk hole (Ø9.18 × 90°)",
+      "check": "hole_count",
+      "hole": { "kind": "countersink", "size": "M4", "csink_d": [9.17, 9.19], "dir": "-Z" },
+      "eq": 1
+    },
+    {
+      "id": "insert",
+      "description": "One standard M3 heat-set insert hole (Ø4 × 6.7)",
+      "check": "hole_count",
+      "hole": { "kind": "insert", "size": "M3", "insert_depth": [6.69, 6.71], "dir": "-Z" },
+      "eq": 1
+    },
+    {
+      "id": "order",
+      "description": "Left to right: plain, counterbore, countersink, insert",
+      "check": "hole_positions",
+      "diameter": [3.3, 5.1],
+      "points": [[-45, 0, 10], [-15, 0, 10], [15, 0, 10], [45, 0, 10]]
+    },
+    {
+      "id": "from_top",
+      "description": "The counterbore, countersink and insert hole all open in the top face (a plain through hole has no side)",
+      "check": "hole_positions",
+      "diameter": [3.3, 4.6],
+      "entry": true,
+      "points": [[-15, 0, 10], [15, 0, 10], [45, 0, 10]]
+    },
+    {
+      "id": "volume",
+      "description": "48000 − 196.35 − 172.74 − 211.17 − 84.19 = 47335.5 mm³ ±0.3%",
+      "check": "volume",
+      "approx": 47335.55,
+      "rel": 0.003
+    }
+  ],
+  "notes": "Values from the SPEC-v1 §6.5 HOLE_SIZES table: M3 counterbore Ø6.5 × 3.4 over Ø3.4; M4 countersink Ø9.18 × 90° over Ø4.5; M3 insert Ø4.0 × 6.7. Construction: cbore, csink, insert read the hole features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only those tests."
+}

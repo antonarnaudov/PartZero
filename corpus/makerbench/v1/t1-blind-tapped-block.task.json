@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-blind-tapped-block",
+  "tier": "T1",
+  "title": "Sensor block with blind tapped holes",
+  "prompt": "Sensor mounting block, 40 × 20 × 15 mm, centred on the origin on Z = 0. Two M5 tapped holes 10 mm deep in the top face, 24 mm apart along the length (on the centre line), and one M5 clearance hole straight through the block across its 20 mm width, halfway up, in the middle of the length. Mark the tapped holes as threads so they show on the drawing. Make all three holes hole features.",
+  "process": "fdm",
+  "tags": ["block", "tapped", "thread", "m5", "blind-hole"],
+  "requires": ["ir/1", "op/hole"],
+  "reference": "t1-blind-tapped-block.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "size", "description": "40 × 20 × 15 mm", "check": "bbox_size", "approx": [40, 20, 15], "abs": 0.05 },
+    {
+      "id": "tapped",
+      "description": "Two M5 threaded blind holes, 10 mm deep, M5 × 0.8 thread",
+      "check": "hole_count",
+      "hole": { "size": "M5", "threaded": true, "through": false, "depth": [9.99, 10.01], "thread_pitch": [0.79, 0.81], "dir": "-Z" },
+      "eq": 2
+    },
+    {
+      "id": "tap_drill",
+      "description": "The tapped holes use the Ø4.2 M5 tap drill and open in the top face",
+      "check": "hole_positions",
+      "diameter": [4.15, 4.25],
+      "entry": true,
+      "points": [[-12, 0, 15], [12, 0, 15]]
+    },
+    {
+      "id": "cross",
+      "description": "An Ø5.5 clearance hole across the width, 7.5 mm up",
+      "check": "hole_positions",
+      "diameter": [5.45, 5.55],
+      "points": [[0, 0, 7.5]]
+    },
+    {
+      "id": "cross_through",
+      "description": "One M5 through hole",
+      "check": "hole_count",
+      "hole": { "size": "M5", "through": true },
+      "eq": 1
+    },
+    {
+      "id": "volume",
+      "description": "12000 − 2 blind holes with 118° tips (144.37 each) − cross hole 475.17 = 11236 mm³ ±0.3%",
+      "check": "volume",
+      "approx": 11236.09,
+      "rel": 0.003
+    }
+  ],
+  "notes": "M5: pitch 0.8, tap drill 4.2, normal clearance 5.5 (ISO 2306 / ISO 273). Blind hole: π·2.1²·10 + cone π/3·2.1²·(2.1/tan 59°). Construction: tapped, cross_through read the hole features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only those tests."
+}

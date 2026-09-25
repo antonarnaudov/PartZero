@@ -1,0 +1,67 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-snap-fit-lid",
+  "tier": "T2",
+  "title": "Snap-fit lid",
+  "prompt": "Snap-fit lid for an 80 × 60 box with 2 mm walls: an 80 × 60 × 2 mm plate (centred on the origin, Z = 0 to 2) with a 1.2 mm thick locating lip hanging 5 mm down under it that fits inside the walls with 0.2 mm clearance (lip 75.6 × 55.6 outside), a snap bead along the middle 30 mm of each long side of the lip (a Ø1.2 half-round bead centred 3.5 mm below the plate on the lip's outer face), and the plate's top edge rounded R1. Make the clearance a parameter called clearance. Make the R1 round a fillet feature.",
+  "process": "fdm",
+  "tags": ["lid", "snap-fit", "lip", "fillet", "parametric"],
+  "requires": ["ir/1", "op/boolean", "op/fillet"],
+  "reference": "t2-snap-fit-lid.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "Plate, lip and beads are one solid", "check": "body_count", "eq": 1 },
+    {
+      "id": "size",
+      "description": "80 × 60, from 5 mm below the plate to its top",
+      "check": "bbox_min",
+      "approx": [-40, -30, -5],
+      "abs": 0.05
+    },
+    { "id": "top", "description": "Plate top on Z = 2", "check": "bbox_max", "approx": [40, 30, 2], "abs": 0.05 },
+    {
+      "id": "top_fillet",
+      "description": "The plate's top edge rounded R1 (4 edges)",
+      "check": "blend_edges",
+      "type": "fillet",
+      "size": [0.99, 1.01],
+      "eq": 4
+    },
+    {
+      "id": "beads",
+      "description": "Two Ø1.2 beads along X on the lip's outer faces (y = ±27.8, 3.5 mm below the plate); beads are bosses, not holes, so every swept circle counts",
+      "check": "hole_positions",
+      "circles": "all",
+      "diameter": [1.15, 1.25],
+      "points": [[0, -27.8, -3.5], [0, 27.8, -3.5]]
+    },
+    {
+      "id": "volume",
+      "description": "9600 + lip 1545.6 + beads 33.9 − R1 round 60 ≈ 11120 mm³ ±0.3%",
+      "check": "volume",
+      "approx": 11119.82,
+      "rel": 0.003
+    },
+    {
+      "id": "clearance",
+      "description": "The lip clearance is the clearance parameter, 0.2 mm",
+      "check": "param_value",
+      "name": "clearance",
+      "approx": 0.2,
+      "abs": 1e-09
+    },
+    {
+      "id": "clearance_param",
+      "description": "clearance = 0.3 shrinks the lip: 11115 mm³",
+      "check": "param",
+      "set": { "clearance": 0.3 },
+      "test": { "check": "volume", "approx": 11115.02, "rel": 0.0002 }
+    }
+  ],
+  "notes": "The bead position check reads the bead's circle (drawn on YZ, extruded 30 mm symmetric along X), so it also accepts any sketch that places a Ø1.2 circle there. Construction: top_fillet reads the fillet features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only that test."
+}

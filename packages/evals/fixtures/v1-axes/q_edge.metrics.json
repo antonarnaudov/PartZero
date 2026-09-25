@@ -1,0 +1,325 @@
+{
+ "schema": "aicad.metrics/1",
+ "engine": "forge 0.0.1",
+ "document": "quarter_disc_junction_axis",
+ "status": "ok",
+ "params": [],
+ "features": [
+  {
+   "part": "q",
+   "feature": "qs",
+   "feature_id": "f_qs",
+   "type": "sketch",
+   "status": "ok",
+   "warnings": [],
+   "regions": [
+    {
+     "area": 1256.6370614359173,
+     "loops": 1,
+     "outer_curves": [
+      "a1",
+      "l1",
+      "l2"
+     ]
+    }
+   ],
+   "sketch": {
+    "mode": "explicit",
+    "solved": [
+     {
+      "kind": "line",
+      "id": "l1",
+      "start": [
+       0.0,
+       0.0
+      ],
+      "end": [
+       40.0,
+       0.0
+      ]
+     },
+     {
+      "kind": "arc",
+      "id": "a1",
+      "start": [
+       40.0,
+       0.0
+      ],
+      "end": [
+       0.0,
+       40.0
+      ],
+      "center": [
+       0.0,
+       0.0
+      ],
+      "ccw": true
+     },
+     {
+      "kind": "line",
+      "id": "l2",
+      "start": [
+       0.0,
+       40.0
+      ],
+      "end": [
+       0.0,
+       0.0
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "part": "q",
+   "feature": "q",
+   "feature_id": "f_q",
+   "type": "extrude",
+   "status": "ok",
+   "warnings": [],
+   "bodies": [
+    {
+     "origin": {
+      "feature": "f_q",
+      "member": "a1"
+     },
+     "change": "created",
+     "volume": 6283.185307179586,
+     "area": 3227.4333882308147,
+     "centroid": [
+      16.9765272631355,
+      16.9765272631355,
+      2.5
+     ],
+     "bbox_min": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "bbox_max": [
+      40.0,
+      40.0,
+      5.0
+     ],
+     "faces": 5,
+     "edges": 9,
+     "shells": 1,
+     "face_types": {
+      "cylinder": 1,
+      "plane": 4
+     },
+     "edge_types": {
+      "circle": 2,
+      "line": 7
+     },
+     "valid": true
+    }
+   ]
+  },
+  {
+   "part": "q",
+   "feature": "h",
+   "feature_id": "f_h",
+   "type": "hole",
+   "status": "ok",
+   "warnings": [],
+   "bodies": [
+    {
+     "origin": {
+      "feature": "f_q",
+      "member": "a1"
+     },
+     "change": "modified",
+     "volume": 6220.35345410779,
+     "area": 3265.1325000738925,
+     "centroid": [
+      16.844977033470204,
+      17.046997235490405,
+      2.5
+     ],
+     "bbox_min": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "bbox_max": [
+      40.0,
+      40.0,
+      5.0
+     ],
+     "faces": 6,
+     "edges": 11,
+     "shells": 1,
+     "face_types": {
+      "cylinder": 2,
+      "plane": 4
+     },
+     "edge_types": {
+      "circle": 4,
+      "line": 7
+     },
+     "valid": true
+    }
+   ],
+   "refs": [
+    {
+     "field": "/on/face",
+     "status": "exact",
+     "members": [
+      {
+       "key": "f_q/cap:end@a1",
+       "name": "q/cap:end",
+       "via": "named",
+       "status": "exact",
+       "probe": {
+        "kind": "face",
+        "point": [
+         16.976527263135505,
+         16.9765272631355,
+         5.0
+        ],
+        "normal": [
+         0.0,
+         0.0,
+         1.0
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "holes": [
+    {
+     "at": "a",
+     "center": [
+      30.0,
+      10.0,
+      5.0
+     ],
+     "axis": [
+      -0.0,
+      -0.0,
+      -1.0
+     ],
+     "d": 4.0,
+     "depth": null,
+     "kind": "simple"
+    }
+   ]
+  },
+  {
+   "part": "q",
+   "feature": "p",
+   "feature_id": "f_p",
+   "type": "pattern",
+   "status": "ok",
+   "warnings": [],
+   "bodies": [
+    {
+     "origin": {
+      "feature": "f_q",
+      "member": "a1"
+     },
+     "change": "modified",
+     "volume": 6157.521601035994,
+     "area": 3302.83161191697,
+     "centroid": [
+      16.74809163623872,
+      17.18359665587455,
+      2.5
+     ],
+     "bbox_min": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "bbox_max": [
+      40.0,
+      40.0,
+      5.0
+     ],
+     "faces": 7,
+     "edges": 13,
+     "shells": 1,
+     "face_types": {
+      "cylinder": 3,
+      "plane": 4
+     },
+     "edge_types": {
+      "circle": 6,
+      "line": 7
+     },
+     "valid": true
+    }
+   ],
+   "refs": [
+    {
+     "field": "/layout/circular/axis/edge",
+     "status": "exact",
+     "members": [
+      {
+       "key": "f_q/edge:{f_q/side:a1|f_q/side:l1}@a1.start",
+       "name": "q/edge:{q/side:a1|q/side:l1}",
+       "via": "named",
+       "status": "exact",
+       "probe": {
+        "kind": "edge",
+        "point": [
+         40.0,
+         0.0,
+         2.5
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "pattern": {
+    "instances": 1
+   }
+  }
+ ],
+ "parts": [
+  {
+   "part": "q",
+   "part_id": "p_q",
+   "bodies": [
+    {
+     "origin": {
+      "feature": "f_q",
+      "member": "a1"
+     },
+     "volume": 6157.521601035994,
+     "area": 3302.83161191697,
+     "centroid": [
+      16.74809163623872,
+      17.18359665587455,
+      2.5
+     ],
+     "bbox_min": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "bbox_max": [
+      40.0,
+      40.0,
+      5.0
+     ],
+     "faces": 7,
+     "edges": 13,
+     "shells": 1,
+     "face_types": {
+      "cylinder": 3,
+      "plane": 4
+     },
+     "edge_types": {
+      "circle": 6,
+      "line": 7
+     },
+     "valid": true
+    }
+   ]
+  }
+ ]
+}
