@@ -1,0 +1,32 @@
+packages/forge-web/src/types/sketch.ts
+  s_59c0dd2af30db2::t_13ed6bbdc6cf1b 1-171
+packages/forge-web/src/sketch.ts
+  s_59c0dd2af30db2::t_1f3f8025cdb653 1-196
+forge/crates/forge-sketch-wasm/src/lib.rs
+  s_59c0dd2af30db2::t_b4668d07175570 10
+packages/forge-web/package.json
+  s_59c0dd2af30db2::t_3c928f756ccb81 19-22,24,33-38,41,47-49
+packages/forge-web/test/sketch.test.mjs
+  s_59c0dd2af30db2::t_879eadfe3ecf5c 1-118
+packages/forge-web/.gitignore
+  s_59c0dd2af30db2::t_3c928f756ccb81 5
+packages/forge-web/scripts/build-sketch.mjs
+  s_59c0dd2af30db2::t_41d8f6cff9c6df 1-6,8-105
+  s_59c0dd2af30db2::t_b4668d07175570 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1383ac7f23b3dff9ee6dd3257b9566a1c7be1d8f",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
