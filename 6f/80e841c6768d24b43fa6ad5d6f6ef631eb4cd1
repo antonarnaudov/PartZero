@@ -1,0 +1,21 @@
+packages/app/src/file/ui/FileLayer.tsx
+  s_59c0dd2af30db2::t_3e481763e98401 6,39-42,47,52
+packages/app/src/main.tsx
+  s_59c0dd2af30db2::t_fc86f58f81dd04 5,34-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6f80e841c6768d24b43fa6ad5d6f6ef631eb4cd1",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
