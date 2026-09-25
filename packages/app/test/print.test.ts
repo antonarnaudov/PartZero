@@ -119,6 +119,23 @@ describe("Open in Bambu Studio", () => {
   });
 });
 
+describe("file.openInSlicer (the command the button, the palette, the agent and MCP call)", () => {
+  it("sends a 3MF by default and STEP on request, and says the STEP is exact geometry", async () => {
+    const step = FILE.replace(".3mf", ".step");
+    const bridge = new FakePrintBridge({ status: "opened", file: FILE, receipt: FILE, slicer: SLICER, bodies: 1, bytes: 1, alreadyRunning: false, warnings: [], format: "3mf" });
+    const h = await harnessWith(bridge);
+    expect(await h.commands.execute({ id: "file.openInSlicer", args: {} }, { source: "ui" })).toMatchObject({ ok: true, value: { status: "opened" } });
+    expect(bridge.requests[0]!.format).toBeUndefined();
+    bridge.next = { status: "opened", file: step, receipt: step, slicer: SLICER, bodies: 1, bytes: 1, alreadyRunning: false, warnings: [], format: "step" };
+    expect(await h.commands.execute({ id: "file.openInSlicer", args: { format: "step" } }, { source: "agent" })).toMatchObject({ ok: true, value: { status: "opened", format: "step" } });
+    expect(bridge.requests[1]!.format).toBe("step");
+    expect(h.services.ui.getState().toasts.at(-1)!.message).toBe("Sent test-1a2b3c4d.step to Bambu Studio. It is the exact geometry: Bambu Studio tessellates it on import.");
+    expect(await h.commands.execute({ id: "file.openInSlicer", args: { format: "obj" } } as never, { source: "ui" })).toMatchObject({ ok: false, error: { code: "INVALID_ARGS" } });
+    const def = h.commands.describe().find((c) => c.id === "file.openInSlicer");
+    expect(def).toMatchObject({ keys: ["Mod+P"] });
+  });
+});
+
 /** A stand-in for Phase C's `IrDocStore`: a canonical v1 document, changed by transactions. */
 class FakeIrStore implements PrintableIrStore {
   state: { document: string | null; busy: boolean };

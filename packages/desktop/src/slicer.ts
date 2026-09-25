@@ -10,7 +10,7 @@
  *   A candidate counts only when its `Info.plist` says `CFBundleIdentifier` is Bambu Studio's, so
  *   a path set from the renderer can never launch another app.
  * - **Launch:** `execFile("/usr/bin/open", ["-a", <app>, <file>])`, no shell, a 10 s timeout,
- *   capped output, and only for a `.3mf` inside the prints folder. `-a <app>` opens the exact copy
+ *   capped output, and only for a `.3mf` (or `.step`) inside the prints folder. `-a <app>` opens the exact copy
  *   that was detected (and whose version is reported); a Bambu Studio that is already running
  *   receives the file as an open-document event. Bambu Studio 02.06 opens a file it receives
  *   while a part is loaded in a **new instance** (docs/SLICER-HANDOFF.md, finding 4), so the
@@ -223,14 +223,14 @@ export function isInside(dir: string, file: string): boolean {
   return rel.length > 0 && !rel.startsWith("..") && !isAbsolute(rel) && !rel.split(sep).includes("..");
 }
 
-/** Hand `file` (a `.3mf` in `printsDir`) to the detected slicer. */
+/** Hand `file` (a `.3mf`, or a `.step` / `.stp`, in `printsDir`) to the detected slicer. */
 export async function openInSlicer(sys: SlicerSystem, slicer: SlicerInfo, file: string, printsDir: string): Promise<OpenOutcome> {
   if (!slicer.found || !slicer.path) {
     return { ok: false, code: "SLICER_NOT_FOUND", message: slicer.reason ?? "Bambu Studio was not found." };
   }
   const abs = resolve(file);
-  if (!/\.3mf$/i.test(abs) || !existsSync(abs) || !isInside(printsDir, abs)) {
-    return { ok: false, code: "PRINT_PATH_NOT_ALLOWED", message: `Only a 3MF in ${printsDir} can be opened in the slicer.` };
+  if (!/\.(3mf|step|stp)$/i.test(abs) || !existsSync(abs) || !isInside(printsDir, abs)) {
+    return { ok: false, code: "PRINT_PATH_NOT_ALLOWED", message: `Only a 3MF or STEP file in ${printsDir} can be opened in the slicer.` };
   }
   const alreadyRunning = await slicerRunning(sys, slicer.path);
   const r = await sys.exec(sys.openBin, ["-a", slicer.path, abs], OPEN_TIMEOUT_MS);

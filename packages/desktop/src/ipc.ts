@@ -221,7 +221,12 @@ export function registerIpc(deps: IpcDeps): void {
     });
     handle("slicer:open", (_e, req) => {
       const r = (typeof req === "object" && req !== null ? req : {}) as Partial<OpenInSlicerRequest>;
-      return openPrintInSlicer(print, { irJson: str(r.irJson, "IR", 32 * 1024 * 1024), docName: str(r.docName ?? "", "document name", 200) });
+      if (r.format !== undefined && r.format !== "3mf" && r.format !== "step") throw new Error("invalid slicer format");
+      return openPrintInSlicer(print, {
+        irJson: str(r.irJson, "IR", 32 * 1024 * 1024),
+        docName: str(r.docName ?? "", "document name", 200),
+        ...(r.format ? { format: r.format } : {}),
+      });
     });
     handle("print:reveal", (_e, path) => {
       const p = str(path, "path");

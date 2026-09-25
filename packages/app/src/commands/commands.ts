@@ -17,6 +17,7 @@ import { PRINT_TESSELLATION } from "../engine/types";
 import { baseName, docNameFromPath } from "../host/host";
 import { BLANK_SOURCE, findTemplate } from "../host/templates";
 import { makeExportStepCommand } from "../io/step-export-command";
+import { openInSlicer } from "../print/open-in-slicer";
 import type { AppServices } from "../services";
 import { selectionChips } from "../selection/chips";
 import type { SelectionChip } from "../ui-store";
@@ -285,6 +286,24 @@ export const COMMANDS = {
     },
     host: (ctx) => ctx.host,
     toast: (ctx, kind, message) => ctx.ui.toast(kind, message),
+  }),
+
+  // "Open in Bambu Studio" (ALPHA-0-PLAN W5): check, export for the active printer into ~/PartZero/Prints
+  // and hand the file to the user's Bambu Studio. `3mf` (default): print-ready meshes at 0.01 mm / 5°,
+  // centred on the bed; `step`: the exact geometry, which Bambu Studio tessellates itself.
+  "file.openInSlicer": command({
+    id: "file.openInSlicer",
+    title: "Open in Bambu Studio",
+    category: "File",
+    description:
+      "Check the part with Forge, save it to ~/PartZero/Prints for the active printer profile and open it in Bambu Studio. format: 3mf (print-ready meshes at 0.01 mm / 5°, centred on the bed; the default) or step (exact geometry; Bambu Studio tessellates it on import). Desktop app only.",
+    args: z.strictObject({ format: z.enum(["3mf", "step"]).default("3mf") }),
+    keys: ["Mod+P"],
+    palette: [
+      { title: "Open in Bambu Studio (3MF, print-ready)", args: { format: "3mf" } },
+      { title: "Open in Bambu Studio (STEP, exact geometry)", args: { format: "step" } },
+    ],
+    run: ({ format }, ctx) => openInSlicer(ctx, { format }),
   }),
 
   // ─── Edit ──────────────────────────────────────────────────────────────────────────────────

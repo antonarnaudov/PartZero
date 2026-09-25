@@ -23,14 +23,22 @@
  * 4. **Hand off.** The slicer is found and launched by `slicer.ts`. When it is missing or does not
  *    start, the export still stands and the result says so (the UI offers Show in Finder).
  *
+ * **STEP instead of 3MF** (`format: "step"`, the owner's choice of "3MF print-ready or STEP
+ * exact"): steps 1–2 run exactly as above on the print meshes, so a design that does not fit, leaks
+ * or stacks is refused the same way; the file saved and handed over is then `aicad export --format
+ * step` (AP214, the exact B-rep), `<doc>-<hash8>.step`, and the receipt says `format: "step"` with
+ * no tessellation or placement: Bambu Studio 02.06 tessellates STEP itself (its STEP import
+ * precision dialog) and places the part on the plate.
+ *
  * The receipt never contains the slicer's output: downstream results are advisory (ADR 0016 §2).
  */
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
-import type { OpenInSlicerRequest, OpenInSlicerResult, PrintWarning, SlicerInfo } from "@aicad/app/bridge";
+import type { OpenInSlicerRequest, OpenInSlicerResult, PrintWarning, SlicerFormat, SlicerInfo } from "@aicad/app/bridge";
 import { forgeEval, forgeFailure, forgeInfo, forgePrintExport } from "./forge-cli.js";
 import { type MachineProfile, type MaterialProfile, type ProfileStore, writeFileAtomic } from "./profiles.js";
 import { detectSlicer, openInSlicer, type SlicerSystem } from "./slicer.js";
+import { forgeStepExport } from "./step-export.js";
 import { ensureUserFolder } from "./user-folders.js";
 
 export const RECEIPT_SCHEMA = "partzero.receipt/1";
@@ -161,12 +169,16 @@ function receipt(o: {
   valid: boolean;
   summary: Summary;
   warnings: PrintWarning[];
+  format: SlicerFormat;
 }): unknown {
   const p = o.printer;
   const m = o.material;
+  const step = o.format === "step";
   return {
     schema: RECEIPT_SCHEMA,
     file: o.file,
+    /** `3mf`: print meshes placed on the bed; `step`: the exact B-rep, tessellated and placed by the slicer. */
+    format: o.format,
     /** The file's bytes (integrity). They include the document name and app version. */
     sha256: o.sha256,
     /** Forge's hash of the geometry and placement without the metadata (the determinism hash). */
@@ -204,14 +216,17 @@ function receipt(o: {
       bedFit: { ok: true, usable: [p.bed.x - 2 * p.bedMargin, p.bed.y - 2 * p.bedMargin, p.bed.z] },
       layoutWarnings: o.warnings,
     },
-    tessellation: o.summary.tessellation ?? null,
-    bbox: { model: o.summary.bbox ?? null, onBed: o.summary.placement?.bbox ?? null },
-    placement: { translation: o.summary.placement?.translation ?? null },
-    note: "What PartZero checked against this printer profile. The slicer's own results are not part of this receipt (ADR 0016).",
+    // A STEP file is exact geometry: the slicer tessellates it and places it on the plate.
+    tessellation: step ? null : (o.summary.tessellation ?? null),
+    bbox: { model: o.summary.bbox ?? null, onBed: step ? null : (o.summary.placement?.bbox ?? null) },
+    placement: { translation: step ? null : (o.summary.placement?.translation ?? null) },
+    note: step
+      ? "What PartZero checked against this printer profile, on print meshes at the profile's tessellation. The file is the exact geometry (STEP AP214): Bambu Studio tessellates it with its own import precision and places it on the plate. The slicer's own results are not part of this receipt (ADR 0016)."
+      : "What PartZero checked against this printer profile. The slicer's own results are not part of this receipt (ADR 0016).",
   };
 }
 
-type Written = { file: string; receipt: string; bodies: number; bytes: number; warnings: PrintWarning[] };
+type Written = { file: string; receipt: string; bodies: number; bytes: number; warnings: PrintWarning[]; format: SlicerFormat };
 
 /** Steps 1–3: check, export and save. */
 export async function exportForPrinter(deps: PrintHandoffDeps, req: OpenInSlicerRequest): Promise<Written | Refusal> {
@@ -219,9 +234,14 @@ export async function exportForPrinter(deps: PrintHandoffDeps, req: OpenInSlicer
   const docName = typeof req.docName === "string" ? req.docName.slice(0, 200) : "";
   const info = await forgeInfo(deps.forgeBin);
   if (!info.available) return { status: "refused", code: "FORGE_UNAVAILABLE", message: info.detail };
+  if (req.format !== undefined && req.format !== "3mf" && req.format !== "step") throw new Error("invalid slicer format");
+  const format: SlicerFormat = req.format ?? "3mf";
   const printer = deps.profiles.printer();
   const material = deps.profiles.material();
-  const [ev, ex] = await Promise.all([
+  // STEP: the same checks run on the print meshes (validity, bed fit, watertight, layout); the file is the exact B-rep.
+  const stepRun =
+    format === "step" ? forgeStepExport(deps.forgeBin, { irJson: req.irJson, schema: "ap214", productName: docName.trim() || "part", allowPartial: false }) : Promise.resolve(null);
+  const [ev, ex, stepOut] = await Promise.all([
     forgeEval(deps.forgeBin, { irJson: req.irJson, meshes: false }),
     forgePrintExport(deps.forgeBin, {
       irJson: req.irJson,
@@ -233,6 +253,7 @@ export async function exportForPrinter(deps: PrintHandoffDeps, req: OpenInSlicer
       title: docName || "part",
       application: `${PRODUCT_NAME} ${deps.appVersion}`,
     }),
+    stepRun,
   ]);
   const checks = reportChecks(ev.reportJson);
   if (!checks) {
@@ -259,7 +280,16 @@ export async function exportForPrinter(deps: PrintHandoffDeps, req: OpenInSlicer
   const unconfirmed = confirmSummary(ex.summary as Summary | null, checks.bodies.length);
   if (unconfirmed) return unconfirmed;
   const warnings = summaryWarnings(summary);
-  const sha256 = createHash("sha256").update(ex.data).digest("hex");
+  let data: Uint8Array = ex.data;
+  if (format === "step") {
+    if (!stepOut || stepOut.exitCode !== 0 || !stepOut.data) {
+      const f = forgeFailure(stepOut ?? { exitCode: null, stderr: "" }, deps.forgeBin);
+      return { status: "refused", code: f.code, message: f.code === "FORGE_OUTDATED" ? f.message : `The STEP export failed: ${f.message}` };
+    }
+    data = stepOut.data;
+  }
+  const ext = format === "step" ? "step" : "3mf";
+  const sha256 = createHash("sha256").update(data).digest("hex");
   const stem = `${printFileStem(docName)}-${sha256.slice(0, 8)}`;
   // Created on first use (ALPHA-0-PLAN D4), with `~/PartZero` itself; a Prints (or PartZero) that is a symlink or a
   // file is refused rather than written through (user-folders.ts).
@@ -268,13 +298,14 @@ export async function exportForPrinter(deps: PrintHandoffDeps, req: OpenInSlicer
   } catch (e) {
     return { status: "refused", code: "EXPORT_FAILED", message: `Not saved: ${e instanceof Error ? e.message : String(e)}.` };
   }
-  const file = join(deps.printsDir, `${stem}.3mf`);
+  const file = join(deps.printsDir, `${stem}.${ext}`);
   const receiptPath = join(deps.printsDir, `${stem}.receipt.json`);
-  writeFileAtomic(file, ex.data);
+  writeFileAtomic(file, data);
   const r = receipt({
-    file: `${stem}.3mf`,
+    file: `${stem}.${ext}`,
+    format,
     sha256,
-    bytes: ex.data.byteLength,
+    bytes: data.byteLength,
     createdAt: (deps.now ?? (() => new Date()))().toISOString(),
     appVersion: deps.appVersion,
     docName,
@@ -286,7 +317,7 @@ export async function exportForPrinter(deps: PrintHandoffDeps, req: OpenInSlicer
     warnings,
   });
   writeFileAtomic(receiptPath, `${JSON.stringify(r, null, 2)}\n`);
-  return { file, receipt: receiptPath, bodies: summary.bodies?.length ?? 0, bytes: ex.data.byteLength, warnings };
+  return { file, receipt: receiptPath, bodies: summary.bodies?.length ?? 0, bytes: data.byteLength, warnings, format };
 }
 
 /** The slicer as currently configured (the Settings path, else the search). */

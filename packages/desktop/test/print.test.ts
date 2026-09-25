@@ -6,6 +6,7 @@
 import { createHash } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { inflateRawSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { findRepoRoot, forgeFailure, forgePrintCapability, locateForgeBinary } from "../src/forge-cli.js";
@@ -340,6 +341,66 @@ const bin = locateForgeBinary({ env: {}, isPackaged: false, resourcesPath: "", a
 const corpus = (name: string): string => readFileSync(join(repo ?? "", "corpus", "programs", `${name}.json`), "utf8");
 const haveForge = !!repo && existsSync(bin) && existsSync(join(repo, "corpus", "programs", "extrude_two_regions.json"));
 
+/** A 30 × 20 × 5 mm plate with one 5 mm through hole (IR v1, a `hole` feature on the top cap). */
+const HOLE_PLATE = JSON.stringify({
+  schema: "aicad.ir/1",
+  meta: { name: "hole", description: "" },
+  params: [],
+  parts: [
+    {
+      id: "p1",
+      name: "plate",
+      features: [
+        { type: "sketch", id: "s1", name: "base", plane: "XY", curves: [{ kind: "rect", id: "outline", center: [0, 0], w: 30, h: 20 }] },
+        { type: "extrude", id: "e1", name: "slab", sketch: "s1", distance: 5 },
+        { type: "hole", id: "h1", name: "hole5", on: { face: { kind: "face", q: { op: "cap", feature: "e1", end: "end" } } }, at: { grid: { nx: 1, ny: 1, dx: 0, dy: 0 } }, d: 5, depth: "through" },
+      ],
+    },
+  ],
+});
+
+/** The centre of the circle through points (x, y) (Kåsa's least-squares fit: exact for points on a circle). */
+function circleCentre(ps: ReadonlyArray<readonly [number, number, number]>): [number, number] {
+  // Minimise Σ (x² + y² + D x + E y + F)²: the normal equations, solved by Cramer's rule.
+  let sxx = 0, sxy = 0, syy = 0, sx = 0, sy = 0, sxz = 0, syz = 0, sz = 0;
+  for (const [x, y] of ps) {
+    const zz = x * x + y * y;
+    sxx += x * x; sxy += x * y; syy += y * y; sx += x; sy += y; sxz += x * zz; syz += y * zz; sz += zz;
+  }
+  const n = ps.length;
+  const m = [[sxx, sxy, sx], [sxy, syy, sy], [sx, sy, n]];
+  const b = [-sxz, -syz, -sz];
+  const det = (a: number[][]): number =>
+    a[0]![0]! * (a[1]![1]! * a[2]![2]! - a[1]![2]! * a[2]![1]!) - a[0]![1]! * (a[1]![0]! * a[2]![2]! - a[1]![2]! * a[2]![0]!) + a[0]![2]! * (a[1]![0]! * a[2]![1]! - a[1]![1]! * a[2]![0]!);
+  const d = det(m);
+  const col = (k: number): number[][] => m.map((row, i) => row.map((v, j) => (j === k ? b[i]! : v)));
+  return [-det(col(0)) / d / 2, -det(col(1)) / d / 2];
+}
+
+/** The object vertices of a 3MF (its build transform aside), from the zip's central directory. */
+function threeMfVertices(zip: Buffer): Array<[number, number, number]> {
+  let eocd = zip.length - 22;
+  while (eocd >= 0 && zip.readUInt32LE(eocd) !== 0x06054b50) eocd--;
+  const count = zip.readUInt16LE(eocd + 10);
+  let at = zip.readUInt32LE(eocd + 16);
+  for (let i = 0; i < count; i++) {
+    const method = zip.readUInt16LE(at + 10);
+    const size = zip.readUInt32LE(at + 20);
+    const nameLen = zip.readUInt16LE(at + 28);
+    const extraLen = zip.readUInt16LE(at + 30);
+    const commentLen = zip.readUInt16LE(at + 32);
+    const local = zip.readUInt32LE(at + 42);
+    const name = zip.subarray(at + 46, at + 46 + nameLen).toString("utf8");
+    at += 46 + nameLen + extraLen + commentLen;
+    if (!/3dmodel\.model$/i.test(name)) continue;
+    const start = local + 30 + zip.readUInt16LE(local + 26) + zip.readUInt16LE(local + 28);
+    const raw = zip.subarray(start, start + size);
+    const xml = (method === 8 ? inflateRawSync(raw) : raw).toString("utf8");
+    return [...xml.matchAll(/<vertex\s+x="([^"]+)"\s+y="([^"]+)"\s+z="([^"]+)"/g)].map((m) => [Number(m[1]), Number(m[2]), Number(m[3])]);
+  }
+  throw new Error("no 3D model in the 3MF");
+}
+
 function handoff(root: string, o: { slicerDirs?: string[]; openBin?: string; forgeBin?: string } = {}): PrintHandoffDeps {
   return {
     forgeBin: o.forgeBin ?? bin,
@@ -390,7 +451,7 @@ describe.skipIf(!haveForge || !posix)("the handoff with the real aicad", () => {
     expect(onBed.min[2]).toBe(0);
     // Only what PartZero checked: no slicer output (ADR 0016 §2).
     expect(Object.keys(receipt).sort()).toEqual(
-      ["app", "bbox", "bytes", "checks", "createdAt", "document", "file", "forge", "geometryHash", "material", "note", "placement", "printer", "schema", "sha256", "tessellation"].sort(),
+      ["app", "bbox", "bytes", "checks", "createdAt", "document", "file", "format", "forge", "geometryHash", "material", "note", "placement", "printer", "schema", "sha256", "tessellation"].sort(),
     );
     // The same design gets the same name (and bytes) again.
     const again = await exportForPrinter(deps, { irJson: corpus("extrude_two_regions"), docName: "Two Pucks" });
@@ -417,6 +478,65 @@ describe.skipIf(!haveForge || !posix)("the handoff with the real aicad", () => {
     symlinkSync(root, linked.printsDir);
     const refused = await exportForPrinter(linked, { irJson: corpus("extrude_box"), docName: "box" });
     expect(refused).toMatchObject({ status: "refused", code: "EXPORT_FAILED", message: expect.stringContaining("is not a folder") });
+  });
+
+  it("hands over a 5 mm hole with at least 72 segments (the P2S print tessellation, 0.01 mm and 5°)", async () => {
+    const root = tmp();
+    const deps = handoff(root);
+    const r = await exportForPrinter(deps, { irJson: HOLE_PLATE, docName: "hole" });
+    if (!("file" in r)) throw new Error(r.message);
+    expect(r.format).toBe("3mf");
+    const points = threeMfVertices(readFileSync(r.file));
+    // The top cap's own vertices, away from the plate's outline, are the rim of the hole.
+    for (const z of [0, 5]) {
+      const rim = points.filter((p) => Math.abs(p[2] - z) < 1e-6 && Math.abs(p[0]) < 14.9 && Math.abs(p[1]) < 9.9);
+      const [cx, cy] = circleCentre(rim);
+      const angles = [...new Set(rim.map((p) => Math.round(((Math.atan2(p[1] - cy, p[0] - cx) + 2 * Math.PI) % (2 * Math.PI)) * 1e4)))].sort((a, b) => a - b);
+      expect(angles.length, `rim at z = ${z}`).toBeGreaterThanOrEqual(72);
+      for (const p of rim) expect(Math.hypot(p[0] - cx, p[1] - cy)).toBeCloseTo(2.5, 4);
+      let widest = 0;
+      for (let i = 0; i < angles.length; i++) widest = Math.max(widest, ((i + 1 < angles.length ? angles[i + 1]! : angles[0]! + 2 * Math.PI * 1e4) - angles[i]!) / 1e4);
+      expect(widest).toBeLessThanOrEqual((5 * Math.PI) / 180 + 1e-3);
+    }
+    expect(JSON.parse(readFileSync(r.receipt, "utf8"))).toMatchObject({ format: "3mf", tessellation: { deflection: 0.01, angular: Math.PI / 36 } });
+  });
+
+  it("offers STEP instead: the same checks, then the exact B-rep as <doc>-<hash8>.step, opened in Bambu Studio", async () => {
+    const root = tmp();
+    const app = fakeApp(join(root, "Applications"));
+    const open = fakeOpen(root);
+    const deps = handoff(root, { slicerDirs: [join(root, "Applications")], openBin: open.bin });
+    const r = await openPrintInSlicer(deps, { irJson: HOLE_PLATE, docName: "Hole Plate", format: "step" });
+    expect(r.status).toBe("opened");
+    if (r.status !== "opened") return;
+    const bytes = readFileSync(r.file);
+    const sha = createHash("sha256").update(bytes).digest("hex");
+    expect(r.file).toBe(join(deps.printsDir, `hole-plate-${sha.slice(0, 8)}.step`));
+    expect(r).toMatchObject({ format: "step", bodies: 1, bytes: bytes.length, warnings: [] });
+    expect(bytes.subarray(0, 13).toString()).toBe("ISO-10303-21;");
+    const text = bytes.toString("utf8");
+    expect(text).toMatch(/AUTOMOTIVE_DESIGN/);
+    expect(text).toMatch(/CYLINDRICAL_SURFACE\([^)]*2\.5/);
+    expect(open.args()).toEqual(["-a", app, r.file]);
+    const receipt = JSON.parse(readFileSync(r.receipt, "utf8"));
+    expect(receipt).toMatchObject({
+      schema: "partzero.receipt/1",
+      format: "step",
+      file: `hole-plate-${sha.slice(0, 8)}.step`,
+      sha256: sha,
+      bytes: bytes.length,
+      checks: { report: "ok", valid: true, watertight: true, bodies: 1, bedFit: { ok: true } },
+      tessellation: null,
+      placement: { translation: null },
+      bbox: { onBed: null },
+    });
+    expect(receipt.note).toMatch(/Bambu Studio tessellates it/);
+    // The checks still refuse what would not print: too big for the bed is refused before any STEP is saved.
+    const big = JSON.parse(HOLE_PLATE) as { parts: Array<{ features: Array<{ curves?: Array<{ w?: number; h?: number }> }> }> };
+    big.parts[0]!.features[0]!.curves![0]!.w = 400;
+    const refused = await openPrintInSlicer(handoff(tmp()), { irJson: JSON.stringify(big), docName: "big", format: "step" });
+    expect(refused).toMatchObject({ status: "refused", code: "EXPORT_BED_FIT" });
+    await expect(exportForPrinter(deps, { irJson: HOLE_PLATE, docName: "x", format: "obj" as never })).rejects.toThrow(/invalid slicer format/);
   });
 
   it("still saves the file when Bambu Studio is missing, and says how to fix it", async () => {

@@ -10,7 +10,7 @@ import { useFilesState } from "../../file/ui/hooks";
 import { TOOL_GROUPS, type ToolDefinition, type ToolGroupInfo } from "../../tools/framework/types";
 import { useApp, useStore } from "../context";
 import { Icon } from "../icons";
-import { OpenInSlicerButton } from "../Toolbar";
+import { OpenInSlicerButton } from "./SlicerButton";
 import { BrandLockup } from "./BrandMark";
 import { useShell, useShellState } from "./context";
 import { ToolIcon } from "./tool-icons";

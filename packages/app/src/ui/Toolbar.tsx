@@ -1,44 +1,15 @@
-import { useState, type ReactElement } from "react";
+import type { ReactElement } from "react";
 import type { AppInvocation } from "../commands/commands";
 import { formatKey } from "../commands/registry";
 import { useFilesState } from "../file/ui/hooks";
-import { openInSlicer } from "../print/open-in-slicer";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
 import { SketchButton } from "./sketch/SketchModeHost";
 
-/**
- * The primary handoff button (ALPHA-0-PLAN W3/W5): check, export for the printer and open in the
- * user's Bambu Studio. Desktop only. It calls `openInSlicer` directly until `file.openInSlicer`
- * (with ⌘P) is registered in the command layer; failures surface as toasts like other commands.
- */
-export function OpenInSlicerButton(): ReactElement | null {
-  const { services } = useApp();
-  const [busy, setBusy] = useState(false);
-  if (!services.host.print) return null;
-  const run = (): void => {
-    setBusy(true);
-    openInSlicer(services)
-      .catch((e: unknown) => services.ui.toast("error", e instanceof Error ? e.message : String(e)))
-      .finally(() => setBusy(false));
-  };
-  return (
-    <div className="tb-group">
-      <button
-        type="button"
-        className="tb-primary"
-        title="Check the part, save it to ~/PartZero/Prints centred on the printer bed, and open it in Bambu Studio"
-        disabled={busy}
-        aria-busy={busy}
-        onClick={run}
-        data-testid="open-in-slicer"
-      >
-        {busy ? <Icon.Spinner size={14} /> : <Icon.Printer size={14} />}
-        <span>Open in Bambu Studio</span>
-      </button>
-    </div>
-  );
-}
+/** The primary handoff button: the split button over `file.openInSlicer` (3MF or STEP) in `shell/SlicerButton.tsx`. */
+import { OpenInSlicerButton } from "./shell/SlicerButton";
+
+export { OpenInSlicerButton };
 
 function ToolButton({ cmd, title, keyHint, children, disabled }: { cmd: AppInvocation; title: string; keyHint?: string; children: ReactElement; disabled?: boolean }): ReactElement {
   const { run, isMac } = useApp();

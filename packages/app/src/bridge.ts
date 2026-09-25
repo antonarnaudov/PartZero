@@ -212,12 +212,24 @@ export interface SlicerInfo {
   fix?: string;
 }
 
+/**
+ * What the slicer gets (SLICER-HANDOFF.md):
+ * - `3mf` (the default): print-ready meshes at the profile's print tessellation (0.01 mm, 5°),
+ *   centred on the bed, one object per body.
+ * - `step`: the exact B-rep (AP214). Bambu Studio 02.06 imports STEP and tessellates it itself with
+ *   its own precision (its STEP import dialog); the same checks run first (Forge, bed fit,
+ *   watertight print meshes), but the placement on the plate is the slicer's.
+ */
+export type SlicerFormat = "3mf" | "step";
+
 /** `slicer:open`: export the current design for the active printer and open it in the slicer. */
 export interface OpenInSlicerRequest {
   /** The compiled IR of the document (JSON). */
   irJson: string;
-  /** The document name (the file is `<name>-<hash8>.3mf`). */
+  /** The document name (the file is `<name>-<hash8>.3mf`, or `.step`). */
   docName: string;
+  /** Default `3mf`. */
+  format?: SlicerFormat;
 }
 
 /** Something about a print the slicer may treat differently from the model (it is still written). */
@@ -249,9 +261,9 @@ export type OpenInSlicerResult =
    * the slicer then loaded it is not observable). `alreadyRunning`: the slicer was running before,
    * so it may open the file in a new window (null: not known).
    */
-  | { status: "opened"; file: string; receipt: string; slicer: SlicerInfo; bodies: number; bytes: number; alreadyRunning: boolean | null; warnings: PrintWarning[] }
+  | { status: "opened"; file: string; receipt: string; slicer: SlicerInfo; bodies: number; bytes: number; alreadyRunning: boolean | null; warnings: PrintWarning[]; format?: SlicerFormat }
   /** Written, but not opened: no slicer, or its launch failed. `message` says why, `fix` what to do. */
-  | { status: "exported"; file: string; receipt: string; slicer: SlicerInfo; bodies: number; bytes: number; warnings: PrintWarning[]; message: string; fix?: string }
+  | { status: "exported"; file: string; receipt: string; slicer: SlicerInfo; bodies: number; bytes: number; warnings: PrintWarning[]; message: string; fix?: string; format?: SlicerFormat }
   /** Nothing written: the design is not checked, does not fit the printer, or would print wrong. */
   | { status: "refused"; code: OpenInSlicerRefusal; message: string; details?: unknown };
 

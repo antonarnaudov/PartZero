@@ -4,8 +4,9 @@
  * printer's bed into `~/PartZero/Prints` with a receipt, and opens it in the user's own Bambu
  * Studio (`slicer:open`, see `@aicad/desktop` print-handoff.ts).
  *
- * This is the body of the `file.openInSlicer` command. Until that command is registered in
- * `commands/commands.ts` (which IR v1 Phase C has open), the toolbar button calls it directly.
+ * This is the body of the `file.openInSlicer { format }` command (⌘P), which the toolbar's split
+ * button, the palette, the agent and MCP all call: `3mf` (print-ready meshes, the default) or
+ * `step` (the exact geometry; Bambu Studio 02.06 imports STEP and tessellates it itself).
  *
  * **Which document is exported** ({@link printableIr}): the IR v1 document of record when the
  * host has an IR v1 store (`services.ir`, IR v1 Phase C) with a document loaded, since v1
@@ -14,7 +15,7 @@
  * exported (golden path a3/a4). Nothing here guesses between the two once the app has one document
  * store (ALPHA-0-PLAN W4c): the rule is to export what the user is editing.
  */
-import type { OpenInSlicerResult, PrintBridge } from "../bridge";
+import type { OpenInSlicerResult, PrintBridge, SlicerFormat } from "../bridge";
 import type { DocState } from "../doc/doc-store";
 import type { Toast } from "../ui-store";
 
@@ -80,17 +81,19 @@ function warningText(result: { warnings?: Array<{ message: string }> }): string 
  * result (also shown as a toast); throws when there is nothing to hand over (no desktop shell, or
  * code with errors), like the other commands.
  */
-export async function openInSlicer(ctx: OpenInSlicerContext): Promise<OpenInSlicerResult> {
+export async function openInSlicer(ctx: OpenInSlicerContext, options: { format?: SlicerFormat } = {}): Promise<OpenInSlicerResult> {
   const print = ctx.host.print;
   if (!print) throw new Error("Open in Bambu Studio needs the desktop app. Export a 3MF and open it in Bambu Studio instead.");
-  const result = await print.openInSlicer(await printableIr(ctx));
+  const format = options.format ?? "3mf";
+  const result = await print.openInSlicer({ ...(await printableIr(ctx)), ...(format === "step" ? { format } : {}) });
   const reveal = (path: string): Toast["action"] => ({ label: "Show in Finder", run: () => void print.reveal(path).catch(() => undefined) });
   switch (result.status) {
     case "opened": {
       // `open` handed the file over; whether Bambu Studio loaded it is not observable from here.
       // A running Bambu Studio with a part loaded opens the file in a new instance (SLICER-HANDOFF.md).
       const again = result.alreadyRunning ? ` ${result.slicer.name} was already open, so it may open this in a new window: close the previous one when you're done.` : "";
-      const text = `Sent ${fileName(result.file)} to ${result.slicer.name}.${again}${warningText(result)}`;
+      const exact = result.format === "step" ? " It is the exact geometry: Bambu Studio tessellates it on import." : "";
+      const text = `Sent ${fileName(result.file)} to ${result.slicer.name}.${exact}${again}${warningText(result)}`;
       ctx.ui.toast(again || result.warnings?.length ? "info" : "success", text, again || result.warnings?.length ? 12_000 : 6000, reveal(result.file));
       break;
     }
