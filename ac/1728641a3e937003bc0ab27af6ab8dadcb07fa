@@ -1,0 +1,40 @@
+oracle/src/aicad_oracle/v1/patterns.py
+  s_59c0dd2af30db2::t_ec5cb31359fe32 406-448
+oracle/src/aicad_oracle/v1/validate.py
+  s_59c0dd2af30db2::t_21479409aa15d2 674-694
+  s_59c0dd2af30db2::t_eb7946127c01a4 149-153
+  s_59c0dd2af30db2::t_8dbffc4a57cd6d 711,714
+  s_59c0dd2af30db2::t_d34d8d53c36f37 472-473
+  s_59c0dd2af30db2::t_e922c1f491f56e 165-173
+  s_59c0dd2af30db2::t_dd3e83ab87583f 730-736
+oracle/src/aicad_oracle/v1/jsonio.py
+  s_59c0dd2af30db2::t_1849968cb3ca0d 308
+  s_59c0dd2af30db2::t_1cf93de9d91c99 536-537
+  s_59c0dd2af30db2::t_2d999d98974fa7 575-581
+  s_59c0dd2af30db2::t_8558002d8d719c 534,538-543
+  s_59c0dd2af30db2::t_bc80bc6f504283 311
+oracle/src/aicad_oracle/v1/evaluate.py
+  s_59c0dd2af30db2::t_3bab53b3c074f9 733-737,744-745
+  s_59c0dd2af30db2::t_9556392bed2c9d 860-905
+  s_59c0dd2af30db2::t_ee07da95bc649c 1046-1050
+  s_59c0dd2af30db2::t_05aec14dbfbb57 711,713-718
+  s_59c0dd2af30db2::t_ecaebddcdd6976 1039-1041
+  s_59c0dd2af30db2::t_8cf4a289efb454 457-460
+  s_59c0dd2af30db2::t_1d7218eb467eed 906
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ac1728641a3e937003bc0ab27af6ab8dadcb07fa",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
