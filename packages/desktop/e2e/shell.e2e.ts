@@ -217,7 +217,9 @@ test("inspect tools: Forge's exact body properties and the printer fit, in the p
   await props.click();
   const panel = page.getByTestId("property-panel");
   await expect(panel).toBeVisible();
-  await expect(page.getByTestId("dock-tab-properties")).toHaveAttribute("aria-selected", "true");
+  // The tool's panel floats over the viewport's top left (plan §2.5), not in the right dock.
+  await expect(page.getByTestId("floating-panel")).toBeVisible();
+  await expect(page.getByTestId("dock-tab-properties")).toHaveCount(0);
   await expect(panel.getByTestId("panel-summary")).toContainText("10417.7");
   await expect(panel.getByTestId("panel-summary")).toContainText("50 × 50 × 5 mm");
   await expect(panel.getByTestId("panel-summary")).toContainText("Valid solid");

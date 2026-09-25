@@ -29,6 +29,9 @@ __pycache__/
 *.step
 !corpus/golden/**/*.step
 
+# Design screenshots (packages/desktop/e2e/design.e2e.ts) and other test output at the root
+/test-results/
+
 # OS / editors
 .DS_Store
 .idea/
