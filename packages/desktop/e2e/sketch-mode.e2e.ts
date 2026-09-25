@@ -83,7 +83,7 @@ async function wheelTrace(trace: Array<{ deltaX?: number; deltaY: number; ctrlKe
 
 /** Open a new sketch on a named plane from the toolbar. */
 async function newSketch(plane: "XY" | "XZ" | "YZ"): Promise<void> {
-  await page.getByTestId("toolbar-sketch").click();
+  await page.getByTestId("tool-sketch.new").click();
   await page.getByTestId(`sketch-plane-${plane}`).click();
   await expect.poll(async () => (await sk()).phase).toBe("active");
 }
@@ -134,7 +134,7 @@ test.afterAll(async () => {
 });
 
 test("opens sketch mode on the XY plane from the toolbar", async () => {
-  await page.getByTestId("toolbar-sketch").click();
+  await page.getByTestId("tool-sketch.new").click();
   await expect(page.getByTestId("sketch-plane-picker")).toBeVisible();
   await page.getByTestId("sketch-plane-XY").click();
   await expect(page.getByTestId("sketch-mode")).toBeVisible();

@@ -3,7 +3,7 @@
  * its tool palette, constraint bar, inspector (status, DOF, conflicts with one-click repairs,
  * constraints and dimensions), inline dimension editor, typed-value box, hint and notices.
  *
- * Mounted once inside the viewport column (App.tsx). The toolbar's Sketch button, the
+ * Mounted once inside the viewport column (ui/shell/AppShell.tsx). The ribbon's Sketch tool, the
  * integrator's `sketch.*` commands and the test hooks all drive the same `sketchMode`.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";

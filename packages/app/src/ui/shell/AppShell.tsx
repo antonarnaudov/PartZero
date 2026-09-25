@@ -13,6 +13,8 @@
  * ```
  */
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
+import { FileLayer } from "../../file/ui/FileLayer";
+import { sketchMode } from "../../sketch/instance";
 import { useProblems } from "../doc-hooks";
 import { ChatPanel } from "../ChatPanel";
 import { CommandPalette } from "../CommandPalette";
@@ -20,6 +22,7 @@ import { useApp, useStore } from "../context";
 import { AboutDialog, TemplateDialog, Toasts } from "../Dialogs";
 import { ProblemsPanel } from "../ProblemsPanel";
 import { SettingsDialog } from "../SettingsDialog";
+import { SketchModeHost } from "../sketch/SketchModeHost";
 import { StatusBar } from "../StatusBar";
 import { Viewport } from "../Viewport";
 import { useShell, useShellState } from "./context";
@@ -79,7 +82,9 @@ function useWelcomeVisible(): boolean {
   useStore(services.doc, (s) => `${s.docId}:${s.path ?? ""}:${s.dirty}:${s.revision}:${s.model !== null}`);
   useStore(services.agent, (s) => `${s.activeRunId ?? ""}:${s.review ? 1 : 0}`);
   useShellState((s) => s.welcome);
-  return shell.welcomeVisible();
+  // Sketch mode (the plane picker, then the sketcher) draws over the viewport: the welcome makes way.
+  const sketching = useStore(sketchMode, (s) => s.phase !== "off");
+  return !sketching && shell.welcomeVisible();
 }
 
 export function AppShell(): ReactElement {
@@ -128,6 +133,7 @@ export function AppShell(): ReactElement {
         {panels.left && <Splitter axis="x" label="Resize the model panel" onDrag={(d) => resize("left", d)} />}
         <main className="col-center">
           <Viewport />
+          <SketchModeHost />
           {welcome && (
             <div className="welcome-layer">
               <Welcome />
@@ -155,6 +161,7 @@ export function AppShell(): ReactElement {
       {dialog === "about" && <AboutDialog />}
       {dialog === "settings" && <SettingsDialog />}
       {shellDialog === "shortcuts" && <ShortcutsDialog />}
+      <FileLayer />
       <Toasts />
     </div>
   );

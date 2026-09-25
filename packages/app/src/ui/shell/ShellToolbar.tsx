@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactElement } from "react";
 import type { AppInvocation } from "../../commands/commands";
 import { formatKey } from "../../commands/registry";
+import { useFilesState } from "../../file/ui/hooks";
 import { TOOL_GROUPS, type ToolDefinition, type ToolGroupInfo } from "../../tools/framework/types";
 import { useApp, useStore } from "../context";
 import { Icon } from "../icons";
@@ -177,6 +178,9 @@ export function TitleBar(): ReactElement {
   const name = useStore(services.doc, (s) => s.name);
   const dirty = useStore(services.doc, (s) => s.dirty);
   const format = useStore(services.doc, (s) => s.format);
+  const isPartZero = useStore(services.doc, (s) => /\.partzero$/i.test(s.path ?? ""));
+  // Reference meshes added or removed are unsaved changes too (they are not in the store).
+  const refsDirty = useFilesState().extraDirty;
   const canUndo = useStore(services.doc, (s) => s.history.canUndo);
   const canRedo = useStore(services.doc, (s) => s.history.canRedo);
   const undoLabel = useStore(services.doc, (s) => s.history.undoLabel);
@@ -210,8 +214,8 @@ export function TitleBar(): ReactElement {
       </div>
       <div className="doc-title" data-testid="doc-title" title={format === "ir-json" ? "IR JSON document (edited as CadScript)" : "CadScript document"}>
         <span className="doc-name">{name}</span>
-        <span className="doc-ext">{format === "ir-json" ? ".json" : ".cad.ts"}</span>
-        {dirty && <span className="dirty-dot" aria-label="Unsaved changes" />}
+        <span className="doc-ext">{isPartZero ? ".partzero" : format === "ir-json" ? ".json" : ".cad.ts"}</span>
+        {(dirty || refsDirty) && <span className="dirty-dot" aria-label="Unsaved changes" />}
       </div>
       <button type="button" className="palette-btn" onClick={() => run({ id: "view.commandPalette" })} title="Search commands and tools" data-testid="palette-button">
         <Icon.Search size={13} />
