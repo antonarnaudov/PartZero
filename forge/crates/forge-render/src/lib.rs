@@ -18,6 +18,9 @@
 //!   shaded flat (hatched) at the depth where the view ray meets the plane.
 //! - **Hover / selection** highlights (face tint, thicker coloured edges), resolved by
 //!   provenance name so they survive re-evaluation.
+//! - **Display modes** ([`DisplayMode`]): shaded, shaded with edges, wireframe (edges
+//!   only, hidden ones included, edges-only picking), hidden line (flat paper faces that
+//!   occlude) and X-ray (translucent faces, every edge shows through).
 //!
 //! ## Picking
 //! Face and edge ids go into an `R32Uint` target ([`pick`] documents the encoding); a pick
@@ -36,6 +39,7 @@
 
 pub mod camera;
 pub mod context;
+pub mod display;
 pub mod lines;
 pub mod pick;
 pub mod scene;
@@ -45,6 +49,7 @@ pub use camera::{Camera, CameraFrame, Projection, Sphere, StandardView};
 #[cfg(not(target_arch = "wasm32"))]
 pub use context::block_on;
 pub use context::{BackendKind, GpuContext, GpuFault, RenderError};
+pub use display::DisplayMode;
 pub use pick::PickKind;
 pub use scene::{EntityRef, SceneBody, SceneData, SceneEdge, SceneError, SceneFace, SceneTables};
 #[cfg(not(target_arch = "wasm32"))]

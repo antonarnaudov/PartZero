@@ -27,6 +27,10 @@ import type {
 
 type Canvas = HTMLCanvasElement | OffscreenCanvas;
 
+/** forge-render display modes (see `forge-render/src/display.rs`). */
+export const DISPLAY_MODES = ["shaded", "shadedEdges", "wireframe", "hiddenLine", "xray"] as const;
+export type DisplayMode = (typeof DISPLAY_MODES)[number];
+
 const now = (): number => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
 function isHtmlCanvas(c: Canvas): c is HTMLCanvasElement {
@@ -463,6 +467,42 @@ export class Viewport {
     this.#live();
     this.#raw.setOptions(options);
     this.requestRender();
+  }
+
+  /**
+   * The display modes this build's renderer draws (forge-render display modes: `shaded`,
+   * `shadedEdges`, `wireframe`, `hiddenLine`, `xray`); `[]` when the WASM module predates them
+   * (their bindings, `forge-wasm/src/web/view_ext.rs`, are wired into it separately).
+   */
+  displayModes(): DisplayMode[] {
+    const r = this.#raw as unknown as { displayModes?: () => unknown };
+    if (typeof r.displayModes !== "function") return [];
+    const modes = r.displayModes();
+    return Array.isArray(modes) ? modes.filter((m): m is DisplayMode => typeof m === "string" && (DISPLAY_MODES as readonly string[]).includes(m)) : [];
+  }
+
+  /** Draw with display mode `mode`; returns false (and does nothing) when this build lacks display modes. */
+  setDisplayMode(mode: DisplayMode): boolean {
+    this.#live();
+    const r = this.#raw as unknown as { setDisplayMode?: (m: string) => void };
+    if (typeof r.setDisplayMode !== "function") return false;
+    try {
+      r.setDisplayMode(mode);
+    } catch (e) {
+      throw asForgeError(e, "RENDER_DISPLAY_MODE");
+    }
+    this.requestRender();
+    return true;
+  }
+
+  /** Face opacity in X-ray mode (0.02–1); false when this build lacks display modes. */
+  setXrayOpacity(opacity: number): boolean {
+    this.#live();
+    const r = this.#raw as unknown as { setXrayOpacity?: (a: number) => void };
+    if (typeof r.setXrayOpacity !== "function") return false;
+    r.setXrayOpacity(opacity);
+    this.requestRender();
+    return true;
   }
 
   /** `"webgpu"` or `"webgl2"`. */

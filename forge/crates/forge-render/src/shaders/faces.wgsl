@@ -59,9 +59,33 @@ fn highlight(base: vec3<f32>, state: u32) -> vec3<f32> {
     return c;
 }
 
+// The opaque face colour of the current display mode: shaded, or (hidden line) flat in the
+// paper colour, still tinted by hover and selection.
+fn face_color(in: FaceOut) -> vec3<f32> {
+    if (frame.flags.w == MODE_HIDDEN_LINE) {
+        return highlight(frame.display.yzw, in.state);
+    }
+    return shade(in.normal, in.world, highlight(in.color, in.state));
+}
+
 @fragment
 fn fs_face(in: FaceOut) -> @location(0) vec4<f32> {
-    return vec4<f32>(shade(in.normal, in.world, highlight(in.color, in.state)), 1.0);
+    return vec4<f32>(face_color(in), 1.0);
+}
+
+// X-ray: shaded, premultiplied, semi-transparent (selected and hovered faces more opaque),
+// clipped by the section plane when one is set. Drawn without depth writes, both sides.
+@fragment
+fn fs_face_xray(in: FaceOut) -> @location(0) vec4<f32> {
+    if (section_clipped(in.world)) {
+        discard;
+    }
+    var a = frame.display.x;
+    if (in.state != 0u) {
+        a = max(a, 0.55);
+    }
+    let c = shade(in.normal, in.world, highlight(in.color, in.state));
+    return vec4<f32>(c * a, a);
 }
 
 // ---- Section view -------------------------------------------------------------------
@@ -83,7 +107,7 @@ fn fs_face_clipped(in: FaceOut) -> @location(0) vec4<f32> {
     if (section_clipped(in.world)) {
         discard;
     }
-    return vec4<f32>(shade(in.normal, in.world, highlight(in.color, in.state)), 1.0);
+    return vec4<f32>(face_color(in), 1.0);
 }
 
 @fragment

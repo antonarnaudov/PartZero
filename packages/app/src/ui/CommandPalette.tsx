@@ -4,6 +4,7 @@
  */
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { formatKey, type PaletteItem } from "../commands/registry";
+import { routedExecute, routedPaletteItems } from "../viewport/registry";
 import { useApp } from "./context";
 
 /** Subsequence fuzzy score (higher is better), or -1 when `q` does not match. */
@@ -32,7 +33,7 @@ export function CommandPalette(): ReactElement {
   const [index, setIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const items = useMemo(() => commands.paletteItems(), [commands]);
+  const items = useMemo(() => routedPaletteItems(services, commands), [services, commands]);
 
   const results = useMemo(() => {
     return items
@@ -52,7 +53,7 @@ export function CommandPalette(): ReactElement {
   const choose = (item: PaletteItem | undefined): void => {
     if (!item) return;
     close();
-    void commands.executeUnknown({ id: item.id, args: item.args }, { source: "palette" });
+    void routedExecute(services, commands, { id: item.id, args: item.args }, "palette");
   };
 
   return (

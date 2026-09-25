@@ -1,13 +1,33 @@
 /**
- * The viewport host: owns the adapter (forge-web or placeholder), feeds it bodies, selection and
- * hover, forwards clicks as `selection.selectEntity`, and shows view controls and a hover readout.
+ * The viewport host: owns the renderer adapter (forge-web or the placeholder) and wires it to the
+ * viewport runtime (`viewport/runtime.ts`): bodies, highlights, camera navigation for mouse and
+ * trackpad (FD3), hover pre-highlight, click / Shift-click / box selection with the kind filter,
+ * and the overlays: view cube, origin display, vertex markers, measure dimensions, manipulator
+ * handles, section and measure panels.
  */
-import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement } from "react";
 import { PREVIEW_TINT } from "../agent/agent-service";
-import { facesOfFeature, findFeature } from "../doc/provenance";
-import type { Projection, ViewName } from "../engine/forge-web-contract";
-import type { PickResult, RenderBody } from "../engine/types";
+import type { RenderBody } from "../engine/types";
+import { measureSelection } from "../measure/measure";
+import { MeasurePanel } from "../measure/MeasurePanel";
+import type { Rect } from "../selection/box-select";
+import { boxModeOf } from "../selection/box-select";
+import { labelOf } from "../selection/labels";
+import type { OriginId } from "../selection/types";
 import { createViewportAdapter, type ViewportAdapter, type ViewportColors } from "../viewport/adapter";
+import { installViewportKeyboard } from "../viewport/keyboard";
+import { ManipulatorLayer } from "../viewport/manipulators/ManipulatorLayer";
+import { CLICK_SLOP_PX, classifyWheel, dragRole, newWheelMemory } from "../viewport/navigation";
+import { Overlay } from "../viewport/Overlay";
+import { routedExecute, viewportCommands } from "../viewport/registry";
+import { viewportRuntime } from "../viewport/runtime";
+import { SectionPanel } from "../viewport/SectionPanel";
+import { sketchPolylines } from "../viewport/sketches";
+import { installViewTestHook } from "../viewport/test-hook";
+import type { CameraFrame } from "../viewport/view-camera";
+import { ViewCube } from "../viewport/ViewCube";
+import { SelectionBar, ViewToolbar } from "../viewport/ViewToolbar";
+import "../viewport/viewport.css";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
 
@@ -43,33 +63,47 @@ function zExtent(bodies: readonly RenderBody[]): string {
   return hi >= lo ? (hi - lo).toFixed(2) : "";
 }
 
-const VIEWS: Array<{ view: ViewName; label: string; title: string }> = [
-  { view: "iso", label: "Iso", title: "Isometric" },
-  { view: "top", label: "Top", title: "Top (looking down −Z)" },
-  { view: "front", label: "Front", title: "Front (looking along +Y)" },
-  { view: "right", label: "Right", title: "Right (looking along −X)" },
-];
+type Cmd = { id: string; args?: Record<string, unknown> };
 
 export function Viewport(): ReactElement {
-  const { services, run } = useApp();
+  const { services, commands, isMac } = useApp();
   const { doc, ui } = services;
+  const runtime = useMemo(() => viewportRuntime(services), [services]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [adapter, setAdapter] = useState<ViewportAdapter | null>(null);
+  const [frame, setFrame] = useState<CameraFrame | null>(null);
+  const [box, setBox] = useState<(Rect & { mode: "window" | "crossing" }) | null>(null);
   const bodies = useStore(doc, (s) => s.bodies);
   const docId = useStore(doc, (s) => s.docId);
-  const selection = useStore(doc, (s) => s.selection);
-  const model = useStore(doc, (s) => s.model);
-  const hover = useStore(ui, (s) => s.hover);
   const theme = useStore(ui, (s) => s.resolvedTheme);
   const vpStatus = useStore(ui, (s) => s.viewport);
   const phase = useStore(doc, (s) => s.phase);
   const engineError = useStore(doc, (s) => s.engineError);
   const hasReport = useStore(doc, (s) => s.report !== null);
+  const report = useStore(doc, (s) => s.report);
   const review = useStore(services.agent, (s) => s.review);
+  const sel = useSyncExternalStore(runtime.selection.subscribe, runtime.selection.getState);
+  const view = useSyncExternalStore(runtime.view.subscribe, runtime.view.getState);
+  const measureOpen = useSyncExternalStore(runtime.measure.subscribe, () => runtime.measure.getState().open);
   const reviewOpen = !!review && review.status === "ready" && review.resolution === null;
   const showPreview = reviewOpen && review.previewEnabled && review.preview.status === "ready";
   const shown = showPreview ? review.preview.bodies : bodies;
   const extent = useMemo(() => zExtent(shown), [shown]);
+
+  const run = useCallback((cmd: Cmd) => void routedExecute(services, commands, cmd, "ui"), [services, commands]);
+
+  // UI-originated app commands from the runtime (mirroring the primary item into the document selection).
+  useEffect(() => {
+    runtime.setCommandRunner((cmd) => void commands.executeUnknown(cmd, { source: "ui" }));
+    return () => runtime.setCommandRunner(null);
+  }, [runtime, commands]);
+
+  // Viewport shortcuts and the test hook (only where `window.__aicad` is installed).
+  useEffect(() => installViewportKeyboard(viewportCommands(services), commands, isMac, () => ui.getState().dialog !== null), [services, commands, isMac, ui]);
+  useEffect(() => {
+    if (!window.__aicad) return;
+    return installViewTestHook(services, commands);
+  }, [services, commands]);
 
   // Create the adapter once.
   useEffect(() => {
@@ -77,6 +111,7 @@ export function Viewport(): ReactElement {
     if (!container) return;
     let disposed = false;
     let created: ViewportAdapter | null = null;
+    let detach: (() => void) | null = null;
     void createViewportAdapter(container, {
       onFallback: (reason) => console.info(`[viewport] ${reason}`),
     }).then((a) => {
@@ -88,25 +123,46 @@ export function Viewport(): ReactElement {
       a.setColors(readColors(container));
       const r = container.getBoundingClientRect();
       a.resize(r.width, r.height, window.devicePixelRatio || 1);
+      detach = runtime.attach(a);
       ui.setViewport({ kind: a.kind, backend: a.backend() });
       setAdapter(a);
     });
     return () => {
       disposed = true;
+      detach?.();
       created?.dispose();
       ui.setViewport({ kind: "none", backend: "" });
     };
-  }, [ui]);
+  }, [ui, runtime]);
 
-  // Commands reach the adapter through the viewport controller.
+  // The app's `view.fit` / `view.setView` / `view.setProjection` reach the runtime through the controller.
   useEffect(() => {
     if (!adapter) return;
     return services.viewport.attach({
-      fitView: () => adapter.fitView(),
-      setView: (v) => adapter.setView(v),
-      setProjection: (p) => adapter.setProjection(p),
+      fitView: () => void runtime.fit(),
+      setView: (v) => void runtime.setStandardView(v),
+      setProjection: (p) => runtime.setProjection(p),
     });
-  }, [adapter, services.viewport]);
+  }, [adapter, runtime, services.viewport]);
+
+  // Overlays follow the camera: one frame snapshot per rendered frame.
+  useEffect(() => {
+    if (!adapter) return;
+    let raf = 0;
+    const update = (): void => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        setFrame(runtime.frame());
+      });
+    };
+    update();
+    const off = runtime.onFrame(update);
+    return () => {
+      off();
+      cancelAnimationFrame(raf);
+    };
+  }, [adapter, runtime]);
 
   // Size.
   useEffect(() => {
@@ -115,13 +171,14 @@ export function Viewport(): ReactElement {
     const ro = new ResizeObserver(() => {
       const r = container.getBoundingClientRect();
       adapter.resize(r.width, r.height, window.devicePixelRatio || 1);
+      setFrame(runtime.frame());
     });
     ro.observe(container);
     return () => ro.disconnect();
-  }, [adapter]);
+  }, [adapter, runtime]);
 
-  // Theme colors (after the CSS variables switched). The proposal preview tints the bodies (the
-  // placeholder has one body colour; forge-render takes the per-body colour of the preview bodies).
+  // Theme colours. The proposal preview tints the bodies (the placeholder has one body colour;
+  // forge-render takes the per-body colour of the preview bodies).
   useEffect(() => {
     const container = containerRef.current;
     if (!adapter || !container) return;
@@ -134,82 +191,166 @@ export function Viewport(): ReactElement {
   // Bodies (the document's, or the proposal preview's); refit when another document was loaded.
   const lastFitDoc = useRef(0);
   useEffect(() => {
+    runtime.setSceneBodies(shown);
     if (!adapter) return;
-    adapter.setBodies(shown);
     if (shown.length > 0 && lastFitDoc.current !== docId) {
       lastFitDoc.current = docId;
       adapter.fitView();
     }
-  }, [adapter, shown, docId]);
+  }, [adapter, runtime, shown, docId]);
 
-  // Selection: a picked entity, or every face of the selected feature.
-  useEffect(() => {
-    if (!adapter) return;
-    if (selection.entity) {
-      adapter.setSelection([selection.entity]);
-    } else if (selection.featureId) {
-      const loc = findFeature(model?.ir, selection.featureId);
-      adapter.setSelection(loc ? facesOfFeature(bodies, loc.feature.name) : []);
-    } else {
-      adapter.setSelection([]);
-    }
-  }, [adapter, selection, model, bodies]);
-
-  useEffect(() => {
-    adapter?.setHover(hover);
-  }, [adapter, hover]);
-
-  // Pointer: hover picking and click-to-select (a click is a press without drag).
+  // Pointer input on the canvas: navigation (FD3), hover, click, box select.
   useEffect(() => {
     if (!adapter) return;
     const canvas = adapter.canvas;
-    let press: { x: number; y: number; button: number } | null = null;
-    let pending = false;
-    let last: { x: number; y: number } | null = null;
-    const local = (e: PointerEvent): { x: number; y: number } => {
+    const wheelMem = newWheelMemory();
+    type Press = { id: number; x: number; y: number; lastX: number; lastY: number; role: "orbit" | "pan" | "select"; moved: boolean; button: number; additive: boolean };
+    let press: Press | null = null;
+    let hoverBusy = false;
+    let hoverNext: { x: number; y: number } | null = null;
+    const local = (e: { clientX: number; clientY: number }): { x: number; y: number } => {
       const r = canvas.getBoundingClientRect();
       return { x: e.clientX - r.left, y: e.clientY - r.top };
     };
-    const onMove = (e: PointerEvent): void => {
-      if (press) return;
-      last = local(e);
-      if (pending) return;
-      pending = true;
-      requestAnimationFrame(() => {
-        pending = false;
-        if (!last) return;
-        void adapter.pick(last.x, last.y).then((p) => ui.setHover(p));
-      });
-    };
-    const onLeave = (): void => {
-      last = null;
-      ui.setHover(null);
+    const hover = (x: number, y: number): void => {
+      hoverNext = { x, y };
+      if (hoverBusy) return;
+      hoverBusy = true;
+      void (async () => {
+        while (hoverNext) {
+          const q = hoverNext;
+          hoverNext = null;
+          if (press || runtime.manipulators.dragging) break;
+          await runtime.hoverAt(q.x, q.y);
+        }
+        hoverBusy = false;
+      })();
     };
     const onDown = (e: PointerEvent): void => {
-      press = { ...local(e), button: e.button };
+      const role = dragRole(e.button, e);
+      if (!role) return;
+      const q = local(e);
+      press = { id: e.pointerId, x: q.x, y: q.y, lastX: q.x, lastY: q.y, role, moved: false, button: e.button, additive: e.shiftKey || e.metaKey || e.ctrlKey };
+      canvas.setPointerCapture(e.pointerId);
+      canvas.focus({ preventScroll: true });
+    };
+    const onMove = (e: PointerEvent): void => {
+      const q = local(e);
+      const p = press;
+      if (!p || p.id !== e.pointerId) {
+        hover(q.x, q.y);
+        return;
+      }
+      if (!p.moved && Math.hypot(q.x - p.x, q.y - p.y) < CLICK_SLOP_PX) return;
+      p.moved = true;
+      const dx = q.x - p.lastX;
+      const dy = q.y - p.lastY;
+      p.lastX = q.x;
+      p.lastY = q.y;
+      if (p.role === "orbit") {
+        adapter.orbit(dx, dy);
+        runtime.noteOrbit();
+      } else if (p.role === "pan") adapter.pan(dx, dy);
+      else setBox({ x0: p.x, y0: p.y, x1: q.x, y1: q.y, mode: boxModeOf(p.x, q.x) });
     };
     const onUp = (e: PointerEvent): void => {
       const p = press;
+      if (!p || p.id !== e.pointerId) return;
       press = null;
-      if (!p || p.button !== 0) return;
+      if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+      if (p.role !== "select") return;
       const q = local(e);
-      if (Math.hypot(q.x - p.x, q.y - p.y) > 4) return;
-      void adapter.pick(q.x, q.y).then((hit: PickResult | null) => {
-        if (hit) run({ id: "selection.selectEntity", args: { ...hit } });
-        else run({ id: "selection.clear" });
+      if (p.moved) {
+        setBox(null);
+        runtime.boxSelect({ x0: p.x, y0: p.y, x1: q.x, y1: q.y }, { additive: p.additive });
+      } else {
+        void runtime.clickAt(q.x, q.y, p.additive);
+      }
+    };
+    const onCancel = (e: PointerEvent): void => {
+      if (press?.id === e.pointerId) press = null;
+      setBox(null);
+    };
+    const onLeave = (): void => {
+      hoverNext = null;
+      if (!press) runtime.selection.setHover(null);
+    };
+    const onWheel = (e: WheelEvent): void => {
+      e.preventDefault();
+      const a = classifyWheel(e as WheelEvent & { wheelDeltaX?: number; wheelDeltaY?: number }, wheelMem, runtime.view.getState().navigation);
+      if (!a) return;
+      const q = local(e);
+      if (a.type === "zoom") adapter.zoomAt(q.x, q.y, a.factor);
+      else if (a.type === "orbit") {
+        adapter.orbit(a.dx, a.dy);
+        runtime.noteOrbit();
+      } else adapter.pan(a.dx, a.dy);
+    };
+    const onDbl = (e: MouseEvent): void => {
+      const q = local(e);
+      void runtime.pickAt(q.x, q.y).then((it) => {
+        if (!it) void runtime.fit();
       });
     };
-    canvas.addEventListener("pointermove", onMove);
-    canvas.addEventListener("pointerleave", onLeave);
+    const onMenu = (e: Event): void => e.preventDefault();
     canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("pointercancel", onCancel);
+    canvas.addEventListener("pointerleave", onLeave);
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    canvas.addEventListener("dblclick", onDbl);
+    canvas.addEventListener("contextmenu", onMenu);
     return () => {
-      canvas.removeEventListener("pointermove", onMove);
-      canvas.removeEventListener("pointerleave", onLeave);
       canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointercancel", onCancel);
+      canvas.removeEventListener("pointerleave", onLeave);
+      canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("dblclick", onDbl);
+      canvas.removeEventListener("contextmenu", onMenu);
     };
-  }, [adapter, run, ui]);
+  }, [adapter, runtime]);
+
+  const measurement = useMemo(
+    () => (measureOpen ? measureSelection(sel.items, runtime.topo, report) : null),
+    // The topology changes with the bodies; the selection revision covers re-resolution.
+    [measureOpen, sel, runtime.topo, report],
+  );
+
+  const onOriginClick = useCallback(
+    (id: OriginId, additive: boolean) => {
+      if (!runtime.selection.getState().filter.origin) return;
+      const it = { kind: "origin" as const, id };
+      if (additive) runtime.selection.toggle(it);
+      else runtime.selectItems([it]);
+    },
+    [runtime],
+  );
+  const onOriginHover = useCallback((id: OriginId | null) => runtime.selection.setHover(id ? { kind: "origin", id } : null), [runtime]);
+
+  // Sketches: all of them with "Sketches" on (or only sketches selectable); otherwise the selected ones.
+  const model = useStore(doc, (s) => s.model);
+  const allSketches = useMemo(() => sketchPolylines(model?.ir), [model]);
+  const onlySketches = sel.filter.sketch && !sel.filter.face && !sel.filter.edge && !sel.filter.vertex && !sel.filter.body;
+  const shownSketches = useMemo(() => {
+    // With only sketches selectable (key 5), every sketch is shown so there is something to pick.
+    if (view.sketches || onlySketches) return allSketches;
+    const keep = new Set(sel.items.flatMap((it) => (it.kind === "sketch" ? [it.feature] : [])));
+    return keep.size ? allSketches.filter((s) => keep.has(s.sketch)) : [];
+  }, [allSketches, view.sketches, onlySketches, sel.items]);
+  const onSketchClick = useCallback(
+    (sketch: string, additive: boolean) => {
+      const it = { kind: "sketch" as const, feature: sketch };
+      if (additive) {
+        runtime.selection.toggle(it);
+        runtime.syncDocSelection();
+      } else runtime.selectItems([it]);
+    },
+    [runtime],
+  );
+  const onSketchHover = useCallback((s: string | null) => runtime.selection.setHover(s ? { kind: "sketch", feature: s } : null), [runtime]);
 
   const busy = phase === "compiling" || phase === "evaluating" || phase === "pending";
   let empty: string | null = null;
@@ -219,39 +360,54 @@ export function Viewport(): ReactElement {
     else if (hasReport) empty = "No solid bodies — the document has sketches only, or every body-creating feature failed.";
     else if (!busy) empty = "Nothing to show yet.";
   }
-
-  const setProjection = (projection: Projection): void => run({ id: "view.setProjection", args: { projection } });
+  const ir = doc.getState().model?.ir;
+  const originSize = runtime.topo.bbox ? Math.max(10, Math.max(...runtime.topo.bbox.max.map((v, i) => Math.abs(v - runtime.topo.bbox!.min[i]!))) * 0.6) : 40;
 
   return (
-    <div className="viewport" data-testid="viewport" data-shown={showPreview ? "proposal" : "current"} data-extent-z={extent}>
+    <div className="viewport" data-testid="viewport" data-shown={showPreview ? "proposal" : "current"} data-extent-z={extent} data-display={view.display} data-renderer={vpStatus.kind}>
       <div ref={containerRef} className="viewport-surface" />
-      <div className="vp-toolbar" role="toolbar" aria-label="View">
-        {VIEWS.map((v) => (
-          <button key={v.view} type="button" className={`vp-btn${vpStatus.view === v.view ? " active" : ""}`} title={v.title} onClick={() => run({ id: "view.setView", args: { view: v.view } })}>
-            {v.label}
-          </button>
-        ))}
-        <span className="vp-sep" />
-        <button type="button" className="vp-btn icon" title="Zoom to fit (F)" aria-label="Zoom to fit" onClick={() => run({ id: "view.fit" })}>
-          <Icon.Fit size={14} />
-        </button>
-        <button
-          type="button"
-          className="vp-btn"
-          title="Toggle perspective / orthographic"
-          onClick={() => setProjection(vpStatus.projection === "perspective" ? "orthographic" : "perspective")}
-        >
-          {vpStatus.projection === "perspective" ? "Persp" : "Ortho"}
-        </button>
+      {frame && (
+        <Overlay
+          frame={frame}
+          origin={view.origin}
+          originSize={originSize}
+          items={sel.items}
+          hover={sel.hover}
+          measurements={measurement?.rows ?? []}
+          box={box}
+          onOriginClick={onOriginClick}
+          onOriginHover={onOriginHover}
+          sketches={shownSketches}
+          // Overlay curves are not depth-tested: they take clicks only when nothing else is selectable
+          // (key 5), so they never steal a click meant for a face in front of them.
+          sketchPickable={onlySketches}
+          onSketchClick={onSketchClick}
+          onSketchHover={onSketchHover}
+        />
+      )}
+      {frame && <ManipulatorLayer host={runtime.manipulators} frame={frame} />}
+      <ViewToolbar runtime={runtime} run={run} measureOpen={measureOpen} />
+      {frame && view.viewCube && (
+        <ViewCube
+          basis={frame.basis}
+          onView={(v) => run({ id: "view.setView", args: { view: v } })}
+          onDirection={(dir) => run({ id: "view.lookAlong", args: { dir } })}
+          onHome={() => run({ id: "view.home" })}
+        />
+      )}
+      <SelectionBar runtime={runtime} run={run} />
+      <div className="vp-side">
+        <SectionPanel runtime={runtime} run={run} />
+        {measureOpen && <MeasurePanel result={measurement} count={sel.items.length} onClose={() => run({ id: "measure.toggle", args: { open: false } })} />}
       </div>
       {vpStatus.kind !== "none" && (
         <div className="vp-chip" title={vpStatus.kind === "placeholder" ? "Placeholder renderer until @aicad/forge-web is available" : "forge-render"}>
           {vpStatus.kind === "placeholder" ? "Placeholder" : "forge-render"} · {vpStatus.backend}
         </div>
       )}
-      {hover && (
+      {sel.hover && (
         <div className="vp-hover" data-testid="viewport-hover">
-          {hover.face ?? hover.edge ?? hover.body}
+          {labelOf(sel.hover, ir)}
         </div>
       )}
       {busy && bodies.length > 0 && (

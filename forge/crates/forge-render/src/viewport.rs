@@ -32,6 +32,7 @@ use glam::{DMat4, DVec3, DVec4};
 
 use crate::camera::{Camera, CameraFrame, Projection, Sphere, StandardView};
 use crate::context::{COLOR_FORMAT, DEPTH_FORMAT, GpuContext, GpuFault, ID_FORMAT};
+use crate::display::DisplayMode;
 use crate::pick::{self, PickKind, PickWindow};
 use crate::scene::{
     EntityRef, FACE_VERTEX_STRIDE, LINE_INSTANCE_STRIDE, SILHOUETTE_INSTANCE_STRIDE, SceneBody,
@@ -49,7 +50,9 @@ const STATE_WIDTH: u32 = 2048;
 const STATE_HOVER: u8 = 1;
 const STATE_SELECTED: u8 = 2;
 /// Size of the `Frame` uniform in bytes.
-const FRAME_SIZE: u64 = 2 * 64 + 21 * 16;
+const FRAME_SIZE: u64 = 2 * 64 + 22 * 16;
+/// The paper colour of hidden-line faces (sRGB).
+const HIDDEN_LINE_FACE: [f64; 3] = [0.975, 0.978, 0.985];
 /// Capacity of the gizmo line buffer (segments).
 const GIZMO_CAPACITY: u64 = 32;
 
@@ -142,6 +145,10 @@ pub struct ViewOptions {
     pub silhouettes: bool,
     /// Edge snapping radius for picking.
     pub pick_radius: f64,
+    /// How faces and edges are drawn ([`DisplayMode`]).
+    pub display: DisplayMode,
+    /// Face opacity in [`DisplayMode::XRay`] (0..1).
+    pub xray_opacity: f64,
 }
 
 impl Default for ViewOptions {
@@ -156,6 +163,8 @@ impl Default for ViewOptions {
             edges: true,
             silhouettes: true,
             pick_radius: 4.0,
+            display: DisplayMode::ShadedEdges,
+            xray_opacity: 0.28,
         }
     }
 }
@@ -252,6 +261,7 @@ pub struct RgbaImage {
 struct Pipelines {
     background: wgpu::RenderPipeline,
     face: wgpu::RenderPipeline,
+    face_xray: wgpu::RenderPipeline,
     face_clipped: wgpu::RenderPipeline,
     section_mask: wgpu::RenderPipeline,
     cap: wgpu::RenderPipeline,
@@ -594,6 +604,19 @@ fn create_pipelines(
             GreaterEqual,
             &opaque,
         ),
+        // X-ray: both sides, blended, no depth writes (faces never occlude each other or
+        // the edges).
+        face_xray: main(
+            "face x-ray",
+            &faces,
+            "vs_face",
+            "fs_face_xray",
+            &face_buf,
+            None,
+            false,
+            GreaterEqual,
+            &blended,
+        ),
         face_clipped: main(
             "face clipped",
             &faces,
@@ -819,6 +842,8 @@ struct FrameParams<'a> {
     highlight_scale: f64,
     dpr: f64,
     grid_steps: (f64, f64, f64, f64),
+    mode: DisplayMode,
+    xray_opacity: f64,
 }
 
 fn frame_uniform(p: &FrameParams<'_>) -> Vec<u8> {
@@ -842,7 +867,7 @@ fn frame_uniform(p: &FrameParams<'_>) -> Vec<u8> {
         u32::from(p.section.is_some()),
         u32::from(p.grid),
         u32::from(p.silhouettes),
-        0,
+        p.mode.code(),
     ]);
     u.v4([
         p.edge_half_px,
@@ -866,6 +891,13 @@ fn frame_uniform(p: &FrameParams<'_>) -> Vec<u8> {
     u.v4([minor, major, extent, fade]);
     u.rgb([0.45, 0.48, 0.53], 0.22);
     u.rgb([0.40, 0.43, 0.48], 0.45);
+    let paper = lin(HIDDEN_LINE_FACE);
+    u.v4([
+        p.xray_opacity.clamp(0.02, 1.0),
+        paper[0],
+        paper[1],
+        paper[2],
+    ]);
     debug_assert_eq!(u.0.len() as u64, FRAME_SIZE);
     u.0
 }
@@ -1360,13 +1392,15 @@ impl Viewport {
             cam,
             section: self.section,
             grid: o.grid,
-            silhouettes: o.silhouettes,
+            silhouettes: o.silhouettes && o.display.draws_lines(),
             edge_half_px: o.edge_width * self.dpr * 0.5,
             silhouette_half_px: o.silhouette_width * self.dpr * 0.5,
             bias_px: o.line_depth_bias * self.dpr,
             highlight_scale: o.highlight_width_scale,
             dpr: self.dpr,
             grid_steps: self.grid_steps(cam),
+            mode: o.display,
+            xray_opacity: o.xray_opacity,
         };
         self.ctx
             .queue
@@ -1428,6 +1462,8 @@ impl Viewport {
             highlight_scale: 1.0,
             dpr: self.dpr,
             grid_steps: (1.0, 10.0, 1.0, 1.0),
+            mode: DisplayMode::ShadedEdges,
+            xray_opacity: 1.0,
         };
         self.ctx
             .queue
@@ -1498,7 +1534,10 @@ impl Viewport {
                 label: Some("forge-render frame"),
             });
         let mut draws = 0u32;
-        let sectioned = self.sectioned();
+        let mode = self.options.display;
+        let lines = mode.draws_lines();
+        // Wireframe draws no faces, so no caps either (edges are still clipped).
+        let sectioned = self.sectioned() && mode.draws_faces();
         if sectioned {
             self.encode_mask_pass(&mut enc, None);
             draws += 1;
@@ -1539,10 +1578,24 @@ impl Viewport {
             pass.set_pipeline(&self.pipes.background);
             pass.draw(0..3, 0..1);
             draws += 1;
-            if let (Some(vb), Some(ib)) = (&s.vertices, &s.indices) {
+            if let (Some(vb), Some(ib)) = (&s.vertices, &s.indices)
+                && mode.draws_faces()
+            {
                 pass.set_vertex_buffer(0, vb.slice(..));
                 pass.set_index_buffer(ib.slice(..), wgpu::IndexFormat::Uint32);
-                if sectioned {
+                if mode == DisplayMode::XRay {
+                    // Opaque caps first (they occlude what lies behind the cut), then the
+                    // translucent faces over everything else.
+                    if sectioned {
+                        pass.set_bind_group(1, &t.mask_bind, &[]);
+                        pass.set_pipeline(&self.pipes.cap);
+                        pass.draw_indexed(0..s.index_count, 0, 0..1);
+                        draws += 1;
+                    }
+                    pass.set_pipeline(&self.pipes.face_xray);
+                    pass.draw_indexed(0..s.index_count, 0, 0..1);
+                    draws += 1;
+                } else if sectioned {
                     pass.set_pipeline(&self.pipes.face_clipped);
                     pass.draw_indexed(0..s.index_count, 0, 0..1);
                     pass.set_bind_group(1, &t.mask_bind, &[]);
@@ -1561,6 +1614,7 @@ impl Viewport {
                 draws += 1;
             }
             if self.options.silhouettes
+                && lines
                 && let Some(sb) = &s.silhouettes
             {
                 pass.set_pipeline(&self.pipes.silhouette);
@@ -1569,6 +1623,7 @@ impl Viewport {
                 draws += 1;
             }
             if self.options.edges
+                && lines
                 && let Some(eb) = &s.edges
             {
                 pass.set_pipeline(&self.pipes.edge);
@@ -1648,7 +1703,9 @@ impl Viewport {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("forge-render pick"),
             });
-        let sectioned = self.sectioned();
+        let mode = self.options.display;
+        // Wireframe: only edges can be picked (there are no faces on screen).
+        let sectioned = self.sectioned() && mode.draws_faces();
         if sectioned {
             self.encode_mask_pass(&mut enc, Some(&window));
         }
@@ -1686,7 +1743,9 @@ impl Viewport {
             pass.set_scissor_rect(window.x0, window.y0, window.width, window.height);
             let s = &self.scene;
             pass.set_bind_group(0, &s.frame_bind, &[]);
-            if let (Some(vb), Some(ib)) = (&s.vertices, &s.indices) {
+            if let (Some(vb), Some(ib)) = (&s.vertices, &s.indices)
+                && mode.draws_faces()
+            {
                 pass.set_vertex_buffer(0, vb.slice(..));
                 pass.set_index_buffer(ib.slice(..), wgpu::IndexFormat::Uint32);
                 if sectioned {
@@ -1701,6 +1760,7 @@ impl Viewport {
                 }
             }
             if self.options.edges
+                && mode.draws_lines()
                 && let Some(eb) = &s.edges
             {
                 pass.set_pipeline(&self.pipes.edge_id);
@@ -2098,14 +2158,26 @@ mod tests {
             highlight_scale: 2.0,
             dpr: 1.0,
             grid_steps: (1.0, 10.0, 100.0, 100.0),
+            mode: DisplayMode::XRay,
+            xray_opacity: 0.3,
         };
-        assert_eq!(frame_uniform(&p).len() as u64, FRAME_SIZE);
-        // The WGSL struct has exactly 2 matrices and 21 vec4s.
+        let u = frame_uniform(&p);
+        assert_eq!(u.len() as u64, FRAME_SIZE);
+        // The WGSL struct has exactly 2 matrices and 22 vec4s.
         let src = include_str!("shaders/common.wgsl");
         let start = src.find("struct Frame {").expect("Frame struct");
         let body = &src[start..src[start..].find("};").expect("end") + start];
         assert_eq!(body.matches("mat4x4<f32>").count(), 2);
-        assert_eq!(body.matches(": vec4<").count(), 21);
+        assert_eq!(body.matches(": vec4<").count(), 22);
+        // flags.w carries the display mode; the last vec4 starts with the X-ray opacity.
+        // eye, forward, right, up, viewport, section, then flags.
+        let flags = 2 * 64 + 6 * 16;
+        assert_eq!(
+            u[flags + 12..flags + 16],
+            DisplayMode::XRay.code().to_le_bytes()
+        );
+        let last = FRAME_SIZE as usize - 16;
+        assert_eq!(u[last..last + 4], 0.3f32.to_le_bytes());
     }
 
     #[test]

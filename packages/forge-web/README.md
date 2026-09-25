@@ -112,6 +112,7 @@ Engine errors are thrown as `Error` objects with a stable `code`, such as `MESH_
 | `cameraState()`, `setCameraState(partial)` | `{ target, distance, yaw, pitch, fovY, projection }` |
 | `orbit(dx, dy)`, `pan(dx, dy)`, `zoomAt(x, y, factor)` | Programmatic camera control. |
 | `setDisplayOptions({ edgeWidth, silhouetteWidth, pickRadius, grid, axes, edges, silhouettes, … })` | |
+| `displayModes() → DisplayMode[]`, `setDisplayMode(mode) → boolean`, `setXrayOpacity(a) → boolean` | forge-render display modes: `shaded`, `shadedEdges`, `wireframe`, `hiddenLine`, `xray`. Feature-detected: `[]` / `false` when the WASM module was built without `forge-wasm/src/web/view_ext.rs`. |
 | `backend() → "webgpu" \| "webgl2"` | |
 | `dispose()` | Frees the GPU resources and listeners. |
 
