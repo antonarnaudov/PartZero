@@ -107,3 +107,25 @@ registry once step 2 is done.
   the overlay and the view cube switch to dark ink on forge-render for contrast
   (`data-renderer="forge-web"`). Wire theme colours into the Frame uniform when VIEW-2 does.
 - `window.__pzView` is this stream's slice of C7's `__pzTest`; QA can fold it in.
+
+## 7. Measure: curve and surface types from the kernel (ENG, forge-mesh / forge-wasm)
+
+The Measure panel recovers geometry from the render mesh (`packages/app/src/measure/geometry.ts`)
+and claims "exact" only where the mesh proves it: forge-web's per-face exact normals certify
+planes, cylinders and two-point straight edges; circles need ≥ 5 points. Everything else is shown
+with "≈" — including every low-sweep arc the tessellator draws as one chord (a 15° arc at r 3 is
+one segment; its wall one flat quad), 3–4-point arcs, and **every** planar area, straight edge and
+hole radius from the CLI engine's OBJ (vertices shared between faces, normals averaged).
+`packages/app/test/fixtures/gen-forge-web-meshes.mjs` regenerates the real-kernel fixtures the
+tests use (NEMA 17 plate, 15° and 45° wedges).
+
+The complete fix is the plan's `measure(entities)` query in the kernel (forge-check, "with the
+formula used"). A cheaper intermediate step:
+- `forge_mesh::RenderMesh`: add the curve kind (+ parameters: line; circle centre/axis/radius) to
+  each `EdgePolyline` and the surface kind (+ parameters: plane normal/offset; cylinder
+  axis/radius) to each `FaceRange`;
+- pass them through `forge-wasm` (`engine.rs`) and `@aicad/forge-web` (`types.ts`: optional
+  `curve` / `surface` fields on the polyline and the face range), and write them into forge-io's
+  OBJ as comments for the CLI engine;
+- in `geometry.ts`, prefer the kernel's type and parameters when present (exact, any sampling),
+  and keep today's mesh evidence as the fallback.

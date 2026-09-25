@@ -21,6 +21,7 @@ import {
   type Projection,
   type StandardView,
 } from "../src/viewport/view-camera";
+import { forgeWebBody } from "./forge-web-fixture";
 import { BOX, makeHarness, type Harness } from "./helpers";
 import nemaObj from "./fixtures/nema17-plate.obj?raw";
 
@@ -289,6 +290,8 @@ describe("selection commands", () => {
 
 describe("measure commands", () => {
   it("measures the selection or given items, exact values without ≈", async () => {
+    // The default engine's mesh (forge-web: per-face vertices with exact normals) proves them.
+    rt.setSceneBodies([forgeWebBody("nema")]);
     await exec("selection.set", { items: [{ kind: "face", body: BODY, key: "plate/cap:end" }, { kind: "face", body: BODY, key: "plate/cap:start" }] });
     const r = await exec("measure.selection");
     expect(r).toMatchObject({ ok: true, value: { result: { title: "Face ↔ Face" } } });

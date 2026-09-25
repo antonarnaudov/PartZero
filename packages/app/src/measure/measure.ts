@@ -1,8 +1,8 @@
 /**
  * Measuring the current selection: one entity (position, length, radius/diameter, area, body
  * volume), two entities (minimum distance, angle, centre distance, axis deltas), or several
- * (total length / total area). Exact wherever the geometry is (see `geometry.ts`); approximate
- * results are flagged and shown with "≈".
+ * (total length / total area). Exact only where the mesh proves the geometry (see `geometry.ts`);
+ * everything else is flagged approximate and shown with "≈".
  */
 import type { EvalReport } from "@aicad/ir-types";
 import { edgeGeom, faceGeom, type EdgeGeom, type FaceGeom } from "./geometry";
@@ -49,7 +49,7 @@ function geomOf(topo: SceneTopology, it: SelectionItem): Geom | null {
   }
   if (it.kind === "edge") {
     const e = b.edges.get(it.key);
-    return e ? { kind: "edge", g: edgeGeom(e), points: edgePoints(e) } : null;
+    return e ? { kind: "edge", g: edgeGeom(e, b), points: edgePoints(e) } : null;
   }
   const g = faceGeom(b, it.key);
   return g ? { kind: "face", g, tris: faceTriangles(b, it.key) } : null;
@@ -211,20 +211,23 @@ function angleBetween(u: Vec3, v: Vec3): number {
   return (Math.acos(c) * 180) / Math.PI;
 }
 
-/** Direction of a geometry for angle purposes: line direction, plane normal, cylinder axis. */
-function directionOf(g: Geom): { dir: Vec3; kind: "line" | "normal" } | null {
-  if (g.kind === "edge" && g.g.type === "line") return { dir: g.g.dir, kind: "line" };
-  if (g.kind === "edge" && g.g.type === "circle") return { dir: g.g.normal, kind: "normal" };
-  if (g.kind === "face" && g.g.type === "plane") return { dir: g.g.normal, kind: "normal" };
-  if (g.kind === "face" && g.g.type === "cylinder") return { dir: g.g.axis, kind: "line" };
+/**
+ * Direction of a geometry for angle purposes: line direction, plane normal, cylinder axis.
+ * `exact` when the mesh proves the geometry (see `geometry.ts`).
+ */
+function directionOf(g: Geom): { dir: Vec3; kind: "line" | "normal"; exact: boolean } | null {
+  if (g.kind === "edge" && g.g.type === "line") return { dir: g.g.dir, kind: "line", exact: g.g.exact };
+  if (g.kind === "edge" && g.g.type === "circle") return { dir: g.g.normal, kind: "normal", exact: g.g.exact };
+  if (g.kind === "face" && g.g.type === "plane") return { dir: g.g.normal, kind: "normal", exact: g.g.verified };
+  if (g.kind === "face" && g.g.type === "cylinder") return { dir: g.g.axis, kind: "line", exact: g.g.verified };
   return null;
 }
 
 /** A centre for centre-to-centre distances: circle centre, cylinder axis point, vertex. */
-function centreOf(g: Geom): { p: Vec3; axis?: Vec3 } | null {
-  if (g.kind === "point") return { p: g.p };
-  if (g.kind === "edge" && g.g.type === "circle") return { p: g.g.center, axis: g.g.normal };
-  if (g.kind === "face" && g.g.type === "cylinder") return { p: g.g.point, axis: g.g.axis };
+function centreOf(g: Geom): { p: Vec3; axis?: Vec3; exact: boolean } | null {
+  if (g.kind === "point") return { p: g.p, exact: true };
+  if (g.kind === "edge" && g.g.type === "circle") return { p: g.g.center, axis: g.g.normal, exact: g.g.exact };
+  if (g.kind === "face" && g.g.type === "cylinder") return { p: g.g.point, axis: g.g.axis, exact: g.g.verified };
   return null;
 }
 
@@ -261,18 +264,20 @@ function single(g: Geom, report: EvalReport | null | undefined, topo: SceneTopol
   }
   if (g.kind === "edge") {
     const e = g.g;
-    if (e.type === "line") return { title: "Line edge", rows: [row("length", "Length", e.length, "mm", true)] };
+    // An unproven line may be a low-sweep arc drawn as one chord: no "Line" claim, length ≈.
+    if (e.type === "line") return { title: e.exact ? "Line edge" : "Edge", rows: [row("length", "Length", e.length, "mm", e.exact)] };
     if (e.type === "circle") {
+      const x = e.exact;
       return {
-        title: e.closed ? "Circle edge" : "Arc edge",
+        title: x ? (e.closed ? "Circle edge" : "Arc edge") : "Edge (≈ arc)",
         rows: [
-          row("radius", "Radius", e.radius, "mm", true),
-          row("diameter", "Diameter", e.radius * 2, "mm", true),
-          row("length", e.closed ? "Circumference" : "Arc length", e.length, "mm", true),
-          ...(e.closed ? [] : [row("sweep", "Sweep", (e.sweep * 180) / Math.PI, "°", true)]),
-          row("cx", "Centre X", e.center[0], "mm", true),
-          row("cy", "Centre Y", e.center[1], "mm", true),
-          row("cz", "Centre Z", e.center[2], "mm", true),
+          row("radius", "Radius", e.radius, "mm", x),
+          row("diameter", "Diameter", e.radius * 2, "mm", x),
+          row("length", e.closed ? "Circumference" : "Arc length", e.length, "mm", x),
+          ...(e.closed ? [] : [row("sweep", "Sweep", (e.sweep * 180) / Math.PI, "°", x)]),
+          row("cx", "Centre X", e.center[0], "mm", x),
+          row("cy", "Centre Y", e.center[1], "mm", x),
+          row("cz", "Centre Z", e.center[2], "mm", x),
         ],
       };
     }
@@ -280,11 +285,12 @@ function single(g: Geom, report: EvalReport | null | undefined, topo: SceneTopol
   }
   if (g.kind === "face") {
     const f = g.g;
-    if (f.type === "plane") return { title: "Planar face", rows: [row("area", "Area", f.area, "mm²", f.exact)] };
+    if (f.type === "plane") return { title: f.verified ? "Planar face" : "Face", rows: [row("area", "Area", f.area, "mm²", f.exact)] };
     if (f.type === "cylinder") {
+      const kind = f.verified ? "Cylindrical face" : "Face (≈ cylindrical)";
       return {
-        title: f.inner ? "Cylindrical face (hole)" : "Cylindrical face",
-        rows: [row("radius", "Radius", f.radius, "mm", true), row("diameter", "Diameter", f.radius * 2, "mm", true), row("area", "Area", f.area, "mm²", f.exact)],
+        title: f.inner ? `${kind} (hole)` : kind,
+        rows: [row("radius", "Radius", f.radius, "mm", f.verified), row("diameter", "Diameter", f.radius * 2, "mm", f.verified), row("area", "Area", f.area, "mm²", f.exact)],
       };
     }
     return { title: "Face", rows: [row("area", "Area", f.area, "mm²", false)] };
@@ -364,13 +370,13 @@ function pair(a: Geom, b: Geom, topo: SceneTopology, contact: Vec3 | null = null
     const d = Math.abs(dot(sub(b.g.point, a.g.point), a.g.normal));
     const from = a.g.centroid;
     const to = sub(from, scale(a.g.normal, dot(sub(from, b.g.point), a.g.normal)));
-    parallelDistance = row("distance", "Distance (parallel planes)", d, "mm", true, { from, to });
+    parallelDistance = row("distance", "Distance (parallel planes)", d, "mm", a.g.verified && b.g.verified, { from, to });
   } else if (a.kind === "point" && b.kind === "face" && b.g.type === "plane") {
     // Point to plane: exact when the foot of the perpendicular lies on the face.
     const n = b.g.normal;
     const foot = sub(a.p, scale(n, dot(sub(a.p, b.g.point), n)));
     if (b.tris.some((t) => length(sub(closestOnTriangle(foot, t[0]!, t[1]!, t[2]!), foot)) < 1e-6)) {
-      parallelDistance = row("distance", "Distance", Math.abs(dot(sub(a.p, b.g.point), n)), "mm", true, { from: a.p, to: foot });
+      parallelDistance = row("distance", "Distance", Math.abs(dot(sub(a.p, b.g.point), n)), "mm", b.g.verified, { from: a.p, to: foot });
     }
   } else if (b.kind === "point" && a.kind === "face" && a.g.type === "plane") {
     return pair(b, a, topo, contact);
@@ -380,7 +386,7 @@ function pair(a: Geom, b: Geom, topo: SceneTopology, contact: Vec3 | null = null
     const pa = primsOf(a, topo);
     const pb = primsOf(b, topo);
     const m = minDistance(pa, pb);
-    const exactPrims = pa.tris.length === 0 && pb.tris.length === 0 && [a, b].every((g) => g.kind === "point" || (g.kind === "edge" && g.g.type === "line"));
+    const exactPrims = pa.tris.length === 0 && pb.tris.length === 0 && [a, b].every((g) => g.kind === "point" || (g.kind === "edge" && g.g.type === "line" && g.g.exact));
     rows.push(row("distance", "Minimum distance", m.d, "mm", exactPrims, { from: m.from, to: m.to }));
   }
 
@@ -397,9 +403,9 @@ function pair(a: Geom, b: Geom, topo: SceneTopology, contact: Vec3 | null = null
     if (ca.axis && cb.axis && length(cross(ca.axis, cb.axis)) < 1e-6) {
       const off = sub(cb.p, ca.p);
       const perp = sub(off, scale(ca.axis, dot(off, ca.axis)));
-      rows.push(row("axis", "Axis distance", length(perp), "mm", true, { from: ca.p, to: add(ca.p, perp) }));
+      rows.push(row("axis", "Axis distance", length(perp), "mm", ca.exact && cb.exact, { from: ca.p, to: add(ca.p, perp) }));
     } else {
-      rows.push(row("centre", "Centre distance", length(sub(cb.p, ca.p)), "mm", true, { from: ca.p, to: cb.p }));
+      rows.push(row("centre", "Centre distance", length(sub(cb.p, ca.p)), "mm", ca.exact && cb.exact, { from: ca.p, to: cb.p }));
     }
   }
 
@@ -414,7 +420,7 @@ function pair(a: Geom, b: Geom, topo: SceneTopology, contact: Vec3 | null = null
       // Line vs plane: complement of the line–normal angle.
       ang = Math.abs(90 - Math.min(ang, 180 - ang));
     }
-    rows.push(row("angle", "Angle", ang, "°", true));
+    rows.push(row("angle", "Angle", ang, "°", da.exact && db.exact));
   }
   return { title, rows };
 }
