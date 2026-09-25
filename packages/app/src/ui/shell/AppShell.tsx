@@ -14,6 +14,7 @@
  */
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { FileLayer } from "../../file/ui/FileLayer";
+import { useFilesState } from "../../file/ui/hooks";
 import { sketchMode } from "../../sketch/instance";
 import { useProblems } from "../doc-hooks";
 import { ChatPanel } from "../ChatPanel";
@@ -82,9 +83,11 @@ function useWelcomeVisible(): boolean {
   useStore(services.doc, (s) => `${s.docId}:${s.path ?? ""}:${s.dirty}:${s.revision}:${s.model !== null}`);
   useStore(services.agent, (s) => `${s.activeRunId ?? ""}:${s.review ? 1 : 0}`);
   useShellState((s) => s.welcome);
-  // Sketch mode (the plane picker, then the sketcher) draws over the viewport: the welcome makes way.
+  // Sketch mode (the plane picker, then the sketcher) draws over the viewport, and reference meshes
+  // are work in the document (their panel sits over the viewport): the welcome makes way for both.
   const sketching = useStore(sketchMode, (s) => s.phase !== "off");
-  return !sketching && shell.welcomeVisible();
+  const hasReferences = useFilesState().references.length > 0;
+  return !sketching && !hasReferences && shell.welcomeVisible();
 }
 
 export function AppShell(): ReactElement {

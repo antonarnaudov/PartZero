@@ -18,11 +18,14 @@
   --ov-halo: rgba(250, 251, 253, 0.92);
 }
 
-/* The toolbar wraps before it reaches the view cube. */
+/* The toolbar wraps before it reaches the view cube. Its menus drop over the view cube and the
+   other overlays (its backdrop-filter makes it a stacking context, so the menus' own z-index
+   stays inside it); sketch mode and the welcome (z 5+) still cover it. */
 .viewport .vp-toolbar {
   max-width: calc(100% - 150px);
   flex-wrap: wrap;
   row-gap: 2px;
+  z-index: 1;
 }
 .viewport .vp-toolbar .vp-btn:not(.icon) {
   padding: 0 6px;

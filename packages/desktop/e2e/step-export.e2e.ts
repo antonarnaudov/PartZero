@@ -6,10 +6,9 @@
  * normal save grant (`fs:write` after a save dialog) — here to a temp path granted by a stubbed
  * dialog — and read back as STEP.
  *
- * The last test runs the user's path: File ▸ Export ▸ STEP… (the `file.exportStep` command,
- * `@aicad/app` `io/step-export-command.ts`) on an IR v1 document. The command layer belongs to the
- * IR v1 Phase C work, so until the integrator registers the command (one entry in `commands.ts`,
- * one menu line) that test is skipped and says so; nothing else changes when it lands.
+ * The last test runs the user's path: File ▸ Quick Export ▸ STEP… (the `file.exportStep` command,
+ * `@aicad/app` `io/step-export-command.ts`, registered in `commands.ts` with one menu line) on the
+ * IR v1 document of record. It skips, and says so, on a build without the command.
  */
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -149,7 +148,7 @@ test("an IR v1 document exports through the same channel", async () => {
   expect(res.summary.bodies.every((b) => b.forge.volume > 0 && b.step.solids === 1)).toBe(true);
 });
 
-test("File > Export > STEP… exports the open IR v1 document", async () => {
+test("File > Export > STEP… exports the IR v1 document of record", async () => {
   const hasCommand = await page.evaluate(async () => {
     const a = (window as unknown as { __aicad?: Automation }).__aicad;
     return !!a && (await a.describe()).some((c) => c.id === "file.exportStep");
@@ -158,16 +157,14 @@ test("File > Export > STEP… exports the open IR v1 document", async () => {
     !hasCommand,
     "file.exportStep is not registered yet: the Phase C integrator adds it to commands.ts (io/step-export-command.ts)",
   );
-  // Open it the user's way: the open dialog (stubbed to pick it) grants the read.
-  await app.evaluate(({ dialog }, path) => {
-    (dialog as unknown as { showOpenDialog: unknown }).showOpenDialog = () =>
-      Promise.resolve({ canceled: false, filePaths: [path] });
-  }, V1_PROGRAM);
-  const opened = await page.evaluate(() =>
-    (window as unknown as { __aicad: Automation }).__aicad.execute({ id: "file.open" }),
+  // The v1 document of record lives in the IR v1 store (services.ir, Phase C); `file.open` reads
+  // only IR v0 documents until the v1 document adapter lands, so load it the command layer's way.
+  const v1Text = readFileSync(V1_PROGRAM, "utf8");
+  const loaded = await page.evaluate(
+    (document) => (window as unknown as { __aicad: Automation }).__aicad.execute({ id: "ir.load", args: { document } }),
+    v1Text,
   );
-  expect(opened.ok, opened.error?.message).toBe(true);
-  await page.evaluate(() => (window as unknown as { __aicad: Automation }).__aicad.idle());
+  expect(loaded.ok, loaded.error?.message).toBe(true);
 
   const target = join(root, "params-plate.step");
   await app.evaluate(({ dialog }, path) => {
