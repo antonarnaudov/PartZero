@@ -1,0 +1,84 @@
+packages/app/src/tools/builtin/features.ts
+  s_59c0dd2af30db2::t_e77327334d70eb 12-13
+  s_59c0dd2af30db2::t_bdd3d20f7dff73 5-6,107,109
+packages/app/src/tools/shell.ts
+  s_59c0dd2af30db2::t_3cb70330c4bd09 143
+  s_59c0dd2af30db2::t_710956d64cc830 17
+  s_59c0dd2af30db2::t_3b8894f717782d 331-341,344-353
+  s_59c0dd2af30db2::t_d6de308b0c4989 342-343
+  s_59c0dd2af30db2::t_32f1d6b24af97e 325
+  s_59c0dd2af30db2::t_07927e689c868a 60-61
+packages/app/test/create-tools.test.ts
+  s_59c0dd2af30db2::t_7f6b1128ac01b8 343
+  s_59c0dd2af30db2::t_e55c591d90cc9b 317
+  s_59c0dd2af30db2::t_c1b0876e35d7c8 370-371
+  s_59c0dd2af30db2::t_4be7c6dec706ca 327
+  s_59c0dd2af30db2::t_3167fe8b182bad 1-199,201-212,214-215,222,224-255,260-271,273-285,287-316,318-326,328-342,344-367,372-376
+  s_59c0dd2af30db2::t_dc510fd45ad093 217
+  s_59c0dd2af30db2::t_a88a802fdd2fb3 200,213,216,218-221,223,256-259,286,368-369
+  s_59c0dd2af30db2::t_140780841035a2 272
+packages/app/src/ui/shell/install.ts
+  s_59c0dd2af30db2::t_a159192e995092 57-58
+  s_59c0dd2af30db2::t_c70cb2091b3f9a 8-9
+packages/app/src/tools/create/extrude.ts
+  s_59c0dd2af30db2::t_a0c77b574cfc54 80-81
+  s_59c0dd2af30db2::t_a1ec3fad93e45e 1-79,82-166
+packages/model-ops/src/modeling/keys.ts
+  s_59c0dd2af30db2::t_0de8dd8d300dc6 299-331
+packages/app/src/tools/create/ports.ts
+  s_59c0dd2af30db2::t_6e4373c5509a9a 1-58,61-130
+  s_59c0dd2af30db2::t_1bd28515bb58ce 59-60
+packages/app/src/tools/framework/types.ts
+  s_59c0dd2af30db2::t_9da5637892baff 47
+  s_59c0dd2af30db2::t_d7a2542d00ff01 403-404,406,410-431
+  s_59c0dd2af30db2::t_26c69d137e8276 432
+packages/app/src/tools/create/combine.ts
+  s_59c0dd2af30db2::t_85f02bbff37bf3 1-94
+packages/app/src/tools/create/revolve.ts
+  s_59c0dd2af30db2::t_8b44fad053d87d 1-183
+packages/app/src/tools/create/hole.ts
+  s_59c0dd2af30db2::t_200aaa67ece72a 181
+  s_59c0dd2af30db2::t_042a051e530448 1-180,182-234
+packages/app/src/tools/framework/session.ts
+  s_59c0dd2af30db2::t_251eace9527bf2 80-81
+  s_59c0dd2af30db2::t_2acb98489a254c 264
+  s_59c0dd2af30db2::t_ae6e69203f6fb6 27
+  s_59c0dd2af30db2::t_247578e6700c32 513
+  s_59c0dd2af30db2::t_4bec9fb2d6ad7d 670,673-695
+packages/app/src/tools/create/kit.ts
+  s_59c0dd2af30db2::t_7ed230925e6ec1 360-365
+  s_59c0dd2af30db2::t_e5437ef8c935d8 104
+  s_59c0dd2af30db2::t_ec2fe673079ffb 1-103,105-170,172-298,300-359,366-376
+  s_59c0dd2af30db2::t_6ebaaa3542f0ac 299
+  s_59c0dd2af30db2::t_1bd28515bb58ce 171
+packages/app/src/commands/model-commands.ts
+  s_59c0dd2af30db2::t_c856710c80738d 1-61
+packages/app/src/tools/create/push-pull.ts
+  s_59c0dd2af30db2::t_391b9232777419 1-55,57-69,71-80
+  s_59c0dd2af30db2::t_c3628c956a980d 56,70
+packages/app/src/tools/create/index.ts
+  s_59c0dd2af30db2::t_7e7cc96ed8e2f0 1-19
+packages/app/src/tools/create/model.ts
+  s_59c0dd2af30db2::t_6d92c827417cda 1-78
+packages/app/src/commands/commands.ts
+  s_59c0dd2af30db2::t_517d27e916648c 26
+  s_59c0dd2af30db2::t_22501c10d12cbc 914-915
+packages/app/src/tools/create/datum.ts
+  s_59c0dd2af30db2::t_7e08402ff3ed0b 1-267
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c21e6fcce1f50ae009b2fe289047c495cb3a7e92",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
