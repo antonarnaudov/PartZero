@@ -1,0 +1,30 @@
+packages/app/test/doc-store.test.ts
+  s_59c0dd2af30db2::t_109812034b0c91 219-230
+packages/app/test/document-files.test.ts
+  s_59c0dd2af30db2::t_805961f0a3b899 20-39,43,47-48,100-102,126-127,131,134,167,181,591-685,702-714
+  s_59c0dd2af30db2::t_fd9f68e78c0c01 686-701,715
+  s_59c0dd2af30db2::t_dfa9a610202a4b 716
+packages/app/src/file/document-files.ts
+  s_59c0dd2af30db2::t_d7429101cacf9b 13,151-152,164-165,281-285,287-292,525-536,540-541,543-545,548-551,553,555-557,559-561,581-582,601
+  s_59c0dd2af30db2::t_6aa06685678d90 286
+packages/app/src/doc/doc-store.ts
+  s_59c0dd2af30db2::t_70c5d5fd5fe3b0 196-205
+packages/app/src/file/adapter.ts
+  s_59c0dd2af30db2::t_0f6906ee7f19ac 9,24-39,50,79-82,106-109,146,148,150,152,218-224,227-230,234-238,245
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6ccdd6c751422c007254a2e8dee9e1dd7c2767f7",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
