@@ -5,6 +5,8 @@
 import type { AppCommandRegistry } from "../../commands/commands";
 import type { AppServices } from "../../services";
 import { registerAllTools } from "../../tools/catalog";
+import { manipulatorHandlesPort, runtimeSelectionPort } from "../../tools/create/ports";
+import { viewportRuntime } from "../../viewport/runtime";
 import { createShellCommandRegistry } from "../../tools/commands";
 import type { PanelSpec, ToolDefinition } from "../../tools/framework/types";
 import { ToolRegistry } from "../../tools/registry";
@@ -52,6 +54,8 @@ export function installShell(
   const tools = options.tools ?? new ToolRegistry({ flags: options.flags ?? (() => options.automation) });
   const shell = new Shell({ services, commands, shellCommands, tools });
   attachShell(services, shell);
+  // Tools see the viewport's multi-selection, and their panels' handles show in the viewport.
+  shell.bindPorts({ selection: runtimeSelectionPort(services), handles: manipulatorHandlesPort(viewportRuntime(services).manipulators) });
   registerAllTools(tools);
   const panels = new PanelRegistry();
   registerBuiltinPanels(panels);

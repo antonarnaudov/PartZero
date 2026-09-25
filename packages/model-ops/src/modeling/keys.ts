@@ -296,6 +296,39 @@ export function bodiesRef(doc: DocJson, names: readonly string[], report: Report
   return { kind: "body", q: qs.length === 1 ? qs[0]! : { op: "union", of: qs } };
 }
 
+/**
+ * The provenance name a named face query designates (the inverse of {@link faceQuery}), for showing
+ * an existing feature's face reference as a pick: `cap` → `F/cap:end`, `side` → `F/side:c`,
+ * `endcap`, `hole_face` → `H/wall@p`. Null for any other query.
+ */
+export function keyOfFaceQuery(q: unknown): string | null {
+  if (typeof q !== "object" || q === null) return null;
+  const o = q as Record<string, unknown>;
+  const f = typeof o["feature"] === "string" ? escapeKeyId(o["feature"]) : null;
+  if (!f) return null;
+  switch (o["op"]) {
+    case "cap":
+    case "endcap":
+      return typeof o["end"] === "string" ? `${f}/${o["op"]}:${o["end"]}${typeof o["member"] === "string" ? `@${escapeKeyId(o["member"])}` : ""}` : null;
+    case "side":
+      return typeof o["curve"] === "string" ? `${f}/side:${escapeKeyId(o["curve"])}` : null;
+    case "hole_face":
+      return typeof o["part"] === "string" && typeof o["at"] === "string" ? `${f}/${o["part"]}@${escapeKeyId(o["at"])}` : null;
+    default:
+      return null;
+  }
+}
+
+/** The pick a PlaneRef designates: `XY`, a datum's id, or a face's name (null when it has no simple pick). */
+export function pickOfPlaneRef(plane: unknown): string | null {
+  if (plane === "XY" || plane === "XZ" || plane === "YZ") return plane;
+  if (typeof plane !== "object" || plane === null) return null;
+  const p = plane as Record<string, unknown>;
+  if (typeof p["datum"] === "string") return p["datum"];
+  const face = p["face"] as { q?: unknown } | undefined;
+  return face ? keyOfFaceQuery(face.q) : null;
+}
+
 /** Named origin planes and axes. */
 export const ORIGIN_PLANES = ["XY", "XZ", "YZ"] as const;
 export const ORIGIN_AXES = ["X", "Y", "Z"] as const;

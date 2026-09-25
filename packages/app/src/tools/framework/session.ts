@@ -24,6 +24,7 @@ import type {
   FieldValue,
   NumberValue,
   OpsPort,
+  PanelHandle,
   PanelSessionHandle,
   PanelSpec,
   PanelState,
@@ -76,6 +77,8 @@ export interface PanelSessionState {
   pendingCommit: boolean;
   /** A one-line note for the user (e.g. why OK did not close the panel); cleared by the next edit. */
   notice: string | null;
+  /** Manipulator handles of the last preview that returned any (kept while a preview fails). */
+  handles: readonly PanelHandle[];
 }
 
 export type CloseReason = "ok" | "cancel" | "replaced";
@@ -258,6 +261,7 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
       closedBy: null,
       pendingCommit: false,
       notice: null,
+      handles: [],
     });
     this.id = options.id;
     this.spec = spec;
@@ -506,6 +510,7 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
       state: outcome.ok ? "ready" : "invalid",
       summary: outcome.summary ?? [],
       warnings: outcome.ok ? (outcome.warnings ?? []) : [],
+      ...(outcome.handles ? { handles: outcome.handles } : {}),
     });
     this.showBodies(outcome.ok ? (outcome.bodies ?? null) : null, false);
   }
@@ -662,7 +667,30 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
         // A tool's cleanup must not keep the panel open.
       }
     }
-    this.setState({ state: "closed", closedBy: reason });
+    this.setState({ state: "closed", closedBy: reason, handles: [] });
     this.onClose?.(reason, this);
   }
+
+  // ─── Handles ──────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * A handle of this panel was dragged (plan §2.6): its field takes the value (as text), which
+   * re-checks and re-previews the panel. `cancel` puts the value the drag started from back.
+   */
+  handleChanged(id: string, value: number, phase: "start" | "drag" | "end" | "cancel"): void {
+    if (this.closed || phase === "start") return;
+    const h = this.getState().handles.find((x) => x.id === id);
+    if (!h) return;
+    const field = this.getState().fields.find((f) => f.key === h.field);
+    if (!field || field.spec.kind !== "number") return;
+    const text = h.toText ? h.toText(value) : formatHandleValue(value);
+    if ((field.value as NumberValue).text === text) return;
+    this.set(h.field, text);
+  }
+}
+
+/** A dragged value as a field's text: at most 4 decimals, no trailing zeros. */
+export function formatHandleValue(v: number): string {
+  const r = Number(v.toFixed(4));
+  return String(Object.is(r, -0) ? 0 : r);
 }

@@ -44,6 +44,7 @@ import type { AppInvocation } from "../../commands/commands";
 import type { CommandResult, CommandSource } from "../../commands/registry";
 import type { RenderBody } from "../../engine/types";
 import type { AppServices } from "../../services";
+import type { HandleSpec } from "../../viewport/manipulators/types";
 
 // ─── Tool groups and modes ─────────────────────────────────────────────────────────────────────
 
@@ -399,10 +400,35 @@ export type PreviewOutcome =
        * the viewport marks it stale.
        */
       bodies?: readonly RenderBody[];
+      /** Manipulator handles for this preview (plan §2.6); see {@link PanelHandle}. */
+      handles?: readonly PanelHandle[];
     }
-  | { ok: false; errors: readonly FieldError[]; summary?: readonly SummaryRow[] };
+  | { ok: false; errors: readonly FieldError[]; summary?: readonly SummaryRow[]; handles?: readonly PanelHandle[] };
 
 export type CommitOutcome = { ok: true; message?: string } | { ok: false; errors: readonly FieldError[] };
+
+// ─── Manipulators (plan §2.6) ─────────────────────────────────────────────────────────────────
+
+/**
+ * A handle in the viewport bound to one number field of the panel: dragging it sets the field
+ * (`toText(value)`, default the number), which re-runs the preview; OK commits as usual. A panel
+ * returns its handles with each preview ({@link PreviewOutcome}), placed from the previewed
+ * geometry; a failing preview keeps the last ones, so the user can drag back into range.
+ */
+export interface PanelHandle extends HandleSpec {
+  /** The number field the handle drives. */
+  field: string;
+  /** The handle's value as the field's text (e.g. a symmetric extrude's arrow shows half the distance). */
+  toText?(value: number): string;
+}
+
+/** Where the shell shows the open panel's handles (the viewport's manipulator host once bound). */
+export interface HandlesPort {
+  /** Show or update the handles; drags report to `onChange`. */
+  show(handles: readonly PanelHandle[], onChange: (id: string, value: number, phase: "start" | "drag" | "end" | "cancel") => void): void;
+  /** Remove them (the panel closed). */
+  clear(): void;
+}
 
 export interface PreviewIO {
   /** Aborted when a newer preview starts, the document changes or the panel closes. */

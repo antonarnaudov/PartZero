@@ -23,6 +23,7 @@ import type { SelectionChip } from "../ui-store";
 import { VIEWPORT_COMMANDS } from "../viewport/registry";
 import { viewportRuntime } from "../viewport/runtime";
 import { IR_COMMANDS, originOf as irOriginOf, refuseAgentCaller, refuseAgentUndo, runOps } from "./ir-commands";
+import { MODEL_COMMANDS } from "./model-commands";
 import { CommandRegistry, defineCommand, type ExecuteMeta, type Invocation } from "./registry";
 
 const command = defineCommand<AppServices>();
@@ -910,6 +911,8 @@ export const COMMANDS = {
 
   // ─── IR v1 command layer (SPEC-v1 §0.6, §5.9, §9.2) ──────────────────────────────────────
   ...IR_COMMANDS,
+  // The modeling tools' commands (model.extrude, model.hole, …): what their panels, the agent and MCP run.
+  ...MODEL_COMMANDS,
 
   // The viewport stream (docs/fm/view-sel-followups.md step 2): last, so its view.setView (7
   // views, animated), view.fit and view.setProjection replace the ones above.

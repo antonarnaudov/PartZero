@@ -14,7 +14,7 @@ import type { AppServices } from "../services";
 import { Store } from "../store";
 import { docDocumentPort, docParamsPort, docSelectionPort } from "./framework/ports";
 import { PanelSession, type CloseReason } from "./framework/session";
-import type { DocumentPort, Enablement, OpsPort, PanelSpec, ParamsPort, SelectionPort, ShellMode, ToolContext, ToolDefinition } from "./framework/types";
+import type { DocumentPort, Enablement, HandlesPort, OpsPort, PanelSpec, ParamsPort, SelectionPort, ShellMode, ToolContext, ToolDefinition } from "./framework/types";
 import { featurePropertiesPanel } from "./builtin/features";
 import { appOpsPort } from "./framework/v1-ops";
 import { ToolRegistry } from "./registry";
@@ -57,6 +57,8 @@ export interface ShellPorts {
   document: DocumentPort;
   /** Where tools' ops are applied as one transaction (the IR v1 store's transaction once bound). */
   ops: OpsPort;
+  /** Where the open panel's manipulator handles are shown (the viewport's, once bound; none headless). */
+  handles?: HandlesPort | null;
 }
 
 /** What starting a tool did. */
@@ -138,6 +140,7 @@ export class Shell extends Store<ShellState> {
       params: options.ports?.params ?? docParamsPort(options.services.doc),
       document: options.ports?.document ?? docDocumentPort(options.services.doc),
       ops: options.ports?.ops ?? appOpsPort(options.services, (cmd, source) => this.commands.executeUnknown(cmd, { source })),
+      handles: options.ports?.handles ?? null,
     };
     this.tools.reserveKeys(this.commandKeymap());
     this.lastDocId = options.services.doc.getState().docId;
@@ -319,9 +322,33 @@ export class Shell extends Store<ShellState> {
       },
     });
     opened = session;
+    this.syncHandles(session);
     this.services.ui.setPanel("right", true);
     this.setState((s) => ({ panel: session, activeToolId: toolId, rightTab: "properties", focusTick: s.focusTick + 1 }));
     return session;
+  }
+
+  /** Mirror the open panel's manipulator handles into the viewport (plan §2.6) until it closes. */
+  private syncHandles(session: PanelSession): void {
+    const port = this.ports.handles;
+    if (!port) return;
+    let shown = session.getState().handles;
+    const onChange = (id: string, value: number, phase: "start" | "drag" | "end" | "cancel"): void => session.handleChanged(id, value, phase);
+    if (shown.length) port.show(shown, onChange);
+    const off = session.subscribe(() => {
+      const s = session.getState();
+      if (s.state === "closed") {
+        off();
+        // A replaced panel closes before its successor opens, so this never removes the next one's.
+        if (shown.length) port.clear();
+        shown = [];
+        return;
+      }
+      if (s.handles === shown) return;
+      shown = s.handles;
+      if (shown.length) port.show(shown, onChange);
+      else port.clear();
+    });
   }
 
   private setPreview(bodies: readonly RenderBody[] | null, stale: boolean): void {
