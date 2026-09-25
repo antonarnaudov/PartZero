@@ -90,6 +90,19 @@ export function modelSelectionPort(services: AppServices): SelectionPort {
     const p = picking.get(services);
     const docSel = services.doc.getState().selection;
     const extra: SelectionItem[] = [];
+    // An entity selected through the command layer (`selection.selectEntity`: the chat, an
+    // agent, a test) is the document's selection without being a viewport pick (a viewport
+    // pick is mirrored there, so it is in the viewport's items already).
+    const e = docSel.entity;
+    if (e) {
+      const key = e.face ?? e.edge;
+      const kind = e.face ? "face" : e.edge ? "edge" : "body";
+      const has = view.some((i) => (kind === "body" ? i.kind === "body" && i.body === e.body : (i.kind === "face" || i.kind === "edge") && i.key === key && i.body === e.body));
+      if (!has) {
+        const part = partOfBody(services, e.body);
+        extra.push(kind === "body" ? { kind: "body", part, body: e.body } : { kind, part, key: key!, body: e.body });
+      }
+    }
     if (p) extra.push(...p.features);
     else if (docSel.featureId && !docSel.entity) {
       const f = v1Parts(services).flatMap((x) => x.features).find((x) => x.id === docSel.featureId || x.name === docSel.featureId);
