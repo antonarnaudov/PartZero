@@ -13,6 +13,7 @@
  * - {@link parseDevServerUrl}: a dev server is accepted only on loopback (`localhost`, `127.0.0.1`,
  *   `[::1]`); its exact origin is what {@link isTrustedFrameUrl} (protocol-core.ts) trusts.
  */
+import { userInfo } from "node:os";
 import { delimiter, join, resolve } from "node:path";
 import { CLI_ENV_LOCATION, CLI_ENV_NETWORK } from "@aicad/llm-gateway/cli";
 
@@ -86,6 +87,29 @@ export function cliChildHostEnv(env: NodeJS.ProcessEnv): Record<string, string> 
   return out;
 }
 
+/** The account's login name, or null (`os.userInfo()` throws when the user database has no entry). */
+function accountName(): string | null {
+  try {
+    const name = userInfo().username;
+    return name.length > 0 ? name : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `env` with `USER` and `LOGNAME` filled from the account (`os.userInfo()`) when the app was started without them.
+ * launchd normally sets both for a GUI app, but not every launcher does, and CLI agents depend on them: without `USER`,
+ * `claude auth status` exits 1 (read as "not logged in") for a user who is logged in (observed with Claude Code
+ * 2.1.260). Like the `SHELL` fallback (llm-gateway `loginShellPath`). POSIX only; a value that is set is never changed.
+ */
+export function withLoginNames(env: NodeJS.ProcessEnv, username: () => string | null = accountName, platform: NodeJS.Platform = process.platform): NodeJS.ProcessEnv {
+  if (platform === "win32" || (env["USER"] && env["LOGNAME"])) return env;
+  const name = env["USER"] || env["LOGNAME"] || username();
+  if (!name) return env;
+  return { ...env, USER: env["USER"] || name, LOGNAME: env["LOGNAME"] || name };
+}
+
 /** CLI detection probes in the main process: the allowlist, the CLI locations and proxies, and `SHELL` for the login-shell lookup. */
 export function cliDetectEnv(env: NodeJS.ProcessEnv): Record<string, string> {
   return childProcessEnv(env, [...CLI_ENV_LOCATION, ...CLI_ENV_NETWORK, "SHELL"]);
@@ -156,6 +180,23 @@ export interface DevOverrides {
    * so a fake CLI that only answers single calls is never driven through the MCP runtime by accident.
    */
   cliAutoMode: "runtime" | "completion";
+  /**
+   * `AICAD_SELF_TEST_TIMEOUT_MS`: the `--self-test` watchdog's limit (self-test.ts `SELF_TEST_TIMEOUT_MS` otherwise), so
+   * the e2e suite can check that a self-test that does not finish still prints a report and exits.
+   */
+  selfTestTimeoutMs: number | null;
+  /**
+   * `AICAD_PRINTS_DIR`: where "Open in Bambu Studio" saves prints instead of `~/PartZero/Prints`. With an isolated
+   * profile and no `AICAD_PRINTS_DIR`, `<profile>/Prints`: a test run never writes into the user's real prints folder.
+   */
+  printsDir: string | null;
+  /**
+   * `AICAD_SLICER_DIRS` (path-list): look for `BambuStudio.app` only in these folders (no `/Applications`, no
+   * LaunchServices). With an isolated profile and none given, `[]`: a test run never launches the user's real slicer.
+   */
+  slicerDirs: string[] | null;
+  /** `AICAD_OPEN_BIN`: the `open` executable the slicer launch uses (a fake in tests) instead of `/usr/bin/open`. */
+  openBin: string | null;
 }
 
 const NO_OVERRIDES: DevOverrides = {
@@ -168,6 +209,10 @@ const NO_OVERRIDES: DevOverrides = {
   cliDirs: null,
   detectLocalModels: true,
   cliAutoMode: "runtime",
+  selfTestTimeoutMs: null,
+  printsDir: null,
+  slicerDirs: null,
+  openBin: null,
 };
 
 /** Every `AICAD_*` variable read by the main process for development and tests. */
@@ -185,6 +230,10 @@ export const DEV_OVERRIDE_VARIABLES = [
   "AICAD_AGENT_DOTENV",
   "AICAD_CLI_DIRS",
   "AICAD_CLI_AUTO",
+  "AICAD_SELF_TEST_TIMEOUT_MS",
+  "AICAD_PRINTS_DIR",
+  "AICAD_SLICER_DIRS",
+  "AICAD_OPEN_BIN",
 ] as const;
 
 /**
@@ -210,6 +259,14 @@ export function readDevOverrides(env: NodeJS.ProcessEnv, isPackaged: boolean, wa
     cliDirs: env["AICAD_CLI_DIRS"] ? env["AICAD_CLI_DIRS"].split(delimiter).filter((d) => d.length > 0).map((d) => resolve(d)) : env["AICAD_USER_DATA_DIR"] ? [] : null,
     detectLocalModels: !env["AICAD_USER_DATA_DIR"],
     cliAutoMode: cliAutoMode(env, warn),
+    selfTestTimeoutMs: /^[1-9]\d{0,6}$/.test(env["AICAD_SELF_TEST_TIMEOUT_MS"] ?? "") ? Number(env["AICAD_SELF_TEST_TIMEOUT_MS"]) : null,
+    printsDir: path("AICAD_PRINTS_DIR") ?? (env["AICAD_USER_DATA_DIR"] ? join(resolve(env["AICAD_USER_DATA_DIR"]), "Prints") : null),
+    slicerDirs: env["AICAD_SLICER_DIRS"]
+      ? env["AICAD_SLICER_DIRS"].split(delimiter).filter((d) => d.length > 0).map((d) => resolve(d))
+      : env["AICAD_USER_DATA_DIR"]
+        ? []
+        : null,
+    openBin: path("AICAD_OPEN_BIN"),
   };
 }
 

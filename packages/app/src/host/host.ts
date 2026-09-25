@@ -9,6 +9,7 @@ import type {
   DocumentStateMessage,
   MenuCommandMessage,
   OpenDialogOptions,
+  PrintBridge,
   SaveDialogOptions,
   SettingsBridge,
 } from "../bridge";
@@ -31,6 +32,8 @@ export interface AppHost {
   readonly agent: AgentBridge | null;
   /** Agent settings and API keys (desktop only). */
   readonly settings: SettingsBridge | null;
+  /** Printer profile and "Open in Bambu Studio" (desktop only; absent or null elsewhere). */
+  readonly print?: PrintBridge | null;
   setDocumentState(state: DocumentStateMessage): void;
   onMenuCommand(listener: (message: MenuCommandMessage) => void): () => void;
 }

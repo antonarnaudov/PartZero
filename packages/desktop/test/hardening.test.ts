@@ -15,7 +15,7 @@ import { liveTransports, OFFICIAL_BASE_URLS } from "../src/agent/runner.js";
 import { SettingsStore } from "../src/agent/settings.js";
 import { transportFromEnv } from "../src/agent/setup.js";
 import { DEBUG_SWITCHES, debugSwitchRefusal, forbiddenDebugSwitches } from "../src/debug-switches.js";
-import { agentWorkerEnv, CHILD_ENV_ALLOWLIST, forgeCliEnv, parseDevServerUrl, readDevOverrides, resolveWebRoot } from "../src/env.js";
+import { agentWorkerEnv, CHILD_ENV_ALLOWLIST, cliDetectEnv, forgeCliEnv, parseDevServerUrl, readDevOverrides, resolveWebRoot, withLoginNames } from "../src/env.js";
 import { canonicalPath, documentStatePath, PathGrants, RecentFiles } from "../src/files.js";
 import { forgeEval, locateForgeBinary } from "../src/forge-cli.js";
 import { buildMenuTemplate } from "../src/menu.js";
@@ -69,7 +69,7 @@ describe("L10: packaged builds ignore dev and test overrides", () => {
 
   it("reads no AICAD_* override when packaged, and says so", () => {
     const warnings: string[] = [];
-    expect(readDevOverrides({ ...env, AICAD_ALLOW_DEBUGGER: "1" }, true, (m) => warnings.push(m))).toEqual({ devServer: null, userDataDir: null, appDist: null, skipClosePrompt: false, simulatePackaged: false, allowDebugger: false, cliDirs: null, detectLocalModels: true, cliAutoMode: "runtime" });
+    expect(readDevOverrides({ ...env, AICAD_ALLOW_DEBUGGER: "1" }, true, (m) => warnings.push(m))).toEqual({ devServer: null, userDataDir: null, appDist: null, skipClosePrompt: false, simulatePackaged: false, allowDebugger: false, cliDirs: null, detectLocalModels: true, cliAutoMode: "runtime", selfTestTimeoutMs: null, printsDir: null, slicerDirs: null, openBin: null });
     expect(warnings).toEqual(
       expect.arrayContaining(["AICAD_DEV_URL is ignored in packaged builds", "AICAD_BIN is ignored in packaged builds", "AICAD_APP_DIST is ignored in packaged builds", "AICAD_ALLOW_DEBUGGER is ignored in packaged builds", "AICAD_CLI_DIRS is ignored in packaged builds"]),
     );
@@ -87,6 +87,18 @@ describe("L10: packaged builds ignore dev and test overrides", () => {
     expect(readDevOverrides({ AICAD_USER_DATA_DIR: "/tmp/profile", AICAD_CLI_AUTO: "runtime" }, false)).toMatchObject({ cliAutoMode: "runtime" });
     expect(readDevOverrides({}, false)).toMatchObject({ cliDirs: null, detectLocalModels: true, cliAutoMode: "runtime" });
     expect(readDevOverrides({ AICAD_CLI_AUTO: "completion" }, true).cliAutoMode).toBe("runtime"); // packaged: ignored
+    expect(readDevOverrides({ AICAD_SELF_TEST_TIMEOUT_MS: "1500" }, false).selfTestTimeoutMs).toBe(1500);
+    for (const bad of ["0", "-1", "1e3", "abc", "99999999"]) expect(readDevOverrides({ AICAD_SELF_TEST_TIMEOUT_MS: bad }, false).selfTestTimeoutMs, bad).toBeNull();
+    expect(readDevOverrides({ AICAD_SELF_TEST_TIMEOUT_MS: "1500" }, true).selfTestTimeoutMs).toBeNull(); // packaged: ignored
+    // A test profile never writes into the user's prints folder or launches their real slicer unless it opts in.
+    expect(readDevOverrides({ AICAD_USER_DATA_DIR: "/tmp/profile" }, false)).toMatchObject({ printsDir: join(resolve("/tmp/profile"), "Prints"), slicerDirs: [], openBin: null });
+    expect(readDevOverrides({ AICAD_USER_DATA_DIR: "/tmp/profile", AICAD_PRINTS_DIR: "/tmp/prints", AICAD_SLICER_DIRS: "/tmp/apps", AICAD_OPEN_BIN: "/tmp/fake-open" }, false)).toMatchObject({
+      printsDir: resolve("/tmp/prints"),
+      slicerDirs: [resolve("/tmp/apps")],
+      openBin: resolve("/tmp/fake-open"),
+    });
+    expect(readDevOverrides({}, false)).toMatchObject({ printsDir: null, slicerDirs: null, openBin: null });
+    expect(readDevOverrides({ AICAD_OPEN_BIN: "/tmp/fake-open", AICAD_SLICER_DIRS: "/tmp/apps" }, true)).toMatchObject({ slicerDirs: null, openBin: null }); // packaged: ignored
     expect(locateForgeBinary({ env, isPackaged: false, resourcesPath: "", appPath: "/" })).toBe(resolve("/tmp/aicad"));
     expect(transportFromEnv(env, () => undefined, false)).toEqual({ kind: "scripted", scriptPath: thisFile });
     expect(resolveWebRoot({ isPackaged: false, appPath: "/x", appDistOverride: null, workspaceWebRoot: () => "/ws" })).toBe("/ws");
@@ -130,6 +142,25 @@ describe("L9/L11: child processes get allowlisted environments", () => {
     const env = { PATH: "/bin", HOME: "/h", TMPDIR: "/t", LANG: "C", SystemRoot: "C:\\Windows", RUST_BACKTRACE: "1", AICAD_BIN: "/x", ...HOSTILE_ENV };
     expect(agentWorkerEnv(env)).toEqual({ PATH: "/bin", HOME: "/h", TMPDIR: "/t", LANG: "C", SystemRoot: "C:\\Windows" });
     expect(forgeCliEnv(env)).toEqual({ PATH: "/bin", HOME: "/h", TMPDIR: "/t", LANG: "C", SystemRoot: "C:\\Windows", RUST_BACKTRACE: "1" });
+  });
+
+  it("fills USER and LOGNAME from the account when the app was started without them (CLI login probes need USER)", () => {
+    const me = (): string => "maker";
+    // Started without either (a launcher that sets only HOME and PATH): both come from the account, and reach the
+    // worker (whose CLI children inherit them) and the detection probes.
+    const bare = withLoginNames({ PATH: "/usr/bin:/bin", HOME: "/Users/maker" }, me, "darwin");
+    expect(agentWorkerEnv(bare)).toEqual({ PATH: "/usr/bin:/bin", HOME: "/Users/maker", USER: "maker", LOGNAME: "maker" });
+    expect(cliDetectEnv(bare)).toMatchObject({ USER: "maker", LOGNAME: "maker" });
+    // A value that is set wins, and fills the other one.
+    expect(withLoginNames({ USER: "anna" }, me, "darwin")).toEqual({ USER: "anna", LOGNAME: "anna" });
+    expect(withLoginNames({ LOGNAME: "anna" }, me, "linux")).toEqual({ USER: "anna", LOGNAME: "anna" });
+    const both = { USER: "a", LOGNAME: "b" };
+    expect(withLoginNames(both, me, "darwin")).toBe(both);
+    // No account name, or Windows (USERNAME): unchanged.
+    expect(withLoginNames({ HOME: "/h" }, () => null, "darwin")).toEqual({ HOME: "/h" });
+    expect(withLoginNames({ HOME: "C:\\Users\\m" }, me, "win32")).toEqual({ HOME: "C:\\Users\\m" });
+    // The real account (this machine): some non-empty name.
+    expect(withLoginNames({}, undefined, "darwin")["USER"]).toMatch(/^.+$/);
   });
 
   /** A fake `aicad` that dumps its environment to `dump` and prints `stdout`. */

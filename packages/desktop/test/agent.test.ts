@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { AgentEvent } from "@aicad/app/bridge";
 import { describe, expect, it } from "vitest";
 import { AgentHost, type WorkerHandle } from "../src/agent/host.js";
-import { KeyResolver, KeyStore, keysFromVariables, last4, parseDotenv, type Cipher } from "../src/agent/keys.js";
+import { API_KEYS_OFF_DETAIL, KeyResolver, KeyStore, keysFromVariables, last4, parseDotenv, type Cipher } from "../src/agent/keys.js";
 import { agentWorkerEnv } from "../src/env.js";
 import {
   composePrompt,
@@ -132,6 +132,46 @@ describe("API keys: encrypted store, env and .env", () => {
     expect(linux.secureStorage().available).toBe(false);
     expect(() => linux.set("openai", "sk-abcdefghijklmnop")).toThrow(/No OS keyring/);
     expect(existsSync(join(dir, "b.json"))).toBe(false);
+  });
+
+  it("never asks the keychain before a key is stored when a probe may prompt (macOS, ALPHA-0-PLAN as10)", () => {
+    const dir = tmp();
+    let probes = 0;
+    const counting: Cipher = { ...fakeCipher(), probeMayPrompt: true, isEncryptionAvailable: () => (probes++, true) };
+    const store = new KeyStore(join(dir, "k.json"), counting);
+    expect(store.secureStorage()).toEqual({ available: true, detail: "Keys you save are encrypted with the OS keychain." });
+    expect(new KeyResolver(store).status("anthropic")).toEqual({ source: null, last4: null });
+    expect(probes).toBe(0);
+    // Saving the first key is what asks the keychain; from then on the view reflects the real store.
+    store.set("anthropic", "sk-ant-abcdefghijklmnop-1234");
+    expect(probes).toBe(1);
+    expect(new KeyStore(join(dir, "k.json"), counting).secureStorage().available).toBe(true);
+    expect(probes).toBe(2);
+  });
+
+  it("a build without API keys never reads the key file, never touches the cipher and refuses to save one", () => {
+    const dir = tmp();
+    const file = join(dir, "agent-keys.json");
+    new KeyStore(file, fakeCipher()).set("anthropic", "sk-ant-abcdefghijklmnop-1234");
+    const touched: string[] = [];
+    const spy: Cipher = {
+      isEncryptionAvailable: () => (touched.push("available"), true),
+      backend: () => (touched.push("backend"), "x"),
+      encryptString: () => (touched.push("encrypt"), Buffer.alloc(0)),
+      decryptString: () => (touched.push("decrypt"), ""),
+    };
+    const off = new KeyStore(file, spy, { enabled: false });
+    expect(off.enabled).toBe(false);
+    expect(off.has("anthropic")).toBe(false);
+    expect(off.get("anthropic")).toBeUndefined();
+    expect(off.secureStorage()).toEqual({ available: false, detail: API_KEYS_OFF_DETAIL });
+    expect(() => off.set("openai", "sk-abcdefghijklmnop")).toThrow(/turned off in this build/);
+    expect(new KeyResolver(off).resolve("anthropic")).toEqual({ key: undefined, source: null, last4: null });
+    expect(touched).toEqual([]);
+    // The view tells the renderer to hide key entry.
+    const view = buildSettingsView({ stored: new SettingsStore(join(dir, "s.json")).get(), keys: new KeyResolver(off), transport: "live" });
+    expect(view.apiKeysEnabled).toBe(false);
+    expect(buildSettingsView({ stored: new SettingsStore(join(dir, "s.json")).get(), keys: new KeyResolver(new KeyStore(join(dir, "k3.json"), fakeCipher())), transport: "live" })).not.toHaveProperty("apiKeysEnabled");
   });
 
   it("survives a corrupted file and an undecryptable key", () => {
@@ -292,6 +332,34 @@ describe("agent host (main process)", () => {
     // The worker is reused for the next run.
     expect(await h.start(START)).toMatchObject({ ok: true });
     expect(workers).toHaveLength(1);
+  });
+
+  it("starts every run with the printer profile's process and conventions, read at each start (W5)", async () => {
+    const { h, workers } = host({ keys: { anthropic: "[REDACTED]" } });
+    let material = "PLA";
+    h.setRunDefaults(() => ({ process: "fdm", conventions: `Machine: Bambu Lab P2S; Material: ${material}.` }));
+    const first = (await h.start(START)) as { ok: true; runId: string };
+    const start = workers[0]!.sent[0] as Extract<HostToWorker, { type: "start" }>;
+    expect(start.request.process).toBe("fdm");
+    expect(start.config.conventions).toBe("Machine: Bambu Lab P2S; Material: PLA.");
+    workers[0]!.reply({ type: "event", v: 1, event: { v: 1, runId: first.runId, seq: 1, t: 1, type: "result", result: {} as never } });
+    // A material change applies to the next run; a process the request names is kept.
+    material = "PETG";
+    await h.start({ ...START, process: "cnc" });
+    const next = workers[0]!.sent.at(-1) as Extract<HostToWorker, { type: "start" }>;
+    expect(next.request.process).toBe("cnc");
+    expect(next.config.conventions).toContain("Material: PETG.");
+  });
+
+  it("starts without the printer context when the profile can't be read", async () => {
+    const { h, workers } = host({ keys: { anthropic: "[REDACTED]" } });
+    h.setRunDefaults(() => {
+      throw new Error("machine-profiles.json is unreadable");
+    });
+    expect(await h.start(START)).toMatchObject({ ok: true });
+    const start = workers[0]!.sent[0] as Extract<HostToWorker, { type: "start" }>;
+    expect(start.request).toEqual(START);
+    expect(start.config.conventions).toBeUndefined();
   });
 
   it("reports a crashed agent process as a terminal error event and forks a new one next time", async () => {

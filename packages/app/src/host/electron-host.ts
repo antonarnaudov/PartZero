@@ -1,4 +1,4 @@
-import type { AgentBridge, AicadBridge, SettingsBridge } from "../bridge";
+import type { AgentBridge, AicadBridge, PrintBridge, SettingsBridge } from "../bridge";
 import type { AppHost } from "./host";
 
 declare global {
@@ -15,6 +15,7 @@ export class ElectronHost implements AppHost {
   readonly forgeCli: AicadBridge["forge"];
   readonly agent: AgentBridge | null;
   readonly settings: SettingsBridge | null;
+  readonly print: PrintBridge | null;
   private readonly bridge: AicadBridge;
 
   constructor(bridge: AicadBridge) {
@@ -24,6 +25,7 @@ export class ElectronHost implements AppHost {
     // Optional chaining: an older shell without the agent channels still runs the app.
     this.agent = bridge.agent ?? null;
     this.settings = bridge.settings ?? null;
+    this.print = bridge.print ?? null;
   }
 
   appInfo = (): ReturnType<AicadBridge["appInfo"]> => this.bridge.appInfo();

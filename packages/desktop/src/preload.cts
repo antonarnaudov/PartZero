@@ -67,6 +67,13 @@ const bridge: AicadBridge = {
     clearApiKey: (request) => invoke("settings:clearApiKey", request),
     probeProviders: (request) => invoke("settings:probeProviders", request),
   },
+  print: {
+    profile: () => invoke("print:profile"),
+    detectSlicer: () => invoke("slicer:detect"),
+    setSlicerPath: (path) => invoke("slicer:setPath", path),
+    openInSlicer: (request) => invoke("slicer:open", request),
+    reveal: (path) => invoke("print:reveal", path),
+  },
 };
 
 contextBridge.exposeInMainWorld("aicad", bridge);

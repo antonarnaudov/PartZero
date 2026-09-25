@@ -34,6 +34,8 @@ export interface Toast {
   id: number;
   kind: "info" | "success" | "error";
   message: string;
+  /** One button in the toast, e.g. "Show in Finder" after an export. */
+  action?: { label: string; run: () => void };
 }
 
 export type DialogId = "palette" | "templates" | "about" | "settings" | null;
@@ -176,9 +178,9 @@ export class UiStore extends Store<UiState> {
     this.setState((s) => ({ chatFocusTick: s.chatFocusTick + 1 }));
   }
 
-  toast(kind: Toast["kind"], message: string, ttlMs = kind === "error" ? 8000 : 4000): void {
+  toast(kind: Toast["kind"], message: string, ttlMs = kind === "error" ? 8000 : 4000, action?: Toast["action"]): void {
     const id = this.toastSeq++;
-    this.setState((s) => ({ toasts: [...s.toasts.slice(-3), { id, kind, message }] }));
+    this.setState((s) => ({ toasts: [...s.toasts.slice(-3), { id, kind, message, ...(action ? { action } : {}) }] }));
     setTimeout(() => this.dismissToast(id), ttlMs);
   }
 

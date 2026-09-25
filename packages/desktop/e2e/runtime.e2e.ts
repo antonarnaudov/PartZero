@@ -23,6 +23,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from "@playwright/test";
+import { appDir } from "./app-dir.js";
 
 const desktopRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const repo = join(desktopRoot, "..", "..");
@@ -93,7 +94,7 @@ function jsonl<T>(name: string): T[] {
 }
 
 async function launch(): Promise<void> {
-  app = await electron.launch({ args: [desktopRoot, "--use-mock-keychain"], env: keylessEnv({ AICAD_USER_DATA_DIR: userData, AICAD_CLI_DIRS: binDir }) });
+  app = await electron.launch({ args: [appDir, "--use-mock-keychain"], env: keylessEnv({ AICAD_USER_DATA_DIR: userData, AICAD_CLI_DIRS: binDir }) });
   page = await app.firstWindow();
   page.on("pageerror", (e) => pageErrors.push(e.message));
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setBounds({ x: 40, y: 40, width: 1480, height: 920 }));

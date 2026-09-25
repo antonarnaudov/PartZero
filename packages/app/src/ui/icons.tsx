@@ -129,6 +129,15 @@ export const Icon = {
       <path d="M3 8.5v5h10v-5" />
     </Svg>
   ),
+  /** A 3D printer (frame, gantry, nozzle, bed): the slicer handoff. */
+  Printer: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M2.5 14V2.5h11V14" />
+      <path d="M2.5 5.5h11" />
+      <path d="M7 5.5v2.2l1 1.3 1-1.3V5.5" />
+      <path d="M4.5 12h7" />
+    </Svg>
+  ),
   Search: (p: IconProps) => (
     <Svg {...p}>
       <circle cx={7} cy={7} r={4.2} />

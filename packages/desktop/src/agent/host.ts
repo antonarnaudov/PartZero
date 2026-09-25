@@ -84,6 +84,8 @@ export interface CliRunSetup {
   exePath: string | null;
   /** Development: the workspace's `packages/mcp-server`. */
   mcpServerDir: string | null;
+  /** The bundled MCP shim (`bundle/mcp/stdio.mjs`), or null (`setup.ts`). */
+  mcpShimPath?: string | null;
   /** CLI login locations and proxy settings for CLI children only (`env.ts` `cliChildHostEnv`). */
   childEnv?: Record<string, string>;
   /** What the `auto` CLI mode means here (`env.ts` `DevOverrides.cliAutoMode`; default `runtime`). */
@@ -112,6 +114,16 @@ export interface AgentHostDeps {
   cliOff?: string;
   /** Backstop when the worker dies: kill one CLI process group (default: SIGKILL to `-pid`). */
   killProcessGroup?(pid: number): void;
+}
+
+/**
+ * What every run starts with unless its request says otherwise (ALPHA-0-PLAN W5 "Agent context"):
+ * the manufacturing process and one line of machine and material conventions from the active
+ * printer profile (`profiles.ts` `agentConventionsLine`).
+ */
+export interface RunDefaults {
+  process?: "fdm" | "cnc" | "laser" | "any";
+  conventions?: string;
 }
 
 interface ActiveRun {
@@ -146,6 +158,7 @@ export class AgentHost {
   #cliGroups: number[] = [];
   /** The worker that reported {@link #cliGroups}: a replaced worker's late exit must not kill its successor's CLIs. */
   #cliGroupsOwner: WorkerHandle | null = null;
+  #runDefaults: (() => RunDefaults) | null = null;
 
   constructor(deps: AgentHostDeps) {
     this.#deps = deps;
@@ -154,6 +167,24 @@ export class AgentHost {
 
   get activeRunId(): string | null {
     return this.#run?.runId ?? null;
+  }
+
+  /**
+   * Set the {@link RunDefaults} provider (the main process passes the printer profile's). It is
+   * read at every start, so a material change applies to the next run and never to a running one.
+   */
+  setRunDefaults(provider: (() => RunDefaults) | null): void {
+    this.#runDefaults = provider;
+  }
+
+  #defaults(): RunDefaults {
+    try {
+      return this.#runDefaults?.() ?? {};
+    } catch (e) {
+      // A broken profile file must not block the agent: run without the printer context.
+      this.#deps.log?.("warn", `run defaults unavailable: ${e instanceof Error ? e.message : String(e)}`);
+      return {};
+    }
   }
 
   get registry(): ProfileRegistry {
@@ -268,6 +299,7 @@ export class AgentHost {
         if (!setup) return { ok: false, code: "UNAVAILABLE", message: "CLI providers are not set up in this build." };
         const mode = stored.cliMode === "auto" && setup.autoMode === "completion" ? "completion" : stored.cliMode;
         cliConfig = { binaries, mode, workspaceRoot: setup.workspaceRoot, exePath: setup.exePath, mcpServerDir: setup.mcpServerDir };
+        if (setup.mcpShimPath) cliConfig.mcpShimPath = setup.mcpShimPath;
         if (setup.childEnv && Object.keys(setup.childEnv).length > 0) cliConfig.childEnv = { ...setup.childEnv };
       }
     }
@@ -293,7 +325,10 @@ export class AgentHost {
     }
     if (cliConfig) config.cli = cliConfig;
     if (notes.length > 0) config.notes = notes;
-    worker.postMessage({ type: "start", v: PROTOCOL_VERSION, runId, request, config, secrets });
+    const defaults = this.#defaults();
+    if (defaults.conventions) config.conventions = defaults.conventions;
+    const withDefaults = request.process === undefined && defaults.process ? { ...request, process: defaults.process } : request;
+    worker.postMessage({ type: "start", v: PROTOCOL_VERSION, runId, request: withDefaults, config, secrets });
     return { ok: true, runId };
   }
 
@@ -323,7 +358,9 @@ export class AgentHost {
         else if (!l.models.some((m) => m.tag === tag && m.tools)) problems.push({ order, code: "LOCAL_UNAVAILABLE", message: `${tag} has no tool calling, which the agent needs (${roleText}). Pick another model in Settings.` });
       } else if (kind === "api" && provider !== "ollama" && !isCliProviderId(provider)) {
         const info = providerInfo(provider);
-        if (info.keyRequired && !this.#deps.keys.resolve(provider).key) {
+        if (info.keyRequired && !this.#deps.keys.store.enabled) {
+          problems.push({ order, code: "NO_API_KEY", message: `${info.label} API models are turned off in this build, which runs on Claude Code (${roleText}). Pick a Claude Code model in Settings.` });
+        } else if (info.keyRequired && !this.#deps.keys.resolve(provider).key) {
           const hint = nothingSetUp ? " No provider is set up yet: you can also use a CLI agent you already have (Claude Code, Codex, Gemini CLI, opencode) or a local Ollama model, without any key." : "";
           problems.push({ order, code: "NO_API_KEY", message: `No API key for ${info.label} (${roleText}) — add it in Settings or set ${info.envVars[0]}.${hint}` });
         }

@@ -121,6 +121,18 @@ export function Toasts(): ReactElement {
         <div key={t.id} className={`toast toast-${t.kind}`} onClick={() => services.ui.dismissToast(t.id)}>
           {t.kind === "error" ? <Icon.Error size={13} /> : t.kind === "success" ? <Icon.Check size={13} /> : <Icon.Info size={13} />}
           <span>{t.message}</span>
+          {t.action && (
+            <button
+              type="button"
+              className="toast-action"
+              onClick={(e) => {
+                e.stopPropagation();
+                t.action?.run();
+              }}
+            >
+              {t.action.label}
+            </button>
+          )}
         </div>
       ))}
     </div>

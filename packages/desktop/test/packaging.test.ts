@@ -1,0 +1,435 @@
+/**
+ * Packaging for Alpha 0 (docs/ALPHA-0-PLAN.md W1): the build editions and the alpha builder config, the build info a
+ * bundle carries, where a bundled build finds its files, the log files, the user folders (D4), and the electron-free
+ * parts of `--self-test`. The base config's own pins stay in hardening.test.ts.
+ */
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { join, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { AgentSettingsView, CliProviderStatus } from "@aicad/app/bridge";
+import { describe, expect, it } from "vitest";
+import { mcpShimRoundTrip, summarizeReport, workerSelfTest } from "../src/agent/self-test.js";
+import { loadMcpServer, mcpShimCommand } from "../src/agent/optional-modules.js";
+import { parseWorkerMessage } from "../src/agent/protocol.js";
+import { DEV_BUILD_INFO, loginShellProviders, mcpShimExecutable, parseBuildInfo, readBuildInfo, type BuildInfo } from "../src/build-info.js";
+import { bundledMcpShimPath, bundledPromptsDir, bundledWasmPath, unpackedPath } from "../src/bundle-paths.js";
+import { formatConsoleArgs, logFor, RotatingLog } from "../src/log-file.js";
+import { abortedSelfTestReport, claudeCodeCheck, describeRenderer, detectBambuStudio, rendererReady, SELF_TEST_EXIT, selfTestVerdict, type RendererSnapshot, type SelfTestReport } from "../src/self-test.js";
+import { defaultSlicerSystem, type SlicerSystem } from "../src/slicer.js";
+import { ensureUserFolder, userFolders } from "../src/user-folders.js";
+import { tempDirs } from "./temp-dirs.js";
+
+const desktopRoot = fileURLToPath(new URL("..", import.meta.url));
+const repo = join(desktopRoot, "..", "..");
+const require = createRequire(import.meta.url);
+const tmp = tempDirs("aicad-packaging-test-");
+
+interface BuilderConfig {
+  appId: string;
+  productName: string;
+  files: Array<string | { from: string; to: string; filter?: string[] }>;
+  extraMetadata?: Record<string, string>;
+  asarUnpack?: string[];
+  extraResources: Array<{ from: string; to: string }>;
+  electronFuses: Record<string, boolean>;
+  directories: { output: string };
+  mac: { target: Array<{ target: string; arch: string[] }>; identity?: string | null; hardenedRuntime?: boolean; entitlements?: string };
+}
+type Edition = { productName: string; appId: string; flags: BuildInfo["flags"] };
+
+const base = require(join(desktopRoot, "electron-builder.config.cjs")) as BuilderConfig;
+const alpha = require(join(desktopRoot, "electron-builder.alpha-local.cjs")) as BuilderConfig;
+const editions = require(join(desktopRoot, "editions.cjs")) as Record<string, Edition>;
+
+describe("builder configs: the tested base and the local Alpha 0 build", () => {
+  it("both package the bundle (no node_modules, no dist/), with the MCP shim unpacked and no source maps", () => {
+    for (const c of [base, alpha]) {
+      expect(c.files).toContain("bundle/**/*");
+      expect(c.files).not.toContain("dist/**/*");
+      expect(c.files).toContainEqual({ from: "../app/dist/web", to: "app-web", filter: ["**/*", "!**/*.map"] });
+      expect(c.extraMetadata?.["main"]).toBe("bundle/main.js");
+      expect(c.asarUnpack).toEqual(["bundle/mcp/**"]);
+      expect(c.extraResources).toContainEqual({ from: "bundle/THIRD_PARTY_NOTICES.txt", to: "THIRD_PARTY_NOTICES-desktop.txt" });
+    }
+    // Nothing for electron-builder to copy into the app: the bundle inlines every package.
+    const pkg = JSON.parse(readFileSync(join(desktopRoot, "package.json"), "utf8")) as { dependencies?: Record<string, string> };
+    expect(pkg.dependencies ?? {}).toEqual({});
+  });
+
+  it("the alpha config is PartZero (D2): arm64 .app only, ad-hoc signed, no hardened runtime or entitlements", () => {
+    expect(alpha.productName).toBe("PartZero");
+    expect(alpha.appId).toBe("ai.partzero.desktop");
+    expect(alpha.extraMetadata?.["productName"]).toBe("PartZero");
+    expect(alpha.mac).toEqual({ target: [{ target: "dir", arch: ["arm64"] }], category: "public.app-category.graphics-design", identity: "-", hardenedRuntime: false, gatekeeperAssess: false });
+    expect(alpha.directories.output).toBe("release/alpha-local");
+  });
+
+  it("the alpha fuses differ from the base in exactly runAsNode on (D1) and cookie encryption off (as10)", () => {
+    const { runAsNode, enableCookieEncryption, resetAdHocDarwinSignature, ...rest } = alpha.electronFuses;
+    expect({ runAsNode, enableCookieEncryption, resetAdHocDarwinSignature }).toEqual({ runAsNode: true, enableCookieEncryption: false, resetAdHocDarwinSignature: true });
+    const { runAsNode: _r, enableCookieEncryption: _c, ...baseRest } = base.electronFuses;
+    expect(rest).toEqual(baseRest);
+    expect(base.electronFuses["runAsNode"]).toBe(false);
+  });
+
+  it("each config names its app as its edition does, and runs the MCP shim only where the runAsNode fuse allows it", () => {
+    for (const [config, id] of [
+      [base, "default"],
+      [alpha, "alpha-local"],
+    ] as const) {
+      const e = editions[id]!;
+      expect(config.productName).toBe(e.productName);
+      expect(config.appId).toBe(e.appId);
+      expect(e.flags.mcpShim).toBe(config.electronFuses["runAsNode"]);
+    }
+    expect(editions["alpha-local"]!.flags).toEqual({ apiKeys: false, mcpShim: true, loginShell: "claude-cli" });
+    expect(editions["default"]!.flags).toEqual({ apiKeys: true, mcpShim: false, loginShell: "all" });
+  });
+});
+
+describe("each builder config packages only its own edition's bundle", () => {
+  const { bundleEditionProblem } = require(join(desktopRoot, "scripts", "check-bundle-edition.cjs")) as { bundleEditionProblem(dir: string, expected: string): string | null };
+  const bundleOf = (info: object | null): string => {
+    const dir = tmp();
+    if (info !== null) writeFileSync(join(dir, "build-info.json"), JSON.stringify(info));
+    return dir;
+  };
+  const alphaInfo = { edition: "alpha-local", productName: "PartZero", appId: "ai.partzero.desktop" };
+  const defaultInfo = { edition: "default", productName: "aicad", appId: "dev.aicad.desktop" };
+
+  it("accepts the matching edition and refuses another one, a renamed one, or no bundle, saying how to fix it", () => {
+    expect(bundleEditionProblem(bundleOf(alphaInfo), "alpha-local")).toBeNull();
+    expect(bundleEditionProblem(bundleOf(defaultInfo), "default")).toBeNull();
+    // A leftover default bundle (test:e2e:bundle) packaged with the alpha config, and the reverse.
+    expect(bundleEditionProblem(bundleOf(defaultInfo), "alpha-local")).toBe('the bundle is the "default" edition, but this config packages "alpha-local": run `node scripts/bundle.mjs --edition alpha-local` first');
+    expect(bundleEditionProblem(bundleOf(alphaInfo), "default")).toMatch(/^the bundle is the "alpha-local" edition, but this config packages "default"/);
+    expect(bundleEditionProblem(bundleOf({ ...alphaInfo, productName: "aicad" }), "alpha-local")).toMatch(/^the bundle names the app aicad \(ai\.partzero\.desktop\)/);
+    expect(bundleEditionProblem(bundleOf(null), "alpha-local")).toMatch(/^cannot read .*build-info\.json \(ENOENT\): run `node scripts\/bundle\.mjs --edition alpha-local` first$/);
+    expect(bundleEditionProblem(bundleOf(alphaInfo), "nope")).toBe('unknown edition "nope"');
+  });
+
+  it("both configs check the bundle before packing", () => {
+    for (const c of [base, alpha]) expect(typeof (c as unknown as { beforePack?: unknown }).beforePack).toBe("function");
+    expect((alpha as unknown as { beforePack: () => void }).beforePack).not.toBe((base as unknown as { beforePack: () => void }).beforePack);
+  });
+});
+
+describe("build info (bundle/build-info.json)", () => {
+  const valid = { edition: "alpha-local", productName: "PartZero", appId: "ai.partzero.desktop", version: "0.0.1", commit: "2487380265ab", dirty: false, builtAt: "2026-09-25T00:00:00.000Z", flags: { apiKeys: false, mcpShim: true, loginShell: "claude-cli" } };
+
+  it("parses a valid file and drops unknown fields", () => {
+    expect(parseBuildInfo({ ...valid, extra: 1 })).toEqual(valid);
+    expect(parseBuildInfo({ ...valid, commit: null, builtAt: null })).toMatchObject({ commit: null, builtAt: null });
+  });
+
+  it("rejects a product name that is not a plain folder name, a bad app id, commit or flags", () => {
+    for (const bad of [
+      { productName: "../Library" },
+      { productName: "Part/Zero" },
+      { appId: "PartZero" },
+      { commit: "not-a-sha" },
+      { flags: { apiKeys: "no", mcpShim: true, loginShell: "all" } },
+      { flags: { apiKeys: true, mcpShim: true } },
+      { flags: { apiKeys: true, mcpShim: true, loginShell: "gemini-cli" } },
+      { flags: undefined },
+      { dirty: "yes" },
+    ]) {
+      expect(parseBuildInfo({ ...valid, ...bad }), JSON.stringify(bad)).toBeNull();
+    }
+  });
+
+  it("no file is a development run; an invalid file stops the app instead of silently acting like development", () => {
+    const dir = tmp();
+    expect(readBuildInfo(dir)).toBe(DEV_BUILD_INFO);
+    writeFileSync(join(dir, "build-info.json"), "{");
+    expect(() => readBuildInfo(dir)).toThrow(/not JSON/);
+    writeFileSync(join(dir, "build-info.json"), JSON.stringify({ ...valid, productName: "" }));
+    expect(() => readBuildInfo(dir)).toThrow(/not a valid build info/);
+    writeFileSync(join(dir, "build-info.json"), JSON.stringify(valid));
+    expect(readBuildInfo(dir)).toEqual(valid);
+  });
+
+  it("development keeps today's behavior: aicad, API keys, the login shell for every CLI, and the shim only when unpackaged", () => {
+    expect(DEV_BUILD_INFO).toMatchObject({ productName: "aicad", flags: { apiKeys: true, mcpShim: false, loginShell: "all" } });
+    expect(loginShellProviders(DEV_BUILD_INFO)).toBeNull();
+    expect(loginShellProviders(parseBuildInfo(valid)!)).toEqual(["claude-cli"]);
+    expect(mcpShimExecutable(DEV_BUILD_INFO, false, "/x/Electron")).toBe("/x/Electron");
+    expect(mcpShimExecutable(DEV_BUILD_INFO, true, "/x/aicad")).toBeNull();
+    expect(mcpShimExecutable(parseBuildInfo(valid)!, true, "/Applications/PartZero.app/Contents/MacOS/PartZero")).toBe("/Applications/PartZero.app/Contents/MacOS/PartZero");
+  });
+});
+
+describe("bundle paths", () => {
+  it("maps a file inside app.asar to its unpacked copy", () => {
+    const asar = ["", "Applications", "PartZero.app", "Contents", "Resources", "app.asar", "bundle", "mcp", "stdio.mjs"].join(sep);
+    expect(unpackedPath(asar)).toBe(asar.replace(`${sep}app.asar${sep}`, `${sep}app.asar.unpacked${sep}`));
+    expect(unpackedPath(join(desktopRoot, "bundle", "mcp", "stdio.mjs"))).toBe(join(desktopRoot, "bundle", "mcp", "stdio.mjs"));
+  });
+
+  it("finds the bundled shim, prompts and WASM next to the code, and nothing in an unbundled dist/", () => {
+    const yes = (): boolean => true;
+    const no = (): boolean => false;
+    const main = join("/r", "app.asar", "bundle");
+    expect(bundledMcpShimPath(main, yes)).toBe(join("/r", "app.asar.unpacked", "bundle", "mcp", "stdio.mjs"));
+    expect(bundledPromptsDir(join(main, "agent"), yes)).toBe(join(main, "prompts"));
+    expect(bundledWasmPath(join(main, "agent"), yes)).toBe(join(main, "agent", "forge_wasm_bg.wasm"));
+    expect([bundledMcpShimPath(main, no), bundledPromptsDir(main, no), bundledWasmPath(main, no)]).toEqual([null, null, null]);
+    expect(bundledPromptsDir(join(desktopRoot, "dist", "agent"))).toBeNull();
+  });
+});
+
+describe("log files", () => {
+  it("scrubs key-like strings, prefixes time and level, and rotates by size keeping N old files", () => {
+    const dir = tmp();
+    const file = join(dir, "logs", "main.log");
+    const log = new RotatingLog(file, { maxBytes: 200, keep: 2, now: () => new Date("2026-09-25T10:00:00Z") });
+    log.write("warn", "401 from provider: sk-ant-abcdefghijklmnopqrstuvwxyz0123");
+    const first = readFileSync(file, "utf8");
+    expect(first).toBe("2026-09-25T10:00:00.000Z warn  401 from provider: sk-an…[redacted]\n");
+    for (let i = 0; i < 12; i++) log.write("info", `line ${i} ${"x".repeat(40)}`);
+    const names = readdirSync(join(dir, "logs")).sort();
+    expect(names).toEqual(["main.log", "main.log.1", "main.log.2"]);
+    for (const n of names) expect(statSync(join(dir, "logs", n)).size).toBeLessThanOrEqual(200);
+    if (process.platform !== "win32") expect(statSync(file).mode & 0o777).toBe(0o600);
+    expect(readFileSync(file, "utf8")).toContain("line 11");
+  });
+
+  it("never throws when it cannot write", () => {
+    const dir = tmp();
+    writeFileSync(join(dir, "blocker"), "a file where the log folder should be");
+    const log = new RotatingLog(join(dir, "blocker", "main.log"));
+    expect(() => log.write("error", "x")).not.toThrow();
+  });
+
+  it("routes the agent's lines to agent.log and formats console arguments", () => {
+    expect(logFor("[aicad-agent] run started")).toBe("agent");
+    expect(logFor("[aicad] renderer process gone")).toBe("main");
+    expect(formatConsoleArgs(["a", 1, { b: 2 }])).toBe('a 1 {"b":2}');
+    expect(formatConsoleArgs([new Error("boom")])).toContain("Error: boom");
+  });
+});
+
+describe("user folders (D4)", () => {
+  it("prints and reports live in ~/PartZero, created on first use; a symlink or file there is refused", () => {
+    const home = tmp();
+    const f = userFolders(home);
+    expect(f).toEqual({ root: join(home, "PartZero"), prints: join(home, "PartZero", "Prints"), reports: join(home, "PartZero", "Reports") });
+    expect(existsSync(f.root)).toBe(false);
+    expect(ensureUserFolder(f.prints, f.root)).toBe(f.prints);
+    expect(statSync(f.prints).isDirectory()).toBe(true);
+    expect(ensureUserFolder(f.prints, f.root)).toBe(f.prints);
+    const elsewhere = tmp();
+    symlinkSync(elsewhere, f.reports);
+    expect(() => ensureUserFolder(f.reports, f.root)).toThrow(/not a folder/);
+    const home2 = tmp();
+    writeFileSync(join(home2, "PartZero"), "a file");
+    expect(() => ensureUserFolder(userFolders(home2).prints, userFolders(home2).root)).toThrow(/not a folder/);
+  });
+});
+
+describe("--self-test (electron-free parts)", () => {
+  const snapshot: RendererSnapshot = {
+    url: "app://aicad/index.html",
+    shell: true,
+    crossOriginIsolated: true,
+    engine: "forge-web · wasm",
+    features: [
+      { name: "base", status: "ok" },
+      { name: "block", status: "ok" },
+    ],
+    bodies: "1 body",
+    problems: "0",
+    status: "Up to date",
+  };
+
+  it("the renderer is ready once the starting document evaluated in an isolated page", () => {
+    expect(rendererReady(snapshot)).toBe(true);
+    expect(rendererReady({ ...snapshot, bodies: "2 bodies", status: "Up to date · Modified" })).toBe(true);
+    expect(rendererReady({ ...snapshot, features: [{ name: "block", status: "error" }] })).toBe(false);
+    expect(rendererReady({ ...snapshot, crossOriginIsolated: false })).toBe(false);
+    expect(rendererReady({ ...snapshot, bodies: "0 bodies" })).toBe(false);
+    expect(rendererReady({ ...snapshot, problems: "1" })).toBe(false);
+    // Compiled but not (yet) evaluated, or still evaluating: not ready.
+    for (const status of ["Ready", "Evaluating…", "Compiling…", "Errors", null]) expect(rendererReady({ ...snapshot, status }), String(status)).toBe(false);
+    for (const engine of ["Starting engine…", "No engine", null]) expect(rendererReady({ ...snapshot, engine }), String(engine)).toBe(false);
+    expect(rendererReady(null)).toBe(false);
+  });
+
+  it("an empty starting document (W2) is ready once it evaluated: no features, no bodies, no problems", () => {
+    const empty: RendererSnapshot = { ...snapshot, features: [], bodies: "0 bodies" };
+    expect(rendererReady(empty)).toBe(true);
+    expect(rendererReady({ ...empty, status: "Ready" })).toBe(false);
+    expect(rendererReady({ ...empty, bodies: "1 body" })).toBe(false);
+    expect(rendererReady({ ...empty, engine: "Starting engine…" })).toBe(false);
+    expect(describeRenderer(empty)).toBe('app://aicad/index.html: forge-web · wasm, the empty starting document, 0 bodies, 0 problems, status "Up to date"');
+    expect(describeRenderer(null)).toBe("the page did not answer");
+  });
+
+  const claude = (s: Partial<CliProviderStatus>): Pick<AgentSettingsView, "cli" | "autoDefault"> => ({
+    cli: [
+      {
+        id: "claude-cli",
+        label: "Claude Code",
+        installed: true,
+        path: "/Users/me/.local/bin/claude",
+        pathSource: "known-dir",
+        version: "2.1.260",
+        support: "ready",
+        supportDetail: "",
+        lockdownLevel: "verified",
+        residualRisks: [],
+        auth: "logged_in",
+        plan: "max",
+        billing: "subscription",
+        loginHint: "Run `claude auth login` in a terminal",
+        modes: ["completion", "runtime"],
+        planUsage: null,
+        checkedAt: null,
+        ...s,
+      },
+    ],
+    autoDefault: { provider: "claude-cli", label: "Claude Code" },
+  });
+
+  it("Claude Code passes only when found, runnable and logged in", () => {
+    expect(claudeCodeCheck(claude({}))).toMatchObject({ ok: true, version: "2.1.260", lockdownLevel: "verified", autoDefault: "Claude Code" });
+    expect(claudeCodeCheck(claude({})).detail).toBe("Claude Code 2.1.260 at /Users/me/.local/bin/claude (known-dir), verified lockdown, logged in (max plan)");
+    expect(claudeCodeCheck(claude({ auth: "logged_out" }))).toMatchObject({ ok: false, detail: expect.stringContaining("claude auth login") });
+    expect(claudeCodeCheck(claude({ installed: false, support: "not_installed", supportDetail: "not found" }))).toMatchObject({ ok: false, detail: "not installed: not found" });
+    expect(claudeCodeCheck(claude({ support: "blocked", supportDetail: "Stopped after a lockdown violation" })).ok).toBe(false);
+    expect(claudeCodeCheck(null, "detection failed: x")).toMatchObject({ ok: false, detail: "detection failed: x" });
+  });
+
+  it("the verdict lists every failed required check; a missing slicer and a dirty tree are warnings", () => {
+    const ok = { ok: true, detail: "" };
+    const body: Omit<SelfTestReport, "ok" | "failures" | "warnings" | "schema"> = {
+      app: { name: "PartZero", version: "0.0.1", edition: "alpha-local", commit: "abcdef1", dirty: true, builtAt: null, packaged: true, flags: { apiKeys: false, mcpShim: true, loginShell: "claude-cli" }, electron: "", chrome: "", node: "", platform: "darwin", arch: "arm64" },
+      paths: { profile: "", logs: "", prints: "", reports: "" },
+      forgeCli: { ok: true, path: "/x/aicad", version: "aicad 0.0.1", detail: "", v0: null, v1: null },
+      worker: {
+        ok: true,
+        detail: "",
+        readyMs: 1,
+        report: {
+          cadscript: ok,
+          engine: { ...ok, wasm: null },
+          v0: { ...ok, schema: "aicad.metrics/0", status: "ok", bodies: 1, volume: 32000 },
+          v1: { ok: false, detail: "UNSUPPORTED_SCHEMA", schema: null, status: null, bodies: 0, volume: null },
+          prompts: { ...ok, dir: "", ids: [] },
+          mcp: { ok: false, detail: "missing", shim: null, exe: null, ms: null },
+          cliRuntime: ok,
+        },
+      },
+      renderer: { ok: true, detail: "", ms: 1, snapshot },
+      claudeCode: claudeCodeCheck(claude({ auth: "logged_out" })),
+      slicer: { found: false, name: "Bambu Studio", path: null, bundleId: null, version: null },
+    };
+    const v = selfTestVerdict(body);
+    expect(v.ok).toBe(false);
+    expect(v.failures).toEqual(["v1 evaluation (forge-web): UNSUPPORTED_SCHEMA", "CAD MCP server: missing", expect.stringMatching(/^Claude Code: installed but not logged in/)]);
+    expect(v.warnings).toEqual([expect.stringMatching(/^Bambu Studio was not found/), "the build was bundled from a working tree with uncommitted changes"]);
+    // A packaged build that does not run the shim only warns about it.
+    const noShim = selfTestVerdict({ ...body, app: { ...body.app, flags: { apiKeys: true, mcpShim: false, loginShell: "all" } } });
+    expect(noShim.failures.some((f) => f.startsWith("CAD MCP"))).toBe(false);
+    expect(noShim.warnings.some((w) => w.startsWith("CAD MCP"))).toBe(true);
+    // The renderer fell back from its WASM engine to the Forge CLI: it still works, but the page's WASM did not load.
+    const cli = selfTestVerdict({ ...body, renderer: { ...body.renderer, snapshot: { ...snapshot, engine: "Forge CLI · native" } } });
+    expect(cli.warnings).toContain("the renderer evaluates with Forge CLI · native, not forge-web · wasm: the WASM engine did not start in the page");
+  });
+
+  it("a self-test that could not finish still reports: not ok, the reason as its only failure, every check not finished", () => {
+    const appInfo: SelfTestReport["app"] = { name: "PartZero", version: "0.0.1", edition: "alpha-local", commit: "abcdef1", dirty: false, builtAt: null, packaged: true, flags: { apiKeys: false, mcpShim: true, loginShell: "claude-cli" }, electron: "", chrome: "", node: "", platform: "darwin", arch: "arm64" };
+    const r = abortedSelfTestReport("the self-test did not finish within 180 s", appInfo, { profile: "/p", logs: "/l", prints: "/pr", reports: "/r" });
+    expect(r).toMatchObject({ schema: "partzero.self-test/1", ok: false, failures: ["the self-test did not finish within 180 s"], warnings: [], app: appInfo });
+    for (const c of [r.forgeCli, r.worker, r.renderer, r.claudeCode]) expect(c).toMatchObject({ ok: false, detail: "not finished: the self-test did not finish within 180 s" });
+    expect(r.slicer.found).toBe(false);
+    expect(SELF_TEST_EXIT).toEqual({ ok: 0, failed: 1, timedOut: 2 });
+  });
+
+  it("finds Bambu Studio the way Open in Bambu Studio does (slicer.ts), and says why when it does not", async () => {
+    const app = join("/Users/me", "Applications", "BambuStudio.app");
+    const plist = `<plist><dict><key>CFBundleIdentifier</key><string>com.bambulab.bambu-studio</string><key>CFBundleShortVersionString</key><string>02.06.00.51</string></dict></plist>`;
+    const system = (dirs: string[]): SlicerSystem => ({
+      ...defaultSlicerSystem({ searchDirs: dirs }),
+      platform: "darwin",
+      useLaunchServices: false,
+      isDir: (p) => p === app,
+      readText: (p) => (p === join(app, "Contents", "Info.plist") ? plist : null),
+    });
+    const found = await detectBambuStudio({ system: system(["/Applications", join("/Users/me", "Applications")]) });
+    expect(found).toEqual({ found: true, name: "Bambu Studio", path: app, bundleId: "com.bambulab.bambu-studio", version: "02.06.00.51", source: "user-applications", reason: null });
+    // The path set in Settings > Printing is the only place looked at, as in the app.
+    expect(await detectBambuStudio({ system: system(["/Applications"]), customPath: app })).toMatchObject({ found: true, source: "settings" });
+    const missing = await detectBambuStudio({ system: system(["/Applications"]), customPath: "/nowhere/BambuStudio.app" });
+    expect(missing).toMatchObject({ found: false, path: null, reason: expect.stringContaining("/nowhere/BambuStudio.app") });
+    expect(await detectBambuStudio({ system: system(["/Applications"]) })).toMatchObject({ found: false, path: null, reason: expect.stringContaining("isn't installed") });
+  });
+
+  it("summarizes v0 (last body feature) and v1 (final part bodies) reports", () => {
+    expect(summarizeReport({ schema: "aicad.metrics/0", status: "ok", features: [{}, { bodies: [{ volume: 10 }, { volume: 5 }] }] })).toEqual({ schema: "aicad.metrics/0", status: "ok", bodies: 2, volume: 15 });
+    expect(summarizeReport({ schema: "aicad.metrics/1", status: "ok", parts: [{ bodies: [{ volume: 32000 }] }], features: [] })).toEqual({ schema: "aicad.metrics/1", status: "ok", bodies: 1, volume: 32000 });
+    expect(summarizeReport({ schema: "aicad.metrics/1", status: "error" })).toEqual({ schema: "aicad.metrics/1", status: "error", bodies: 0, volume: null });
+  });
+
+  it("parses the worker's selftest answer", () => {
+    expect(parseWorkerMessage({ v: 1, type: "selftest", report: { cadscript: { ok: true } } })).toMatchObject({ type: "selftest" });
+    expect(parseWorkerMessage({ v: 1, type: "selftest", report: null })).toBeNull();
+  });
+
+  const wasmBuilt = existsSync(join(repo, "packages", "forge-web", "pkg", "forge_wasm_bg.wasm"));
+  const mcpServerDir = join(repo, "packages", "mcp-server");
+  const shimBuilt = existsSync(join(mcpServerDir, "dist", "stdio.js"));
+  it.skipIf(!wasmBuilt || !shimBuilt)(
+    "the worker's checks pass on the workspace build: CadScript, forge-web v0 and v1, prompts, MCP shim end to end, runtime",
+    async () => {
+      // The shim runs under this Node as a CLI would start it (ELECTRON_RUN_AS_NODE is ignored by Node itself).
+      const r = await workerSelfTest({ mcpShimPath: null, mcpServerDir, exePath: process.execPath, workspaceRoot: tmp(), workerDir: join(desktopRoot, "dist", "agent") });
+      expect(r.cadscript).toMatchObject({ ok: true });
+      expect(r.engine.ok).toBe(true);
+      expect(r.v0).toMatchObject({ ok: true, schema: "aicad.metrics/0", bodies: 1 });
+      expect(r.v1).toMatchObject({ ok: true, schema: "aicad.metrics/1", bodies: 1 });
+      expect(r.prompts).toMatchObject({ ok: true, dir: "(package default)" });
+      expect(r.prompts.ids.map((i) => i.split("@")[0])).toEqual(["triage.v1", "spec_writer.v1", "designer.v1"]);
+      expect(r.mcp, r.mcp.detail).toMatchObject({ ok: true, shim: join(mcpServerDir, "dist", "stdio.js"), exe: process.execPath });
+      expect(r.mcp.detail).toMatch(/^the shim \(ELECTRON_RUN_AS_NODE=1 \S+ stdio\.js\) answered initialize, tools\/list and tools\/call through the broker in \d+ ms$/);
+      expect(r.cliRuntime.ok).toBe(true);
+    },
+    60_000,
+  );
+
+  it.skipIf(!shimBuilt || process.platform === "win32")("the MCP round trip fails, with the reason, on a wrong ticket, a missing executable, or no workspace root", async () => {
+    const loaded = (await loadMcpServer(mcpServerDir, null))!;
+    const host = loaded.module.createMcpHost({ shim: mcpShimCommand(process.execPath, loaded.stdio) });
+    const root = tmp();
+    const ok = await mcpShimRoundTrip({ host, workspaceRoot: root });
+    expect(ok.ok, ok.detail).toBe(true);
+    // The broker refuses a wrong ticket; the shim then serves no tools, which the check reports.
+    const badTicket = await mcpShimRoundTrip({ host, workspaceRoot: root, ticket: (t) => `${t.slice(0, -1)}${t.endsWith("0") ? "1" : "0"}` });
+    expect(badTicket).toMatchObject({ ok: false, ms: null });
+    expect(badTicket.detail).toMatch(/^tools\/list has no self_test_ping \(tools: none\): the shim did not get through to the broker/);
+    const noExe = await mcpShimRoundTrip({ host: loaded.module.createMcpHost({ shim: mcpShimCommand(join(root, "no-such-app"), loaded.stdio) }), workspaceRoot: root });
+    expect(noExe).toMatchObject({ ok: false });
+    expect(noExe.detail).toMatch(/could not be started|exited/);
+    // Workspaces and sockets are removed after each round trip.
+    expect(readdirSync(root).filter((n) => n !== "s")).toEqual([]);
+    expect(readdirSync(join(root, "s"))).toEqual([]);
+    const off = await workerSelfTest({ mcpShimPath: null, mcpServerDir, exePath: process.execPath, workspaceRoot: null, workerDir: join(desktopRoot, "dist", "agent") });
+    expect(off.mcp).toMatchObject({ ok: false, detail: expect.stringMatching(/^CLI agents are off/) });
+    const noShimExe = await workerSelfTest({ mcpShimPath: null, mcpServerDir, exePath: null, workspaceRoot: root, workerDir: join(desktopRoot, "dist", "agent") });
+    expect(noShimExe.mcp).toMatchObject({ ok: false, detail: expect.stringMatching(/cannot run the MCP shim/) });
+  }, 60_000);
+});
+
+describe("optional modules in a bundled build", () => {
+  it("a bundled shim path loads the MCP host bundled into the worker; a missing shim is no MCP server", async () => {
+    const dir = tmp();
+    const shim = join(dir, "mcp", "stdio.mjs");
+    mkdirSync(join(dir, "mcp"));
+    writeFileSync(shim, "");
+    const loaded = await loadMcpServer(null, shim);
+    expect(loaded?.stdio).toBe(shim);
+    expect(typeof loaded?.module.createMcpHost).toBe("function");
+    expect(await loadMcpServer(null, join(dir, "nope.mjs"))).toBeNull();
+  });
+});

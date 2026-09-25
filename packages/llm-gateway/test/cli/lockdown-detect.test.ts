@@ -1,7 +1,8 @@
 import { mkdirSync, writeFileSync, chmodSync, symlinkSync } from "node:fs";
+import { userInfo } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { compareVersions, normalizeVersion, parseHelp, resolveBinary, versionInRange } from "../../src/cli/detect.js";
+import { commonInstallDirs, compareVersions, loginShellPath, normalizeVersion, nvmBinDirs, parseHelp, resolveBinary, versionInRange } from "../../src/cli/detect.js";
 import { tripwire } from "../../src/cli/lockdown.js";
 import { CLI_PROVIDERS } from "../../src/cli/registry.js";
 import { fakeBinary, fixturePath, makeFakeCli, readFixture, removeDir, tempDir } from "./helpers.js";
@@ -119,6 +120,41 @@ describe("binary resolution and detection (fake binaries, no model call)", () =>
     expect(viaLink).toMatchObject({ source: "settings", realPath: target });
     writeFileSync(join(a, "notexec"), "x");
     chmodSync(join(a, "notexec"), 0o644);
+  });
+
+  it("finds a CLI installed under nvm from a GUI-launched app's minimal PATH (the default alias first, then newest Node)", async () => {
+    dir = tempDir();
+    const home = join(dir, "home");
+    const versions = join(home, ".nvm", "versions", "node");
+    for (const v of ["v18.20.4", "v22.16.0", "v20.19.1", "not-a-version"]) mkdirSync(join(versions, v, "bin"), { recursive: true });
+    const env = { HOME: home, PATH: "/usr/bin:/bin:/usr/sbin:/sbin" };
+    expect(nvmBinDirs(env)).toEqual(["v22.16.0", "v20.19.1", "v18.20.4"].map((v) => join(versions, v, "bin")));
+    mkdirSync(join(home, ".nvm", "alias"), { recursive: true });
+    writeFileSync(join(home, ".nvm", "alias", "default"), "20\n");
+    expect(nvmBinDirs(env)[0]).toBe(join(versions, "v20.19.1", "bin"));
+    writeFileSync(join(home, ".nvm", "alias", "default"), "lts/*\n");
+    expect(nvmBinDirs(env)[0]).toBe(join(versions, "v22.16.0", "bin"));
+    // $NVM_DIR wins over ~/.nvm; no nvm at all is no directory.
+    expect(nvmBinDirs({ HOME: home, NVM_DIR: join(dir, "elsewhere") })).toEqual([]);
+    expect(nvmBinDirs({ HOME: join(dir, "nobody") })).toEqual([]);
+
+    const bin = makeFakeCli(join(versions, "v18.20.4", "bin"), "claude", {});
+    expect(commonInstallDirs(env)).toEqual(expect.arrayContaining([join(home, ".local", "bin"), "/opt/homebrew/bin", join(versions, "v18.20.4", "bin")]));
+    const r = await resolveBinary(["claude"], { overridePath: null, env, extraDirs: commonInstallDirs(env), loginShell: false });
+    expect(r).toMatchObject({ path: bin, source: "known-dir" });
+  });
+
+  it("the login-shell lookup falls back to the account's shell when SHELL is missing", () => {
+    expect(loginShellPath({ SHELL: "/bin/zsh" })).toBe("/bin/zsh");
+    const saved = process.env["SHELL"];
+    delete process.env["SHELL"];
+    try {
+      const shell = loginShellPath({});
+      expect(shell).toBe(userInfo().shell ?? undefined);
+      if (process.platform !== "win32") expect(shell).toMatch(/^\//);
+    } finally {
+      if (saved !== undefined) process.env["SHELL"] = saved;
+    }
   });
 
   it("detect(): ready + verified for a fake claude 2.1.260; unsupported below the minimum; blocked when a flag is gone", async () => {

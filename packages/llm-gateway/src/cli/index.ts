@@ -31,7 +31,7 @@ export {
   type CommandResult,
   type SpawnSpec,
 } from "./process.js";
-export { commonInstallDirs, compareVersions, normalizeVersion, parseHelp, resolveBinary, versionInRange, type ResolvedBinary } from "./detect.js";
+export { commonInstallDirs, compareVersions, loginShellPath, normalizeVersion, nvmBinDirs, parseHelp, resolveBinary, versionInRange, type ResolvedBinary } from "./detect.js";
 export {
   choiceCheck,
   evaluateLockdown,

@@ -54,6 +54,8 @@ use std::process::ExitCode;
 use clap::{Parser, Subcommand, ValueEnum};
 use forge_ir::{EvalReport, IrError, METRICS_SCHEMA, ReportError, Status};
 
+mod print;
+
 #[derive(Parser)]
 #[command(
     name = "aicad",
@@ -88,7 +90,15 @@ enum Command {
     ///
     /// The format follows the extension of `--out` (`.3mf`, `.stl`, `.obj`) unless
     /// `--mesh-format` is given. Exit codes: 0 written; 1 the document has failed features
-    /// (nothing written unless `--allow-partial`); 2 rejected document; 3 I/O or mesh error.
+    /// (nothing written unless `--allow-partial`); 2 rejected document; 3 I/O or mesh error;
+    /// 4 the bodies do not fit the bed of `--bed` (`EXPORT_BED_FIT`, nothing written).
+    ///
+    /// For a printer (3MF only): `--bed` centres the bodies on the bed with their lowest
+    /// point at z = 0 through the build items' transform (the vertices are unchanged), after
+    /// checking that they fit the bed less `--bed-margin` per side; `--title` and
+    /// `--application` set the 3MF metadata. `--summary` writes a JSON record of the export
+    /// (`aicad.export/1`: bodies, watertightness, bounding boxes, placement or error, layout
+    /// warnings such as a body stacked above another, and a geometry hash without metadata).
     Export {
         /// IR document (`aicad.ir/0` or `aicad.ir/1` JSON). For v1, the final bodies of
         /// every part are written.
@@ -108,6 +118,26 @@ enum Command {
         /// Export the bodies that did evaluate even if some features failed.
         #[arg(long)]
         allow_partial: bool,
+        /// Centre the bodies on a printer bed of this size, `X,Y,Z` in mm (e.g.
+        /// `256,256,256`), and refuse bodies that do not fit it (3MF only).
+        #[arg(long, value_name = "X,Y,Z", value_parser = print::parse_bed_size)]
+        bed: Option<[f64; 3]>,
+        /// Room kept free on each side of the bed in X and Y, mm (for a brim or skirt).
+        #[arg(long, value_name = "MM", default_value = "10", value_parser = print::parse_margin, requires = "bed")]
+        bed_margin: f64,
+        /// An area of the bed no body may cover, `X0,Y0,X1,Y1` in bed coordinates (mm);
+        /// repeatable.
+        #[arg(long = "bed-exclude", value_name = "X0,Y0,X1,Y1", value_parser = print::parse_bed_rect, requires = "bed")]
+        bed_exclude: Vec<[f64; 4]>,
+        /// `Title` metadata of the 3MF (e.g. the document name).
+        #[arg(long)]
+        title: Option<String>,
+        /// `Application` metadata of the 3MF (default `forge-io`).
+        #[arg(long)]
+        application: Option<String>,
+        /// Also write a JSON summary of the export (`aicad.export/1`) to this file.
+        #[arg(long, value_name = "FILE")]
+        summary: Option<PathBuf>,
     },
     /// Migrate an `aicad.ir/0` document to canonical `aicad.ir/1` JSON (SPEC-v1 §9.1).
     ///
@@ -157,6 +187,18 @@ enum MeshFormat {
     Obj,
 }
 
+impl MeshFormat {
+    /// The `--mesh-format` spelling.
+    fn name(self) -> &'static str {
+        match self {
+            MeshFormat::ThreeMf => "3mf",
+            MeshFormat::Stl => "stl",
+            MeshFormat::StlAscii => "stl-ascii",
+            MeshFormat::Obj => "obj",
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
 enum ReportVersion {
     /// The document's version: v0 → `aicad.metrics/0`, v1 → `aicad.metrics/1`.
@@ -189,7 +231,25 @@ fn main() -> ExitCode {
             deflection,
             angular,
             allow_partial,
-        } => export(&file, &out, mesh_format, deflection, angular, allow_partial),
+            bed,
+            bed_margin,
+            bed_exclude,
+            title,
+            application,
+            summary,
+        } => {
+            let extras = print::ExportExtras {
+                print: print::PrintOptions {
+                    bed: bed.map(|size| print::build_volume(size, bed_margin, &bed_exclude)),
+                    title,
+                    application,
+                },
+                summary,
+                deflection,
+                angular,
+            };
+            export(&file, &out, mesh_format, allow_partial, &extras)
+        }
         Command::Migrate { file, out, renames } => {
             migrate(&file, out.as_deref(), renames.as_deref())
         }
@@ -206,10 +266,10 @@ fn export(
     file: &Path,
     out: &Path,
     mesh_format: Option<MeshFormat>,
-    deflection: f64,
-    angular: f64,
     allow_partial: bool,
+    extras: &print::ExportExtras,
 ) -> ExitCode {
+    let (deflection, angular) = (extras.deflection, extras.angular);
     let format = match mesh_format.or_else(|| format_from_extension(out)) {
         Some(f) => f,
         None => {
@@ -220,6 +280,12 @@ fn export(
             return ExitCode::from(3);
         }
     };
+    if format != MeshFormat::ThreeMf && extras.print.any() {
+        eprintln!(
+            "aicad: --bed, --title and --application apply to 3MF only (the placement is the 3MF build items' transform)"
+        );
+        return ExitCode::from(3);
+    }
     let text = match std::fs::read_to_string(file) {
         Ok(t) => t,
         Err(e) => {
@@ -232,7 +298,7 @@ fn export(
             Ok(m) => m,
             Err(code) => return code,
         };
-        return write_meshes(out, format, meshes);
+        return write_meshes(out, format, meshes, extras);
     }
     let doc = match forge_ir::from_json(&text) {
         Ok(d) => d,
@@ -276,7 +342,7 @@ fn export(
             }
         }
     }
-    write_meshes(out, format, meshes)
+    write_meshes(out, format, meshes, extras)
 }
 
 /// Encode and write the meshes of an export (shared by the v0 and v1 paths).
@@ -284,6 +350,7 @@ fn write_meshes(
     out: &Path,
     format: MeshFormat,
     meshes: Vec<(String, forge_mesh::BodyMesh)>,
+    extras: &print::ExportExtras,
 ) -> ExitCode {
     if meshes.is_empty() {
         eprintln!("aicad: the document produced no bodies; nothing to export");
@@ -292,8 +359,42 @@ fn write_meshes(
     let named: Vec<(&str, &forge_mesh::BodyMesh)> =
         meshes.iter().map(|(n, m)| (n.as_str(), m)).collect();
     let only: Vec<&forge_mesh::BodyMesh> = meshes.iter().map(|(_, m)| m).collect();
+    let mut summary = print::Summary {
+        format: format.name(),
+        deflection: extras.deflection,
+        angular: extras.angular,
+        meshes: &meshes,
+        bed: extras.print.bed.as_ref(),
+        placement: None,
+        bytes: None,
+        error: None,
+        warnings: Vec::new(),
+        geometry_hash: None,
+    };
     let bytes = match format {
-        MeshFormat::ThreeMf => forge_io::try_write_3mf(&named),
+        MeshFormat::ThreeMf => match print::encode_3mf(&named, &extras.print) {
+            Ok((bytes, placement)) => {
+                summary.placement = placement;
+                if let Some(p) = &placement {
+                    summary.warnings = print::layout_warnings(&meshes, p, extras.deflection);
+                }
+                Ok(bytes)
+            }
+            Err(print::Print3mfError::Placement(e)) => {
+                eprintln!("aicad: {}: {e}", e.code());
+                let code = if e.code() == "EXPORT_BED_FIT" {
+                    print::EXIT_BED_FIT
+                } else {
+                    3
+                };
+                summary.error = Some((e.code(), e.to_string(), print::placement_details(&e)));
+                if let Some(path) = &extras.summary {
+                    print::write_summary(path, &summary);
+                }
+                return ExitCode::from(code);
+            }
+            Err(print::Print3mfError::Io(e)) => Err(e),
+        },
         MeshFormat::Obj => forge_io::try_write_obj(&named),
         MeshFormat::Stl => forge_io::try_write_stl(&only, true),
         MeshFormat::StlAscii => forge_io::try_write_stl(&only, false),
@@ -316,6 +417,29 @@ fn write_meshes(
         meshes.len(),
         bytes.len()
     );
+    if meshes.len() > 1 && matches!(format, MeshFormat::Stl | MeshFormat::StlAscii) {
+        eprintln!(
+            "aicad: note: STL has no objects, so a slicer loads these {} bodies as one object; export 3MF to keep them apart",
+            meshes.len()
+        );
+    }
+    for w in &summary.warnings {
+        eprintln!(
+            "aicad: warning: {}: {}",
+            w["code"].as_str().unwrap_or("WARNING"),
+            w["message"].as_str().unwrap_or("")
+        );
+    }
+    summary.bytes = Some(bytes.len());
+    summary.geometry_hash = Some(forge_io::geometry_hash(
+        &named,
+        summary.placement.map(|p| p.translation),
+    ));
+    if let Some(path) = &extras.summary
+        && !print::write_summary(path, &summary)
+    {
+        return ExitCode::from(3);
+    }
     ExitCode::SUCCESS
 }
 

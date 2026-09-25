@@ -6,25 +6,42 @@
  * 2. else the native Forge CLI (`@aicad/evals` `ForgeCliEngine`, the binary the main process found).
  */
 import { readFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ForgeCliEngine, type Engine, type EngineAvailability } from "@aicad/evals";
 import type { EvalReport, IrDocument } from "@aicad/ir-types";
+import { bundledWasmPath } from "../bundle-paths.js";
 
-interface ForgeWebModule {
+/** The subset of `@aicad/forge-web` the worker uses. */
+export interface ForgeWebModule {
   init(input?: unknown): Promise<void>;
   evaluate(ir: string | object): { report: EvalReport };
+  /** SPEC-v1 §9.1: the canonical `aicad.ir/1` text of a v0 document. */
+  migrate(ir: string | object): { document: string };
   engineVersion(): string;
+}
+
+/**
+ * Where the Forge WASM module is: next to a bundled worker (`bundle/agent/forge_wasm_bg.wasm`; a packaged app has no
+ * `node_modules` to resolve the package in), else the `@aicad/forge-web` package's own file.
+ */
+export function forgeWasmPath(workerDir: string = dirname(fileURLToPath(import.meta.url))): string {
+  return bundledWasmPath(workerDir) ?? fileURLToPath(import.meta.resolve("@aicad/forge-web/forge_wasm_bg.wasm"));
 }
 
 export class ForgeWebNodeEngine implements Engine {
   readonly kind = "forge-web";
   #mod: Promise<ForgeWebModule> | null = null;
 
+  /** The initialized module (loads it on first use). */
+  module(): Promise<ForgeWebModule> {
+    return this.#load();
+  }
+
   #load(): Promise<ForgeWebModule> {
     this.#mod ??= (async () => {
       const mod = (await import("@aicad/forge-web")) as unknown as ForgeWebModule;
-      const wasm = fileURLToPath(import.meta.resolve("@aicad/forge-web/forge_wasm_bg.wasm"));
-      await mod.init(await readFile(wasm));
+      await mod.init(await readFile(forgeWasmPath()));
       return mod;
     })();
     this.#mod.catch(() => {

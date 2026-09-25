@@ -16,6 +16,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from "@playwright/test";
 import { makeFakeClaude, type FakeClaude } from "./fake-cli.js";
+import { appDir } from "./app-dir.js";
 
 const desktopRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 /** Review screenshots (gitignored). */
@@ -66,7 +67,7 @@ test.beforeAll(async () => {
   // A local Ollama on this machine must not change the result: point the probe at a closed loopback port.
   writeFileSync(join(userData, "agent-settings.json"), JSON.stringify({ v: 1, models: {}, budgetUsd: 1, compatBaseUrl: null, ollamaBaseUrl: "http://127.0.0.1:9" }));
   app = await electron.launch({
-    args: [desktopRoot, "--use-mock-keychain"],
+    args: [appDir, "--use-mock-keychain"],
     env: keylessEnv({ AICAD_USER_DATA_DIR: userData, AICAD_CLI_DIRS: fake.binDir }),
   });
   page = await app.firstWindow();

@@ -147,6 +147,119 @@ export async function forgeEval(bin: string, req: ForgeEvalRequest, timeoutMs = 
   });
 }
 
+/** A 3MF for a printer: centred on its bed, fit-checked, print tessellation (`aicad export --bed`). */
+export interface ForgePrintExportRequest {
+  irJson: string;
+  /** Bed width, depth and height, mm. */
+  bed: readonly [number, number, number];
+  /** Room kept free on each side, mm. */
+  margin: number;
+  /** Areas of the bed no part may cover, `[x0, y0, x1, y1]`, mm. */
+  exclusions: ReadonlyArray<readonly [number, number, number, number]>;
+  deflection: number;
+  angular: number;
+  /** 3MF `Title` metadata. */
+  title: string;
+  /** 3MF `Application` metadata, e.g. `PartZero 0.0.1`. */
+  application: string;
+}
+
+export interface ForgePrintExportResponse {
+  /** The 3MF bytes (exit 0 only). */
+  data: Uint8Array | null;
+  /** The `aicad.export/1` summary, written on success and on `EXPORT_BED_FIT` (exit 4). */
+  summary: unknown;
+  exitCode: number | null;
+  stderr: string;
+  error?: string;
+}
+
+/** Metadata text for the command line: no control characters, bounded. */
+function metaArg(s: string): string {
+  // eslint-disable-next-line no-control-regex
+  return s.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 200);
+}
+
+function finite(v: number, what: string): string {
+  if (!Number.isFinite(v)) throw new Error(`invalid ${what}`);
+  return String(v);
+}
+
+export async function forgePrintExport(bin: string, req: ForgePrintExportRequest, timeoutMs = 300_000): Promise<ForgePrintExportResponse> {
+  const args = (dir: string, docPath: string): string[] => [
+    "export",
+    docPath,
+    "--out",
+    join(dir, "print.3mf"),
+    `--deflection=${finite(req.deflection, "deflection")}`,
+    `--angular=${finite(req.angular, "angular")}`,
+    `--bed=${req.bed.map((v) => finite(v, "bed size")).join(",")}`,
+    `--bed-margin=${finite(req.margin, "bed margin")}`,
+    ...req.exclusions.map((r) => `--bed-exclude=${r.map((v) => finite(v, "exclusion zone")).join(",")}`),
+    `--title=${metaArg(req.title)}`,
+    `--application=${metaArg(req.application)}`,
+    `--summary=${join(dir, "summary.json")}`,
+  ];
+  return withTempDoc(req.irJson, async (dir, docPath) => {
+    const r = await run(bin, args(dir, docPath), timeoutMs);
+    let data: Uint8Array | null = null;
+    if (r.code === 0) {
+      try {
+        data = new Uint8Array(await readFile(join(dir, "print.3mf")));
+      } catch {
+        data = null;
+      }
+    }
+    let summary: unknown = null;
+    try {
+      summary = JSON.parse(await readFile(join(dir, "summary.json"), "utf8"));
+    } catch {
+      summary = null;
+    }
+    return { data, summary, exitCode: r.code, stderr: r.stderr.trim(), ...(r.error ? { error: r.error } : {}) };
+  });
+}
+
+/** The flags of `aicad export` the print handoff needs (W5); an older `aicad` rejects them. */
+export const PRINT_EXPORT_FLAGS = ["--bed", "--bed-margin", "--bed-exclude", "--title", "--application", "--summary"] as const;
+
+/**
+ * Why an `aicad` run failed, in words for a toast. An `aicad` built before the app (clap exits 2
+ * with `unexpected argument '--bed'`) is `FORGE_OUTDATED`, with the rebuild command; otherwise
+ * the first `error:` / `aicad:` line of stderr, not clap's closing "For more information, try
+ * '--help'." line.
+ */
+export function forgeFailure(r: { exitCode: number | null; stderr: string; error?: string }, bin: string): { code: "FORGE_OUTDATED" | "EXPORT_FAILED"; message: string } {
+  if (r.error) return { code: "EXPORT_FAILED", message: r.error };
+  const lines = r.stderr
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const unknown = r.exitCode === 2 ? /unexpected argument '(--?[\w-]+)/.exec(r.stderr) : null;
+  if (unknown) {
+    return {
+      code: "FORGE_OUTDATED",
+      message: `The Forge CLI at ${bin} is older than this app: it does not know ${unknown[1]}. Rebuild it with \`cargo build -p forge-cli\` in forge/ (with --release for a packaged build).`,
+    };
+  }
+  const line = lines.find((l) => /^(error|aicad):/i.test(l)) ?? lines.at(-1);
+  return { code: "EXPORT_FAILED", message: (line ?? `exit code ${String(r.exitCode)}`).slice(0, 500) };
+}
+
+/**
+ * Whether `bin` is new enough for the print handoff: `aicad export --help` lists every flag in
+ * {@link PRINT_EXPORT_FLAGS}. For the self-test (ALPHA-0-PLAN G1 #2) and diagnostics.
+ */
+export async function forgePrintCapability(bin: string, timeoutMs = 10_000): Promise<{ ok: boolean; missing: string[]; detail: string }> {
+  const r = await run(bin, ["export", "--help"], timeoutMs);
+  if (r.code !== 0) return { ok: false, missing: [...PRINT_EXPORT_FLAGS], detail: r.error ?? `aicad export --help exited with ${String(r.code)}` };
+  const help = r.stdout.toString("utf8");
+  const missing = PRINT_EXPORT_FLAGS.filter((f) => !new RegExp(`(^|[\\s,])${f}(?![\\w-])`, "m").test(help));
+  return missing.length === 0
+    ? { ok: true, missing, detail: `${bin} supports the print export` }
+    : { ok: false, missing, detail: `${bin} is older than this app (no ${missing.join(", ")}); rebuild it with \`cargo build -p forge-cli\`` };
+}
+
 export async function forgeExport(bin: string, req: ForgeExportRequest, timeoutMs = 300_000): Promise<ForgeExportResponse> {
   if (!MESH_FORMATS.includes(req.format)) throw new Error(`unsupported mesh format: ${String(req.format)}`);
   return withTempDoc(req.irJson, async (dir, docPath) => {
@@ -162,5 +275,48 @@ export async function forgeExport(bin: string, req: ForgeExportRequest, timeoutM
       }
     }
     return { data, exitCode: r.code, stderr: r.stderr.trim(), ...(r.error ? { error: r.error } : {}) };
+  });
+}
+
+/** What `--self-test` reports about the Forge CLI (`self-test.ts`). */
+export interface ForgeSelfCheck {
+  ok: boolean;
+  path: string;
+  version: string | null;
+  detail: string;
+  v0: { status: string | null; schema: string | null } | null;
+  v1: { status: string | null; schema: string | null } | null;
+}
+
+function reportHead(stdout: Buffer): { status: string | null; schema: string | null } | null {
+  try {
+    const j = JSON.parse(stdout.toString("utf8")) as { status?: unknown; schema?: unknown };
+    return { status: typeof j.status === "string" ? j.status : null, schema: typeof j.schema === "string" ? j.schema : null };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `--self-test`: the bundled `aicad` runs (`--version`), evaluates `irJson` (a v0 document), migrates it to
+ * `aicad.ir/1` and evaluates that. The v1 path is the one the Alpha 0 agent's fallback engine uses.
+ */
+export async function forgeSelfCheck(bin: string, irJson: string, timeoutMs = 60_000): Promise<ForgeSelfCheck> {
+  const info = await forgeInfo(bin);
+  if (!info.available) return { ok: false, path: bin, version: null, detail: info.detail, v0: null, v1: null };
+  const ver = await run(bin, ["--version"], timeoutMs);
+  const version = ver.code === 0 ? ver.stdout.toString("utf8").trim().slice(0, 100) : null;
+  return withTempDoc(irJson, async (dir, docPath) => {
+    const v0 = reportHead((await run(bin, ["eval", docPath, "--format", "json"], timeoutMs)).stdout);
+    const v1Path = join(dir, "document.v1.json");
+    const mig = await run(bin, ["migrate", docPath, "--out", v1Path], timeoutMs);
+    const v1 = mig.code === 0 ? reportHead((await run(bin, ["eval", v1Path, "--format", "json"], timeoutMs)).stdout) : null;
+    const ok = version !== null && v0?.status === "ok" && v0.schema === "aicad.metrics/0" && v1?.status === "ok" && v1.schema === "aicad.metrics/1";
+    const detail = ok
+      ? `${version}: evaluates v0 and v1`
+      : version === null
+        ? `${bin} --version failed: ${ver.error ?? ver.stderr.slice(0, 200)}`
+        : `v0 ${v0?.schema ?? "no report"} ${v0?.status ?? ""}; migrate exit ${mig.code}${mig.code === 0 ? "" : ` (${mig.stderr.slice(0, 200)})`}; v1 ${v1?.schema ?? "no report"} ${v1?.status ?? ""}`;
+    return { ok, path: bin, version, detail, v0, v1 };
   });
 }

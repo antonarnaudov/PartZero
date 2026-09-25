@@ -84,8 +84,11 @@ export interface CliDetectorDeps {
   now?: () => number;
   /** Development and tests (`AICAD_CLI_DIRS`): look for CLIs only in these directories. Null: normal discovery. */
   searchDirs?: readonly string[] | null;
-  /** Last-resort lookup through the login shell (a packaged macOS app has a minimal PATH). Default true. */
-  loginShell?: boolean;
+  /**
+   * Last-resort lookup through the login shell (a packaged macOS app has a minimal PATH): for every CLI (true, the
+   * default), none (false), or only these (a build that keeps it to the CLIs it needs: `build-info.ts` `flags.loginShell`).
+   */
+  loginShell?: boolean | readonly CliProviderId[];
   /** Model discovery through the CLI (`codex debug models`, `opencode models`). Default true. */
   discover?: boolean;
   /** Persistence of lockdown blocks (default: memory only). */
@@ -412,6 +415,11 @@ export class CliDetector {
     return { path: findInDirs(provider.binaryNames, dirs), searched: true };
   }
 
+  #loginShellFor(id: CliProviderId): boolean {
+    const allowed = this.#deps.loginShell ?? true;
+    return typeof allowed === "boolean" ? allowed : allowed.includes(id);
+  }
+
   async #probe(id: CliProviderId, force: boolean): Promise<void> {
     const provider = this.#deps.providers.get(id);
     if (!provider) return;
@@ -435,7 +443,7 @@ export class CliDetector {
         };
       } else {
         try {
-          detection = await provider.detect({ overridePath: override.path, env, extraDirs: [], loginShell: this.#deps.loginShell ?? true });
+          detection = await provider.detect({ overridePath: override.path, env, extraDirs: [], loginShell: this.#loginShellFor(id) });
         } catch (err) {
           detection = { provider: id, status: "not_installed", binary: null, lockdown: null, detail: `detection failed: ${(err as Error).message}`.slice(0, 300) };
         }

@@ -15,26 +15,31 @@
     "test": "vitest run",
     "test:e2e": "node scripts/ensure-electron.mjs && pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && playwright test -c e2e/playwright.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "package": "pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && node scripts/package-notices.mjs && electron-builder --config electron-builder.config.cjs",
+    "package": "pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && node scripts/bundle.mjs && node scripts/package-notices.mjs && electron-builder --config electron-builder.config.cjs",
     "package:mac": "pnpm run package --mac",
     "package:win": "pnpm run package --win",
     "package:linux": "pnpm run package --linux",
-    "test:e2e:fallback": "node scripts/ensure-electron.mjs && pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && node scripts/e2e-fallback.mjs"
+    "test:e2e:fallback": "node scripts/ensure-electron.mjs && pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && node scripts/e2e-fallback.mjs",
+    "bundle": "node scripts/bundle.mjs",
+    "test:e2e:bundle": "node scripts/ensure-electron.mjs && pnpm --filter \"@aicad/desktop^...\" run build && tsc -p tsconfig.build.json && node scripts/e2e-bundle.mjs",
+    "package:alpha": "bash ../../scripts/alpha0-mac.sh --build"
   },
-  "dependencies": {
+  "devDependencies": {
     "@aicad/agent": "workspace:*",
     "@aicad/agent-tools": "workspace:*",
+    "@aicad/app": "workspace:*",
+    "@aicad/cadscript": "workspace:*",
     "@aicad/evals": "workspace:*",
     "@aicad/forge-web": "workspace:*",
     "@aicad/ir-types": "workspace:*",
-    "@aicad/llm-gateway": "workspace:*"
-  },
-  "devDependencies": {
-    "@aicad/app": "workspace:*",
+    "@aicad/llm-gateway": "workspace:*",
+    "@aicad/mcp-server": "workspace:*",
+    "@electron/fuses": "^1.8.0",
     "@playwright/test": "^1.63.0",
     "@types/node": "^24.9.0",
     "electron": "^44.4.4",
     "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
     "typescript": "~5.9.3",
     "vite": "^8.3.0",
     "vitest": "^4.1.0"
