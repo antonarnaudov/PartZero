@@ -9,6 +9,7 @@
 import type { AppCommandRegistry, AppInvocation } from "../commands/commands";
 import type { CommandRegistry, CommandResult, CommandSource, PaletteItem } from "../commands/registry";
 import type { RenderBody } from "../engine/types";
+import { BLANK_SOURCE } from "../host/templates";
 import type { AppServices } from "../services";
 import { Store } from "../store";
 import { docParamsPort, docSelectionPort } from "./framework/ports";
@@ -75,16 +76,13 @@ export function shellOf(services: AppServices): Shell {
   return s;
 }
 
-export function hasShell(services: AppServices): boolean {
-  return shells.has(services);
-}
-
 /** The document is a new, unsaved, untouched document with no features. */
 export function isBlankDocument(services: AppServices): boolean {
   const s = services.doc.getState();
   if (s.path !== null || s.dirty) return false;
   const ir = s.model?.ir ?? s.compile?.ir ?? null;
-  if (!ir) return s.source.trim() === "";
+  // Before the first compile: the starter document (no flash of the workspace at startup).
+  if (!ir) return s.source.trim() === "" || s.source === BLANK_SOURCE;
   return ir.parts.every((p) => p.features.length === 0);
 }
 

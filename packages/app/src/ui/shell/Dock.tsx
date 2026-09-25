@@ -2,7 +2,7 @@
  * A dock: the panels of one area as tabs (a single panel shows without a tab strip). Hidden panels
  * that ask for it stay mounted (the code editor keeps its Monaco state).
  */
-import { useEffect, useSyncExternalStore, type ReactElement } from "react";
+import { useEffect, type ReactElement } from "react";
 import { useApp, useStore } from "../context";
 import { Icon } from "../icons";
 import { useShell, useShellState, usePanels } from "./context";
@@ -108,10 +108,4 @@ export function Dock({ area, label }: { area: PanelArea; label: string }): React
       </div>
     </section>
   );
-}
-
-/** Subscribe to the panel registry (for layout decisions outside a dock). */
-export function useAreaHasPanels(area: PanelArea): boolean {
-  const { panels } = useShell();
-  return useSyncExternalStore(panels.subscribe, () => panels.getState().panels.some((p) => p.area === area));
 }

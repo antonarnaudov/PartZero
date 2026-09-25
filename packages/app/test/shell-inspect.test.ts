@@ -5,6 +5,7 @@ import { ToolRegistry } from "../src/tools/registry";
 import { attachShell, Shell } from "../src/tools/shell";
 import { exampleAvailability, openExample, STARTERS } from "../src/tools/starters";
 import { BLANK_SOURCE } from "../src/host/templates";
+import { TOOL_ICON_NAMES } from "../src/ui/shell/tool-icons";
 import { BOX, makeHarness } from "./helpers";
 
 const body = (min: [number, number, number], max: [number, number, number], volume = 1000, valid = true) => ({
@@ -85,6 +86,12 @@ describe("printer fit", () => {
 });
 
 describe("inspect tools in the shell", () => {
+  it("use icons the toolbar has", () => {
+    const tools = new ToolRegistry();
+    registerInspectTools(tools);
+    for (const t of tools.list()) expect(TOOL_ICON_NAMES).toContain(t.icon);
+  });
+
   it("are disabled without bodies and open read-only panels with Forge's numbers", async () => {
     const h = await makeHarness({ source: BOX });
     const tools = new ToolRegistry();
@@ -130,5 +137,22 @@ describe("starter parts", () => {
     expect(h.services.doc.getState().source).toBe(BLANK_SOURCE);
     const p1 = STARTERS.find((s) => s.id === "p1-storage-bin")!;
     expect(await exampleAvailability(h.services, p1)).toMatchObject({ status: "unavailable" });
+  });
+
+  it("opens an example as a new unsaved document once the store compiles IR v1 (after Phase C)", async () => {
+    const h = await makeHarness({ source: BLANK_SOURCE });
+    const p5 = STARTERS.find((s) => s.id === "p5-electronics-box")!;
+    const compile = h.services.cadscript.compile.bind(h.services.cadscript);
+    // A v1-capable CadScript service, as the app has once IR v1 documents land.
+    const v1Services = {
+      ...h.services,
+      cadscript: { ...h.services.cadscript, compile: async (source: string) => ({ ...(await compile(BLANK_SOURCE)), ok: source.length > 0 }) },
+    };
+    expect(await exampleAvailability(v1Services, p5)).toEqual({ status: "ready" });
+    expect(await openExample(v1Services, p5)).toEqual({ opened: true });
+    const s = h.services.doc.getState();
+    expect(s.name).toBe("p5-electronics-box");
+    expect(s.path).toBeNull();
+    expect(s.source).toBe(p5.source);
   });
 });
