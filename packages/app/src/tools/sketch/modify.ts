@@ -10,7 +10,7 @@ function run(api: ToolApi, r: OpResult): boolean {
     api.notify("warning", r.reason);
     return false;
   }
-  const out = api.commit(r.edits, [], { dropRedundant: true });
+  const out = api.commit(r.edits, [], r.keepRedundant ? { allowRedundant: true } : { dropRedundant: true });
   if (out.ok && r.note) api.notify("info", r.note);
   return out.ok;
 }
@@ -207,7 +207,7 @@ export class CornerTool implements SketchTool {
 
   private apply(size: number, api: ToolApi): void {
     if (!this.corner) return;
-    const r = this.id === "fillet" ? filletCorner(this.corner, size, api.feature(), api.ids()) : chamferCorner(this.corner, size, api.feature(), api.ids());
+    const r = this.id === "fillet" ? filletCorner(this.corner, size, api.curves(), api.feature(), api.ids()) : chamferCorner(this.corner, size, api.curves(), api.feature(), api.ids());
     if (run(api, r)) this.corner = null;
   }
 

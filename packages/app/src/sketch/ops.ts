@@ -3,10 +3,14 @@
  * fillet and chamfer. Each returns the `sketchEdit` list to commit (the session solves and checks
  * it), or a reason why it does not apply.
  *
- * Constraint bookkeeping: an operation that moves a curve end drops the constraints that pinned
- * that end (they would pull it back) and the length dimensions of the curves it shortens, keeps
- * orientation constraints (horizontal, parallel, …), and binds new ends to what cut them
- * (`point_on_line` / `point_on_circle`), so the result stays associative.
+ * Constraint bookkeeping:
+ * - **Fillet and chamfer keep the design intent**: the corner's constraints and dimensions move to
+ *   a construction point at the virtual sharp (see `virtualSharp`), so a fully constrained sketch
+ *   stays fully constrained and a dimension bound to a parameter keeps its binding and its id.
+ * - **Trim and extend** move a curve end to a new place: the constraints that pinned that end
+ *   (they would pull it back) and the length dimensions of the curve go, orientation constraints
+ *   (horizontal, parallel, …) stay, and the new end is bound to what cut it (`point_on_line` /
+ *   `point_on_circle`), so the result stays associative. What goes is named in the op's note.
  */
 import type { v1 } from "@aicad/ir-types";
 import type { SketchEdit } from "./engine-types";
@@ -35,7 +39,12 @@ import {
 } from "./geom";
 import type { IdAllocator } from "./ids";
 
-export type OpResult = { ok: true; edits: SketchEdit[]; note?: string } | { ok: false; reason: string };
+/**
+ * `keepRedundant`: commit the batch with `allowRedundant` instead of dropping redundant
+ * constraints, because it re-adds the user's own constraints (a redundancy then shows as a
+ * warning instead of a silently lost dimension).
+ */
+export type OpResult = { ok: true; edits: SketchEdit[]; note?: string; keepRedundant?: boolean } | { ok: false; reason: string };
 
 type Line = Extract<LiteralCurve, { kind: "line" }>;
 type Arc = Extract<LiteralCurve, { kind: "arc" }>;
@@ -80,6 +89,14 @@ function dropsFor(feature: v1.SketchFeature, refs: readonly string[], shortened:
     if (onMovedEnd || lengthOf) out.push(c.id);
   }
   return out;
+}
+
+/** The note naming the constraints an op removed for good (`removed` minus what it re-added). */
+function removedNote(feature: v1.SketchFeature, removed: readonly string[], readded: readonly v1.Constraint[], why: string): { note?: string } {
+  const back = new Set(readded.map((c) => c.id));
+  const gone = (feature.constraints ?? []).filter((c) => removed.includes(c.id) && !back.has(c.id));
+  const note = droppedNote(gone, why);
+  return note ? { note } : {};
 }
 
 function lit(p: P2): P2 {
@@ -171,6 +188,7 @@ function trimLine(c: Line, lo: Cut | null, hi: Cut | null, feature: v1.SketchFea
         { op: "replaceCurve", curve: { kind: "line", id, start: lit(hi.point), end: c.end, ...base } },
         { op: "addConstraint", constraint: onCurveConstraint(`${id}.start`, hi.by, ids.next("on")) },
       ],
+      ...removedNote(feature, drops, [], "that held the trimmed end"),
     };
   }
   if (lo && !hi) {
@@ -182,6 +200,7 @@ function trimLine(c: Line, lo: Cut | null, hi: Cut | null, feature: v1.SketchFea
         { op: "replaceCurve", curve: { kind: "line", id, start: c.start, end: lit(lo.point), ...base } },
         { op: "addConstraint", constraint: onCurveConstraint(`${id}.end`, lo.by, ids.next("on")) },
       ],
+      ...removedNote(feature, drops, [], "that held the trimmed end"),
     };
   }
   // Middle piece: `id` keeps [start, lo]; a new line takes [hi, end] and the old end's constraints.
@@ -209,6 +228,7 @@ function trimLine(c: Line, lo: Cut | null, hi: Cut | null, feature: v1.SketchFea
       { op: "addConstraint", constraint: onCurveConstraint(`${nid}.start`, hi!.by, ids.next("on")) },
       { op: "addConstraint", constraint: { type: "parallel", id: ids.next("par"), a: id, b: nid } },
     ],
+    ...removedNote(feature, drops, moved, "that no longer hold on the split line"),
   };
 }
 
@@ -268,6 +288,7 @@ function trimArc(c: Arc, lo: Cut | null, hi: Cut | null, feature: v1.SketchFeatu
         { op: "addConstraint", constraint: onCurveConstraint(ccwEnd, lo.by, ids.next("on")) },
         { op: "addConstraint", constraint: onCurveConstraint(c.ccw ? `${nid}.start` : `${nid}.end`, hi.by, ids.next("on")) },
       ],
+      ...removedNote(feature, drops, moved, "that no longer hold on the split arc"),
     };
   }
   const moving = lo ? ccwEnd : ccwStart;
@@ -281,6 +302,7 @@ function trimArc(c: Arc, lo: Cut | null, hi: Cut | null, feature: v1.SketchFeatu
       { op: "replaceCurve", curve: next },
       { op: "addConstraint", constraint: onCurveConstraint(moving, by, ids.next("on")) },
     ],
+    ...removedNote(feature, drops, [], "that held the trimmed end"),
   };
 }
 
@@ -311,6 +333,7 @@ export function extend(id: string, at: P2, curves: readonly LiteralCurve[], feat
     return {
       ok: true,
       edits: [...drops.map((d): SketchEdit => ({ op: "removeConstraint", id: d })), { op: "replaceCurve", curve }, { op: "addConstraint", constraint: onCurveConstraint(ref, best.by, ids.next("on")) }],
+      ...removedNote(feature, drops, [], "that held the extended end"),
     };
   }
   if (c?.kind === "arc") {
@@ -338,6 +361,7 @@ export function extend(id: string, at: P2, curves: readonly LiteralCurve[], feat
     return {
       ok: true,
       edits: [...drops.map((d): SketchEdit => ({ op: "removeConstraint", id: d })), { op: "replaceCurve", curve: next }, { op: "addConstraint", constraint: onCurveConstraint(ref, best.by, ids.next("on")) }],
+      ...removedNote(feature, drops, [], "that held the extended end"),
     };
   }
   return { ok: false, reason: "Click near the end of a line or an arc." };
@@ -525,20 +549,27 @@ interface Corner {
   vertex: P2;
 }
 
-/** The corner where exactly two lines meet nearest `at` (within `tol`). */
+/**
+ * The corner where exactly two lines of the same kind (profile, or construction) meet nearest
+ * `at` (within `tol`). Lines of the other kind ending there (a centre rectangle's construction
+ * diagonal) do not block it: the corner operation binds them to the virtual sharp.
+ */
 export function findCorner(at: P2, curves: readonly LiteralCurve[], tol: number): Corner | null {
-  const lines = curves.filter((c): c is Line => c.kind === "line" && !c.construction);
+  const all = curves.filter((c): c is Line => c.kind === "line");
   let best: { corner: Corner; d: number } | null = null;
-  for (let i = 0; i < lines.length; i++) {
-    for (let j = i + 1; j < lines.length; j++) {
-      const s = sharedEnd(lines[i]!, lines[j]!);
-      if (!s) continue;
-      const v = lines[i]![s[0]];
-      const d = dist(v, at);
-      if (d > tol) continue;
-      const others = lines.filter((l, k) => k !== i && k !== j && (dist(l.start, v) <= 1e-6 || dist(l.end, v) <= 1e-6));
-      if (others.length) continue;
-      if (!best || d < best.d) best = { corner: { a: lines[i]!, b: lines[j]!, aEnd: s[0], bEnd: s[1], vertex: v }, d };
+  for (const construction of [false, true]) {
+    const lines = all.filter((c) => !!c.construction === construction);
+    for (let i = 0; i < lines.length; i++) {
+      for (let j = i + 1; j < lines.length; j++) {
+        const s = sharedEnd(lines[i]!, lines[j]!);
+        if (!s) continue;
+        const v = lines[i]![s[0]];
+        const d = dist(v, at);
+        if (d > tol) continue;
+        const others = lines.filter((l, k) => k !== i && k !== j && (dist(l.start, v) <= 1e-6 || dist(l.end, v) <= 1e-6));
+        if (others.length) continue;
+        if (!best || d < best.d) best = { corner: { a: lines[i]!, b: lines[j]!, aEnd: s[0], bEnd: s[1], vertex: v }, d };
+      }
     }
   }
   return best?.corner ?? null;
@@ -557,8 +588,78 @@ function withEnd(l: Line, which: "start" | "end", p: P2): Line {
   return which === "start" ? { ...l, start: lit(p) } : { ...l, end: lit(p) };
 }
 
-/** Round a corner with an arc of radius `r` tangent to both lines (plus its radius dimension). */
-export function filletCorner(k: Corner, r: number, feature: v1.SketchFeature, ids: IdAllocator): OpResult {
+/**
+ * The virtual sharp of a corner (what Fusion and Onshape keep after a sketch fillet or chamfer):
+ * a construction point at the old vertex, held on both lines (`point_on_line` ×2, so it stays at
+ * their intersection). Everything that held the corner moves to it with the same constraint id
+ * and value (a `fix`, a coincident, a distance or a dimension bound to a parameter, including a
+ * line's length `distance(l.start, l.end)`, which becomes the distance to the virtual sharp), and
+ * the other curve ends that were welded to the corner are bound to it (`coincident`). Only what
+ * can no longer hold is dropped, and named: `equal` lengths and `midpoint`s of the shortened
+ * lines.
+ */
+function virtualSharp(
+  k: Corner,
+  curves: readonly LiteralCurve[],
+  feature: v1.SketchFeature,
+  ids: IdAllocator,
+): { vs: string; remove: string[]; add: v1.Constraint[]; point: LiteralCurve; dropped: v1.Constraint[] } {
+  const vs = ids.next("vs");
+  const refs = [`${k.a.id}.${k.aEnd}`, `${k.b.id}.${k.bEnd}`];
+  const shortened = [k.a.id, k.b.id];
+  const own: v1.Constraint[] = [
+    { type: "point_on_line", id: ids.next("on"), point: vs, line: k.a.id },
+    { type: "point_on_line", id: ids.next("on"), point: vs, line: k.b.id },
+  ];
+  const remove: string[] = [];
+  const moved: v1.Constraint[] = [];
+  const dropped: v1.Constraint[] = [];
+  const same = (x: v1.Constraint, y: v1.Constraint): boolean => JSON.stringify({ ...x, id: "" }) === JSON.stringify({ ...y, id: "" });
+  for (const c of feature.constraints ?? []) {
+    const args = argsOf(c);
+    const onCorner = args.some((x) => refs.includes(x));
+    const lostMeaning = (c.type === "equal" && (shortened.includes(c.a) || shortened.includes(c.b))) || (c.type === "midpoint" && shortened.includes(c.line));
+    if (lostMeaning) {
+      remove.push(c.id);
+      dropped.push(c);
+      continue;
+    }
+    if (!onCorner) continue;
+    remove.push(c.id);
+    const r = renameArg(renameArg(c, refs[0]!, vs), refs[1]!, vs);
+    const ra = argsOf(r);
+    // coincident(a.end, b.start) of the corner itself, or a copy of the virtual sharp's own constraints.
+    if (new Set(ra).size < ra.length || own.some((o) => same(o, r))) continue;
+    moved.push(r);
+  }
+  // Other curve ends welded to the corner (a construction diagonal): bind them to the virtual sharp.
+  const bound: v1.Constraint[] = [];
+  for (const c of curves) {
+    if (c.id === k.a.id || c.id === k.b.id || (c.kind !== "line" && c.kind !== "arc")) continue;
+    for (const end of ["start", "end"] as const) {
+      if (dist(c[end], k.vertex) <= 1e-6) bound.push({ type: "coincident", id: ids.next("con"), a: `${c.id}.${end}`, b: vs });
+    }
+  }
+  return { vs, remove, add: [...own, ...bound, ...moved], point: { kind: "point", id: vs, at: lit(k.vertex), construction: true }, dropped };
+}
+
+/** A short name for a constraint in a notice: `d2 (distance = height)`. */
+export function describeConstraint(c: v1.Constraint): string {
+  const v = "value" in c && c.value !== undefined ? ` = ${String(c.value)}` : "";
+  return `${c.id} (${c.type.replace(/_/g, " ")}${v})`;
+}
+
+function droppedNote(dropped: readonly v1.Constraint[], why: string): string | undefined {
+  if (dropped.length === 0) return undefined;
+  return `Removed ${dropped.length} constraint${dropped.length === 1 ? "" : "s"} ${why}: ${dropped.map(describeConstraint).join(", ")}.`;
+}
+
+/**
+ * Round a corner with an arc of radius `r` tangent to both lines (plus its radius dimension).
+ * The corner's constraints move to its virtual sharp (see {@link virtualSharp}), so a fully
+ * constrained sketch stays fully constrained and parameter-bound dimensions keep their binding.
+ */
+export function filletCorner(k: Corner, r: number, curves: readonly LiteralCurve[], feature: v1.SketchFeature, ids: IdAllocator): OpResult {
   const f = cornerFrame(k);
   if (!(r > 0)) return { ok: false, reason: "The fillet radius must be positive." };
   if (f.theta < 1e-3 || Math.PI - f.theta < 1e-3) return { ok: false, reason: "The lines are (nearly) parallel: no corner to round." };
@@ -570,43 +671,59 @@ export function filletCorner(k: Corner, r: number, feature: v1.SketchFeature, id
   const center = add(k.vertex, scale(bis, r / Math.sin(f.theta / 2)));
   const ccw = cross(sub(p1, center), sub(p2, center)) > 0;
   const aid = ids.next("a");
-  const refs = [`${k.a.id}.${k.aEnd}`, `${k.b.id}.${k.bEnd}`];
-  const drops = dropsFor(feature, refs, [k.a.id, k.b.id]);
-  const arc: Arc = { kind: "arc", id: aid, start: lit(p1), end: lit(p2), center: lit(center), ccw };
+  const vs = virtualSharp(k, curves, feature, ids);
+  const base = k.a.construction ? { construction: true } : {};
+  const arc: Arc = { kind: "arc", id: aid, start: lit(p1), end: lit(p2), center: lit(center), ccw, ...base };
+  const note = droppedNote(vs.dropped, "that no longer hold on the shortened lines");
   return {
     ok: true,
     edits: [
-      ...drops.map((d): SketchEdit => ({ op: "removeConstraint", id: d })),
+      ...vs.remove.map((d): SketchEdit => ({ op: "removeConstraint", id: d })),
       { op: "replaceCurve", curve: withEnd(k.a, k.aEnd, p1) },
       { op: "replaceCurve", curve: withEnd(k.b, k.bEnd, p2) },
       { op: "addCurve", curve: arc },
+      { op: "addCurve", curve: vs.point },
       { op: "addConstraint", constraint: { type: "tangent", id: ids.next("tan"), a: k.a.id, b: aid } },
       { op: "addConstraint", constraint: { type: "tangent", id: ids.next("tan"), a: k.b.id, b: aid } },
       { op: "addConstraint", constraint: { type: "radius", id: ids.next("r"), curve: aid, value: r } },
+      ...vs.add.map((constraint): SketchEdit => ({ op: "addConstraint", constraint })),
     ],
-    ...(drops.length ? { note: `Removed ${drops.length} constraint(s) on the old corner.` } : {}),
+    keepRedundant: true,
+    ...(note ? { note } : {}),
   };
 }
 
-/** Cut a corner with a line `d` from the corner along each line. */
-export function chamferCorner(k: Corner, d: number, feature: v1.SketchFeature, ids: IdAllocator): OpResult {
+/**
+ * Cut a corner with a line `d` from the corner along each line: the two legs are driving
+ * distances `d` from the virtual sharp (see {@link virtualSharp}), which keeps the corner's
+ * constraints.
+ */
+export function chamferCorner(k: Corner, d: number, curves: readonly LiteralCurve[], feature: v1.SketchFeature, ids: IdAllocator): OpResult {
   const f = cornerFrame(k);
   if (!(d > 0)) return { ok: false, reason: "The chamfer distance must be positive." };
+  if (f.theta < 1e-3 || Math.PI - f.theta < 1e-3) return { ok: false, reason: "The lines are (nearly) parallel: no corner to cut." };
   if (d >= f.l1 - 1e-6 || d >= f.l2 - 1e-6) return { ok: false, reason: `A chamfer of ${d} does not fit these lines.` };
   const p1 = add(k.vertex, scale(f.u1, d));
   const p2 = add(k.vertex, scale(f.u2, d));
   const lid = ids.next("l");
-  const refs = [`${k.a.id}.${k.aEnd}`, `${k.b.id}.${k.bEnd}`];
-  const drops = dropsFor(feature, refs, [k.a.id, k.b.id]);
+  const vs = virtualSharp(k, curves, feature, ids);
+  const base = k.a.construction ? { construction: true } : {};
+  const aRef = `${k.a.id}.${k.aEnd}`;
+  const bRef = `${k.b.id}.${k.bEnd}`;
+  const note = droppedNote(vs.dropped, "that no longer hold on the shortened lines");
   return {
     ok: true,
     edits: [
-      ...drops.map((x): SketchEdit => ({ op: "removeConstraint", id: x })),
+      ...vs.remove.map((x): SketchEdit => ({ op: "removeConstraint", id: x })),
       { op: "replaceCurve", curve: withEnd(k.a, k.aEnd, p1) },
       { op: "replaceCurve", curve: withEnd(k.b, k.bEnd, p2) },
-      { op: "addCurve", curve: { kind: "line", id: lid, start: lit(p1), end: lit(p2) } },
-      { op: "addConstraint", constraint: { type: "distance", id: ids.next("d"), a: `${lid}.start`, b: `${lid}.end`, value: dist(p1, p2) } },
+      { op: "addCurve", curve: { kind: "line", id: lid, start: lit(p1), end: lit(p2), ...base } },
+      { op: "addCurve", curve: vs.point },
+      ...vs.add.map((constraint): SketchEdit => ({ op: "addConstraint", constraint })),
+      { op: "addConstraint", constraint: { type: "distance", id: ids.next("d"), a: vs.vs, b: aRef, value: d } },
+      { op: "addConstraint", constraint: { type: "distance", id: ids.next("d"), a: vs.vs, b: bRef, value: d } },
     ],
-    ...(drops.length ? { note: `Removed ${drops.length} constraint(s) on the old corner.` } : {}),
+    keepRedundant: true,
+    ...(note ? { note } : {}),
   };
 }
