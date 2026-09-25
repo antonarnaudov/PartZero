@@ -1,0 +1,49 @@
+packages/app/src/ui/Timeline.tsx
+  s_59c0dd2af30db2::t_3debb22be77ab7 311-322
+  s_59c0dd2af30db2::t_f55e3de0cb685b 391,393-395
+  s_59c0dd2af30db2::t_b90c8d6570817c 271-283
+  s_59c0dd2af30db2::t_079d29f131e8a6 417-431,435-441
+packages/app/src/ui/ChatPanel.tsx
+  s_59c0dd2af30db2::t_acf7c6ca889d73 418-434
+  s_59c0dd2af30db2::t_dac6ac50fe805c 383
+  s_59c0dd2af30db2::t_9704717078d7eb 355-358
+packages/app/src/ui/StatusBar.tsx
+  s_59c0dd2af30db2::t_fdba23613434b4 41-45
+packages/app/src/ui/shell/panel-catalog.tsx
+  s_59c0dd2af30db2::t_33982e7056760e 12,14
+  s_59c0dd2af30db2::t_44876a258cc55e 27-45,47-52
+  s_59c0dd2af30db2::t_b6517754204646 79-80
+packages/app/src/ui/Viewport.tsx
+  s_59c0dd2af30db2::t_d5f08d2b636755 366,370-371
+packages/app/src/ui/ProblemsPanel.tsx
+  s_59c0dd2af30db2::t_4cbbf71bd7316f 26-27,29-30
+  s_59c0dd2af30db2::t_60981c9bb901e0 37
+  s_59c0dd2af30db2::t_94db59880356d6 28
+packages/app/src/ui/shell/AppShell.tsx
+  s_59c0dd2af30db2::t_6bbee9681d9d86 32,34
+  s_59c0dd2af30db2::t_37f57073815403 161
+  s_59c0dd2af30db2::t_7b1e84d6c20ccd 119-121
+  s_59c0dd2af30db2::t_389faea465cc60 148
+  s_59c0dd2af30db2::t_6d4d284afcda65 177,179
+  s_59c0dd2af30db2::t_daedc50d86c59f 41
+  s_59c0dd2af30db2::t_34c326779c29c5 5-12
+  s_59c0dd2af30db2::t_3fa6b3bb72f12e 40,42-43
+packages/app/src/ui/shell/BrowserPanel.tsx
+  s_59c0dd2af30db2::t_c87f44f8be916d 1-232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1e6344c581d8435c1f1bda459d17663c0ddb5280",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
