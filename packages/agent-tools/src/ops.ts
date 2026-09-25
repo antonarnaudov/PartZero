@@ -30,6 +30,7 @@ import {
 import type { metricsV1 } from "@aicad/ir-types";
 import { z } from "zod";
 import { clip } from "./format.js";
+import { MODELING_AGENT_TOOLS, modelingAgentTools } from "./modeling.js";
 import { defineTool, ToolRegistry, type AgentTool, type ToolOutput } from "./registry.js";
 
 /** What the op tools run against. */
@@ -272,16 +273,16 @@ function catalogueTools(): AgentTool<OpsToolContext, z.ZodObject>[] {
   return OP_CATALOGUE.filter((o) => !o.hostOnly && o.tool).map((o) => opTool(o.op, o.tool!, o.description));
 }
 
-/** The op tools and the model reading tools. */
+/** The op tools, the modeling tools (Extrude, Hole, … — the user's hand tools) and the model reading tools. */
 export function opTools(): AgentTool<OpsToolContext, z.ZodObject>[] {
-  return [...catalogueTools(), applyOpsTool, getModelTool, getFeatureTool, dependentsTool, paramUsesTool];
+  return [...catalogueTools(), ...modelingAgentTools(), applyOpsTool, getModelTool, getFeatureTool, dependentsTool, paramUsesTool];
 }
 
 /** The model reading tools (safe in ask/explain mode and for read-only MCP scopes). */
 export const OPS_READ_TOOLS = ["feature_dependents", "get_feature", "get_model", "param_uses"] as const;
 
-/** Every op tool name, sorted: the catalogue's tools, `apply_ops` and the reading tools. */
-export const OPS_TOOLS: readonly string[] = [...OP_CATALOGUE.filter((o) => !o.hostOnly && o.tool).map((o) => o.tool!), "apply_ops", ...OPS_READ_TOOLS].sort();
+/** Every op tool name, sorted: the catalogue's tools, the modeling tools, `apply_ops` and the reading tools. */
+export const OPS_TOOLS: readonly string[] = [...OP_CATALOGUE.filter((o) => !o.hostOnly && o.tool).map((o) => o.tool!), ...MODELING_AGENT_TOOLS, "apply_ops", ...OPS_READ_TOOLS].sort();
 
 export function opsRegistry(): ToolRegistry<OpsToolContext> {
   return new ToolRegistry(opTools());

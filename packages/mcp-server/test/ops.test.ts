@@ -106,5 +106,13 @@ describe("an MCP client operating the model through the broker", () => {
     expect(report.parts?.[0]?.bodies).toHaveLength(1);
     expect(report.parts?.[0]?.bodies[0]?.volume).toBeCloseTo(40 * 40 * 4 + Math.PI * 36 * 8, 3);
     expect(blankDocument()).toContain("aicad.ir/1");
+
+    // The hand tools are MCP tools too: the client drills the boss with the Hole tool's command.
+    r = await c.call(5, "hole", { face: "extrude1/cap:end", at: [{ u: 0, v: 0 }], size: "M5", depth: 6, tip: "flat" });
+    expect(r.isError, r.text).toBe(false);
+    expect(r.text).toMatch(/Done: Hole M5 .*feature hole1/);
+    const after = await host.report();
+    expect(after.features.find((f) => f.feature_id === "hole1")?.status).toBe("ok");
+    expect(after.parts?.[0]?.bodies[0]?.volume).toBeLessThan(report.parts![0]!.bodies[0]!.volume);
   });
 });

@@ -18,6 +18,7 @@
  *   sketch_edit, query, describe, …).
  */
 export * from "./format.js";
+export * from "./modeling.js";
 export * from "./ops.js";
 export * from "./playbooks.js";
 export * from "./registry.js";

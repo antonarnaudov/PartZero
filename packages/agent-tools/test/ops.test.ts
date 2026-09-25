@@ -43,16 +43,23 @@ describe("the op tools", () => {
       "add_param",
       "apply_ops",
       "capture_ref",
+      "combine",
+      "datum_axis",
+      "datum_plane",
       "delete_feature",
       "delete_param",
+      "extrude",
       "feature_dependents",
       "get_feature",
       "get_model",
+      "hole",
       "move_feature",
       "param_uses",
+      "push_pull",
       "rename_curve",
       "rename_feature",
       "rename_param",
+      "revolve",
       "set_appearance",
       "set_field",
       "set_param",
@@ -120,6 +127,37 @@ describe("an agent operating the tools", () => {
     expect(r.isError, r.text).toBeFalsy();
     r = await call("get_feature", { feature: "plate" });
     expect(r.text).toContain('"distance": "thick * 2"');
+  });
+
+  it_("operates the hand tools: extrude, hole, push/pull and a datum plane, chained, each one undoable step", async () => {
+    const { host, call } = await session();
+    await call("add_feature", { feature_json: JSON.stringify({ type: "sketch", name: "outline", plane: "XY", curves: [{ kind: "rect", id: "r", center: [0, 0], w: 60, h: 40 }] }) });
+    let r = await call("extrude", { sketch: "outline", distance: 6 });
+    expect(r.isError, r.text).toBeFalsy();
+    expect(r.text).toMatch(/Done: Extrude outline .*feature extrude1/);
+    r = await call("hole", { face: "extrude1/cap:end", at: [{ u: 20, v: 10 }, { u: -20, v: -10 }], size: "M4", kind: "countersink" });
+    expect(r.isError, r.text).toBeFalsy();
+    r = await call("push_pull", { face: "extrude1/cap:end", offset: 2 });
+    expect(r.isError, r.text).toBeFalsy();
+    r = await call("datum_plane", { from: "extrude1/cap:end", distance: 5 });
+    expect(r.isError, r.text).toBeFalsy();
+    const doc = parseDoc(await host.document());
+    expect(doc.parts[0]!.features.map((f) => [f.id, f["author"]])).toEqual([
+      ["sketch1", "agent"],
+      ["extrude1", "agent"],
+      ["hole1", "agent"],
+      ["datum_plane1", "agent"],
+    ]);
+    expect(doc.parts[0]!.features[1]!["distance"]).toBe(8);
+    expect(doc.parts[0]!.features[2]).toMatchObject({ size: "M4", csink: "iso10642", depth: "through" });
+    // A refusal names the field and the reason; nothing changes.
+    const before = await host.document();
+    r = await call("hole", { face: "extrude1/side:r.left", at: [{ u: 99, v: 0 }] });
+    expect(r.isError).toBe(true);
+    expect(r.text).toMatch(/Refused \(COMMAND_FEATURE_FAILS\)/);
+    r = await call("push_pull", { face: "extrude1/side:r.left", offset: 1 });
+    expect(r.text).toMatch(/MODEL_NO_DRIVER.*sketch/);
+    expect(await host.document()).toBe(before);
   });
 
   it_("is refused with the command layer's reason, and nothing changes", async () => {
