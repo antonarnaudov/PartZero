@@ -527,11 +527,150 @@ export const shellTool: ToolDefinition = {
   fromFeature: (feature, ctx) => shellPanel(ctx, feature),
 };
 
+// ─── Draft ───────────────────────────────────────────────────────────────────────────────────
+
+const ORIGIN_PLANES: Record<string, Vec3> = { XY: [0, 0, 1], XZ: [0, -1, 0], YZ: [1, 0, 0] };
+
+function draftPanel(ctx: ToolContext, existing: FeatureInfo | null): PanelSpec {
+  const services = ctx.services;
+  const refs = new RefCache(services);
+  const j = existing?.json ?? {};
+  const initialFaces = existing ? refMembers(services, existing, "/faces") : [];
+  const neutralOld = j["neutral"];
+  const neutralItems = (): SelectionItem[] => {
+    if (typeof neutralOld === "string") return [{ kind: "origin", feature: neutralOld, label: `${neutralOld} plane` }];
+    if (neutralOld && typeof neutralOld === "object") {
+      const v = neutralOld as Json;
+      if (typeof v["datum"] === "string") return [{ kind: "datum", feature: v["datum"], label: v["datum"] }];
+      if (v["face"] && existing) return refMembers(services, existing, "/neutral/face");
+    }
+    return [{ kind: "origin", feature: "XY", label: "XY plane" }];
+  };
+  const initialNeutral = existing ? neutralItems() : [{ kind: "origin" as const, feature: "XY", label: "XY plane" }];
+  let part = existing?.part ?? partOf(services, ctx.selection.items());
+  const pidFor = (): string => existing?.id ?? previewId(v1Document(services)?.document ?? "{}", "draft");
+
+  const neutralOf = async (items: readonly SelectionItem[]): Promise<unknown> => {
+    if (existing && sameItems(items, initialNeutral)) return neutralOld;
+    const it = items[0];
+    if (it?.kind === "origin" && ORIGIN_PLANES[it.feature]) return it.feature;
+    if (it?.kind === "datum") return { datum: docFeatures(services).find((f) => f.id === it.feature || f.name === it.feature)?.id ?? it.feature };
+    if (it?.kind === "face") return { face: (await refs.get({ kind: "face", picks: picksOf(services, [it]), card: "one" }, existing ? { feature: existing.id } : { part })).ref };
+    throw Object.assign(new Error("Pick the neutral plane: an origin plane, a planar face or a datum plane."), { code: "BAD_PICK" });
+  };
+
+  const featureOf = async (values: PanelValues, id: string): Promise<{ json: Json; set: Json } | { errors: FieldError[] }> => {
+    const faces = values["faces"] as readonly SelectionItem[];
+    part = existing?.part ?? partOf(services, faces);
+    let facesRef: unknown;
+    try {
+      facesRef = (await refOf(refs, services, faces, "face", { part, existing, initial: initialFaces, field: "faces" })).ref;
+    } catch (e) {
+      return { errors: [refError(e, "faces")] };
+    }
+    let neutral: unknown;
+    try {
+      neutral = await neutralOf(values["neutral"] as readonly SelectionItem[]);
+    } catch (e) {
+      const code = (e as { code?: unknown }).code;
+      return { errors: [code === "BAD_PICK" ? { field: "neutral", code: "BAD_PICK", message: (e as Error).message } : refError(e, "neutral")] };
+    }
+    const angle = num(values, "angle");
+    if (angle === null) return { errors: [{ field: "angle", code: "REQUIRED", message: "Enter the draft angle." }] };
+    const json: Json = { type: "draft", id, name: id, faces: facesRef, neutral, angle };
+    if (values["flip"] === true) json["pull"] = "reverse";
+    const set: Json = {};
+    for (const k of ["faces", "neutral", "angle", "pull"]) {
+      const next = json[k];
+      if (next === undefined) {
+        if (j[k] !== undefined) set[k] = null;
+      } else if (JSON.stringify(next) !== JSON.stringify(j[k])) set[k] = next;
+    }
+    return { json, set };
+  };
+
+  const map: ErrorMapper = (e, refField) => {
+    if (e.code === "DRAFT_FACE_UNSUPPORTED" || e.code === "DRAFT_FAILED" || refField === "/faces") return { field: "faces" };
+    if (e.code === "INVALID_VALUE" || e.code === "INVALID_ANGLE") return { field: "angle" };
+    if (refField?.startsWith("/neutral") || e.code.startsWith("PLANE_")) return { field: "neutral" };
+    return null;
+  };
+
+  return {
+    title: existing ? `Edit ${existing.name ?? existing.id}` : "Draft",
+    icon: "draft",
+    description: "Tilts planar walls by an angle about a neutral plane, so a part leaves its mould or prints with sloped sides",
+    fields: [
+      { key: "faces", label: "Walls", kind: "selection", accepts: ["face"], min: 1, hint: "Planar walls square to the neutral plane (draft before rounding their corners)." },
+      { key: "neutral", label: "Neutral plane", kind: "selection", accepts: ["origin", "face", "datum"], min: 1, max: 1, fromSelection: false, hint: "The walls keep their outline here and taper away from it." },
+      { key: "angle", label: "Angle", kind: "number", quantity: "angle", min: 0, max: 45, minExclusive: true, step: 0.5, default: "3°" },
+      { key: "flip", label: "Flip pull direction", kind: "toggle", default: false, hint: "The part tapers inward along the pull direction." },
+    ],
+    initial: (existing
+      ? { faces: initialFaces, neutral: initialNeutral, angle: scalarText(j["angle"], "3"), flip: j["pull"] === "reverse" }
+      : { neutral: initialNeutral }) as NonNullable<PanelSpec["initial"]>,
+    apply: !existing,
+    preview: async (values, io): Promise<PreviewOutcome> => {
+      const v = v1Document(services);
+      if (!v) return { ok: false, errors: [{ code: "NOT_V1", message: "Draft needs an IR v1 model." }] };
+      const id = pidFor();
+      const f = await featureOf(values, id);
+      if (io.signal.aborted) return { ok: true };
+      if ("errors" in f) return { ok: false, errors: f.errors };
+      const text = existing ? withEditedFeature(v.document, v.rollback, existing.id, f.set) : withNewFeature(v.document, v.rollback, part, f.json).text;
+      return checkedPreview(services, text, id, io.signal, map, (_entry, report) => {
+        const rows: SummaryRow[] = [{ label: "Walls", value: String((values["faces"] as readonly SelectionItem[]).length), tone: "ok" }];
+        const vr = volumeRow(services, report);
+        if (vr) rows.push(vr);
+        return rows;
+      });
+    },
+    toOps: async (values): Promise<IrOp[]> => {
+      const f = await featureOf(values, pidFor());
+      if ("errors" in f) throw new Error(f.errors[0]?.message ?? "The inputs do not check");
+      if (existing) return Object.keys(f.set).length ? [{ op: "updateFeature", feature: existing.id, set: f.set }] : [];
+      const { id: _id, name: _name, ...feature } = f.json;
+      return [{ op: "addFeature", part, feature: feature as { type: string } & Json }];
+    },
+    label: () => (existing ? `Edit ${existing.name ?? existing.id}` : "Draft"),
+    handles: (values): PanelHandle[] => {
+      // An angle arc about the hinge: the line where the first wall meets the neutral plane.
+      const face = (values["faces"] as readonly SelectionItem[])[0];
+      const a = face ? faceAnchor(services, face) : null;
+      const plane = (values["neutral"] as readonly SelectionItem[])[0];
+      const pn = plane?.kind === "origin" ? ORIGIN_PLANES[plane.feature] : undefined;
+      if (!a || !pn) return [];
+      const p: Vec3 = values["flip"] === true ? [-pn[0], -pn[1], -pn[2]] : pn;
+      const n = a.axis;
+      const hinge: Vec3 = [n[1] * p[2] - n[2] * p[1], n[2] * p[0] - n[0] * p[2], n[0] * p[1] - n[1] * p[0]];
+      const l = Math.hypot(hinge[0], hinge[1], hinge[2]);
+      if (l < 1e-6) return [];
+      const d = a.origin[0] * p[0] + a.origin[1] * p[1] + a.origin[2] * p[2];
+      const base: Vec3 = [a.origin[0] - d * p[0], a.origin[1] - d * p[1], a.origin[2] - d * p[2]];
+      return [{ field: "angle", kind: "rotate", origin: base, axis: [hinge[0] / l, hinge[1] / l, hinge[2] / l], ref: p, min: 0.1, max: 44.9, step: 0.5, fineStep: 0.1, label: "Draft angle" }];
+    },
+  };
+}
+
+export const draftTool: ToolDefinition = {
+  id: "feature.draft",
+  label: "Draft",
+  group: "modify",
+  icon: "draft",
+  order: 40,
+  description: "Tilt planar walls by an angle about a neutral plane",
+  accepts: ["face"],
+  features: ["draft"],
+  enabledWhen: needsBody("Draft"),
+  activate: (ctx) => draftPanel(ctx, null),
+  fromFeature: (feature, ctx) => draftPanel(ctx, feature),
+};
+
 /** Feature types these tools make (for tests and the palette). */
-export const MODIFY_FEATURES = ["fillet", "chamfer", "shell"] as const;
+export const MODIFY_FEATURES = ["fillet", "chamfer", "shell", "draft"] as const;
 
 export function registerModifyTools(registry: ToolRegistry): () => void {
-  const offs = [filletTool, chamferTool, shellTool].map((t) => registry.register(t));
+  const offs = [filletTool, chamferTool, shellTool, draftTool].map((t) => registry.register(t));
   return () => {
     for (const off of offs) off();
   };

@@ -443,21 +443,20 @@ describe.skipIf(!hasWasm)("IR v1 command layer on Forge (forge-web WASM)", () =>
       expect(s.document).toBe(loaded);
     });
 
-    it("takes pure IR edits of documents Forge does not evaluate (the optional draft)", async () => {
+    it("takes pure IR edits and evaluated ops on a drafted document (Forge evaluates the optional draft; it refused the evaluated ops with UNSUPPORTED_FEATURE before)", async () => {
       const draft = { type: "draft", id: "d1", name: "taper", faces: { kind: "face", q: { op: "sides", feature: "e1" } }, neutral: "XY", angle: 2 };
       const s = await store(plate([draft]));
       const before = s.document;
       const t = await s.apply({ op: "renameFeature", feature: "d1", name: "taper2" });
       expect(t.changed).toBe(true);
       expect(t.ops.map((o) => o.op.op)).toEqual(["renameFeature"]);
-      expect(t.writeBackSkipped?.code).toBe("UNSUPPORTED_FEATURE");
+      expect(t.writeBackSkipped).toBeUndefined();
       const p = await s.apply({ op: "setParam", name: "t", value: "4*2" });
       expect(p.ops[0]!.result).toMatchObject({ value: "4 * 2" });
       expect(s.undo() && s.undo()).toBe(true);
       expect(s.document).toBe(before);
-      // The evaluated ops are refused with the engine's capability check.
-      const e = (await s.apply({ op: "captureRef", feature: "t_side", field: "/target" }).catch((x: unknown) => x)) as CommandEngineError;
-      expect(e.code).toBe("UNSUPPORTED_FEATURE");
+      const c = await s.apply({ op: "captureRef", feature: "t_side", field: "/target" });
+      expect(c.ops.map((o) => o.op.op)).toEqual(["captureRef"]);
     });
 
     it("refuses a document whose canonical form would be rejected ([W0-20])", async () => {

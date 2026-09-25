@@ -270,6 +270,35 @@ test("Shell: remove the front face, 2 mm walls; too thick is refused on the fiel
   await page.screenshot({ path: screenshotPath("feature-tools-shell.png", "AICAD_E2E_SHELL_SCREENSHOT") });
 });
 
+test("Draft: the top is refused on Walls; the front and right walls taper 4° about XY with an angle handle; double-click re-edits", async () => {
+  await load();
+  await startTool("feature.draft");
+  await expect(page.getByTestId("selection-count-neutral")).toHaveText("1 plane");
+  // The top is not square to the pull direction (+Z from the XY neutral plane).
+  await clickAt([-4, 4, T]);
+  await expect(page.getByTestId("field-error-faces")).toContainText("cannot be drafted", { timeout: 30_000 });
+  await clickAt([-4, 4, T]);
+  await clickAt(FRONT_FACE);
+  await clickAt([20, 4, T / 2]);
+  await expect(page.getByTestId("selection-count-faces")).toHaveText("2 faces");
+  await fill("angle", "4");
+  await ready();
+  await expect(page.getByTestId("handle-angle")).toBeVisible();
+  await expect(page.getByTestId("panel-summary")).toContainText("Walls");
+  await ok();
+  const f = (await features()).at(-1)!;
+  expect(f).toMatchObject({ type: "draft", neutral: "XY", angle: 4, faces: { kind: "face" } });
+  await expect(row("draft1")).toHaveAttribute("data-status", "ok");
+  await page.screenshot({ path: screenshotPath("feature-tools-draft.png", "AICAD_E2E_DRAFT_SCREENSHOT") });
+  await row("draft1").dblclick();
+  await expect(panel()).toContainText("Edit draft1");
+  await expect(page.getByTestId("selection-count-faces")).toHaveText("2 faces");
+  await fill("angle", "6");
+  await ok();
+  expect((await features()).at(-1)).toMatchObject({ type: "draft", angle: 6, faces: f["faces"] });
+  await expect(row("draft1")).toHaveAttribute("data-status", "ok");
+});
+
 test("Linear pattern: the pocket picked in the timeline, 3 along −X, 8 mm apart", async () => {
   await load();
   await startTool("pattern.linear");

@@ -364,6 +364,62 @@ describe("Shell", () => {
   });
 });
 
+const WALLS = ["e1/side:r.left", "e1/side:r.right", "e1/side:r.top", "e1/side:r.bottom"];
+
+/** The drafted slab: the 40 × 20 × 5 rectangle's frustum (A h − P k h²/2 + 4 k² h³/3) less the untouched pocket. */
+function draftedPlate(deg: number): number {
+  const k = Math.tan((deg * Math.PI) / 180);
+  return 800 * 5 - (120 * k * 25) / 2 + (4 * k * k * 125) / 3 - 32;
+}
+
+describe("Draft", () => {
+  it_("tapers the picked walls about the XY plane (closed-form volume), with an angle handle on the hinge; re-edit is one updateFeature", async () => {
+    const r = await rig();
+    const p = await openTool(r, "feature.draft", WALLS.map((n) => entity(r, "face", n)));
+    p.set("angle", "3");
+    await p.settled();
+    expect(p.getState().state).toBe("ready");
+    expect(p.getState().summary.find((x) => x.label === "Walls")?.value).toBe("4");
+    await (r.shell.panelHandles as PanelHandles).settled();
+    const h = r.handles.shown.find((x) => x.id === "angle");
+    expect(h).toMatchObject({ kind: "rotate", value: 3 });
+    expect(h!.origin[2]).toBeCloseTo(0);
+    await commit(r, p);
+    const f = features(r).at(-1)!;
+    expect(f).toMatchObject({ type: "draft", id: "draft1", neutral: "XY", angle: 3, faces: { kind: "face" } });
+    expect(f["pull"]).toBeUndefined();
+    const vol = reportOf(r).parts[0]!.bodies[0]!.volume;
+    expect(Math.abs(vol - draftedPlate(3))).toBeLessThan(1e-6);
+    const e = await r.shell.editFeature("draft1", "test");
+    expect(e).toMatchObject({ started: true, tool: "feature.draft" });
+    const q = r.shell.getState().panel!;
+    expect(q.getState().fields.find((x) => x.key === "faces")!.value as SelectionItem[]).toHaveLength(4);
+    q.set("angle", "5");
+    await commit(r, q);
+    expect(features(r).at(-1)).toMatchObject({ angle: 5, faces: f["faces"] });
+    expect(Math.abs(reportOf(r).parts[0]!.bodies[0]!.volume - draftedPlate(5))).toBeLessThan(1e-6);
+    expect(r.ir.getState().history.undoLabel).toBe("Edit draft1");
+  });
+
+  it_("a cap is refused on Walls (not square to the pull), a flipped pull widens the part, and 45° is out of range", async () => {
+    const r = await rig();
+    const p = await openTool(r, "feature.draft", [entity(r, "face", "e1/cap:start")]);
+    await p.settled();
+    const walls = p.getState().fields.find((x) => x.key === "faces")!;
+    expect(walls.remoteError?.code).toBe("DRAFT_FACE_UNSUPPORTED");
+    r.selection.set([]);
+    p.set("faces", WALLS.map((n) => entity(r, "face", n)));
+    p.set("flip", true);
+    p.set("angle", "45");
+    await p.settled();
+    expect(p.getState().state).toBe("invalid");
+    p.set("angle", "2");
+    await commit(r, p);
+    expect(features(r).at(-1)).toMatchObject({ type: "draft", pull: "reverse", angle: 2 });
+    expect(reportOf(r).parts[0]!.bodies[0]!.volume).toBeGreaterThan(800 * 5 - 32);
+  });
+});
+
 describe("Patterns", () => {
   it_("linear: the pocket three times along X — one addFeature with the feature seed", async () => {
     const r = await rig();
