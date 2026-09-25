@@ -1,0 +1,24 @@
+forge/crates/forge-blend/src/error.rs
+  s_59c0dd2af30db2::t_9c7d94774acd5a 418-420
+forge/crates/forge-blend/src/draft.rs
+  s_59c0dd2af30db2::t_85ed36f5197fae 337,346
+  s_59c0dd2af30db2::t_61c04a0c81e3f4 252-262,264-274
+  s_59c0dd2af30db2::t_552338510b3042 471-479
+  s_59c0dd2af30db2::t_5e6a7c34e545bc 349-350
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "98f8b01abef6efac223578dc995b3f08cb49087e",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
