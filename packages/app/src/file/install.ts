@@ -23,9 +23,16 @@
  * `protects: ["ir"]`). Until one of them is wired, this module registers a fail-closed guard (see
  * {@link failClosedSource}) so v1 edits are never lost silently, and the test "every document store in AppServices
  * is saved or guarded" fails.
+ *
+ * Wired (integration branch): main.tsx passes {@link documentStoreGuards}, a real {@link UnsavedContentSource} over
+ * `services.ir` ({@link irStoreContentSource}). This build still writes only the IR v0 document, so while the v1 store
+ * holds a document it loaded or edited, the window is dirty and saves refuse with FILE_UNSAVABLE_CONTENT; an empty v1
+ * store (the app's own pipeline is IR v0) never blocks a save. An `IrDocumentAdapter` replaces it when v1 becomes the
+ * document of record.
  */
 import type { AppCommandRegistry } from "../commands/commands";
 import type { AnyCommandSpec } from "../commands/registry";
+import type { IrDocState } from "../doc/v1/ir-doc-store";
 import type { AppServices } from "../services";
 import { DocStoreAdapter, type DocumentAdapter } from "./adapter";
 import { makeFileCommands } from "./commands";
@@ -85,6 +92,41 @@ export function failClosedSource(label: string, store: unknown): UnsavedContentS
       };
     },
   };
+}
+
+/**
+ * The unsaved-content source for the IR v1 store until its adapter lands: nothing writes the v1 document into a file,
+ * so it holds unsaved content whenever it holds a document that changed after `ir` was handed to the document layer
+ * (loaded or edited through the `ir.*` commands, a tool or the agent). Listeners hear only when that answer changes,
+ * never on the store's other notifications (`busy`, history).
+ */
+export function irStoreContentSource(
+  ir: { getState(): Pick<IrDocState, "document" | "revision">; subscribe(listener: () => void): () => void },
+  label: string = OTHER_DOCUMENT_STORES["ir"] ?? "IR v1 model",
+): UnsavedContentSource {
+  const base = ir.getState().revision;
+  const unsaved = (): boolean => {
+    const s = ir.getState();
+    return s.document !== null && s.revision !== base;
+  };
+  return {
+    label,
+    hasUnsavedContent: unsaved,
+    subscribe(listener) {
+      let last = unsaved();
+      return ir.subscribe(() => {
+        const now = unsaved();
+        if (now === last) return;
+        last = now;
+        listener();
+      });
+    },
+  };
+}
+
+/** The {@link installDocumentFiles} options that save or guard every document store in `services` besides `doc`. */
+export function documentStoreGuards(services: AppServices): Pick<InstallOptions, "protects" | "contentSources"> {
+  return services.ir ? { protects: ["ir"], contentSources: [irStoreContentSource(services.ir)] } : {};
 }
 
 export interface InstallOptions {

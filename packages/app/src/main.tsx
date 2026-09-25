@@ -1,7 +1,9 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { automationAllowed, bootstrap } from "./bootstrap";
-import { installDocumentFiles } from "./file/install";
+import { registerExportFormat } from "./file/export-formats";
+import { documentStoreGuards, installDocumentFiles } from "./file/install";
+import { stepExportFormat } from "./io/step-export";
 import type { AppInvocation } from "./commands/commands";
 import type { CommandSource } from "./commands/registry";
 import { installShell } from "./ui/shell/install";
@@ -19,7 +21,9 @@ const root = createRoot(rootEl);
 bootstrap().then(
   ({ services, commands }) => {
     // Documents and files (.partzero, recovery, windows): before the keyboard reads the command table.
-    installDocumentFiles({ services, commands });
+    installDocumentFiles({ services, commands }, documentStoreGuards(services));
+    // STEP in the export dialog: Forge's own writer through the desktop's Forge CLI (the web build says why not).
+    registerExportFormat(stepExportFormat(services.host));
     const isMac = services.host.platform === "darwin" || /Mac/.test(navigator.userAgent);
     document.documentElement.dataset["platform"] = services.host.platform;
     const shellValue = installShell(services, commands, { automation: automationAllowed(import.meta.env.DEV, services.ui.getState().appInfo) });

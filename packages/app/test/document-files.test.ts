@@ -9,7 +9,8 @@ import { COMMANDS } from "../src/commands/commands";
 import { DocStoreAdapter, documentName } from "../src/file/adapter";
 import { DocumentFiles, DocumentFilesError } from "../src/file/document-files";
 import type { FileHost } from "../src/file/host";
-import { documentFiles, failClosedSource, installDocumentFiles, replaceCommands, unprotectedDocumentStores } from "../src/file/install";
+import { IrDocStore } from "../src/doc/v1/ir-doc-store";
+import { documentFiles, documentStoreGuards, failClosedSource, installDocumentFiles, irStoreContentSource, replaceCommands, unprotectedDocumentStores } from "../src/file/install";
 import type { AppServices } from "../src/services";
 import { Store } from "../src/store";
 import { writeBinaryStl, type TriangleMesh } from "../src/file/mesh";
@@ -794,10 +795,40 @@ describe("content the adapter does not save (IR v1 until its adapter lands)", ()
     expect(unprotectedDocumentStores({ doc: 1, ir: 2 }, ["ir"])).toEqual([]);
   });
 
+  it("the IR v1 store's source: unsaved once it holds a document that changed, and quiet on its other notifications", () => {
+    class FakeIr extends Store<{ document: string | null; revision: number; busy: boolean }> {
+      constructor() {
+        super({ document: null, revision: 0, busy: false });
+      }
+      set(patch: Partial<{ document: string | null; revision: number; busy: boolean }>): void {
+        this.setState(patch);
+      }
+    }
+    const ir = new FakeIr();
+    const source = irStoreContentSource(ir);
+    expect(source.label).toBe("IR v1 model");
+    let heard = 0;
+    const off = source.subscribe(() => void heard++);
+    ir.set({ busy: true });
+    ir.set({ busy: false });
+    expect(source.hasUnsavedContent()).toBe(false);
+    expect(heard).toBe(0);
+    ir.set({ document: "{}", revision: 1 });
+    expect(source.hasUnsavedContent()).toBe(true);
+    expect(heard).toBe(1);
+    ir.set({ document: "{ }", revision: 2 });
+    expect(heard).toBe(1);
+    off();
+  });
+
   it("every document store in AppServices is saved or guarded (merge gate for Phase C's services.ir)", async () => {
     const h = await makeHarness({ source: BOX });
+    // bootstrap.ts gives every window an IR v1 store; main.tsx installs the document layer with documentStoreGuards.
+    const services = { ...h.services, ir: new IrDocStore({ engine: () => null }) } as AppServices;
+    expect(unprotectedDocumentStores(services, documentStoreGuards(services).protects ?? [])).toEqual([]);
+    expect(documentStoreGuards(services).contentSources?.map((c) => [c.label, c.hasUnsavedContent()])).toEqual([["IR v1 model", false]]);
     expect(
-      unprotectedDocumentStores(h.services, []),
+      unprotectedDocumentStores(h.services, documentStoreGuards(h.services).protects ?? []),
       "AppServices has an IR v1 store but main.tsx installs the document layer with DocStoreAdapter (IR v0 only). Wire an IrDocumentAdapter " +
         "(installDocumentFiles options: adapter + protects: ['ir']) or a real UnsavedContentSource (contentSources + protects), then pass the same " +
         "protects here. See packages/app/src/file/install.ts.",
