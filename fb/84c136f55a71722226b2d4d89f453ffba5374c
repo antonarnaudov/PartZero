@@ -1,0 +1,36 @@
+packages/app/src/measure/measure.ts
+  s_59c0dd2af30db2::t_0337e80ceeb6ef 4-5,52,214-222,227-230,267-268,270,272,274-280,288,290,292-293,373,379,389,406,408,423
+packages/app/test/fixtures/gen-forge-web-meshes.mjs
+  s_59c0dd2af30db2::t_0048a13689fac4 1-92
+packages/app/test/fixtures/forge-web-meshes.json
+  s_59c0dd2af30db2::t_11b5a481329023 1
+packages/app/src/measure/geometry.ts
+  s_59c0dd2af30db2::t_938d2f3acdadf4 2-3,5-33,37,41-49,52-53,56-59,61-63,85-233,246-250,254,260-263,286-297,304,325-328,333,347-348,350-351,353,356-359,369,372,381-423,427,431-434,436,438,440-441,462
+  s_59c0dd2af30db2::t_8df53a8954bd2d 360-363
+packages/app/test/viewport-commands.test.ts
+  s_59c0dd2af30db2::t_82d8521339736d 24,293-294
+packages/app/test/measure.test.ts
+  s_59c0dd2af30db2::t_56d7a20de8a457 147-202,207-285
+  s_59c0dd2af30db2::t_8df53a8954bd2d 203-206
+  s_59c0dd2af30db2::t_764455541e34c4 3,5,7,11-13,29,31-33,35-36,38,51,57,66
+packages/app/test/forge-web-fixture.ts
+  s_59c0dd2af30db2::t_0cb36b8a37e86e 1-59
+docs/fm/view-sel-followups.md
+  s_59c0dd2af30db2::t_a368a60f87764f 110-131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fb84c136f55a71722226b2d4d89f453ffba5374c",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
