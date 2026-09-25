@@ -55,7 +55,13 @@ export function runtimeSelectionPort(services: AppServices): SelectionPort {
     const ir = services.doc.getState().model?.ir;
     const items = rt.selection.getState().items.map((it) => toToolItem(it, ir));
     const docSel = services.doc.getState().selection;
-    if (docSel.featureId && !docSel.entity) {
+    const e = docSel.entity;
+    if (e && (e.face || e.edge) && !items.some((i) => (i.kind === "face" || i.kind === "edge") && i.key === (e.face ?? e.edge))) {
+      // An entity selected from elsewhere (the code view, a command): the tools see it too.
+      const kind = e.face ? "face" : "edge";
+      const key = (e.face ?? e.edge)!;
+      items.unshift({ kind, part: partOfBody(e.body), key, body: e.body, label: labelOf({ kind, body: e.body, key }, ir) });
+    } else if (docSel.featureId && !docSel.entity) {
       const loc = findFeature(services.doc.getState().model?.ir, docSel.featureId);
       if (loc) {
         const f = loc.feature;

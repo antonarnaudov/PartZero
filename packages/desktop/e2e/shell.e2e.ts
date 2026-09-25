@@ -205,7 +205,7 @@ test("the ribbon is built from the tool registry: groups, labels, shortcuts and 
   );
   await expect(ribbon.getByTestId("group-create")).toBeVisible();
   const groups = await ribbon.locator(".rb-group").evaluateAll((els) => els.map((e) => e.getAttribute("data-testid")));
-  expect(groups).toEqual(["group-sketch", "group-create", "group-inspect"]);
+  expect(groups).toEqual(["group-sketch", "group-create", "group-modify", "group-inspect", "group-construct"]);
 });
 
 test("inspect tools: Forge's exact body properties and the printer fit, in the property panel", async () => {
