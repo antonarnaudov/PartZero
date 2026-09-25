@@ -1,0 +1,75 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-one-more-vent-row",
+  "tier": "T4",
+  "title": "Edit: one more row of vents",
+  "prompt": "Add one more row of vent holes above the top row, with the same spacing.",
+  "context": "t4-one-more-vent-row.context.cad.ts",
+  "process": "fdm",
+  "tags": ["edit", "pattern", "vent"],
+  "requires": ["ir/1", "op/boolean", "op/pattern"],
+  "reference": "t4-one-more-vent-row.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "vents",
+      "description": "24 Ø6 vent holes (6 × 4)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [5.95, 6.05],
+      "eq": 24
+    },
+    {
+      "id": "new_row",
+      "description": "The new row sits 12 mm above the old top row (y = 18)",
+      "check": "hole_positions",
+      "diameter": [5.95, 6.05],
+      "points": [
+        [-30, -18, 0],
+        [-18, -18, 0],
+        [-6, -18, 0],
+        [6, -18, 0],
+        [18, -18, 0],
+        [30, -18, 0],
+        [-30, -6, 0],
+        [-18, -6, 0],
+        [-6, -6, 0],
+        [6, -6, 0],
+        [18, -6, 0],
+        [30, -6, 0],
+        [-30, 6, 0],
+        [-18, 6, 0],
+        [-6, 6, 0],
+        [6, 6, 0],
+        [18, 6, 0],
+        [30, 6, 0],
+        [-30, 18, 0],
+        [-18, 18, 0],
+        [-6, 18, 0],
+        [6, 18, 0],
+        [18, 18, 0],
+        [30, 18, 0]
+      ]
+    },
+    {
+      "id": "same_panel",
+      "description": "The panel is unchanged",
+      "check": "bbox_size",
+      "approx": "$context",
+      "abs": 0.01
+    },
+    {
+      "id": "volume",
+      "description": "Six more Ø6 holes: 12643 mm³",
+      "check": "volume",
+      "approx": 12642.83,
+      "rel": 0.002
+    },
+    { "id": "minimal", "description": "Only the pattern changed", "check": "changed_features", "eq": 1 }
+  ]
+}

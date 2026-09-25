@@ -27,7 +27,9 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "makerbench": "node dist/cli.js run --tasks ../../corpus/makerbench --solver reference --engine fixture --out ../../artifacts/evals/reference-fixture",
-    "fixtures": "node dist/cli.js fixtures --tasks ../../corpus/makerbench --engine oracle --out fixtures/makerbench"
+    "fixtures": "node dist/cli.js fixtures --tasks ../../corpus/makerbench --engine oracle --out fixtures/makerbench",
+    "makerbench:v1": "node dist/cli.js run --tasks ../../corpus/makerbench/v1 --solver reference --engine fixture --out ../../artifacts/evals/reference-fixture-v1",
+    "fixtures:v1": "node dist/cli.js fixtures --tasks ../../corpus/makerbench/v1 --engine oracle --out fixtures/makerbench-v1"
   },
   "dependencies": {
     "@aicad/cadscript": "workspace:*",

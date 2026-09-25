@@ -1,0 +1,43 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-drawer-pull-v1",
+  "tier": "T1",
+  "title": "Drawer pull (IR v1)",
+  "prompt": "Drawer pull I can print lying on its side: a U-shaped bar handle for 96 mm screw spacing. 106 mm long, 25 mm tall, 12 mm wide. The two legs are 10 mm wide (the screws go into the middle of each leg; I'll drill those myself), the grip bar is 8 mm thick, and round off the two top outer corners with an 8 mm radius.",
+  "process": "fdm",
+  "tags": ["handle", "drawer", "fillet"],
+  "requires": ["ir/1", "op/boolean", "op/fillet"],
+  "reference": "t1-drawer-pull-v1.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "One solid body", "check": "body_count", "eq": 1 },
+    {
+      "id": "size",
+      "description": "106 × 25 × 12 mm",
+      "check": "bbox_sorted",
+      "approx": [12, 25, 106],
+      "abs": 0.1
+    },
+    {
+      "id": "rounded_corners",
+      "description": "Two rounded corners (cylindrical faces)",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 2
+    },
+    {
+      "id": "area",
+      "description": "Surface area 5790.7 mm² ±0.3% (R8 corners, 10 mm legs, 8 mm grip)",
+      "check": "area",
+      "approx": 5790.65,
+      "rel": 0.003
+    },
+    { "id": "volume", "description": "13926 mm³ ±0.5%", "check": "volume", "approx": 13926.37, "rel": 0.005 }
+  ],
+  "notes": "IR v1 rewrite of t1-drawer-pull: a bar with the gap cut out and the two top corners filleted (v0 drew the arcs into the profile)."
+}

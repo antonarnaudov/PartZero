@@ -1,0 +1,64 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-nema17-cbore-plate",
+  "tier": "T1",
+  "title": "NEMA 17 motor plate with counterbores",
+  "prompt": "Motor plate for a NEMA 17 stepper: 60 × 60 × 6 mm, centred on the origin on Z = 0, vertical corners rounded R6. A Ø22.5 mm hole in the middle for the motor's centring boss, and four M3 socket-head holes on the motor's 31 mm square pattern, counterbored from the top to the ISO 4762 size. Make the four screw holes counterbored hole features with the M3 preset.",
+  "process": "fdm",
+  "tags": ["nema17", "stepper", "motor", "counterbore", "fillet"],
+  "requires": ["ir/1", "op/hole", "op/fillet"],
+  "reference": "t1-nema17-cbore-plate.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "size", "description": "60 × 60 × 6 mm", "check": "bbox_size", "approx": [60, 60, 6], "abs": 0.05 },
+    {
+      "id": "pilot",
+      "description": "Ø22.5 centring hole on the axis",
+      "check": "hole_positions",
+      "diameter": [22.45, 22.55],
+      "points": [[0, 0, 0]]
+    },
+    {
+      "id": "screws",
+      "description": "Four M3 counterbored holes (Ø3.4, ISO 4762 counterbore Ø6.5 × 3.4)",
+      "check": "hole_count",
+      "hole": {
+        "kind": "counterbore",
+        "size": "M3",
+        "d": [3.39, 3.41],
+        "cbore_d": [6.49, 6.51],
+        "cbore_depth": [3.39, 3.41],
+        "dir": "-Z"
+      },
+      "eq": 4
+    },
+    {
+      "id": "pattern",
+      "description": "On the 31 mm NEMA 17 square, opening in the top face",
+      "check": "hole_positions",
+      "diameter": [3.35, 3.45],
+      "entry": true,
+      "points": [[-15.5, -15.5, 6], [15.5, -15.5, 6], [15.5, 15.5, 6], [-15.5, 15.5, 6]]
+    },
+    {
+      "id": "round_faces",
+      "description": "13 cylindrical faces: 4 corners, the pilot, 4 holes and 4 counterbores",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 13
+    },
+    {
+      "id": "volume",
+      "description": "(3600 − (4 − π)·36)·6 − pilot − screws = 18483 mm³ ±0.3%",
+      "check": "volume",
+      "approx": 18483.22,
+      "rel": 0.003
+    }
+  ],
+  "notes": "Construction: screws reads the hole features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only that test."
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-constrained-l-bracket",
+  "tier": "T1",
+  "title": "Parametric L bracket profile",
+  "prompt": "L-shaped bracket seen from the side, driven by three parameters: leg_a (the floor leg length along X, 50 mm), leg_b (the upright height along Z, 35 mm) and thick (the material thickness, 5 mm). The outside corner is at the origin (back face on X = 0, bottom on Z = 0) and the bracket is 30 mm wide, centred on Y = 0. Draw the profile as a fully constrained sketch so changing any of the three parameters regenerates it correctly.",
+  "process": "fdm",
+  "tags": ["bracket", "constraints", "parametric", "sketch"],
+  "requires": ["ir/1", "sketch/constraints"],
+  "reference": "t1-constrained-l-bracket.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "size",
+      "description": "50 × 30 × 35 mm, outside corner at the origin",
+      "check": "bbox_max",
+      "approx": [50, 15, 35],
+      "abs": 0.05
+    },
+    {
+      "id": "origin",
+      "description": "Outside corner on the origin, centred on Y",
+      "check": "bbox_min",
+      "approx": [0, -15, 0],
+      "abs": 0.05
+    },
+    {
+      "id": "volume",
+      "description": "(50·5 + 30·5)·30 = 12000 mm³",
+      "check": "volume",
+      "approx": 12000,
+      "rel": 0.002
+    },
+    {
+      "id": "fully_constrained",
+      "description": "No under-constrained sketch warning",
+      "check": "warning_count",
+      "code": "SKETCH_UNDER_CONSTRAINED",
+      "eq": 0
+    },
+    {
+      "id": "leg_a_param",
+      "description": "leg_a = 60 lengthens the floor leg",
+      "check": "param",
+      "set": { "leg_a": 60 },
+      "test": { "check": "bbox_max", "axis": "x", "approx": 60, "abs": 0.05 }
+    },
+    {
+      "id": "leg_b_param",
+      "description": "leg_b = 45 raises the upright",
+      "check": "param",
+      "set": { "leg_b": 45 },
+      "test": { "check": "bbox_max", "axis": "z", "approx": 45, "abs": 0.05 }
+    },
+    {
+      "id": "thick_param",
+      "description": "leg_a = 60 and thick = 8: (60·8 + 27·8)·30 = 20880 mm³",
+      "check": "param",
+      "set": { "leg_a": 60, "thick": 8 },
+      "test": { "check": "volume", "approx": 20880, "rel": 0.002 }
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-counterbore-the-holes",
+  "tier": "T4",
+  "title": "Edit: counterbore the holes",
+  "prompt": "Counterbore the four holes from the top so M5 socket head cap screws sit flush (standard ISO 4762 counterbore); keep them hole features.",
+  "context": "t4-counterbore-the-holes.context.cad.ts",
+  "process": "fdm",
+  "tags": ["edit", "hole", "counterbore", "m5"],
+  "requires": ["ir/1", "op/hole"],
+  "reference": "t4-counterbore-the-holes.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "cbores",
+      "description": "Four M5 counterbored holes: Ø5.5 with an ISO 4762 counterbore Ø10 × 5.4",
+      "check": "hole_count",
+      "hole": {
+        "kind": "counterbore",
+        "size": "M5",
+        "d": [5.49, 5.51],
+        "cbore_d": [9.99, 10.01],
+        "cbore_depth": [5.39, 5.41],
+        "dir": "-Z"
+      },
+      "eq": 4
+    },
+    {
+      "id": "same_places",
+      "description": "Same positions along the centre line, counterbored from the top face",
+      "check": "hole_positions",
+      "diameter": [5.45, 5.55],
+      "entry": true,
+      "points": [[-45, 0, 12], [-15, 0, 12], [15, 0, 12], [45, 0, 12]]
+    },
+    {
+      "id": "same_bar",
+      "description": "The bar is unchanged",
+      "check": "bbox_size",
+      "approx": "$context",
+      "abs": 0.01
+    },
+    { "id": "minimal", "description": "Only the hole feature changed", "check": "changed_features", "eq": 1 },
+    {
+      "id": "volume",
+      "description": "42059.6 − 4·π·(5² − 2.75²)·5.4 = 40876 mm³",
+      "check": "volume",
+      "approx": 40876.32,
+      "rel": 0.002
+    }
+  ],
+  "notes": "Construction: cbores reads the hole features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only that test."
+}

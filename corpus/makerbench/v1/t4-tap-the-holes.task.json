@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-tap-the-holes",
+  "tier": "T4",
+  "title": "Edit: make the holes tapped M6",
+  "prompt": "Turn the two blind holes into M6 tapped holes, same depth, and mark them as threaded (hole features with a thread).",
+  "context": "t4-tap-the-holes.context.cad.ts",
+  "process": "fdm",
+  "tags": ["edit", "hole", "thread", "tapped", "m6"],
+  "requires": ["ir/1", "op/hole"],
+  "reference": "t4-tap-the-holes.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "tapped",
+      "description": "Two M6 threaded blind holes 12 mm deep (M6 × 1)",
+      "check": "hole_count",
+      "hole": { "size": "M6", "threaded": true, "through": false, "depth": [11.99, 12.01], "thread_pitch": [0.99, 1.01], "dir": "-Z" },
+      "eq": 2
+    },
+    {
+      "id": "tap_drill",
+      "description": "The Ø5.0 M6 tap drill, at the same places, still drilled from the top face",
+      "check": "hole_positions",
+      "diameter": [4.95, 5.05],
+      "entry": true,
+      "points": [[-15, 0, 20], [15, 0, 20]]
+    },
+    {
+      "id": "same_geometry",
+      "description": "The M6 tap drill equals the old Ø5 holes: the geometry is unchanged",
+      "check": "volume",
+      "approx": "$context",
+      "rel": 0.0005
+    },
+    { "id": "minimal", "description": "Only the hole feature changed", "check": "changed_features", "eq": 1 }
+  ],
+  "notes": "Construction: tapped reads the hole features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only that test."
+}

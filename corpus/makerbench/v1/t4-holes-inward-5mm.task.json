@@ -1,0 +1,51 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-holes-inward-5mm",
+  "tier": "T4",
+  "title": "Edit: move the holes 5 mm inward",
+  "prompt": "Move the four screw holes (hole features) 5 mm further in from the edges (in both directions).",
+  "context": "t4-holes-inward-5mm.context.cad.ts",
+  "process": "fdm",
+  "tags": ["edit", "hole", "move"],
+  "requires": ["ir/1", "op/hole"],
+  "reference": "t4-holes-inward-5mm.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "inward",
+      "description": "Holes now 15 mm from both edges",
+      "check": "hole_positions",
+      "diameter": [5.45, 5.55],
+      "relative_to": "edges",
+      "points": [[15, 15], [15, 15], [15, 15], [15, 15]]
+    },
+    {
+      "id": "count",
+      "description": "Still four M5 holes",
+      "check": "hole_count",
+      "hole": { "size": "M5" },
+      "eq": 4
+    },
+    {
+      "id": "same_plate",
+      "description": "The plate is unchanged",
+      "check": "bbox_size",
+      "approx": "$context",
+      "abs": 0.01
+    },
+    {
+      "id": "same_volume",
+      "description": "Moving holes keeps the volume",
+      "check": "volume",
+      "approx": "$context",
+      "rel": 0.001
+    },
+    { "id": "minimal", "description": "Only the hole feature changed", "check": "changed_features", "eq": 1 }
+  ],
+  "notes": "Construction: count reads the hole features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only that test."
+}

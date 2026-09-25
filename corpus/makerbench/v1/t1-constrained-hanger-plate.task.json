@@ -1,0 +1,75 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-constrained-hanger-plate",
+  "tier": "T1",
+  "title": "Parametric hanger plate",
+  "prompt": "Wall hanger plate, 4 mm thick on Z = 0, corner at the origin: a width × height rectangle (parameters width = 60 and height = 40) with two M4 clearance holes (4.5 mm) symmetric about the vertical centre line, spacing mm apart (parameter spacing = 40) and 10 mm below the top edge. Use a fully constrained sketch so the holes stay centred and 10 mm below the top when the plate is resized.",
+  "process": "fdm",
+  "tags": ["hanger", "plate", "constraints", "parametric", "sketch"],
+  "requires": ["ir/1", "sketch/constraints"],
+  "reference": "t1-constrained-hanger-plate.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "size",
+      "description": "60 × 40 × 4 mm from the origin",
+      "check": "bbox_size",
+      "approx": [60, 40, 4],
+      "abs": 0.05
+    },
+    {
+      "id": "holes",
+      "description": "Two Ø4.5 holes 40 mm apart, centred, 10 mm below the top",
+      "check": "hole_positions",
+      "diameter": [4.45, 4.55],
+      "points": [[10, 30, 0], [50, 30, 0]]
+    },
+    {
+      "id": "volume",
+      "description": "(2400 − 2·π·2.25²)·4 = 9472.8 mm³",
+      "check": "volume",
+      "approx": 9472.77,
+      "rel": 0.002
+    },
+    {
+      "id": "fully_constrained",
+      "description": "No under-constrained sketch warning",
+      "check": "warning_count",
+      "code": "SKETCH_UNDER_CONSTRAINED",
+      "eq": 0
+    },
+    {
+      "id": "resize",
+      "description": "width = 70, spacing = 30: holes at x = 20 and 50, still 10 mm below the top",
+      "check": "param",
+      "set": { "width": 70, "spacing": 30 },
+      "test": { "check": "hole_positions", "diameter": [4.45, 4.55], "points": [[20, 30, 0], [50, 30, 0]] }
+    },
+    {
+      "id": "taller",
+      "description": "height = 50 keeps the holes 10 mm below the (new) top",
+      "check": "param",
+      "set": { "height": 50 },
+      "test": { "check": "hole_positions", "diameter": [4.45, 4.55], "points": [[10, 40, 0], [50, 40, 0]] }
+    },
+    {
+      "id": "resize_volume",
+      "description": "width = 70, spacing = 30: (2800 − 2·π·2.25²)·4 = 11072.77 mm³, both holes still through",
+      "check": "param",
+      "set": { "width": 70, "spacing": 30 },
+      "test": { "check": "volume", "approx": 11072.77, "rel": 0.002 }
+    },
+    {
+      "id": "taller_volume",
+      "description": "height = 50: (3000 − 2·π·2.25²)·4 = 11872.77 mm³, both holes still through",
+      "check": "param",
+      "set": { "height": 50 },
+      "test": { "check": "volume", "approx": 11872.77, "rel": 0.002 }
+    }
+  ]
+}

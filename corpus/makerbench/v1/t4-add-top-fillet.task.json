@@ -1,0 +1,65 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-add-top-fillet",
+  "tier": "T4",
+  "title": "Edit: fillet the top edges",
+  "prompt": "Add a 2 mm fillet feature to the top outside edges of the block (not the pocket).",
+  "context": "t4-add-top-fillet.context.cad.ts",
+  "process": "fdm",
+  "tags": ["edit", "fillet", "add-feature"],
+  "requires": ["ir/1", "op/boolean", "op/fillet"],
+  "reference": "t4-add-top-fillet.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "fillet",
+      "description": "Four top outside edges rounded R2",
+      "check": "blend_edges",
+      "type": "fillet",
+      "size": [1.99, 2.01],
+      "eq": 4
+    },
+    {
+      "id": "round_faces",
+      "description": "Four cylindrical faces (the pocket stays square)",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 4
+    },
+    {
+      "id": "fillet_on_top",
+      "description": "The fillet rounds the top edges, not the bottom ones: the centroid sits at z = 9.2443 (9.3213 if the bottom were rounded)",
+      "check": "centroid",
+      "axis": "z",
+      "approx": 9.244342,
+      "abs": 0.01
+    },
+    {
+      "id": "same_size",
+      "description": "The block's size is unchanged",
+      "check": "bbox_size",
+      "approx": "$context",
+      "abs": 0.01
+    },
+    {
+      "id": "minimal",
+      "description": "One feature added, nothing else changed",
+      "check": "changed_features",
+      "eq": 1
+    },
+    { "id": "no_sketch_edits", "description": "No sketch changed", "check": "changed_curves", "eq": 0 },
+    {
+      "id": "volume",
+      "description": "42000 − (1 − π/4)·4·196 = 41831 mm³ ±0.2%",
+      "check": "volume",
+      "approx": 41831.39,
+      "rel": 0.002
+    }
+  ],
+  "notes": "The fillet runs around the top rim (four straight edges meeting at sharp vertical corners): (1 − π/4)·r²·(2·60 + 2·40 − corner overlaps). Construction: fillet reads the fillet features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only that test."
+}

@@ -1,0 +1,56 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-mirrored-bracket-arms",
+  "tier": "T1",
+  "title": "Bracket with mirrored arms",
+  "prompt": "U-shaped holder: an 80 × 30 × 5 mm base plate centred on the origin on Z = 0, with an upright arm at each end: 5 mm thick (flush with the plate's short ends), 20 mm wide centred on the plate, reaching 35 mm above Z = 0. Each arm has an M4 clearance hole through it, 25 mm above Z = 0 and centred across the arm. The two ends are mirror images.",
+  "process": "fdm",
+  "tags": ["bracket", "mirror", "holder", "m4"],
+  "requires": ["ir/1", "op/boolean", "op/pattern", "op/hole"],
+  "reference": "t1-mirrored-bracket-arms.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "One solid", "check": "body_count", "eq": 1 },
+    {
+      "id": "size",
+      "description": "80 × 30 × 35 mm, centred",
+      "check": "bbox_min",
+      "approx": [-40, -15, 0],
+      "abs": 0.05
+    },
+    {
+      "id": "size_max",
+      "description": "80 × 30 × 35 mm, centred",
+      "check": "bbox_max",
+      "approx": [40, 15, 35],
+      "abs": 0.05
+    },
+    {
+      "id": "holes",
+      "description": "An Ø4.5 hole through each arm, 25 mm up, on the centre line",
+      "check": "hole_positions",
+      "diameter": [4.45, 4.55],
+      "points": [[37.5, 0, 25], [-37.5, 0, 25]]
+    },
+    {
+      "id": "symmetric",
+      "description": "The two ends mirror each other: centroid on X = 0",
+      "check": "centroid",
+      "axis": "x",
+      "approx": 0,
+      "abs": 0.005
+    },
+    {
+      "id": "volume",
+      "description": "12000 + 2·3000 − 2·π·2.25²·5 = 17841 mm³ ±0.3%",
+      "check": "volume",
+      "approx": 17840.96,
+      "rel": 0.003
+    }
+  ]
+}

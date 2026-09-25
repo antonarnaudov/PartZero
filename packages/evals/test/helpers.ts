@@ -1,11 +1,14 @@
 import { fileURLToPath } from "node:url";
-import { compile } from "@aicad/cadscript";
-import type { BodyMetrics, EvalReport, FeatureReport, IrDocument } from "@aicad/ir-types";
+import { compile, v1 as cs } from "@aicad/cadscript";
+import type { BodyMetrics, EvalReport, FeatureReport, IrDocument, metricsV1, v1 as irv1 } from "@aicad/ir-types";
 import { FixtureEngine } from "../src/engine.js";
 import { loadTasks, type LoadedTask } from "../src/task.js";
 
 export const CORPUS_DIR = fileURLToPath(new URL("../../../corpus/makerbench/", import.meta.url));
 export const FIXTURES_DIR = fileURLToPath(new URL("../fixtures/makerbench/", import.meta.url));
+/** MakerBench v1: tasks that require `ir/1` (CadScript v1 references). */
+export const CORPUS_V1_DIR = fileURLToPath(new URL("../../../corpus/makerbench/v1/", import.meta.url));
+export const FIXTURES_V1_DIR = fileURLToPath(new URL("../fixtures/makerbench-v1/", import.meta.url));
 
 let cached: LoadedTask[] | undefined;
 /** The MakerBench corpus, loaded and validated once per test file. */
@@ -18,6 +21,53 @@ let fixtures: FixtureEngine | undefined;
 export function fixtureEngine(): FixtureEngine {
   fixtures ??= new FixtureEngine(FIXTURES_DIR);
   return fixtures;
+}
+
+let cachedV1: LoadedTask[] | undefined;
+/** The MakerBench v1 corpus, loaded and validated once per test file. */
+export function corpusTasksV1(): LoadedTask[] {
+  cachedV1 ??= loadTasks(CORPUS_V1_DIR);
+  return cachedV1;
+}
+
+let fixturesV1: FixtureEngine | undefined;
+/** Recorded `aicad.metrics/1` reports of the v1 corpus (references, contexts, mutants, param variants). */
+export function fixtureEngineV1(): FixtureEngine {
+  fixturesV1 ??= new FixtureEngine(FIXTURES_V1_DIR);
+  return fixturesV1;
+}
+
+export function compileV1Ok(source: string): irv1.IrDocument {
+  const r = cs.compile(source);
+  if (!r.ok || !r.ir) throw new Error(`does not compile: ${r.diagnostics.map((d) => `${d.code} ${d.message}`).join("; ")}`);
+  return r.ir;
+}
+
+/** A synthetic v1 body: an axis-aligned box by default. */
+export function bodyV1(p: Partial<metricsV1.BodyReport> & { min?: [number, number, number]; max?: [number, number, number] } = {}): metricsV1.BodyReport {
+  const b = body({ ...(p.min ? { min: p.min } : {}), ...(p.max ? { max: p.max } : {}) });
+  return { origin: { feature: "f1", member: "outline.bottom" }, shells: 1, ...b, ...Object.fromEntries(Object.entries(p).filter(([k]) => k !== "min" && k !== "max")) } as metricsV1.BodyReport;
+}
+
+export function featureV1(p: Partial<metricsV1.FeatureReport> & { type: string }): metricsV1.FeatureReport {
+  const id = p.feature_id ?? `f_${p.feature ?? p.type}`;
+  return { part: "part", feature: p.feature ?? p.type, feature_id: id, status: "ok", warnings: [], ...p };
+}
+
+export function reportV1(
+  features: metricsV1.FeatureReport[],
+  opts: { bodies?: metricsV1.BodyReport[]; params?: metricsV1.ParamReport[]; status?: "ok" | "error" } = {},
+): metricsV1.EvalReport {
+  const r: metricsV1.EvalReport = {
+    schema: "aicad.metrics/1",
+    engine: "test",
+    document: "doc",
+    status: opts.status ?? (features.every((f) => f.status === "ok") ? "ok" : "error"),
+    features,
+    params: opts.params ?? [],
+    parts: [{ part: "part", part_id: "p1", bodies: opts.bodies ?? [] }],
+  };
+  return r;
 }
 
 /** A synthetic body: an axis-aligned box by default. */

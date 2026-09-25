@@ -1,0 +1,31 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-gridfinity-cell-v1",
+  "tier": "T1",
+  "title": "Gridfinity-style baseplate cell (IR v1)",
+  "prompt": "A simplified single-cell Gridfinity-style baseplate: a 42 x 42 mm frame with 4 mm corner radius on the outside, a 36 x 36 mm opening with 1 mm corner radius, 5 mm tall. No chamfered profile, straight walls are fine.",
+  "process": "fdm",
+  "tags": ["gridfinity", "baseplate", "organizer"],
+  "requires": ["ir/1"],
+  "reference": "t1-gridfinity-cell-v1.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "One solid body", "check": "body_count", "eq": 1 },
+    { "id": "size", "description": "42 × 42 × 5 mm", "check": "bbox_sorted", "approx": [5, 42, 42], "abs": 0.1 },
+    { "id": "opening", "description": "One opening through the frame", "check": "inner_loops", "eq": 1 },
+    {
+      "id": "rounded_corners",
+      "description": "Eight rounded corners (4 outside R4, 4 inside R1)",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 8
+    },
+    { "id": "volume", "description": "2275.6 mm³ ±0.5%", "check": "volume", "approx": 2275.62, "rel": 0.005 }
+  ],
+  "notes": "IR v1 rewrite of t1-gridfinity-cell: two rect compound curves with corner radii instead of 16 lines and arcs."
+}

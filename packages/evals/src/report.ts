@@ -75,6 +75,16 @@ export function renderReport(result: SuiteResult): string {
   lines.push(row(["---", "---:", "---:"]));
   for (const [name, c] of Object.entries(s.checks)) lines.push(row([`\`${name}\``, `${c.passed}/${c.total}`, pct(c.total ? c.passed / c.total : 0)]));
   lines.push("");
+  if (s.scorability) {
+    lines.push("## Hidden tests by scorability");
+    lines.push("");
+    lines.push("`geometry`: measurable on any tool's STEP; `seam`: face/edge counts (seam conventions); `ir`: needs our IR or report.");
+    lines.push("");
+    lines.push(row(["Scorability", "Passed", "Rate"]));
+    lines.push(row(["---", "---:", "---:"]));
+    for (const [name, c] of Object.entries(s.scorability)) lines.push(row([name, `${c.passed}/${c.total}`, pct(c.total ? c.passed / c.total : 0)]));
+    lines.push("");
+  }
   const failures = result.tasks.filter((t) => !t.pass);
   lines.push("## Failures");
   lines.push("");
@@ -102,6 +112,14 @@ export function renderReport(result: SuiteResult): string {
     lines.push("## Skipped");
     lines.push("");
     for (const k of result.skipped) lines.push(`- ${k.id}: ${k.reason}`);
+    lines.push("");
+  }
+  if (result.engine_retries && result.engine_retries.length > 0) {
+    lines.push("## Engine runs retried");
+    lines.push("");
+    lines.push("The OS killed these `aicad` runs (SIGKILL, usually memory pressure) and they were run again; the scores above use the second run.");
+    lines.push("");
+    for (const r of result.engine_retries) lines.push(`- ${escapeCell(r)}`);
     lines.push("");
   }
   return lines.join("\n");

@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t5-pcb-standoff-base",
+  "tier": "T5",
+  "title": "Under-specified: PCB standoff base",
+  "prompt": "A base plate with standoffs to mount a small PCB like an Arduino Nano. Make the hole spacing adjustable.",
+  "process": "fdm",
+  "tags": ["pcb", "standoff", "electronics", "underspecified", "parametric"],
+  "requires": ["ir/1", "op/boolean", "op/hole"],
+  "reference": "t5-pcb-standoff-base.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "status_ok",
+      "description": "The model evaluates without feature or parameter errors",
+      "check": "status",
+      "eq": "ok"
+    },
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "Plate and standoffs are one part", "check": "body_count", "eq": 1 },
+    {
+      "id": "board_sized",
+      "description": "Sized for a small board: between 20 × 10 × 3 and 120 × 80 × 30 mm",
+      "check": "bbox_sorted",
+      "between": [[3, 30], [10, 80], [20, 120]]
+    },
+    {
+      "id": "screw_holes",
+      "description": "Four holes for M2–M3 screws (tap or clearance, Ø1.5–3.6)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [1.5, 3.6],
+      "gte": 4
+    },
+    {
+      "id": "adjustable",
+      "description": "Adjustable hole spacing: at least two length parameters",
+      "check": "param_count",
+      "type": "mm",
+      "gte": 2
+    }
+  ],
+  "clarify": {
+    "questions": [
+      "Which board exactly (hole pattern and hole size)?",
+      "How tall should the standoffs be?",
+      "Tapped holes for screws, heat-set inserts, or clearance holes?"
+    ],
+    "assumptions": "Arduino Nano-like 38 × 13.5 hole pattern, M2 tapped Ø6 × 5 standoffs on a 50 × 25.5 × 3 plate; the two spacings and the standoff height are parameters."
+  }
+}

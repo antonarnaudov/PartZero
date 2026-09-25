@@ -1,0 +1,50 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-cable-comb",
+  "tier": "T1",
+  "title": "Cable comb",
+  "prompt": "Cable comb for tidying a bundle: a 100 × 10 × 6 mm spine (corner at the origin, along X, lying on Z = 0) with 12 teeth sticking out along +Y from its long side: each tooth 3 mm wide, 20 mm long and as thick as the spine, the first flush with the spine's left end and one every 8.8 mm. Make the number of teeth a parameter called teeth.",
+  "process": "fdm",
+  "tags": ["cable", "comb", "organizer", "pattern", "parametric"],
+  "requires": ["ir/1", "op/boolean", "op/pattern"],
+  "reference": "t1-cable-comb.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "Spine and teeth are one solid", "check": "body_count", "eq": 1 },
+    { "id": "size", "description": "100 × 30 × 6 mm", "check": "bbox_size", "approx": [100, 30, 6], "abs": 0.05 },
+    {
+      "id": "placement",
+      "description": "Corner at the origin",
+      "check": "bbox_min",
+      "approx": [0, 0, 0],
+      "abs": 0.05
+    },
+    {
+      "id": "volume",
+      "description": "6000 + 12·3·20·6 = 10320 mm³ ±0.3%",
+      "check": "volume",
+      "approx": 10320,
+      "rel": 0.003
+    },
+    {
+      "id": "teeth_spacing",
+      "description": "Teeth every 8.8 mm from the left end: centroid x = 49.958",
+      "check": "centroid",
+      "axis": "x",
+      "approx": 49.9581,
+      "abs": 0.01
+    },
+    {
+      "id": "teeth_param",
+      "description": "teeth = 10 leaves ten teeth: 9600 mm³",
+      "check": "param",
+      "set": { "teeth": 10 },
+      "test": { "check": "volume", "approx": 9600, "rel": 0.002 }
+    }
+  ]
+}

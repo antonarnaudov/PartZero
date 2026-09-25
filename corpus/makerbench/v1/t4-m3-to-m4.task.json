@@ -1,0 +1,53 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-m3-to-m4",
+  "tier": "T4",
+  "title": "Edit: M4 instead of M3",
+  "prompt": "Use M4 screws instead of M3 for the four mounting holes; keep them counterbored hole features for socket heads, in the same places.",
+  "context": "t4-m3-to-m4.context.cad.ts",
+  "process": "fdm",
+  "tags": ["edit", "hole", "counterbore", "m4"],
+  "requires": ["ir/1", "op/hole"],
+  "reference": "t4-m3-to-m4.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "m4",
+      "description": "Four M4 ISO 4762 counterbored holes (Ø4.5, counterbore Ø8 × 4.4)",
+      "check": "hole_count",
+      "hole": {
+        "kind": "counterbore",
+        "size": "M4",
+        "d": [4.49, 4.51],
+        "cbore_d": [7.99, 8.01],
+        "cbore_depth": [4.39, 4.41],
+        "dir": "-Z"
+      },
+      "eq": 4
+    },
+    { "id": "no_m3", "description": "No M3 holes left", "check": "hole_count", "hole": { "size": "M3" }, "eq": 0 },
+    {
+      "id": "same_places",
+      "description": "The holes stay on the 70 × 40 grid, counterbored from the top face",
+      "check": "hole_positions",
+      "diameter": [4.4, 4.6],
+      "entry": true,
+      "points": [[-35, -20, 8], [35, -20, 8], [35, 20, 8], [-35, 20, 8]]
+    },
+    {
+      "id": "same_plate",
+      "description": "The plate is unchanged",
+      "check": "bbox_size",
+      "approx": "$context",
+      "abs": 0.01
+    },
+    { "id": "minimal", "description": "Only the hole feature changed", "check": "changed_features", "eq": 1 },
+    { "id": "volume", "description": "42086 mm³ ±0.3%", "check": "volume", "approx": 42086.31, "rel": 0.003 }
+  ],
+  "notes": "Construction: m4, no_m3 read the hole features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only those tests."
+}

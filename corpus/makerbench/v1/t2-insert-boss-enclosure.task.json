@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-insert-boss-enclosure",
+  "tier": "T2",
+  "title": "Enclosure base with heat-set insert bosses",
+  "prompt": "Enclosure base for a small electronics project: 80 × 60 mm outside, 30 mm tall, open at the top, with 2 mm walls and floor and the four vertical outside corners rounded to R5. Put an Ø8 mm screw boss 10 mm in from the outside walls at each corner, rising from the floor to 4 mm below the rim, each with a hole for an M3 heat-set insert (standard insert size). Keep width, depth, height and wall thickness as parameters named width, depth, height and wall. Make the insert holes hole features with the M3 insert preset.",
+  "process": "fdm",
+  "tags": ["enclosure", "shell", "fillet", "heat-set-insert", "boss", "parametric"],
+  "requires": ["ir/1", "op/boolean", "op/hole", "op/fillet", "op/shell"],
+  "reference": "t2-insert-boss-enclosure.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "One printable part", "check": "body_count", "eq": 1 },
+    {
+      "id": "size",
+      "description": "80 × 60 × 30 mm outside",
+      "check": "bbox_size",
+      "approx": [80, 60, 30],
+      "abs": 0.05
+    },
+    {
+      "id": "round_faces",
+      "description": "16 cylindrical faces: 4 outside and 4 inside R corners, 4 bosses, 4 insert holes",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 16
+    },
+    {
+      "id": "inserts",
+      "description": "Four M3 heat-set insert holes of the standard insert size (Ø4 × 6.7 mm), drilled down into the bosses",
+      "check": "hole_count",
+      "hole": { "kind": "insert", "size": "M3", "insert_d": [3.99, 4.01], "insert_depth": [6.69, 6.71], "dir": "-Z" },
+      "eq": 4
+    },
+    {
+      "id": "insert_positions",
+      "description": "The insert holes open at the top of the bosses (z = 26), 10 mm in from the outside walls",
+      "check": "hole_positions",
+      "diameter": [3.9, 4.1],
+      "entry": true,
+      "points": [[-30, -20, 26], [30, -20, 26], [30, 20, 26], [-30, 20, 26]]
+    },
+    {
+      "id": "volume",
+      "description": "Walls, floor, bosses minus insert holes: 28893 mm³ ±0.5%",
+      "check": "volume",
+      "approx": 28893.22,
+      "rel": 0.005
+    },
+    {
+      "id": "height_param",
+      "description": "The height parameter drives the part: height = 40 gives a 40 mm tall enclosure",
+      "check": "param",
+      "set": { "height": 40 },
+      "test": { "check": "bbox_size", "axis": "z", "approx": 40, "abs": 0.05 }
+    },
+    {
+      "id": "wall_param",
+      "description": "The wall parameter drives walls and floor: wall = 3 gives 39845 mm³",
+      "check": "param",
+      "set": { "wall": 3 },
+      "test": { "check": "volume", "approx": 39844.55, "rel": 0.002 }
+    }
+  ],
+  "notes": "Closed form: outer 80×60 with R5 corners (4778.54 mm²) × 30 = 143356.2; cavity 76×56 with R3 corners (4248.28 mm²) × 28 = 118951.7; bosses 4·π·4²·24 = 4825.5; insert holes 4·π·2²·6.7 = 336.8 → 28893.2 mm³. wall = 3: cavity 74×54 R2 × 27 = 107799.3, bosses 4·π·16·23 → 39844.5. Standard M3 insert: Ø4.0 × 6.7 (SPEC-v1 §6.5 HOLE_SIZES). Construction: inserts reads the hole features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only that test."
+}

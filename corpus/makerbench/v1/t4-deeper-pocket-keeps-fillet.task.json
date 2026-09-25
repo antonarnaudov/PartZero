@@ -1,0 +1,50 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t4-deeper-pocket-keeps-fillet",
+  "tier": "T4",
+  "title": "Edit: deeper pocket, fillet survives",
+  "prompt": "Make the pocket 5 mm deeper. Keep the rounded inside corners (the fillet feature).",
+  "context": "t4-deeper-pocket-keeps-fillet.context.cad.ts",
+  "process": "fdm",
+  "tags": ["edit", "pocket", "fillet", "reference-stability"],
+  "requires": ["ir/1", "op/boolean", "op/fillet"],
+  "reference": "t4-deeper-pocket-keeps-fillet.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    {
+      "id": "fillet_kept",
+      "description": "The pocket's four vertical corners are still rounded R5",
+      "check": "blend_edges",
+      "type": "fillet",
+      "size": [4.99, 5.01],
+      "eq": 4
+    },
+    {
+      "id": "refs_stable",
+      "description": "The fillet still rounds the same four edges as before the edit (same keys), resolved exactly",
+      "check": "ref_stability",
+      "eq": 0
+    },
+    {
+      "id": "same_block",
+      "description": "The block is unchanged outside",
+      "check": "bbox_size",
+      "approx": "$context",
+      "abs": 0.01
+    },
+    {
+      "id": "volume",
+      "description": "13 mm deep pocket with R5 corners: 75299 mm³",
+      "check": "volume",
+      "approx": 75298.98,
+      "rel": 0.002
+    },
+    { "id": "no_sketch_edits", "description": "No sketch changed", "check": "changed_curves", "eq": 0 }
+  ],
+  "notes": "The fillet selects the pocket's vertical side edges by query (pocket.sides().edges().parallel(Z)): deepening the pocket lengthens those edges but keeps their keys, so the reference stays exact. Construction: fillet_kept reads the fillet features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only that test."
+}

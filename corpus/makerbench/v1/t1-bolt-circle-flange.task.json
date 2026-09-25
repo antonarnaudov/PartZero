@@ -1,0 +1,98 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-bolt-circle-flange",
+  "tier": "T1",
+  "title": "Bolt-circle flange",
+  "prompt": "Round flange for a 25 mm pipe: Ø80 mm, 8 mm thick, a Ø25 mm bore through the centre, and six M6 bolt holes (close fit) evenly spaced on a Ø62 mm bolt circle with the first one on +X. Put a 1 mm chamfer on the top outside edge. Centre it on the origin, standing on Z = 0, and make the number of bolt holes a parameter called bolts. Make the bolt holes hole features with the M6 preset.",
+  "process": "fdm",
+  "tags": ["flange", "bolt-circle", "m6", "chamfer", "parametric"],
+  "requires": ["ir/1", "op/hole", "op/chamfer"],
+  "reference": "t1-bolt-circle-flange.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "size", "description": "Ø80 × 8 mm", "check": "bbox_size", "approx": [80, 80, 8], "abs": 0.05 },
+    {
+      "id": "bolt_holes",
+      "description": "Six M6 close-fit (Ø6.4) through holes",
+      "check": "hole_count",
+      "hole": { "size": "M6", "through": true, "d": [6.39, 6.41] },
+      "eq": 6
+    },
+    {
+      "id": "bolt_circle",
+      "description": "The bolt holes on a Ø62 circle, the first on +X",
+      "check": "hole_positions",
+      "diameter": [6.3, 6.5],
+      "points": [
+        [31.0, 0.0, 8],
+        [15.5, 26.846788, 8],
+        [-15.5, 26.846788, 8],
+        [-31.0, 0.0, 8],
+        [-15.5, -26.846788, 8],
+        [15.5, -26.846788, 8]
+      ]
+    },
+    {
+      "id": "bore",
+      "description": "One Ø25 bore on the axis",
+      "check": "hole_positions",
+      "diameter": [24.9, 25.1],
+      "points": [[0, 0, 0]]
+    },
+    {
+      "id": "chamfer",
+      "description": "One conical face: the top chamfer",
+      "check": "face_count",
+      "type": "cone",
+      "eq": 1
+    },
+    {
+      "id": "chamfer_on_top",
+      "description": "The chamfer is on the top edge: it lowers the centroid to z = 3.9868 (on the bottom edge it would be 4.0132)",
+      "check": "centroid",
+      "axis": "z",
+      "approx": 3.986803,
+      "abs": 0.005
+    },
+    {
+      "id": "volume",
+      "description": "π·40²·8 − chamfer ring − bore − 6 bolt holes = 34617 mm³ ±0.1% (the chamfer removes 125 mm³)",
+      "check": "volume",
+      "approx": 34616.62,
+      "rel": 0.001
+    },
+    {
+      "id": "bolts_param",
+      "description": "bolts = 8 puts eight holes on the circle",
+      "check": "param",
+      "set": { "bolts": 8 },
+      "test": {
+        "check": "hole_pattern",
+        "diameter": [6.3, 6.5],
+        "points": [
+          [31.0, 0.0],
+          [21.92031, 21.92031],
+          [0.0, 31.0],
+          [-21.92031, 21.92031],
+          [-31.0, 0.0],
+          [-21.92031, -21.92031],
+          [-0.0, -31.0],
+          [21.92031, -21.92031]
+        ]
+      }
+    },
+    {
+      "id": "bolts_param_volume",
+      "description": "bolts = 8 drills two more Ø6.4 holes: 34616.62 − 2·π·3.2²·8 = 34101.90 mm³ ±0.1%",
+      "check": "param",
+      "set": { "bolts": 8 },
+      "test": { "check": "volume", "approx": 34101.9, "rel": 0.001 }
+    }
+  ],
+  "notes": "π·40²·8 = 40212.39; 1 mm chamfer ring 2π·(40 − 1/3)·0.5 = 124.62; bore π·12.5²·8 = 3926.99; M6 close fit Ø6.4: 6·π·3.2²·8 = 1544.17 → 34616.6 mm³. Construction: bolt_holes reads the hole features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only that test (candidate --circle-cut-bolt-holes)."
+}

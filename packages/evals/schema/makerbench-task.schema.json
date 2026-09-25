@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://aicad.dev/schemas/makerbench-task-0.schema.json",
   "title": "MakerBench task (makerbench/0)",
-  "description": "One MakerBench task: a maker's natural-language request, a reference CadScript solution and declarative hidden tests evaluated on the candidate's aicad.metrics/0 report (and, for IR checks, on the candidate's compiled IR). The file is named <id>.task.json; paths are relative to it.",
+  "description": "One MakerBench task: a maker's natural-language request, a reference CadScript solution and declarative hidden tests evaluated on the candidate's metrics report (aicad.metrics/0, or aicad.metrics/1 for tasks that require ir/1) and, for IR checks, on the candidate's compiled IR. The file is named <id>.task.json; paths are relative to it.",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "tier", "title", "prompt", "process", "tags", "requires", "reference", "hidden_tests"],
@@ -35,7 +35,7 @@
       "uniqueItems": true
     },
     "requires": {
-      "description": "Minimum engine capabilities: an IR level (ir/0 = sketches + extrude/revolve as new bodies) plus optional feature/* and op/* tokens (e.g. feature/revolve, op/boolean, op/fillet, assembly). Runners skip tasks whose requirements they do not meet.",
+      "description": "Minimum engine capabilities: an IR level (ir/0 = sketches + extrude/revolve as new bodies; ir/1 = CadScript v1 compiled to aicad.ir/1 and evaluated with the IR v1 pipeline) plus optional feature/*, op/*, sketch/* and plane/* tokens (e.g. feature/revolve, op/boolean, op/hole, op/fillet, op/chamfer, op/shell, op/pattern, op/draft, sketch/constraints, plane/datum, assembly). Runners skip tasks whose requirements they do not meet.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
@@ -123,7 +123,7 @@
       "type": "object",
       "properties": {
         "type": {
-          "description": "face_count: plane|cylinder|cone|sphere|torus|bspline|other; edge_count: line|circle|ellipse|bspline|other; feature_count: sketch|extrude|revolve.",
+          "description": "face_count: plane|cylinder|cone|sphere|torus|bspline|other; edge_count: line|circle|ellipse|bspline|other; feature_count: sketch|extrude|revolve (v1 tasks also boolean|hole|fillet|chamfer|shell|draft|pattern|datum_plane|datum_axis|tag); blend_edges: fillet|chamfer; param_count: mm|deg|ratio|count|bool; ref_stability: a feature type.",
           "type": "string",
           "pattern": "^[a-z_]+$"
         },
@@ -141,9 +141,53 @@
           "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 3 }
         },
         "tol": { "description": "hole_pattern / hole_positions: distance tolerance, mm (default 0.05).", "type": "number", "exclusiveMinimum": 0 },
+        "entry": {
+          "description": "hole_positions (model points only): true = each point is where a distinct hole OPENS, compared in full 3D with the hole's entry point (a hole feature instance's centre P on its placement face, SPEC-v1 §6.5; a sketch circle's centre on its sketch plane), so a hole drilled from the wrong face fails; default false = the point may lie anywhere on the hole's axis.",
+          "type": "boolean"
+        },
+        "circles": {
+          "description": "hole_positions / hole_pattern on IR v1 models: \"holes\" (default) = hole feature instances and the circles sweeps leave as holes (a cut's outer circles, the inner circles of other extrudes), with their pattern copies; \"all\" = every full circle of the swept sketches (bosses, pins and beads too) and every hole instance, with their pattern copies.",
+          "enum": ["holes", "all"]
+        },
         "relative_to": {
           "description": "hole_positions: \"model\" (default) = points are absolute 3D model points on the hole axes; \"edges\" = points are [a, b] offsets of each hole from the nearest sides of the part's bounding box (all bodies, or the one chosen with body), measured across the hole. Edge offsets do not depend on placement or orientation; the hole axes must be parallel to X, Y or Z.",
           "enum": ["model", "edges"]
+        },
+        "hole": { "$ref": "#/$defs/holeFilter" },
+        "size": { "description": "blend_edges: fillet radius or chamfer distance range, mm (the feature's r or d, evaluated).", "$ref": "#/$defs/range" },
+        "name": { "description": "param_value: the parameter's name.", "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+        "set": {
+          "description": "param: parameters to set (literal values) before re-evaluating the candidate.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["number", "boolean"] }
+        },
+        "test": { "description": "param: the check run on the re-evaluated model (a hidden test without id and description).", "$ref": "#/$defs/nestedTest" },
+        "code": { "description": "warning_count: the warning code to count (required: an unfiltered count would include engine-internal notes that differ between engines).", "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+      }
+    },
+    "holeFilter": {
+      "description": "hole_count: which hole instances count (every given field must match; ranges inclusive, mm or degrees). Hole instances are the positions of hole features (SPEC-v1 §6.5) and their pattern copies.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["simple", "counterbore", "countersink", "insert"] },
+        "size": { "enum": ["M2", "M2.5", "M3", "M4", "M5", "M6", "M8"] },
+        "d": { "description": "Hole diameter range.", "$ref": "#/$defs/range" },
+        "through": { "description": "true: through holes only; false: blind and insert holes only.", "type": "boolean" },
+        "depth": { "description": "Blind depth range (to the shoulder).", "$ref": "#/$defs/range" },
+        "cbore_d": { "$ref": "#/$defs/range" },
+        "cbore_depth": { "$ref": "#/$defs/range" },
+        "csink_d": { "$ref": "#/$defs/range" },
+        "csink_angle": { "description": "Included countersink angle range, degrees.", "$ref": "#/$defs/range" },
+        "insert_d": { "$ref": "#/$defs/range" },
+        "insert_depth": { "$ref": "#/$defs/range" },
+        "threaded": { "description": "true: holes with a cosmetic thread only; false: without.", "type": "boolean" },
+        "thread_pitch": { "$ref": "#/$defs/range" },
+        "dir": {
+          "description": "The drilling direction (SPEC-v1 §6.5 d, into the material from the entry face): +Z = drilled upward from below, -Z = drilled downward from above.",
+          "enum": ["+X", "-X", "+Y", "-Y", "+Z", "-Z"]
         }
       }
     },
@@ -173,7 +217,11 @@
         {
           "if": { "properties": { "check": { "enum": ["hole_pattern", "hole_positions"] } } },
           "then": { "required": ["diameter", "points"] }
-        }
+        },
+        { "if": { "properties": { "check": { "const": "param" } } }, "then": { "required": ["set", "test"] } },
+        { "if": { "properties": { "check": { "const": "blend_edges" } } }, "then": { "required": ["type"] } },
+        { "if": { "properties": { "check": { "const": "param_value" } } }, "then": { "required": ["name"] } },
+        { "if": { "properties": { "check": { "const": "warning_count" } } }, "then": { "required": ["code"] } }
       ],
       "properties": {
         "id": { "description": "Unique within the task.", "type": "string", "pattern": "^[a-z0-9_]+$" },
@@ -183,7 +231,7 @@
           "minLength": 8
         },
         "check": {
-          "description": "What to measure. Model: status, valid, body_count, feature_count, region_count, inner_loops. Body (aggregate or with body): volume, area, centroid, bbox_size, bbox_sorted, bbox_min, bbox_max, face_count, edge_count. Quantifier: bodies_matching. IR: curve_count, hole_pattern, hole_positions, feature_names, changed_curves, changed_features. IR hole checks see full circles: circle curves and closed loops of co-circular arcs.",
+          "description": "What to measure. Model: status, valid, body_count, feature_count, region_count, inner_loops. Body (aggregate or with body): volume, area, centroid, bbox_size, bbox_sorted, bbox_min, bbox_max, face_count, edge_count. Quantifier: bodies_matching. IR: curve_count, hole_pattern, hole_positions, feature_names, changed_curves, changed_features. IR hole checks see full circles: circle curves and closed loops of co-circular arcs (on IR v1 models also every hole feature instance and pattern copy). IR v1 only: hole_count (hole instances, filtered by hole), blend_edges (edges rounded or bevelled, by type and size), shell_thickness, shell_open_faces, param_value (name), param_count (by unit), param (set parameters, re-evaluate, run test), ref_stability (reference fields not resolved exactly, and on T4 tasks every reference field of the context model whose resolved member keys changed or that disappeared), warning_count (by code), changed_params (T4: parameters added, removed or changed). Results tag every test with its scorability for the STEP-scorable subset (task.ts testScorability): geometry (volume, area, centroid, boxes, body count, validity, hole axes and entry points), seam (face and edge counts) or ir (needs our IR or report: curve counts, feature history, parameters, and the IR v1 checks that read how the model was built — hole_count presets, blend_edges sizes, shell_thickness).",
           "enum": [
             "status",
             "valid",
@@ -206,7 +254,17 @@
             "hole_positions",
             "feature_names",
             "changed_curves",
-            "changed_features"
+            "changed_features",
+            "hole_count",
+            "blend_edges",
+            "shell_thickness",
+            "shell_open_faces",
+            "param_value",
+            "param_count",
+            "param",
+            "ref_stability",
+            "warning_count",
+            "changed_params"
           ]
         },
         "where": {
@@ -215,6 +273,59 @@
           "minItems": 1,
           "items": { "$ref": "#/$defs/bodyCheck" }
         }
+      }
+    },
+    "nestedTest": {
+      "description": "The check inside a param test: a hidden test without id and description, measured on the re-evaluated model.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": ["check"],
+      "allOf": [
+        { "$ref": "#/$defs/comparators" },
+        { "$ref": "#/$defs/params" },
+        { "if": { "properties": { "check": { "const": "bodies_matching" } } }, "then": { "required": ["where"] } },
+        {
+          "if": { "properties": { "check": { "enum": ["hole_pattern", "hole_positions"] } } },
+          "then": { "required": ["diameter", "points"] }
+        },
+        { "if": { "properties": { "check": { "const": "blend_edges" } } }, "then": { "required": ["type"] } },
+        { "if": { "properties": { "check": { "const": "param_value" } } }, "then": { "required": ["name"] } },
+        { "if": { "properties": { "check": { "const": "warning_count" } } }, "then": { "required": ["code"] } }
+      ],
+      "properties": {
+        "check": {
+          "enum": [
+            "status",
+            "valid",
+            "body_count",
+            "feature_count",
+            "region_count",
+            "inner_loops",
+            "volume",
+            "area",
+            "centroid",
+            "bbox_size",
+            "bbox_sorted",
+            "bbox_min",
+            "bbox_max",
+            "face_count",
+            "edge_count",
+            "bodies_matching",
+            "curve_count",
+            "hole_pattern",
+            "hole_positions",
+            "feature_names",
+            "hole_count",
+            "blend_edges",
+            "shell_thickness",
+            "shell_open_faces",
+            "param_value",
+            "param_count",
+            "ref_stability",
+            "warning_count"
+          ]
+        },
+        "where": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/bodyCheck" } }
       }
     }
   }

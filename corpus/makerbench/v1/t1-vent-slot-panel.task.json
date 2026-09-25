@@ -1,0 +1,72 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-vent-slot-panel",
+  "tier": "T1",
+  "title": "Vent slot panel",
+  "prompt": "Vent panel, 120 × 80 × 2 mm, centred on the origin on Z = 0, with a column of 8 identical slots cut through it: each slot 40 mm long overall along X with round ends and 4 mm wide, centred on X = 0; the first slot's centre line 12 mm above the bottom edge (Y = −28) and one every 8 mm up from there. Make the number of slots and their spacing parameters called slots and pitch.",
+  "process": "fdm",
+  "tags": ["vent", "panel", "slots", "pattern", "parametric"],
+  "requires": ["ir/1", "op/boolean", "op/pattern"],
+  "reference": "t1-vent-slot-panel.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "One solid panel", "check": "body_count", "eq": 1 },
+    { "id": "size", "description": "120 × 80 × 2 mm", "check": "bbox_size", "approx": [120, 80, 2], "abs": 0.05 },
+    {
+      "id": "slot_ends",
+      "description": "Sixteen half-round slot ends (8 slots)",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 16
+    },
+    {
+      "id": "spacing",
+      "description": "Slots from Y = −28 every 8 mm (8 slots end at Y = 28): centroid on the panel centre",
+      "check": "centroid",
+      "approx": [0, 0, 1],
+      "abs": 0.01
+    },
+    {
+      "id": "pitch",
+      "description": "The spacing is the pitch parameter, 8 mm",
+      "check": "param_value",
+      "name": "pitch",
+      "approx": 8,
+      "abs": 1e-09
+    },
+    {
+      "id": "area",
+      "description": "Surface area 18848 mm² ±0.2% (forty-by-four slots)",
+      "check": "area",
+      "approx": 18848,
+      "rel": 0.002
+    },
+    {
+      "id": "volume",
+      "description": "19200 − 8·(36·4 + π·2²)·2 = 16695 mm³ ±0.3%",
+      "check": "volume",
+      "approx": 16694.94,
+      "rel": 0.003
+    },
+    {
+      "id": "slots_param",
+      "description": "slots = 6 leaves six slots: 17321 mm³",
+      "check": "param",
+      "set": { "slots": 6 },
+      "test": { "check": "volume", "approx": 17321.2, "rel": 0.002 }
+    },
+    {
+      "id": "slots_stay",
+      "description": "slots = 6: the column still starts at Y = −28 (centroid moves up to y = 0.868)",
+      "check": "param",
+      "set": { "slots": 6 },
+      "test": { "check": "centroid", "axis": "y", "approx": 0.8677, "abs": 0.01 }
+    }
+  ],
+  "notes": "A 40 mm slot with round ends has its end centres 36 mm apart: area 36·4 + π·2² = 156.57 mm²."
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t5-headphone-wall-hook",
+  "tier": "T5",
+  "title": "Under-specified: adjustable headphone wall hook",
+  "prompt": "Make me a wall hook for my headphones, with screw holes. I want to be able to adjust it.",
+  "process": "fdm",
+  "tags": ["hook", "wall", "headphones", "underspecified", "parametric"],
+  "requires": ["ir/1", "op/boolean", "op/hole"],
+  "reference": "t5-headphone-wall-hook.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "status_ok",
+      "description": "The model evaluates without feature or parameter errors",
+      "check": "status",
+      "eq": "ok"
+    },
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "One printable hook", "check": "body_count", "eq": 1 },
+    {
+      "id": "hook_sized",
+      "description": "Hook-sized: between 15 × 25 × 40 and 100 × 120 × 150 mm",
+      "check": "bbox_sorted",
+      "between": [[15, 100], [25, 120], [40, 150]]
+    },
+    {
+      "id": "screw_holes",
+      "description": "At least two screw holes of wood-screw size (Ø3–6)",
+      "check": "curve_count",
+      "kind": "circle",
+      "diameter": [3, 6],
+      "gte": 2
+    },
+    {
+      "id": "adjustable",
+      "description": "Adjustable: at least two length parameters (e.g. width, reach)",
+      "check": "param_count",
+      "type": "mm",
+      "gte": 2
+    }
+  ],
+  "clarify": {
+    "questions": [
+      "How wide is the headband, and how far should the hook stick out from the wall?",
+      "Which screws (size, countersunk or pan head)?",
+      "Should it be one hook or several?"
+    ],
+    "assumptions": "40 mm wide, 45 mm reach with a 15 mm lip, 5 mm thick, a 70 mm back plate with two countersunk M4 screw holes; width, reach, lip and thickness are parameters."
+  }
+}

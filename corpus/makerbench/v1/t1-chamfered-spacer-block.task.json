@@ -1,0 +1,50 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t1-chamfered-spacer-block",
+  "tier": "T1",
+  "title": "Chamfered spacer block",
+  "prompt": "Spacer block, 30 × 30 × 12 mm, centred on the origin on Z = 0, with an M6 clearance hole (normal fit) straight down the middle and a 1 mm chamfer on every edge of the top and bottom faces (the vertical edges stay sharp). Make the chamfers a chamfer feature.",
+  "process": "fdm",
+  "tags": ["spacer", "chamfer", "m6"],
+  "requires": ["ir/1", "op/chamfer", "op/hole"],
+  "reference": "t1-chamfered-spacer-block.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "size", "description": "30 × 30 × 12 mm", "check": "bbox_size", "approx": [30, 30, 12], "abs": 0.05 },
+    {
+      "id": "chamfers",
+      "description": "Eight 1 mm chamfers: the four top and four bottom edges",
+      "check": "blend_edges",
+      "type": "chamfer",
+      "size": [0.99, 1.01],
+      "eq": 8
+    },
+    {
+      "id": "faces",
+      "description": "14 flat faces: 6 sides and 8 bevels",
+      "check": "face_count",
+      "type": "plane",
+      "eq": 14
+    },
+    {
+      "id": "hole",
+      "description": "An Ø6.6 hole on the axis",
+      "check": "hole_positions",
+      "diameter": [6.55, 6.65],
+      "points": [[0, 0, 0]]
+    },
+    {
+      "id": "volume",
+      "description": "10800 − 8 chamfers − hole = 10272 mm³ ±0.3%",
+      "check": "volume",
+      "approx": 10272.12,
+      "rel": 0.003
+    }
+  ],
+  "notes": "8 edge chamfers of 0.5 mm² over 30 mm, less the mitred corner overlaps, = 117.33; the M6 normal clearance hole Ø6.6 removes π·3.3²·12 = 410.54. Construction: chamfers reads the chamfer features the prompt asks for (no geometry equivalent in the report), so a correct part built otherwise fails only that test (candidate --intersected-chamfers)."
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t2-jar-with-lid-v1",
+  "tier": "T2",
+  "title": "Jar with press-fit lid (IR v1)",
+  "prompt": "Small round jar with a press-fit lid, printed side by side, each as a single solid. Jar: 50 mm outside diameter, 40 mm tall, 2 mm walls and a 2 mm floor. Lid: a 50 mm diameter, 2 mm thick disc with a 5 mm tall plug ring on one side that fits inside the jar: 45.6 mm outside diameter (0.2 mm clearance) and 1.5 mm wall; print it plug side up. Jar centred on the origin, lid centred 60 mm along +X, both standing on Z = 0.",
+  "process": "fdm",
+  "tags": ["jar", "lid", "container", "shell", "multi-part"],
+  "requires": ["ir/1", "op/boolean", "op/shell", "multi-part"],
+  "reference": "t2-jar-with-lid-v1.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "bodies", "description": "Two solids: jar and lid", "check": "body_count", "eq": 2 },
+    {
+      "id": "layout",
+      "description": "Side by side: 110 × 50 × 40 mm",
+      "check": "bbox_size",
+      "approx": [110, 50, 40],
+      "abs": 0.2
+    },
+    {
+      "id": "jar",
+      "description": "The jar: Ø50 × 40 centred on the origin",
+      "check": "bodies_matching",
+      "where": [
+        { "check": "bbox_sorted", "approx": [40, 50, 50], "abs": 0.1 },
+        { "check": "centroid", "axis": "x", "approx": 0, "abs": 0.1 },
+        { "check": "volume", "approx": 15387.52, "rel": 0.005 }
+      ],
+      "eq": 1
+    },
+    {
+      "id": "lid",
+      "description": "The lid: Ø50, 7 mm with its plug, centred at x = 60",
+      "check": "bodies_matching",
+      "where": [
+        { "check": "bbox_sorted", "approx": [7, 50, 50], "abs": 0.1 },
+        { "check": "centroid", "axis": "x", "approx": 60, "abs": 0.1 },
+        { "check": "volume", "approx": 4966.07, "rel": 0.005 }
+      ],
+      "eq": 1
+    },
+    {
+      "id": "round_faces",
+      "description": "Five cylindrical faces: jar outside and inside, lid rim, plug outside and inside",
+      "check": "face_count",
+      "type": "cylinder",
+      "eq": 5
+    },
+    { "id": "volume", "description": "20354 mm³ ±0.5%", "check": "volume", "approx": 20353.59, "rel": 0.005 }
+  ],
+  "notes": "IR v1 rewrite of t2-jar-with-lid: the jar is a shelled cylinder and the plug ring is joined to the lid (v0 needed revolved profiles)."
+}

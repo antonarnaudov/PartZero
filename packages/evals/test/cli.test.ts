@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -52,6 +52,31 @@ describe("aicad-evals", () => {
     const r = await cli("run", "--tasks", CORPUS_DIR, "--engine", "forge", "--forge-bin", join(out, "nope"), "--out", join(out, "x"));
     expect(r.code).toBe(2);
     expect(r.stderr).toMatch(/engine forge is not available: Forge CLI not found/);
+  });
+
+  it.skipIf(process.platform === "win32")("run: an aicad run the OS killed and ran again fails the run unless --allow-retry, and is listed", async () => {
+    // A fake aicad that is SIGKILLed on its first run of each document, then prints a report.
+    const bin = join(out, "aicad-killed-once");
+    writeFileSync(
+      bin,
+      `#!/usr/bin/env node
+const fs = require("node:fs");
+const marker = process.argv[3] + ".killed";
+if (!fs.existsSync(marker)) { fs.writeFileSync(marker, ""); process.kill(process.pid, "SIGKILL"); }
+process.stdout.write(JSON.stringify({ schema: "aicad.metrics/0", engine: "fake", document: "d", status: "ok", features: [] }));
+`,
+    );
+    chmodSync(bin, 0o755);
+    const args = (dest: string) => ["run", "--tasks", CORPUS_DIR, "--engine", "forge", "--forge-bin", bin, "--only", "t1-m3-washer", "--out", dest];
+    const failing = await cli(...args(join(out, "retried")));
+    expect(failing.code).toBe(1);
+    expect(failing.stderr).toMatch(/killed by the OS \(SIGKILL\) and run again:\n {2}t1-m3-washer: SIGKILL/);
+    const results = JSON.parse(readFileSync(join(out, "retried", "results.json"), "utf8")) as SuiteResult;
+    expect(results.engine_retries).toEqual(["t1-m3-washer: SIGKILL"]);
+    expect(readFileSync(join(out, "retried", "report.md"), "utf8")).toContain("## Engine runs retried");
+    const allowed = await cli(...args(join(out, "allowed")), "--allow-retry");
+    expect(allowed.code).toBe(0);
+    expect(allowed.stderr).toMatch(/allowed \(--allow-retry\)/);
   });
 
   it("run: skips tasks that need capabilities the engine lacks", async () => {

@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../packages/evals/schema/makerbench-task.schema.json",
+  "id": "t5-desk-cable-grommet",
+  "tier": "T5",
+  "title": "Under-specified: parametric desk grommet",
+  "prompt": "A cable grommet for the hole in my desk, the usual size. Parametric please.",
+  "process": "fdm",
+  "tags": ["grommet", "desk", "cable", "underspecified", "parametric"],
+  "requires": ["ir/1", "op/boolean"],
+  "reference": "t5-desk-cable-grommet.cad.ts",
+  "hidden_tests": [
+    {
+      "id": "status_ok",
+      "description": "The model evaluates without feature or parameter errors",
+      "check": "status",
+      "eq": "ok"
+    },
+    {
+      "id": "valid",
+      "description": "Evaluates cleanly and every body is a valid closed solid",
+      "check": "valid",
+      "eq": true
+    },
+    { "id": "one_body", "description": "One printable part", "check": "body_count", "eq": 1 },
+    {
+      "id": "grommet_sized",
+      "description": "Common desk-hole sizes: Ø50–90 with the flange, 10–45 mm tall",
+      "check": "bbox_sorted",
+      "between": [[10, 45], [50, 90], [50, 90]]
+    },
+    { "id": "round", "description": "Round sleeve and bore", "check": "face_count", "type": "cylinder", "gte": 2 },
+    {
+      "id": "parametric",
+      "description": "At least two length parameters (e.g. hole diameter, desk thickness)",
+      "check": "param_count",
+      "type": "mm",
+      "gte": 2
+    }
+  ],
+  "clarify": {
+    "questions": [
+      "What diameter is the hole in the desk (common: 60 or 80 mm)?",
+      "How thick is the desk top?",
+      "Do you want a cap with a cable slot?"
+    ],
+    "assumptions": "A 60 mm desk hole and an 18 mm desk top: Ø59.4 × 18 sleeve, Ø70 × 2 flange, Ø49.4 bore, no cap; hole diameter, desk thickness, flange overhang and wall are parameters."
+  }
+}
