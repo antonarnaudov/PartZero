@@ -8,6 +8,8 @@ import type {
   AcceptRefCandidateResult,
   AcceptRefProposalResult,
   CaptureRefResult,
+  RefForRequest,
+  RefForResult,
   EditResult,
   EvaluateOptions,
   EvaluateResult,
@@ -222,6 +224,23 @@ export function upgradeFeature(ir: IrInput, featureId: string, to?: number): Edi
 export function captureRef(ir: IrInput, featureId: string, field: string): EditResult<CaptureRefResult> {
   assertReady();
   return raw.captureRef(irText(ir), featureId, field) as EditResult<CaptureRefResult>;
+}
+
+/**
+ * `refFor` (FULL-MODELING-PLAN §2.2 "Queries"): a Ref to entities picked in a view (their render
+ * names or report keys, the point where they were picked; bodies by origin), **verified** to
+ * resolve to exactly them in the scope of a feature inserted into `part` (id or name) after
+ * `after` (a feature id or name of that part; `null`: at the end of the part). The query is
+ * synthesized by Forge (named sources, `between`, `edge_at`, `extreme` narrowing) and the Ref
+ * carries a fresh capture. `kind` converts: an `edge` Ref from picked faces takes their boundary
+ * edges; a `body` Ref from picked faces or edges takes their owner body. Nothing is written.
+ * Throws a {@link ForgeError}: `COMMAND_PICK_NOT_FOUND`, `COMMAND_PICK_AMBIGUOUS`,
+ * `COMMAND_REF_NO_QUERY`, `COMMAND_REF_NOT_EXACT`, `COMMAND_UNKNOWN_PART`,
+ * `COMMAND_UNKNOWN_FEATURE` or `COMMAND_INVALID_ARGUMENT`, with `details` (`pick`: the index).
+ */
+export function refFor(ir: IrInput, part: string, after: string | null, request: RefForRequest): RefForResult {
+  assertReady();
+  return raw.refFor(irText(ir), part, after ?? undefined, JSON.stringify(request)) as RefForResult;
 }
 
 /** `acceptRefProposal` (SPEC-v1 §5.8–§5.9): apply the reference's `proposal` (query and fresh capture). */

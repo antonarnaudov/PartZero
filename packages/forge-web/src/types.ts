@@ -235,6 +235,35 @@ export interface CaptureRefResult {
   members: RefMember[];
 }
 
+/** One picked entity for `refFor`. */
+export interface RefPick {
+  kind: "face" | "edge" | "vertex" | "body";
+  /** Its provenance name as the render mesh has it (`e1/edge:{e1/cap:end|e1/side:r.top}`, `#k` for split pieces). */
+  name?: string;
+  /** Its provenance key as the report's members have it. */
+  key?: string;
+  /** Where it was picked (mm): tells apart entities that share a name; locates a vertex. */
+  point?: [number, number, number];
+  /** Its body's origin (the report's `parts[].bodies[].origin`): required for a body pick. */
+  body?: { feature: string; member: string; instance?: number[] };
+}
+
+/** What `refFor` builds a Ref for. */
+export interface RefForRequest {
+  /** The Ref's kind (`edge` from picked faces: their boundary edges; `body` from faces/edges: their owner). */
+  kind: "face" | "edge" | "vertex" | "body";
+  picks: RefPick[];
+  /** Declared cardinality to write (default: the field's). */
+  card?: "one" | "some" | "any" | number;
+}
+
+export interface RefForResult {
+  /** The Ref: synthesized query and fresh capture. */
+  ref: IrRef;
+  /** What it resolves to, in canonical order. */
+  members: Array<{ key: string; name: string; probe: RefMember["probe"] }>;
+}
+
 export interface AcceptRefResult {
   feature: string;
   field: string;

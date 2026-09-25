@@ -26,6 +26,7 @@ export {
   init,
   migrate,
   params,
+  refFor,
   renameCurve,
   renameFeature,
   report,
