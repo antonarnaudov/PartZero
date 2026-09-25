@@ -144,6 +144,9 @@ export const PLAYBOOK_V1: Readonly<Record<string, string>> = {
   MEASURE_FORWARD: "Measured parameters arrive with IR v1.1: use a param() value and a driving dimension instead.",
   // ── Range checks (R on literals, E on expressions) ──
   INVALID_DISTANCE: 'Distances are positive lengths (> 1e-6 mm); to go the other way use direction: "reverse", not a negative distance.',
+  EXTRUDE_EXTENT_CONFLICT: 'An extrude takes exactly one of distance, throughAll and upTo; throughAll cuts (op "cut" or "intersect"); upTo goes one way (not direction "symmetric").',
+  EXTRUDE_UP_TO_NOT_PARALLEL: "upTo needs a plane parallel to the sketch plane (a planar face, a datum plane, XY/XZ/YZ): pick a parallel one, or give a distance instead.",
+  EXTRUDE_UP_TO_BEHIND: 'The upTo plane is behind the sketch (or on it) along the extrude direction: set direction: "reverse", or pick a plane in front of the sketch.',
   INVALID_ANGLE: "Angles are degrees with 0 < angle ≤ 360 (360 = full turn).",
   INVALID_AXIS: "The axis needs a finite origin and a non-zero direction in sketch [u, v] coordinates, e.g. { origin: [0, 0], direction: [0, 1] }.",
   INVALID_PLANE: "frame() needs non-zero, perpendicular normal and xDir (dot product 0), e.g. normal [0, 0, 1] with xDir [1, 0, 0].",
@@ -1712,6 +1715,26 @@ function computeHint(code: string, ctx: V1HintContext, d: Details | undefined): 
       const f = str(d, "feature");
       if (!f) return undefined;
       return `${f.startsWith("/") ? `The feature at ${fieldText(f)}` : ident(featureName(ctx, f))} has no targets: ${PLAYBOOK_V1["BOOLEAN_TARGETS_REQUIRED"]}`;
+    }
+    // Extrude extents (amendment set F).
+    case "EXTRUDE_EXTENT_CONFLICT": {
+      const fields = list(d, "fields").map(String);
+      if (fields.length === 0) return undefined;
+      const f = fname(ctx);
+      return `${f ? `${ident(f)}: ` : ""}${fields.join(" and ")} conflict. ${PLAYBOOK_V1[code]}`;
+    }
+    case "EXTRUDE_UP_TO_NOT_PARALLEL": {
+      const angle = numberOf(d, "angle");
+      if (angle === undefined) return undefined;
+      const f = fname(ctx);
+      return `The upTo plane${f ? ` of ${ident(f)}` : ""} is at ${num(angle)}° to its sketch plane; it must be parallel. Pick a face or datum plane parallel to the sketch, or give a distance instead.`;
+    }
+    case "EXTRUDE_UP_TO_BEHIND": {
+      const distance = numberOf(d, "distance");
+      if (distance === undefined) return undefined;
+      const f = fname(ctx);
+      const where = Math.abs(distance) < 1e-6 ? "lies on its sketch plane" : `is ${num(Math.abs(distance))} mm behind its sketch plane along the extrude direction`;
+      return `The upTo plane${f ? ` of ${ident(f)}` : ""} ${where}. Set direction: "reverse" to extrude toward it, or pick a plane in front of the sketch.`;
     }
     // Holes.
     case "HOLE_POINT_OFF_FACE":

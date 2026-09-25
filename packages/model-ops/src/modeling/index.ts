@@ -8,6 +8,7 @@ import { datumAxisModelingTool, datumPlaneModelingTool } from "./datum.js";
 import { extrudeModelingTool } from "./extrude.js";
 import { holeModelingTool } from "./hole.js";
 import { pushPullModelingTool } from "./push-pull.js";
+import { moveModelingTool } from "./move.js";
 import { revolveModelingTool } from "./revolve.js";
 import type { ModelingContext, ModelingPlan, ModelingTool } from "./tool.js";
 
@@ -19,6 +20,7 @@ export * from "./hole.js";
 export * from "./keys.js";
 export * from "./probe.js";
 export * from "./push-pull.js";
+export * from "./move.js";
 export * from "./revolve.js";
 export * from "./tool.js";
 
@@ -29,6 +31,7 @@ export const MODELING_TOOLS: readonly ModelingTool<any>[] = [
   holeModelingTool,
   booleanModelingTool,
   pushPullModelingTool,
+  moveModelingTool,
   datumPlaneModelingTool,
   datumAxisModelingTool,
 ];

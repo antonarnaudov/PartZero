@@ -53,6 +53,7 @@ describe("the op tools", () => {
       "get_feature",
       "get_model",
       "hole",
+      "move_bodies",
       "move_feature",
       "param_uses",
       "push_pull",

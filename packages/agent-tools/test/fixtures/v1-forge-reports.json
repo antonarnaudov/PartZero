@@ -19316,6 +19316,618 @@
      }
     ]
    }
+  },
+  {
+   "label": "forge:extrude_up_to_not_parallel",
+   "target": "EXTRUDE_UP_TO_NOT_PARALLEL",
+   "ir_sha256": "bf6584573be349e34f5ecc89f83ea0583ef152c27e8ff6ed6a1695ab739bf53f",
+   "ir": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p_p",
+      "name": "p",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "f_s",
+        "name": "s",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "o",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "f_e",
+        "name": "e",
+        "sketch": "f_s",
+        "distance": 5
+       },
+       {
+        "type": "sketch",
+        "id": "f_s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "circle",
+          "id": "c",
+          "center": [
+           0,
+           0
+          ],
+          "radius": 2
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "f_up",
+        "name": "up",
+        "sketch": "f_s2",
+        "extent": {
+         "up_to": "XZ"
+        },
+        "op": "join",
+        "targets": {
+         "kind": "body",
+         "q": {
+          "op": "body",
+          "feature": "f_e"
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "extrude_up_to_not_parallel",
+    "status": "error",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 400,
+        "loops": 1,
+        "outer_curves": [
+         "o.bottom",
+         "o.left",
+         "o.right",
+         "o.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "o.bottom",
+         "start": [
+          -10,
+          -10
+         ],
+         "end": [
+          10,
+          -10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.right",
+         "start": [
+          10,
+          -10
+         ],
+         "end": [
+          10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.top",
+         "start": [
+          10,
+          10
+         ],
+         "end": [
+          -10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.left",
+         "start": [
+          -10,
+          10
+         ],
+         "end": [
+          -10,
+          -10
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1999.9999999999998,
+        "area": 1200.0000000000002,
+        "centroid": [
+         0,
+         -1.7763568394002508e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "s2",
+      "feature_id": "f_s2",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 12.566370614359172,
+        "loops": 1,
+        "outer_curves": [
+         "c"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "circle",
+         "id": "c",
+         "center": [
+          0,
+          0
+         ],
+         "radius": 2
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "up",
+      "feature_id": "f_up",
+      "type": "extrude",
+      "status": "error",
+      "error": {
+       "code": "EXTRUDE_UP_TO_NOT_PARALLEL",
+       "message": "the up_to plane is at 90.0000° to the sketch plane; it must be parallel",
+       "details": {
+        "angle": 90
+       }
+      },
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1999.9999999999998,
+        "area": 1200.0000000000002,
+        "centroid": [
+         0,
+         -1.7763568394002508e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "forge:extrude_up_to_behind",
+   "target": "EXTRUDE_UP_TO_BEHIND",
+   "ir_sha256": "56fb8736d2cfeba68f40b8c27bae9eb7d0ea7ee9096a19c8ea56ad1e55b1e78c",
+   "ir": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p_p",
+      "name": "p",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "f_s",
+        "name": "s",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "o",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "f_e",
+        "name": "e",
+        "sketch": "f_s",
+        "distance": 5
+       },
+       {
+        "type": "sketch",
+        "id": "f_s2",
+        "name": "s2",
+        "plane": {
+         "face": {
+          "kind": "face",
+          "q": {
+           "op": "cap",
+           "feature": "f_e",
+           "end": "end"
+          }
+         }
+        },
+        "curves": [
+         {
+          "kind": "circle",
+          "id": "c",
+          "center": [
+           0,
+           0
+          ],
+          "radius": 2
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "f_up",
+        "name": "up",
+        "sketch": "f_s2",
+        "extent": {
+         "up_to": "XY"
+        },
+        "op": "join",
+        "targets": {
+         "kind": "body",
+         "q": {
+          "op": "body",
+          "feature": "f_e"
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "extrude_up_to_behind",
+    "status": "error",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 400,
+        "loops": 1,
+        "outer_curves": [
+         "o.bottom",
+         "o.left",
+         "o.right",
+         "o.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "o.bottom",
+         "start": [
+          -10,
+          -10
+         ],
+         "end": [
+          10,
+          -10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.right",
+         "start": [
+          10,
+          -10
+         ],
+         "end": [
+          10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.top",
+         "start": [
+          10,
+          10
+         ],
+         "end": [
+          -10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.left",
+         "start": [
+          -10,
+          10
+         ],
+         "end": [
+          -10,
+          -10
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1999.9999999999998,
+        "area": 1200.0000000000002,
+        "centroid": [
+         0,
+         -1.7763568394002508e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "s2",
+      "feature_id": "f_s2",
+      "type": "sketch",
+      "status": "ok",
+      "refs": [
+       {
+        "field": "/plane/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_e/cap:end@o.bottom",
+          "name": "e/cap:end",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -2.8421709430404003e-16,
+            1.9984014443252818e-16,
+            5
+           ],
+           "normal": [
+            0,
+            0,
+            1
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "regions": [
+       {
+        "area": 12.566370614359172,
+        "loops": 1,
+        "outer_curves": [
+         "c"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "circle",
+         "id": "c",
+         "center": [
+          0,
+          0
+         ],
+         "radius": 2
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "up",
+      "feature_id": "f_up",
+      "type": "extrude",
+      "status": "error",
+      "error": {
+       "code": "EXTRUDE_UP_TO_BEHIND",
+       "message": "the up_to plane is -5 mm along the extrude direction; it must lie ahead of the sketch plane",
+       "details": {
+        "distance": -5
+       }
+      },
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1999.9999999999998,
+        "area": 1200.0000000000002,
+        "centroid": [
+         0,
+         -1.7763568394002508e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
   }
  ],
  "roundtrips": [
@@ -22329,7 +22941,8 @@
           "pattern",
           "datum_plane",
           "datum_axis",
-          "tag"
+          "tag",
+          "transform"
          ],
          "type": "\"loft\""
         },
@@ -23799,6 +24412,38 @@
         },
         "message": "mode \"offset\" takes from, distance; missing [distance], not allowed []",
         "path": "/parts/0/features/0"
+       }
+      ]
+     }
+    },
+    "params": [],
+    "parts": []
+   }
+  },
+  {
+   "label": "invalid:extrude-neither-distance-nor-extent",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "doc",
+    "status": "error",
+    "features": [],
+    "error": {
+     "code": "EXTRUDE_EXTENT_CONFLICT",
+     "message": "EXTRUDE_EXTENT_CONFLICT at /parts/0/features/1/extent: an extrude needs a distance or an extent",
+     "details": {
+      "errors": [
+       {
+        "code": "EXTRUDE_EXTENT_CONFLICT",
+        "details": {
+         "field": "extent",
+         "fields": [
+          "distance",
+          "extent"
+         ]
+        },
+        "message": "an extrude needs a distance or an extent",
+        "path": "/parts/0/features/1/extent"
        }
       ]
      }

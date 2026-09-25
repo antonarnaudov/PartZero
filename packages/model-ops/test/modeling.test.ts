@@ -140,6 +140,34 @@ describe("extrude", () => {
     expect(e.code).toMatch(/INVALID_DISTANCE|COMMAND_FEATURE_FAILS/);
   });
 
+  it_("cuts through all, extrudes up to a face, and switches an extrude back to a distance", async () => {
+    const h = await host(plate({ features: [{ type: "sketch", id: "s2", name: "bore", plane: { face: { kind: "face", q: { op: "cap", feature: "e1", end: "end" } } }, curves: [{ kind: "circle", id: "c", center: [10, 0], radius: 2 }] }] }));
+    const cut = await run(h, "extrude", { sketch: "bore", extent: "through_all", direction: "reverse" });
+    expect(feature(await h.document(), cut.plan.feature!)).toMatchObject({ extent: "through_all", op: "cut", targets: "all", direction: "reverse" });
+    expect(feature(await h.document(), cut.plan.feature!)["distance"]).toBeUndefined();
+    expect((await bodies(h))[0]!.volume).toBeCloseTo(40 * 20 * 5 - Math.PI * 4 * 5, 6);
+    // The plate gets thicker (t = 9): the through cut still goes through.
+    await h.apply([{ op: "setParam", name: "t", value: 9 }]);
+    expect((await bodies(h))[0]!.volume).toBeCloseTo(40 * 20 * 9 - Math.PI * 4 * 9, 6);
+    // Back to a blind pocket by a distance: the extent goes.
+    await run(h, "extrude", { feature: cut.plan.feature!, extent: "distance", distance: 2 });
+    const f = feature(await h.document(), cut.plan.feature!);
+    expect(f["extent"]).toBeUndefined();
+    expect(f["distance"]).toBe(2);
+    expect(await refused(run(h, "extrude", { sketch: "bore", extent: "through_all", operation: "join" }))).toMatchObject({ code: "MODEL_INVALID_ARG", details: { field: "extent" } });
+    // Up to a datum plane 20 above the plate's bottom (a new body: the pocket under the same
+    // circle leaves a join nothing to meet): the body ends on the plane, and follows it.
+    await run(h, "datum_plane", { from: "XY", distance: 20 });
+    const up = await run(h, "extrude", { sketch: "bore", extent: "up_to", up_to: "datum_plane1" });
+    expect(feature(await h.document(), up.plan.feature!)).toMatchObject({ extent: { up_to: { datum: "datum_plane1" } } });
+    const top = async () => (await report(h)).parts![0]!.bodies.find((b) => b.origin.feature === up.plan.feature)!;
+    expect((await top()).bbox_min[2]).toBeCloseTo(9, 9);
+    expect((await top()).bbox_max[2]).toBeCloseTo(20, 9);
+    await run(h, "datum_plane", { feature: "datum_plane1", distance: 25 });
+    expect((await top()).bbox_max[2]).toBeCloseTo(25, 9);
+    expect(await refused(run(h, "push_pull", { face: `${up.plan.feature}/cap:end`, offset: 1 }))).toMatchObject({ code: "MODEL_NO_DRIVER" });
+  });
+
   it_("is the agent's command too: the agent's feature is marked, and it may not edit the user's", async () => {
     const h = await host(plate(), "agent");
     await run(h, "extrude", { sketch: "s1", distance: 2, direction: "reverse", operation: "join" });
@@ -270,6 +298,29 @@ describe("combine", () => {
     expect(b[0]!.volume).toBeCloseTo(40 * 20 * 5 - Math.PI * 16 * 5, 3);
     await run(h, "combine", { feature: "boolean1", operation: "join", keep_tools: false });
     expect((await bodies(h))[0]!.volume).toBeCloseTo(40 * 20 * 5 + Math.PI * 16 * 7, 3);
+  });
+});
+
+describe("move/copy (transform, SPEC-v1 §6.13)", () => {
+  it_("moves a body (a later hole on its cap follows), copies it rotated, and edits the angle", async () => {
+    // A hole placed where the slab will be after the move (it fails until then).
+    const h = await host(plate({ features: [{ type: "hole", id: "h1", name: "bore", on: { face: { kind: "face", q: { op: "cap", feature: "e1", end: "end" } } }, at: { list: [{ id: "a", at: [50, 0] }] }, d: 3, depth: "through" }] }));
+    expect((await report(h)).features.find((f) => f.feature_id === "h1")!.error?.code).toBe("HOLE_POINT_OFF_FACE");
+    const moved = await runModelingTool(modelingTool("move")!, { bodies: ["part/slab"], translate: [50, 0, 0] }, h);
+    expect(moved.plan).toMatchObject({ adds: true, feature: "transform1", label: "Move bodies" });
+    // Reordered before the hole: the hole's face reference follows the moved cap (keys kept).
+    await h.apply([{ op: "moveFeature", feature: "transform1", after: "e1" }]);
+    let r = await report(h);
+    expect(r.status).toBe("ok");
+    expect(r.features.find((f) => f.feature_id === "h1")!.holes![0]!.center).toEqual([50, 0, 5]);
+    expect(r.parts![0]!.bodies[0]!.bbox_min[0]).toBeCloseTo(30, 9);
+    const copy = await run(h, "move", { bodies: ["part/slab"], rotate: { axis: "Z", angle: 90 }, copy: true });
+    expect(feature(await h.document(), copy.plan.feature!)).toMatchObject({ type: "transform", rotate: { axis: "Z", angle: 90 }, copy: true });
+    r = await report(h);
+    expect(r.parts![0]!.bodies).toHaveLength(2);
+    await run(h, "move", { feature: copy.plan.feature!, rotate_angle: 45 });
+    expect((feature(await h.document(), copy.plan.feature!)["rotate"] as { angle: number }).angle).toBe(45);
+    expect(await refused(run(h, "move", { bodies: ["part/slab"] }))).toMatchObject({ code: "MODEL_MISSING_ARG" });
   });
 });
 

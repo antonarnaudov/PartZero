@@ -49,6 +49,7 @@ export function faceDriver(ctxDoc: ReturnType<typeof docOf>, key: string): FaceD
   if (!f) return no(`the feature of ${key} is not in the model`, "Pick a face of the model.");
   const leaf = k.leaves[0];
   if (k.label === "cap" && f.type === "extrude") {
+    if (f["extent"] !== undefined) return no(`${f.name} goes ${f["extent"] === "through_all" ? "through all" : "up to a plane"}, so its end follows that`, "Change its extent in the Extrude tool, or move the plane it goes up to.");
     const dir = (f["direction"] as string | undefined) ?? "normal";
     const op = (f["op"] as string | undefined) ?? "new_body";
     const sign = op === "cut" ? -1 : 1;

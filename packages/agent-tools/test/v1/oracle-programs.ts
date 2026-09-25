@@ -76,6 +76,9 @@ function captureBottom(doc: ir.IrDocument): void {
 }
 
 export const ORACLE_PROGRAMS: Readonly<Record<string, OracleProgram>> = {
+  // ── Extrude extents (§6.2, amendment set F) ──
+  extrude_up_to_not_parallel: { target: "EXTRUDE_UP_TO_NOT_PARALLEL", source: `${BOX}const s2 = sketch(XY, { c: circle({ center: [0, 0], radius: 2 }) });\nconst up = extrude(s2, { upTo: XZ, op: "join", targets: e });\n` },
+  extrude_up_to_behind: { target: "EXTRUDE_UP_TO_BEHIND", source: `${BOX}const s2 = sketch(e.cap("end"), { c: circle({ center: [0, 0], radius: 2 }) });\nconst up = extrude(s2, { upTo: XY, op: "join", targets: e });\n` },
   // ── Holes (§6.5) ──
   hole_point_off_face: { target: "HOLE_POINT_OFF_FACE", source: `${BOX}const h = hole(e.cap("end"), { at: { a: [0, 0], b: [17.5, 0] }, d: 3, depth: "through" });\n` },
   hole_duplicate_position: { target: "HOLE_DUPLICATE_POSITION", source: `${BOX}const h = hole(e.cap("end"), { at: { a: [0, 0], b: [0, 0] }, d: 3, depth: "through" });\n` },
