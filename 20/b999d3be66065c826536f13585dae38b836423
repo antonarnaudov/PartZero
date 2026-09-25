@@ -1,0 +1,30 @@
+docs/adr/README.md
+  s_59c0dd2af30db2::t_1e7d7713c49feb 36,49-50
+docs/AGENT-IN-APP.md
+  s_59c0dd2af30db2::t_7bd493d3a6d586 7-8
+docs/fm/agent-live.md
+  s_59c0dd2af30db2::t_3fe5b256d678a2 1-99
+docs/adr/0015-autonomy-dial.md
+  s_59c0dd2af30db2::t_238c69ca375355 185-188
+  s_59c0dd2af30db2::t_1e7d7713c49feb 3
+docs/fm/command-layer.md
+  s_59c0dd2af30db2::t_8ad8285113537a 66-67
+docs/adr/0022-live-agent-edits.md
+  s_59c0dd2af30db2::t_af613d8756c773 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "20b999d3be66065c826536f13585dae38b836423",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
