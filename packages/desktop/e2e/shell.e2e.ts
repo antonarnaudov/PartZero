@@ -48,10 +48,11 @@ interface Automation {
 interface TestToolContext {
   services: {
     doc: { getState(): { model: { ir: unknown } | null } };
-    engines: { active: { evaluate(irJson: string): Promise<{ report: { features: unknown[] } }> } };
+    engines: { active: { evaluate(irJson: string): Promise<{ report: { features: unknown[] }; bodies: unknown[] }> } };
   };
   run(cmd: { id: string; args?: unknown }): Promise<{ ok: true; value: unknown } | { ok: false; error: { message: string } }>;
   openPanel(spec: unknown): unknown;
+  showPreview(bodies: unknown[] | null): void;
 }
 
 type PanelValues = Record<string, unknown>;
@@ -267,6 +268,7 @@ test("a property panel: typed fields, units and expressions, feasible range, pre
             if (d === null) return { ok: true };
             if (d > 12) return { ok: false, errors: [{ field: "d", code: "PLATE_TOO_THICK", message: "Thicker than the screws are long.", feasible: { min: 0.5, max: 12 } }] };
             const r = await ctx.services.engines.active.evaluate(JSON.stringify(withDistance(d)));
+            ctx.showPreview(r.bodies);
             const vol = (r.report.features as Array<{ bodies?: Array<{ volume: number }> }>).flatMap((f) => f.bodies ?? []).reduce((s, b) => s + b.volume, 0);
             return { ok: true, summary: [{ label: "Volume", value: `${vol.toFixed(2)} mm³` }] };
           },
@@ -305,6 +307,10 @@ test("a property panel: typed fields, units and expressions, feasible range, pre
   await expect(input).toHaveValue("12");
   await expect(panel).toHaveAttribute("data-state", "ready");
   await expect(panel.getByTestId("panel-summary")).toContainText(/Volume\s*25002\.6\d mm³/);
+  // The live preview is drawn in the viewport, tinted, instead of the document.
+  const viewport = page.getByTestId("viewport");
+  await expect(viewport).toHaveAttribute("data-shown", "tool-preview");
+  await expect(viewport).toHaveAttribute("data-extent-z", "12.00");
   // Arrow keys step the value; other field kinds.
   await input.press("ArrowDown");
   await expect(input).toHaveValue("11");
@@ -316,9 +322,11 @@ test("a property panel: typed fields, units and expressions, feasible range, pre
   await expect(panel.getByTestId("input-material")).toHaveValue("petg");
   await page.screenshot({ path: screenshotPath("shell-property-panel.png", "PZ_E2E_PANEL_SCREENSHOT") });
 
-  // Cancel leaves the document untouched.
+  // Cancel leaves the document untouched, and the viewport shows it again.
   await input.press("Escape");
   await expect(panel).toBeHidden();
+  await expect(viewport).toHaveAttribute("data-shown", "current");
+  await expect(viewport).toHaveAttribute("data-extent-z", "5.00");
   let s = await page.evaluate(() => (window as unknown as PW).__aicad.idle());
   expect(s.dirty).toBe(false);
 

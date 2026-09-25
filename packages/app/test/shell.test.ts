@@ -143,6 +143,22 @@ describe("the shell", () => {
     expect(shell.getState().panel).toBeNull();
   });
 
+  it("shows a tool's preview bodies until its panel closes or another document loads", async () => {
+    const { shell, engine, commands } = await shellHarness();
+    const { bodies } = await engine.evaluate(JSON.stringify({ schema: "aicad.ir/0", parts: [{ id: "p", name: "p", features: [{ type: "extrude", id: "e", name: "e", sketch: "s" }] }] }));
+    shell.tools.register(tool({ id: "feature.offset", activate: (ctx) => {
+      ctx.showPreview(bodies);
+      return spec();
+    } }));
+    await shell.startTool("feature.offset");
+    expect(shell.getState().previewBodies).toBe(bodies);
+    shell.cancelPanel();
+    expect(shell.getState().previewBodies).toBeNull();
+    await shell.startTool("feature.offset");
+    await commands.execute({ id: "file.new" });
+    expect(shell.getState().previewBodies).toBeNull();
+  });
+
   it("drives tools through the shell commands (tool.start / tool.commit / tool.cancel / tool.list)", async () => {
     const { shell, shellCommands } = await shellHarness();
     const commit = vi.fn().mockResolvedValue({ ok: true, message: "done" });

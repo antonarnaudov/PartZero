@@ -8,6 +8,7 @@
  */
 import type { AppCommandRegistry, AppInvocation } from "../commands/commands";
 import type { CommandRegistry, CommandResult, CommandSource, PaletteItem } from "../commands/registry";
+import type { RenderBody } from "../engine/types";
 import type { AppServices } from "../services";
 import { Store } from "../store";
 import { docParamsPort, docSelectionPort } from "./framework/ports";
@@ -37,6 +38,8 @@ export interface ShellState {
   dialog: "shortcuts" | null;
   /** Bumped to ask the property panel to focus its first field. */
   focusTick: number;
+  /** Bodies a tool's live preview shows in the viewport instead of the document's (null: none). */
+  previewBodies: readonly RenderBody[] | null;
 }
 
 export interface ShellPorts {
@@ -107,6 +110,7 @@ export class Shell extends Store<ShellState> {
       welcome: "auto",
       dialog: null,
       focusTick: 0,
+      previewBodies: null,
     });
     this.services = options.services;
     this.commands = options.commands;
@@ -124,6 +128,7 @@ export class Shell extends Store<ShellState> {
       if (d.docId === this.lastDocId) return;
       this.lastDocId = d.docId;
       if (this.getState().welcome === "dismissed") this.setState({ welcome: "auto" });
+      this.showPreview(null);
       // A tool never outlives its document.
       this.getState().panel?.replace();
     });
@@ -181,6 +186,7 @@ export class Shell extends Store<ShellState> {
       params: this.ports.params,
       mode: this.getState().mode,
       openPanel: (spec) => this.openPanel(spec, toolId),
+      showPreview: (bodies) => this.showPreview(bodies),
       notify: (kind, message) => this.services.ui.toast(kind, message),
     };
   }
@@ -250,8 +256,14 @@ export class Shell extends Store<ShellState> {
     return session;
   }
 
+  /** Show a tool's preview bodies in the viewport (null: the document again). */
+  showPreview(bodies: readonly RenderBody[] | null): void {
+    this.setState({ previewBodies: bodies });
+  }
+
   private onPanelClosed(_reason: CloseReason, session: PanelSession): void {
     if (this.getState().panel !== session) return;
+    this.showPreview(null);
     // Back to what the code dock showed before (the agent may have opened its proposal meanwhile).
     const codeTab = this.services.agent.getState().codeTab;
     this.setState((s) => ({ panel: null, activeToolId: null, rightTab: s.rightTab === "properties" ? codeTab : s.rightTab }));

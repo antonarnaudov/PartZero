@@ -10,6 +10,7 @@ import type { PickResult, RenderBody } from "../engine/types";
 import { createViewportAdapter, type ViewportAdapter, type ViewportColors } from "../viewport/adapter";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
+import { useToolPreviewBodies } from "./shell/tool-preview";
 
 function readColors(el: HTMLElement): ViewportColors {
   const cs = getComputedStyle(el);
@@ -67,8 +68,11 @@ export function Viewport(): ReactElement {
   const hasReport = useStore(doc, (s) => s.report !== null);
   const review = useStore(services.agent, (s) => s.review);
   const reviewOpen = !!review && review.status === "ready" && review.resolution === null;
+  const toolPreview = useToolPreviewBodies();
   const showPreview = reviewOpen && review.previewEnabled && review.preview.status === "ready";
-  const shown = showPreview ? review.preview.bodies : bodies;
+  // An open tool's live preview wins over the proposal preview; both are tinted.
+  const tinted = toolPreview !== null || showPreview;
+  const shown = toolPreview ?? (showPreview ? review.preview.bodies : bodies);
   const extent = useMemo(() => zExtent(shown), [shown]);
 
   // Create the adapter once.
@@ -127,9 +131,9 @@ export function Viewport(): ReactElement {
     if (!adapter || !container) return;
     requestAnimationFrame(() => {
       const colors = readColors(container);
-      adapter.setColors(showPreview ? { ...colors, body: TINT_CSS } : colors);
+      adapter.setColors(tinted ? { ...colors, body: TINT_CSS } : colors);
     });
-  }, [adapter, theme, showPreview]);
+  }, [adapter, theme, tinted]);
 
   // Bodies (the document's, or the proposal preview's); refit when another document was loaded.
   const lastFitDoc = useRef(0);
@@ -223,7 +227,7 @@ export function Viewport(): ReactElement {
   const setProjection = (projection: Projection): void => run({ id: "view.setProjection", args: { projection } });
 
   return (
-    <div className="viewport" data-testid="viewport" data-shown={showPreview ? "proposal" : "current"} data-extent-z={extent}>
+    <div className="viewport" data-testid="viewport" data-shown={toolPreview ? "tool-preview" : showPreview ? "proposal" : "current"} data-extent-z={extent}>
       <div ref={containerRef} className="viewport-surface" />
       <div className="vp-toolbar" role="toolbar" aria-label="View">
         {VIEWS.map((v) => (
@@ -259,7 +263,7 @@ export function Viewport(): ReactElement {
           <Icon.Spinner size={12} /> Evaluating
         </div>
       )}
-      {empty && !showPreview && <div className="vp-empty">{empty}</div>}
+      {empty && !tinted && <div className="vp-empty">{empty}</div>}
       {reviewOpen && (
         <div className={`vp-proposal${showPreview ? "" : " off"}`} data-testid="proposal-preview-chip">
           {showPreview ? (

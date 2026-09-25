@@ -30,6 +30,7 @@
  */
 import type { AppInvocation } from "../../commands/commands";
 import type { CommandResult } from "../../commands/registry";
+import type { RenderBody } from "../../engine/types";
 import type { AppServices } from "../../services";
 
 // ─── Tool groups and modes ─────────────────────────────────────────────────────────────────────
@@ -158,6 +159,12 @@ export interface ToolContext {
   readonly mode: ShellMode;
   /** Open (or replace) the property panel. Returns the live session. */
   openPanel(spec: PanelSpec): PanelSessionHandle;
+  /**
+   * Show preview geometry in the viewport instead of the document (tinted, like the agent's proposal
+   * preview), e.g. the bodies of `engines.active.evaluate(candidate)`; null shows the document again.
+   * The shell clears it when the tool's panel closes or another document loads.
+   */
+  showPreview(bodies: readonly RenderBody[] | null): void;
   /** A short notice (info / success / error toast). */
   notify(kind: "info" | "success" | "error", message: string): void;
 }
