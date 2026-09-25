@@ -222,6 +222,9 @@ export class Shell extends Store<ShellState> {
       const spec = await tool.activate(this.context(id));
       if (spec && (!this.getState().panel || this.getState().panel === before)) this.openPanel(spec, id);
     } catch (e) {
+      // Nothing is left open: a panel the tool opened before failing is cancelled.
+      const opened = this.getState().panel;
+      if (opened && opened !== before && opened.getState().toolId === id) opened.cancel();
       const message = e instanceof Error ? e.message : String(e);
       if (source !== "agent" && source !== "mcp" && source !== "test") this.services.ui.toast("error", `${tool.label}: ${message}`);
       return { started: false, panel: false, reason: message };

@@ -183,7 +183,8 @@ function PrinterStatus(): ReactElement {
 function StarterCard({ starter }: { starter: Starter }): ReactElement {
   const { services, run } = useApp();
   const available = useStore(services.agent, (s) => s.available);
-  const busy = useStore(services.agent, (s) => s.activeRunId !== null);
+  // As the chat composer: no new request while the agent works or its proposal waits for review.
+  const busy = useStore(services.agent, (s) => s.activeRunId !== null || (!!s.review && s.review.status === "ready" && s.review.resolution === null));
   const [example, setExample] = useState<ExampleAvailability>(starter.source ? { status: "checking" } : { status: "unavailable", reason: starter.needs ?? "" });
   useEffect(() => {
     let live = true;

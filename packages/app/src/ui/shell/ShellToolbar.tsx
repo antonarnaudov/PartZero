@@ -79,8 +79,11 @@ function GroupMenu({ group, tools, onClose }: { group: ToolGroupInfo; tools: rea
   close.current = onClose;
   useEffect(() => {
     const onDown = (e: MouseEvent): void => {
-      // The group (label included: its own click toggles the menu) is not "outside".
-      if (!ref.current?.parentElement?.contains(e.target as Node)) close.current();
+      // The group label toggles the menu itself; any other click outside the menu closes it.
+      const t = e.target as Element | null;
+      if (ref.current?.contains(t as Node)) return;
+      if (t?.closest?.(".rb-group-label") && ref.current?.parentElement?.contains(t)) return;
+      close.current();
     };
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
