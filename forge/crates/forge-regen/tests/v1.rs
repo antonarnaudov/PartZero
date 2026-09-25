@@ -559,110 +559,53 @@ fn problems(r: &EvalReport) -> Vec<(String, String)> {
     })
 }
 
-/// SPEC-v1 §0.2 rule 3: "an engine that does not implement a feature's `v` rejects the document
-/// with `UNSUPPORTED_FEATURE_VERSION` (path of the `v` field)". Forge implements no version of
-/// `hole`, `fillet`, `chamfer`, `shell` and `pattern` yet, so a document using one is rejected
-/// (stage R, nothing evaluated), details `{ type, v, supported: [] }` (§7.5).
+/// SPEC-v1 §0.2 rule 3 since Phase C: Forge implements every mandatory feature type
+/// (`hole`, `pattern`: W5; `fillet`, `chamfer`, `shell`: W6), so a document using them loads
+/// and evaluates (the pre-Phase C `UNSUPPORTED_FEATURE_VERSION` rejection is gone; only the
+/// optional `draft` is still rejected, see below). The fillet of every edge of a box is the
+/// rounded box of Steiner's formula (normative sphere corners, §6.6), and the tag of the
+/// fillet's `created` faces sees its 12 blends and 8 corners.
 #[test]
-fn unimplemented_feature_types_reject_the_document_with_unsupported_feature_version() {
-    let (r, ev) = v1::evaluate_text(&fillet_doc(), "forge test", "t");
-    assert!(ev.is_none(), "evaluated: {r:?}");
-    assert_eq!(r.status, Status::Error);
-    assert!(r.features.is_empty() && r.parts.is_empty() && r.params.is_empty());
-    let e = r.error.as_ref().unwrap();
-    assert_eq!(e.code, "UNSUPPORTED_FEATURE_VERSION");
-    assert_eq!(e.code, v1::UNIMPLEMENTED_CODE);
+fn documents_with_the_phase_c_feature_types_load_and_evaluate() {
+    assert!(v1::UNIMPLEMENTED_FEATURE_TYPES.is_empty());
+    assert!(v1::load(&fillet_doc()).is_ok());
+    let r = run(&fillet_doc());
+    assert_eq!(r.status, Status::Ok, "{:#?}", r.features);
+    let f1 = feature(&r, "f1");
+    let fl = f1.fillet.as_ref().expect("fillet block");
+    assert_eq!(fl.edges.len(), 12);
+    assert_eq!(fl.faces_created.len(), 20);
+    assert_eq!(f1.bodies.len(), 1);
     assert_eq!(
-        problems(&r),
-        [(
-            "UNSUPPORTED_FEATURE_VERSION".to_string(),
-            "/parts/0/features/2/v".to_string()
-        )]
+        serde_json::to_value(f1.bodies[0].change).unwrap(),
+        json!("modified")
     );
-    let x = &e.details["errors"][0];
-    assert_eq!(
-        x["details"],
-        json!({ "type": "fillet", "v": 1, "supported": [] })
-    );
-    assert!(x["message"].as_str().unwrap().contains("fillet v1"));
-    // `load` is the rejection for every entry point.
-    let err = v1::load(&fillet_doc()).unwrap_err();
-    assert_eq!(err.errors().len(), 1);
-    // Written `"v": 1` and a suppressed feature are rejected the same way (rule 3 is about the
-    // document, not about what the timeline reaches).
-    let explicit = fillet_doc().replace(r#""r":1"#, r#""r":1,"v":1"#);
-    assert_ne!(explicit, fillet_doc());
-    let suppressed = fillet_doc().replace(r#""r":1"#, r#""r":1,"suppressed":true"#);
-    for text in [explicit, suppressed] {
-        let (r, ev) = v1::evaluate_text(&text, "forge test", "t");
-        assert!(ev.is_none());
-        assert_eq!(
-            problems(&r),
-            [(
-                "UNSUPPORTED_FEATURE_VERSION".to_string(),
-                "/parts/0/features/2/v".to_string()
-            )]
-        );
-    }
-    // Every problem is reported (§0.5 rule 3): with another rejection, both; an undefined `v`
-    // is the pipeline's own problem, at the same path, once.
-    let (r, _) = v1::evaluate_text(
-        &fillet_doc().replace(r#""distance":1"#, r#""distance":-1"#),
-        "forge test",
-        "t",
-    );
-    let ps = problems(&r);
+    // Steiner: an 18 x 18 x 3 core grown by r = 1.
+    let (x, y, z, rr) = (18.0_f64, 18.0_f64, 3.0_f64, 1.0_f64);
+    let pi = std::f64::consts::PI;
+    let want = x * y * z
+        + 2.0 * (x * y + y * z + z * x) * rr
+        + pi * (x + y + z) * rr * rr
+        + 4.0 / 3.0 * pi * rr.powi(3);
     assert!(
-        ps.contains(&(
-            "INVALID_DISTANCE".into(),
-            "/parts/0/features/4/distance".into()
-        )),
-        "{ps:?}"
+        close(f1.bodies[0].volume, want, 1e-9),
+        "{}",
+        f1.bodies[0].volume
     );
-    assert!(
-        ps.contains(&(
-            "UNSUPPORTED_FEATURE_VERSION".into(),
-            "/parts/0/features/2/v".into()
-        )),
-        "{ps:?}"
-    );
-    let (r, _) = v1::evaluate_text(
-        &fillet_doc().replace(r#""r":1"#, r#""r":1,"v":2"#),
-        "forge test",
-        "t",
-    );
-    let ps = problems(&r);
-    assert_eq!(
-        ps.iter().filter(|p| p.1 == "/parts/0/features/2/v").count(),
-        1,
-        "{ps:?}"
-    );
-    assert_eq!(
-        r.error.as_ref().unwrap().details["errors"][0]["details"]["supported"],
-        json!([1])
-    );
-    // A parse error stays alone.
-    let (r, _) = v1::evaluate_text(
-        &fillet_doc().replace(r#""r":1"#, r#""r":null"#),
-        "forge test",
-        "t",
-    );
-    assert_eq!(r.error.as_ref().unwrap().code, "IR_PARSE_ERROR");
-}
-
-/// Defence in depth: a document built without [`v1::load`] (so nothing rejected it) never
-/// gets a guessed fillet: the feature fails with the engine-internal code, passes its input
-/// through, and the rest of the timeline is evaluated.
-#[test]
-fn an_unimplemented_feature_that_bypasses_load_fails_with_the_engine_internal_code() {
-    let d = forge_ir::v1::from_json(&fillet_doc()).expect("valid IR v1");
-    let r = v1::report(&v1::evaluate(&d), "forge test", "t", None);
-    let e = feature(&r, "f1").error.as_ref().unwrap();
-    assert_eq!(e.code, v1::UNSUPPORTED_CODE);
-    assert_eq!(e.details["type"], json!("fillet"));
-    assert_eq!(code(&r, "t1"), Some("DEPENDENCY_FAILED"));
+    assert_eq!(f1.bodies[0].face_types.get("sphere"), Some(&8));
+    // The tag of the fillet's created faces (`any`): 12 cylinders and 8 sphere corners.
+    let t1 = feature(&r, "t1");
+    assert_eq!(t1.refs[0].members.len(), 20);
+    // The rest of the timeline runs on the filleted body.
     assert_eq!(code(&r, "e2"), None);
     assert_eq!(part_volumes(&r).len(), 2);
+    // A document built without `load` evaluates the same (only `draft` is unsupported).
+    let d = forge_ir::v1::from_json(&fillet_doc()).expect("valid IR v1");
+    let direct = v1::report(&v1::evaluate(&d), "forge test", "t", None);
+    assert_eq!(
+        serde_json::to_string(&direct).unwrap(),
+        serde_json::to_string(&r).unwrap()
+    );
 }
 
 /// The implemented, unimplemented and rejected (optional) types partition the v1 feature types.
@@ -685,7 +628,8 @@ fn feature_types_are_partitioned_into_implemented_unimplemented_and_rejected() {
 
 /// Every canonical v1 example program (`corpus/v1/programs`): a program that uses an
 /// unimplemented type is rejected with exactly one `UNSUPPORTED_FEATURE_VERSION` per such
-/// feature (plus `UNSUPPORTED_FEATURE` for a `draft`), and every other program evaluates.
+/// feature (none since Phase C) plus `UNSUPPORTED_FEATURE` for a `draft` (`shell_box`), and
+/// every other program evaluates (`knob_queries` and `plate_features` since Phase C).
 #[test]
 fn corpus_programs_with_unimplemented_types_list_every_one() {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../corpus/v1/programs");
@@ -724,9 +668,9 @@ fn corpus_programs_with_unimplemented_types_list_every_one() {
         assert_eq!(ev.is_none(), !want.is_empty(), "{}", f.display());
         rejected += usize::from(!want.is_empty());
     }
-    assert!(
-        rejected >= 3,
-        "plate_features, knob_queries and shell_box use hole/fillet/chamfer/shell/pattern"
+    assert_eq!(
+        rejected, 1,
+        "only shell_box (its optional draft) is rejected"
     );
 }
 
@@ -876,8 +820,8 @@ fn the_key_invariant_holds_after_every_sweep() {
     files.sort();
     let mut checked = 0;
     for f in files {
-        // Through `from_json` (no engine capability check), so `knob_queries`' extrudes are
-        // checked although Forge rejects its hole and pattern (they fail in the timeline).
+        // Through `from_json` (no engine capability check). Since Phase C `knob_queries`' hole
+        // and body pattern evaluate too, so their tool faces and copies are checked as well.
         let d = forge_ir::v1::from_json(&std::fs::read_to_string(&f).unwrap()).expect("valid IR");
         let (ev, problems) = v1::evaluate_with_key_check(&d);
         assert!(
@@ -1006,12 +950,32 @@ fn the_oracle_comparison_programs_evaluate_as_documented() {
         // `torus_pocket_spiric_edges` meet the torus and the inner cylinder along two disjoint
         // curves each, and both edges get the one key `G/edge:{A|B}` of §5.2 rule 3; forge-refs'
         // checker only accepts a shared key for split pieces of one carrier.
+        // Third, a forge-refs checker false positive (reported to W3; the same exclusion as in
+        // `v1_phase_c.rs`): the faces of one hole's positions (`h6/wall@1`, `h6/wall@2`, …) or
+        // of one pattern's instances differ only by their qualifier and share a display name
+        // (`h6/wall`), which the checker flags as ambiguous edge sources although the tools and
+        // copies stamp their edge sources by key (an edge naming a source that is not a face
+        // would be its own finding). Excluded only for the names of hole and pattern features.
+        let raw: Value = serde_json::from_str(&text).unwrap();
+        let multi: Vec<String> = raw["parts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|p| p["features"].as_array().unwrap())
+            .filter(|x| matches!(x["type"].as_str(), Some("hole" | "pattern")))
+            .map(|x| format!(": {}/", x["id"].as_str().unwrap()))
+            .collect();
         let other: Vec<&String> = problems
             .iter()
             .filter(|p| !p.ends_with("is not a face of the body"))
             .filter(|p| {
                 !(name == "torus_pocket_spiric_edges"
                     && p.ends_with("share the key on different carriers (not split pieces)"))
+            })
+            .filter(|p| {
+                !(p.ends_with(
+                    "several faces of the body carry this name; edge sources are ambiguous",
+                ) && multi.iter().any(|m| p.contains(m.as_str())))
             })
             .collect();
         assert!(other.is_empty(), "{name}: {other:#?}");
@@ -1142,22 +1106,14 @@ fn a_document_with_a_draft_is_rejected_with_unsupported_feature() {
     .unwrap();
     let (r, ev) = v1::evaluate_text(&text, "forge test", "shell_box");
     assert!(ev.is_none());
-    // Its draft, and (§0.2 rule 3) every shell, pattern, fillet and chamfer, which Forge does
-    // not implement yet.
-    let mut got = rejections(&r);
-    got.sort();
-    let mut want = vec![(
-        "UNSUPPORTED_FEATURE".to_string(),
-        "/parts/0/features/3/type".to_string(),
-    )];
-    for i in [2, 6, 20, 21, 22, 23] {
-        want.push((
-            "UNSUPPORTED_FEATURE_VERSION".to_string(),
-            format!("/parts/0/features/{i}/v"),
-        ));
-    }
-    want.sort();
-    assert_eq!(got, want);
+    // Its draft only: the shell, patterns, fillet and chamfer are implemented since Phase C.
+    assert_eq!(
+        rejections(&r),
+        vec![(
+            "UNSUPPORTED_FEATURE".to_string(),
+            "/parts/0/features/3/type".to_string(),
+        )]
+    );
 }
 
 /// Defence in depth: a document validated without this engine's options (so the draft was not
@@ -1255,13 +1211,12 @@ fn a_tag_in_a_sketch_plane_or_a_datum_is_a_dependency_by_id() {
     }
 }
 
-/// A pattern's seeds are dependencies by id too: a failed seed decides the code before the
-/// (engine-internal) unsupported pattern.
+/// A pattern's seeds are dependencies by id too (§7.1 step 2): a failed seed decides the code
+/// (`DEPENDENCY_FAILED` naming it) before anything of the pattern is evaluated; a pattern of a
+/// good `new_body` seed creates one body per non-seed instance (origin `{ pattern, member,
+/// instance }`, §5.2 rule 4).
 #[test]
 fn a_failed_pattern_seed_is_dependency_failed() {
-    // Forge rejects documents with patterns (§0.2 rule 3, not implemented yet); the dependency
-    // order is checked on the timeline of a document built without `load`, where the pattern
-    // fails with the engine-internal code once its seeds are ok.
     let text = doc(
         json!([]),
         json!([
@@ -1276,14 +1231,32 @@ fn a_failed_pattern_seed_is_dependency_failed() {
               "layout": { "linear": { "dir": "+X", "count": 3, "spacing": 5 } } }
         ]),
     );
-    assert_eq!(v1::load(&text).unwrap_err().errors().len(), 2);
-    let d = forge_ir::v1::from_json(&text).expect("valid IR v1");
-    let r = v1::report(&v1::evaluate(&d), "forge test", "t", None);
+    assert!(v1::load(&text).is_ok());
+    let r = run(&text);
     assert_eq!(code(&r, "e2"), Some("INVALID_DISTANCE"));
     let e = feature(&r, "pt1").error.as_ref().unwrap();
     assert_eq!(e.code, "DEPENDENCY_FAILED");
     assert_eq!(e.details["feature"], json!("e2"));
-    assert_eq!(code(&r, "pt2"), Some(v1::UNSUPPORTED_CODE));
+    let pt2 = feature(&r, "pt2");
+    assert_eq!(code(&r, "pt2"), None);
+    assert_eq!(pt2.pattern.as_ref().unwrap().instances, 2);
+    let got: Vec<(String, Option<Vec<u32>>, f64)> = pt2
+        .bodies
+        .iter()
+        .map(|b| {
+            (
+                b.origin.feature.clone(),
+                b.origin.instance.clone(),
+                b.volume,
+            )
+        })
+        .collect();
+    assert_eq!(got.len(), 2, "{got:?}");
+    for (k, (f, i, v)) in got.iter().enumerate() {
+        assert_eq!(f, "pt2");
+        assert_eq!(i.as_deref(), Some(&[k as u32 + 1][..]));
+        assert!(close(*v, 4.0, 1e-12), "{v}");
+    }
 }
 
 // ---- body operations that change nothing, re-joined split pieces, seams ------------------------------
@@ -1296,10 +1269,13 @@ fn program(name: &str) -> String {
     .unwrap()
 }
 
-/// A join whose tools lie inside (or equal) the target leaves it as it was: ok, no body listed
-/// (§6.0.5: created or modified only), nothing removed, and the info note says why.
+/// [W0-39] (SPEC-v1 §6.0.3, §6.0.5): a join whose tools lie inside (or equal) the target
+/// **acts on** it — the target is listed as `modified` (geometry unchanged), nothing is
+/// removed, and no `FORGE_BOOLEAN_NO_CHANGE` note is raised (that note is for targets a join
+/// or cut does not act on). The pre-ruling outcome (no body listed, the note) changed with
+/// W4's [W0-39] alignment; `v1_golden_hash.rs` records the update.
 #[test]
-fn a_join_that_changes_no_target_is_ok_with_a_no_change_note() {
+fn a_join_whose_tools_lie_inside_the_target_modifies_it() {
     for (name, ids) in [
         ("join_nested_tool", &["e2", "e3"][..]),
         ("join_identical_tool", &["e2"][..]),
@@ -1308,18 +1284,23 @@ fn a_join_that_changes_no_target_is_ok_with_a_no_change_note() {
         assert_eq!(r.status, Status::Ok, "{name}");
         for id in ids {
             let f = feature(&r, id);
-            assert!(f.bodies.is_empty() && f.removed.is_empty(), "{name}/{id}");
-            let notes: Vec<_> = f
-                .warnings
-                .iter()
-                .filter(|w| w.code == v1::NO_CHANGE_CODE)
-                .collect();
-            assert_eq!(notes.len(), 1, "{name}/{id}");
-            assert_eq!(notes[0].severity, Severity::Info);
-            assert_eq!(notes[0].details["op"], json!("join"));
+            assert_eq!(f.bodies.len(), 1, "{name}/{id}");
+            let b = &f.bodies[0];
             assert_eq!(
-                notes[0].details["targets"],
-                json!([{ "feature": "e1", "member": "r.bottom" }])
+                serde_json::to_value(b.change).unwrap(),
+                json!("modified"),
+                "{name}/{id}"
+            );
+            assert_eq!(
+                serde_json::to_value(&b.origin).unwrap(),
+                json!({ "feature": "e1", "member": "r.bottom" })
+            );
+            assert!(close(b.volume, 4000.0, 1e-12), "{name}/{id}: {}", b.volume);
+            assert!(f.removed.is_empty(), "{name}/{id}");
+            assert!(
+                f.warnings.iter().all(|w| w.code != v1::NO_CHANGE_CODE),
+                "{name}/{id}: {:?}",
+                f.warnings
             );
         }
         let v = part_volumes(&r);
@@ -1327,7 +1308,7 @@ fn a_join_that_changes_no_target_is_ok_with_a_no_change_note() {
         let b = &r.parts[0].bodies[0];
         assert_eq!((b.faces, b.edges), (6, 12), "{name}");
     }
-    // A join that changes its target has no such note.
+    // A join that changes its target has no such note either.
     let r = run(&program("boxes_join"));
     assert!(
         r.features

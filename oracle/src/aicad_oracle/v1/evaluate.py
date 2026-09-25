@@ -9,9 +9,10 @@ What the oracle **computes** and what it **replays** (SPEC §8.1):
 | constrained sketches | standalone: computes only the §4.4 rule 4 fixed point (the welded stored guess, when it already satisfies every driving constraint); otherwise **replays** the numbers of Forge's `sketch.solved` on the document's own curve structure, after the independent check of `constraints.py` (structure, residuals, welds, dimension values, and bit-identity with a clear fixed point; `--replay` / `oracle diff`); `DEGENERATE_CURVE` applies to the result |
 | datum frames, face frames, axes | computes |
 | references | standalone: computes them itself over its own OCCT bodies and keys (`query.py`). With a Forge report (default mode, the §8.1 PR/nightly gate): **replays** Forge's members by probe, re-checks the query's geometric predicates and picks (recursively) and the cardinality on them, and builds from them (`replay.py`); a set difference from its own resolution is ROBUSTNESS (`ORACLE_REF_DIFFERS`). With `independent_refs`: builds from its own resolution and reports a difference as `ORACLE_REF_MISMATCH`. A Ref nested in a query's Dir (an AxisRef, §3.2) is always the oracle's own resolution; Forge's entry for it, when reported, is checked like a field but never adopted (`Evaluator.query_axis`) |
-| extrude / revolve | computes (the v0 construction and body gate), `new_body`, `join`, `cut`, `intersect` (`booleans.py`) |
+| extrude / revolve | computes (the v0 construction and body gate), `new_body`, `join`, `cut`, `intersect` (`booleans.py`, with the §8.3 normalizations of `normalize.py`) |
 | boolean | computes (`booleans.py`) |
-| hole, fillet, chamfer, shell, draft, pattern | not yet (W7b/W7c): the feature fails with the engine-internal `ORACLE_UNSUPPORTED_FEATURE` |
+| hole, pattern | computes (`holes.py`, `patterns.py`; W7b) |
+| fillet, chamfer, shell, draft | computes (`blends.py`; W7b — the independent-refs mode stays W7c's) |
 
 Engine-internal codes are prefixed `OCCT_` / `ORACLE_` (v0 [R-12]); `kernel-diff` classifies a
 disagreement on them as ROBUSTNESS, never as a silent-wrong answer, and never as MATCH.
@@ -24,7 +25,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .. import ir as ir0
-from ..sketch import SketchError, evaluate_sketch
+from ..sketch import SketchError, SketchResult, evaluate_sketch
 from . import compound, constraints, expr, geom, query
 from .consts import (
     ANGULAR_TOLERANCE,
@@ -94,8 +95,14 @@ class Params:
                 continue
             r = self.evaluate(d)
             if r.error is not None:
-                root = r.error["details"].get("code", r.error["code"]) if r.error["code"] == "PARAM_FAILED" else r.error["code"]
-                return _err("PARAM_FAILED", f"parameter {n!r} failed with {root}", {"param": n, "code": r.error["code"]})
+                # [W0-27]: PARAM_FAILED names the root cause (the parameter whose own evaluation
+                # failed) and its code, through chains of failed parameters
+                if r.error["code"] == "PARAM_FAILED":
+                    det = r.error["details"]
+                    root, code = det.get("param", n), det.get("code", "PARAM_FAILED")
+                else:
+                    root, code = n, r.error["code"]
+                return _err("PARAM_FAILED", f"parameter {root!r} failed with {code}", {"param": root, "code": code})
         return None
 
     def env(self, uses: list[str], scope: int | None) -> dict[str, Any]:
@@ -122,7 +129,8 @@ class Params:
         if bad is not None:
             raise FeatureFailure(bad["code"], bad["message"], bad["details"])
         try:
-            return expr.evaluate(ch.ast, self.env(ch.uses, scope), text=v, fld=fld)
+            # [W0-46]: error details carry the canonical text (`evaluate` defaults to it)
+            return expr.evaluate(ch.ast, self.env(ch.uses, scope), fld=fld)
         except expr.ExprError as e:
             raise FeatureFailure(e.code, e.message, e.details) from None
 
@@ -419,15 +427,17 @@ class Evaluator:
                     bad = self.params.failed_use(ch.uses, st.pi)
                     if bad is not None:
                         raise FeatureFailure(bad["code"], bad["message"], bad["details"])
-            # §7.1: features referenced by id (the consumed sketch, datums) before field values.
-            if t in ("extrude", "revolve"):
-                dep = st.features.get(f["sketch"])
-                if dep is not None and dep.status == "suppressed":
-                    raise FeatureFailure("SKETCH_SUPPRESSED", f"sketch {f['sketch']!r} is suppressed",
-                                         {"feature": f["sketch"]})
-                self.dep(st, f["sketch"], "SKETCH_SUPPRESSED")
-            for did in datum_refs(f):
-                self.dep(st, did, "DEPENDENCY_SUPPRESSED")
+            # §7.1: features referenced by id (the consumed sketch, datums, the tags of `tagged`
+            # queries anywhere in its Refs, pattern seeds) before field values, in field order.
+            for did, kind in by_id_refs(f):
+                if kind == "sketch":
+                    dep = st.features.get(did)
+                    if dep is not None and dep.status == "suppressed":
+                        raise FeatureFailure("SKETCH_SUPPRESSED", f"sketch {did!r} is suppressed",
+                                             {"feature": did})
+                    self.dep(st, did, "SKETCH_SUPPRESSED")
+                else:
+                    self.dep(st, did, "DEPENDENCY_SUPPRESSED")
             if t == "sketch":
                 self.sketch(st, f, entry, refs, fs)
             elif t in ("extrude", "revolve"):
@@ -444,9 +454,29 @@ class Evaluator:
                 from .booleans import boolean_feature
 
                 boolean_feature(self, st, fi, f, entry, refs)
+            elif t == "hole":
+                from .holes import hole_feature
+
+                hole_feature(self, st, fi, f, entry, refs, fs)
+            elif t == "pattern":
+                from .patterns import pattern_feature
+
+                pattern_feature(self, st, fi, f, entry, refs, fs)
+            elif t in ("fillet", "chamfer"):
+                from .blends import blend_feature
+
+                blend_feature(self, st, fi, f, entry, refs, t)
+            elif t == "shell":
+                from .blends import shell_feature
+
+                shell_feature(self, st, fi, f, entry, refs)
+            elif t == "draft":
+                from .blends import draft_feature
+
+                draft_feature(self, st, fi, f, entry, refs)
             else:
                 raise FeatureFailure("ORACLE_UNSUPPORTED_FEATURE",
-                                     f"the oracle does not evaluate {t} features yet (W7b/W7c)", {"type": t})
+                                     f"the oracle does not evaluate {t} features", {"type": t})
         except (FeatureFailure, SketchError, TopoError) as e:
             entry["status"] = "error"
             entry["error"] = _err(e.code, e.message, getattr(e, "details", {}) or {})
@@ -498,7 +528,11 @@ class Evaluator:
             if c["kind"] == "point" or c.get("construction"):
                 continue
             profile.append(_v0_curve(c))
-        res = evaluate_sketch(profile)
+        # A sketch of points and construction curves only has no regions and is valid (v1: its
+        # points place holes, §6.5); the body feature that consumes it fails with
+        # `SKETCH_NO_REGIONS` (`sweep`), as in Forge's `forge-regen` — v0's "cannot happen for a
+        # sketch that passes validation" no longer holds once points are curves.
+        res = evaluate_sketch(profile) if profile else SketchResult([], [])
         entry["regions"] = [{"area": r.area, "loops": r.loops, "outer_curves": list(r.outer_curves)}
                             for r in res.regions]
         block: dict = {"mode": "constrained" if constrained else "explicit", **(solve or {}), "solved": literal}
@@ -686,6 +720,9 @@ class Evaluator:
                 raise FeatureFailure("INVALID_AXIS", "axis direction must be non-zero",
                                      {"field": "axis", "value": list(ad), "expected": "a non-zero direction"})
         regions = select_regions(sk, f.get("regions", "all"))
+        if not regions:
+            raise FeatureFailure("SKETCH_NO_REGIONS", f"sketch {f['sketch']!r} yields no regions",
+                                 {"sketch": f["sketch"]})
         op = f.get("op", "new_body")
         targets = None
         if op != "new_body":
@@ -707,6 +744,9 @@ class Evaluator:
             m = min(r.outer_curves, key=lambda s: s.encode())
             fs.outer_curves[m] = list(r.outer_curves)
             fs.region_curves[m] = sorted(sk.profile[e.index].id for lp in [r.outer, *r.holes] for e in lp.edges)
+        from .patterns import SweepSeed
+
+        fs.seed = SweepSeed(tools=list(tools), op=op, targets=f.get("targets"))
         if op == "new_body":
             st.bodies.extend(tools)
             entry["bodies"] = [body_report(b, "created") for b in canonical_bodies(tools)]
@@ -861,29 +901,136 @@ def _at_pointer(doc: Any, pointer: str) -> Any:
     return cur
 
 
-def datum_refs(f: dict) -> list[str]:
-    """Ids of datum features a feature references by id (`{ "datum": id }` planes and axes),
-    in field order; Ref queries are not searched (their feature references resolve with the
-    query, §5.7 step 1)."""
-    out: list[str] = []
+def by_id_refs(f: dict) -> list[tuple[str, str]]:
+    """The features `f` references **by id** (§7.1 step 2: sketch, datum, tag, pattern seed), in
+    field order (declaration order, depth first through plane, axis, direction and point
+    references and through every query, operands in order), each id once at its first
+    occurrence — Forge's `forge-regen` `v1::deps::by_id`. A `tagged` query is a reference by id
+    to the tag wherever it appears in a Ref; named and broad sources (`cap`, `body`, …) resolve
+    with the query (§5.7 step 1) and are not listed; captures are not searched."""
+    out: list[tuple[str, str]] = []
 
-    def walk(v: Any) -> None:
-        if isinstance(v, dict):
-            if isinstance(v.get("datum"), str) and set(v) <= {"datum", "flip"}:
-                if v["datum"] not in out:
-                    out.append(v["datum"])
-                return
-            for k, x in v.items():
-                if k in ("q", "capture"):
-                    continue
-                walk(x)
-        elif isinstance(v, list):
-            for x in v:
-                walk(x)
+    def push(i: Any, kind: str) -> None:
+        if isinstance(i, str) and all(x != i for x, _ in out):
+            out.append((i, kind))
 
-    for k, v in f.items():
-        if k not in ("id", "name", "type"):
-            walk(v)
+    def q(x: Any) -> None:
+        if not isinstance(x, dict):
+            return
+        op = x.get("op")
+        if op == "tagged":
+            push(x.get("feature"), "tag")
+        elif op in ("between", "minus"):
+            q(x.get("a"))
+            q(x.get("b"))
+        elif op in ("faces", "edges", "vertices", "owner", "largest", "smallest"):
+            q(x.get("of"))
+        elif op == "filter":
+            q(x.get("of"))
+            w = x.get("where") or {}
+            for k in ("normal", "parallel", "perpendicular"):
+                if k in w:
+                    d(w[k])
+        elif op == "extreme":
+            q(x.get("of"))
+            d(x.get("dir"))
+        elif op in ("union", "intersect"):
+            for y in x.get("of") or []:
+                q(y)
+
+    def r(x: Any) -> None:
+        if isinstance(x, dict):
+            q(x.get("q"))
+
+    def plane(p: Any) -> None:
+        if isinstance(p, dict):
+            if "face" in p:
+                r(p["face"])
+            elif "datum" in p:
+                push(p["datum"], "datum")
+
+    def axis_obj(a: Any) -> None:
+        if isinstance(a, dict):
+            if "edge" in a:
+                r(a["edge"])
+            elif "cylinder" in a:
+                r(a["cylinder"])
+            elif "datum" in a:
+                push(a["datum"], "datum")
+
+    def d(x: Any) -> None:
+        if isinstance(x, dict):
+            axis_obj(x)
+
+    def point(p: Any) -> None:
+        if isinstance(p, dict) and "vertex" in p:
+            r(p["vertex"])
+
+    def targets(x: Any) -> None:
+        if isinstance(x, dict):
+            r(x)
+
+    t = f.get("type")
+    if t == "sketch":
+        plane(f.get("plane"))
+    elif t in ("extrude", "revolve"):
+        push(f.get("sketch"), "sketch")
+        targets(f.get("targets"))
+    elif t == "boolean":
+        r(f.get("targets"))
+        r(f.get("tools"))
+    elif t == "hole":
+        plane(f.get("on"))
+        at = f.get("at") or {}
+        if isinstance(at.get("points"), dict):
+            push(at["points"].get("sketch"), "sketch")
+        dep = f.get("depth")
+        if isinstance(dep, dict) and "up_to" in dep:
+            r(dep["up_to"])
+        targets(f.get("targets"))
+    elif t == "fillet":
+        r(f.get("edges"))
+    elif t == "chamfer":
+        r(f.get("edges"))
+        r(f.get("side"))
+    elif t == "shell":
+        r(f.get("body"))
+        r(f.get("open"))
+    elif t == "draft":
+        r(f.get("faces"))
+        plane(f.get("neutral"))
+    elif t == "pattern":
+        seed = f.get("seed") or {}
+        if isinstance(seed.get("features"), list):
+            for i in seed["features"]:
+                push(i, "seed")
+        else:
+            r(seed.get("bodies"))
+        lay = f.get("layout") or {}
+        if "linear" in lay:
+            d(lay["linear"].get("dir"))
+            d(lay["linear"].get("dir2"))
+        elif "circular" in lay:
+            d(lay["circular"].get("axis"))
+        elif "mirror" in lay:
+            plane(lay["mirror"].get("plane"))
+        targets(f.get("targets"))
+    elif t == "datum_plane":
+        plane(f.get("from"))
+        d(f.get("axis"))
+        plane(f.get("a"))
+        plane(f.get("b"))
+        for p in f.get("points") or []:
+            point(p)
+    elif t == "datum_axis":
+        r(f.get("edge"))
+        r(f.get("face"))
+        plane(f.get("a"))
+        plane(f.get("b"))
+        for p in f.get("points") or []:
+            point(p)
+    elif t == "tag":
+        r(f.get("target"))
     return out
 
 

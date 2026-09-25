@@ -138,8 +138,8 @@ fn migrate_writes_to_out_and_rejects_invalid_documents_with_their_codes() {
         "{}",
         stderr(&out)
     );
-    // Migration is independent of what this engine evaluates: a v1 document with holes and
-    // patterns (which `eval` rejects, §0.2 rule 3) is printed in canonical form.
+    // Migration is independent of what this engine evaluates: a v1 document with holes,
+    // blends and patterns is printed in canonical form.
     let out = aicad()
         .arg("migrate")
         .arg(repo("corpus/v1/programs/plate_features.json"))

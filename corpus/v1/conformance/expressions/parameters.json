@@ -1,0 +1,707 @@
+{
+ "description": "Parameter and field evaluation outcomes (SPEC-v1 \u00a72.1, \u00a72.7, \u00a72.8, \u00a70.5 as ruled by [W0-20] string literals, [W0-23] exponent overflow, [W0-24] -0, [W0-25] bounds and [W0-27] PARAM_FAILED). Each case is a valid `aicad.ir/1` document; `params` maps parameter names to the report entry's `value` (with `bits`, big-endian binary64) or `error` (`code`, and the listed `details` keys, which must be equal; other keys are not compared); `features` maps feature ids to `status` and, for a failed feature, its `error` in the same form. Parameters and features not listed are not checked. Evaluated by Forge (forge-ir tests/v1_conformance_amendments.rs, through forge-regen) and the oracle (W7).",
+ "cases": [
+  {
+   "id": "param-failed-names-the-root-cause",
+   "rule": "[W0-27]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "root"
+    },
+    "params": [
+     {
+      "name": "a",
+      "unit": "ratio",
+      "value": "1 / 0"
+     },
+     {
+      "name": "b",
+      "unit": "ratio",
+      "value": "a * 2"
+     },
+     {
+      "name": "c",
+      "unit": "ratio",
+      "value": "b + 1"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": "8 + c * 1 mm"
+       }
+      ]
+     }
+    ]
+   },
+   "params": {
+    "a": {
+     "error": {
+      "code": "EXPR_DOMAIN"
+     }
+    },
+    "b": {
+     "error": {
+      "code": "PARAM_FAILED",
+      "details": {
+       "param": "a",
+       "code": "EXPR_DOMAIN"
+      }
+     }
+    },
+    "c": {
+     "error": {
+      "code": "PARAM_FAILED",
+      "details": {
+       "param": "a",
+       "code": "EXPR_DOMAIN"
+      }
+     }
+    }
+   },
+   "features": {
+    "e1": {
+     "status": "error",
+     "error": {
+      "code": "PARAM_FAILED",
+      "details": {
+       "param": "a",
+       "code": "EXPR_DOMAIN"
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "param-failed-first-failed-use-decides",
+   "rule": "[W0-27]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "first"
+    },
+    "params": [
+     {
+      "name": "half",
+      "unit": "ratio",
+      "value": 0.5
+     },
+     {
+      "name": "p",
+      "unit": "ratio",
+      "value": "1 / 0"
+     },
+     {
+      "name": "q",
+      "unit": "count",
+      "value": "half * 1"
+     },
+     {
+      "name": "x",
+      "unit": "ratio",
+      "value": "q + p"
+     },
+     {
+      "name": "y",
+      "unit": "ratio",
+      "value": "p + q"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "params": {
+    "p": {
+     "error": {
+      "code": "EXPR_DOMAIN"
+     }
+    },
+    "q": {
+     "error": {
+      "code": "EXPR_NOT_INTEGER"
+     }
+    },
+    "x": {
+     "error": {
+      "code": "PARAM_FAILED",
+      "details": {
+       "param": "q",
+       "code": "EXPR_NOT_INTEGER"
+      }
+     }
+    },
+    "y": {
+     "error": {
+      "code": "PARAM_FAILED",
+      "details": {
+       "param": "p",
+       "code": "EXPR_DOMAIN"
+      }
+     }
+    }
+   },
+   "features": {
+    "e1": {
+     "status": "ok"
+    }
+   }
+  },
+  {
+   "id": "bounds-have-the-parameter-type-and-are-evaluated-after-the-value",
+   "rule": "[W0-25]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "bounds"
+    },
+    "params": [
+     {
+      "name": "width",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "half",
+      "unit": "ratio",
+      "value": 0.5
+     },
+     {
+      "name": "holes",
+      "unit": "count",
+      "value": 4,
+      "min": "width / 30 mm"
+     },
+     {
+      "name": "rows",
+      "unit": "count",
+      "value": 4,
+      "min": "width / 40 mm",
+      "max": "width / 10 mm"
+     },
+     {
+      "name": "v",
+      "unit": "count",
+      "value": "1 / 0",
+      "min": "half"
+     },
+     {
+      "name": "w",
+      "unit": "count",
+      "value": "3",
+      "min": "half"
+     },
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": 10,
+      "max": "b"
+     },
+     {
+      "name": "b",
+      "unit": "mm",
+      "value": 5
+     },
+     {
+      "name": "z",
+      "unit": "mm",
+      "value": "b",
+      "min": "a * 0"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "params": {
+    "holes": {
+     "error": {
+      "code": "EXPR_NOT_INTEGER",
+      "details": {
+       "expr": "width / 30 mm"
+      }
+     }
+    },
+    "rows": {
+     "value": 4.0,
+     "bits": "0x4010000000000000"
+    },
+    "v": {
+     "error": {
+      "code": "EXPR_DOMAIN"
+     }
+    },
+    "w": {
+     "error": {
+      "code": "EXPR_NOT_INTEGER",
+      "details": {
+       "expr": "half"
+      }
+     }
+    },
+    "a": {
+     "error": {
+      "code": "PARAM_OUT_OF_RANGE",
+      "details": {
+       "name": "a",
+       "value": 10.0,
+       "max": 5.0
+      }
+     }
+    },
+    "b": {
+     "value": 5.0,
+     "bits": "0x4014000000000000"
+    },
+    "z": {
+     "error": {
+      "code": "PARAM_FAILED",
+      "details": {
+       "param": "a",
+       "code": "PARAM_OUT_OF_RANGE"
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "negative-exponent-overflow-underflows-to-zero",
+   "rule": "[W0-23]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "pow"
+    },
+    "params": [
+     {
+      "name": "r",
+      "unit": "ratio",
+      "value": "1e300 ^ -2"
+     },
+     {
+      "name": "s",
+      "unit": "ratio",
+      "value": "65536 ^ -64"
+     },
+     {
+      "name": "t",
+      "unit": "ratio",
+      "value": "1e-300 ^ -2"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "params": {
+    "r": {
+     "value": 0.0,
+     "bits": "0x0000000000000000"
+    },
+    "s": {
+     "value": 0.0,
+     "bits": "0x0000000000000000"
+    },
+    "t": {
+     "error": {
+      "code": "EXPR_DOMAIN"
+     }
+    }
+   }
+  },
+  {
+   "id": "literal-parameter-values-are-reported-without-negative-zero",
+   "rule": "[W0-24]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "negzero"
+    },
+    "params": [
+     {
+      "name": "z",
+      "unit": "mm",
+      "value": -0.0
+     },
+     {
+      "name": "e",
+      "unit": "mm",
+      "value": "-0 * 1 mm"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "params": {
+    "z": {
+     "value": 0.0,
+     "bits": "0x0000000000000000"
+    },
+    "e": {
+     "value": 0.0,
+     "bits": "0x0000000000000000"
+    }
+   }
+  },
+  {
+   "id": "string-literals-are-range-checked-at-evaluation",
+   "rule": "[W0-20]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "strlit"
+    },
+    "params": [],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": "-5"
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "slab2",
+        "sketch": "s1",
+        "distance": "1e-400"
+       }
+      ]
+     }
+    ]
+   },
+   "features": {
+    "e1": {
+     "status": "error",
+     "error": {
+      "code": "INVALID_DISTANCE",
+      "details": {
+       "value": -5.0
+      }
+     }
+    },
+    "e2": {
+     "status": "error",
+     "error": {
+      "code": "INVALID_DISTANCE",
+      "details": {
+       "value": 0.0
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "w0-46-expr-details-are-the-canonical-text",
+   "rule": "[W0-46]",
+   "note": "every stored text here differs from its canonical form (\u00a72.4); expr and subexpr are the canonical text, whatever the stored spelling",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "exprdetails"
+    },
+    "params": [
+     {
+      "name": "width",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "n",
+      "unit": "count",
+      "value": "width/30mm"
+     },
+     {
+      "name": "holes",
+      "unit": "count",
+      "value": 4,
+      "min": "( width / 30mm )"
+     },
+     {
+      "name": "k",
+      "unit": "count",
+      "value": "(5/2)"
+     },
+     {
+      "name": "x",
+      "unit": "ratio",
+      "value": "1+sqrt(2-3)"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": "sqrt(0-1)*1mm"
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "slab2",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "params": {
+    "width": {
+     "value": 80.0,
+     "bits": "0x4054000000000000"
+    },
+    "n": {
+     "error": {
+      "code": "EXPR_NOT_INTEGER",
+      "details": {
+       "expr": "width / 30 mm",
+       "value": 2.6666666666666665
+      }
+     }
+    },
+    "holes": {
+     "error": {
+      "code": "EXPR_NOT_INTEGER",
+      "details": {
+       "expr": "width / 30 mm",
+       "value": 2.6666666666666665
+      }
+     }
+    },
+    "k": {
+     "error": {
+      "code": "EXPR_NOT_INTEGER",
+      "details": {
+       "expr": "5 / 2",
+       "value": 2.5
+      }
+     }
+    },
+    "x": {
+     "error": {
+      "code": "EXPR_DOMAIN",
+      "details": {
+       "expr": "1 + sqrt(2 - 3)",
+       "subexpr": "sqrt(2 - 3)",
+       "operands": [
+        -1.0
+       ]
+      }
+     }
+    }
+   },
+   "features": {
+    "e1": {
+     "status": "error",
+     "error": {
+      "code": "EXPR_DOMAIN",
+      "details": {
+       "expr": "sqrt(0 - 1) * 1 mm",
+       "subexpr": "sqrt(0 - 1)",
+       "operands": [
+        -1.0
+       ]
+      }
+     }
+    },
+    "e2": {
+     "status": "ok"
+    }
+   }
+  }
+ ]
+}

@@ -3484,6 +3484,2961 @@
     "code": "EXPR_DOMAIN",
     "stage": "E"
    }
+  },
+  {
+   "id": "e376",
+   "text": "(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((min())))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))",
+   "field": "length",
+   "error": {
+    "code": "EXPR_ARITY",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e377",
+   "text": "((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((min()))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))",
+   "field": "length",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e378",
+   "text": "----------------------------------------------------------------1",
+   "field": "ratio",
+   "canonical": "----------------------------------------------------------------1",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e379",
+   "text": "-----------------------------------------------------------------1",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e380",
+   "text": "2^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1",
+   "field": "ratio",
+   "canonical": "2 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1 ^ 1",
+   "type": "flex",
+   "value": 2.0,
+   "bits": "0x4000000000000000"
+  },
+  {
+   "id": "e381",
+   "text": "2^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1^1",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e382",
+   "text": "lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : 2",
+   "field": "length",
+   "canonical": "lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : 2",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e383",
+   "text": "lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : lid ? 1 : 2",
+   "field": "length",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e384",
+   "text": "min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(1, 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1)",
+   "field": "length",
+   "canonical": "min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(1, 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1)",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e385",
+   "text": "min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(min(1, 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1)",
+   "field": "length",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e386",
+   "text": "((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((width))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))",
+   "field": "length",
+   "canonical": "width",
+   "type": "mm",
+   "value": 80.0,
+   "bits": "0x4054000000000000"
+  },
+  {
+   "id": "e387",
+   "text": "(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((width)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))",
+   "field": "length",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e388",
+   "text": "1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1",
+   "field": "ratio",
+   "canonical": "1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1",
+   "type": "flex",
+   "value": 1000.0,
+   "bits": "0x408f400000000000"
+  },
+  {
+   "id": "e389",
+   "text": "nosuch + width * lid",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNKNOWN_NAME",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e390",
+   "text": "lid + nosuch",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNKNOWN_NAME",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e391",
+   "text": "sin(width) + nosuch(1)",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e392",
+   "text": "nosuch(width + lid)",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNKNOWN_FUNCTION",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e393",
+   "text": "min(lid) + nosuch",
+   "field": "length",
+   "error": {
+    "code": "EXPR_ARITY",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e394",
+   "text": "width ? nosuch : 1",
+   "field": "length",
+   "error": {
+    "code": "EXPR_TYPE_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e395",
+   "text": "lid ? nosuch : width + tilt",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNKNOWN_NAME",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e396",
+   "text": "width + tilt + lid",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e397",
+   "text": "width * width + nosuch",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNKNOWN_NAME",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e398",
+   "text": "sqrt(width) + lid",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e399",
+   "text": "min(width, tilt, nosuch)",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNKNOWN_NAME",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e400",
+   "text": "atan2(lid, nosuch)",
+   "field": "angle",
+   "error": {
+    "code": "EXPR_UNKNOWN_NAME",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e401",
+   "text": "atan2(-3, -1e21)",
+   "field": "angle",
+   "canonical": "atan2(-3, -1e+21)",
+   "type": "deg",
+   "value": 180.0,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e402",
+   "text": "atan2(-1e-300, -1)",
+   "field": "angle",
+   "canonical": "atan2(-1e-300, -1)",
+   "type": "deg",
+   "value": 180.0,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e403",
+   "text": "atan2(3, 3)",
+   "field": "angle",
+   "canonical": "atan2(3, 3)",
+   "type": "deg",
+   "value": 45.0,
+   "bits": "0x4046800000000000"
+  },
+  {
+   "id": "e404",
+   "text": "atan2(5, -5)",
+   "field": "angle",
+   "canonical": "atan2(5, -5)",
+   "type": "deg",
+   "value": 135.0,
+   "bits": "0x4060e00000000000"
+  },
+  {
+   "id": "e405",
+   "text": "atan2(-5, -5)",
+   "field": "angle",
+   "canonical": "atan2(-5, -5)",
+   "type": "deg",
+   "value": -135.0,
+   "bits": "0xc060e00000000000"
+  },
+  {
+   "id": "e406",
+   "text": "atan2(0, -3)",
+   "field": "angle",
+   "canonical": "atan2(0, -3)",
+   "type": "deg",
+   "value": 180.0,
+   "bits": "0x4066800000000000"
+  },
+  {
+   "id": "e407",
+   "text": "atan2(0, 3)",
+   "field": "angle",
+   "canonical": "atan2(0, 3)",
+   "type": "deg",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e408",
+   "text": "atan2(4, 0)",
+   "field": "angle",
+   "canonical": "atan2(4, 0)",
+   "type": "deg",
+   "value": 90.0,
+   "bits": "0x4056800000000000"
+  },
+  {
+   "id": "e409",
+   "text": "atan2(-4, 0)",
+   "field": "angle",
+   "canonical": "atan2(-4, 0)",
+   "type": "deg",
+   "value": -90.0,
+   "bits": "0xc056800000000000"
+  },
+  {
+   "id": "e410",
+   "text": "atan2(neg, neg)",
+   "field": "angle",
+   "canonical": "atan2(neg, neg)",
+   "type": "deg",
+   "value": -135.0,
+   "bits": "0xc060e00000000000"
+  },
+  {
+   "id": "e411",
+   "text": "atan2(width, zero)",
+   "field": "angle",
+   "canonical": "atan2(width, zero)",
+   "type": "deg",
+   "value": 90.0,
+   "bits": "0x4056800000000000"
+  },
+  {
+   "id": "e412",
+   "text": "atan2(1e-300, -1e-300)",
+   "field": "angle",
+   "canonical": "atan2(1e-300, -1e-300)",
+   "type": "deg",
+   "value": 135.0,
+   "bits": "0x4060e00000000000"
+  },
+  {
+   "id": "e413",
+   "text": "atan2(1, 1 mm)",
+   "field": "angle",
+   "canonical": "atan2(1, 1 mm)",
+   "type": "deg",
+   "value": 45.0,
+   "bits": "0x4046800000000000"
+  },
+  {
+   "id": "e414",
+   "text": "atan2(width, tilt)",
+   "field": "angle",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e415",
+   "text": "atan2(-1, -3)",
+   "field": "angle",
+   "canonical": "atan2(-1, -3)",
+   "type": "deg",
+   "value": -161.565051177078,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e416",
+   "text": "1e300 ^ -2",
+   "field": "ratio",
+   "canonical": "1e+300 ^ -2",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e417",
+   "text": "(-1e300) ^ -3",
+   "field": "ratio",
+   "canonical": "(-1e+300) ^ -3",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e418",
+   "text": "65536 ^ -64",
+   "field": "ratio",
+   "canonical": "65536 ^ -64",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e419",
+   "text": "1e300 ^ 2",
+   "field": "ratio",
+   "canonical": "1e+300 ^ 2",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e420",
+   "text": "1e-300 ^ -2",
+   "field": "ratio",
+   "canonical": "1e-300 ^ -2",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e421",
+   "text": "0 ^ -1",
+   "field": "ratio",
+   "canonical": "0 ^ -1",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e422",
+   "text": "0 ^ 5",
+   "field": "ratio",
+   "canonical": "0 ^ 5",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e423",
+   "text": "2 ^ 64",
+   "field": "ratio",
+   "canonical": "2 ^ 64",
+   "type": "flex",
+   "value": 1.8446744073709552e+19,
+   "bits": "0x43f0000000000000"
+  },
+  {
+   "id": "e424",
+   "text": "2 ^ -64",
+   "field": "ratio",
+   "canonical": "2 ^ -64",
+   "type": "flex",
+   "value": 5.421010862427522e-20,
+   "bits": "0x3bf0000000000000"
+  },
+  {
+   "id": "e425",
+   "text": "(-2) ^ 63",
+   "field": "ratio",
+   "canonical": "(-2) ^ 63",
+   "type": "flex",
+   "value": -9.223372036854776e+18,
+   "bits": "0xc3e0000000000000"
+  },
+  {
+   "id": "e426",
+   "text": "(-2) ^ 64",
+   "field": "ratio",
+   "canonical": "(-2) ^ 64",
+   "type": "flex",
+   "value": 1.8446744073709552e+19,
+   "bits": "0x43f0000000000000"
+  },
+  {
+   "id": "e427",
+   "text": "10 ^ 22",
+   "field": "ratio",
+   "canonical": "10 ^ 22",
+   "type": "flex",
+   "value": 1e+22,
+   "bits": "0x4480f0cf064dd592"
+  },
+  {
+   "id": "e428",
+   "text": "10 ^ -5",
+   "field": "ratio",
+   "canonical": "10 ^ -5",
+   "type": "flex",
+   "value": 1e-05,
+   "bits": "0x3ee4f8b588e368f1"
+  },
+  {
+   "id": "e429",
+   "text": "1.1 ^ 7",
+   "field": "ratio",
+   "canonical": "1.1 ^ 7",
+   "type": "flex",
+   "value": 1.9487171000000012,
+   "bits": "0x3fff2df1fb5a7ed7"
+  },
+  {
+   "id": "e430",
+   "text": "3 ^ 40",
+   "field": "ratio",
+   "canonical": "3 ^ 40",
+   "type": "flex",
+   "value": 1.2157665459056929e+19,
+   "bits": "0x43e517168a4523fd"
+  },
+  {
+   "id": "e431",
+   "text": "0.1 ^ 3",
+   "field": "ratio",
+   "canonical": "0.1 ^ 3",
+   "type": "flex",
+   "value": 0.0010000000000000002,
+   "bits": "0x3f50624dd2f1a9fd"
+  },
+  {
+   "id": "e432",
+   "text": "(-0.5) ^ -3",
+   "field": "ratio",
+   "canonical": "(-0.5) ^ -3",
+   "type": "flex",
+   "value": -8.0,
+   "bits": "0xc020000000000000"
+  },
+  {
+   "id": "e433",
+   "text": "2 ^ 65",
+   "field": "ratio",
+   "canonical": "2 ^ 65",
+   "type": "flex",
+   "value": 3.6893488147419103e+19,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e434",
+   "text": "2 ^ 0.5",
+   "field": "ratio",
+   "canonical": "2 ^ 0.5",
+   "type": "flex",
+   "value": 1.4142135623730951,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e435",
+   "text": "(-8) ^ (1 / 3)",
+   "field": "ratio",
+   "canonical": "(-8) ^ (1 / 3)",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e436",
+   "text": "0 ^ -0.5",
+   "field": "ratio",
+   "canonical": "0 ^ -0.5",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e437",
+   "text": "-2 ^ 2",
+   "field": "ratio",
+   "canonical": "-(2 ^ 2)",
+   "type": "flex",
+   "value": -4.0,
+   "bits": "0xc010000000000000"
+  },
+  {
+   "id": "e438",
+   "text": "(-2) ^ 2",
+   "field": "ratio",
+   "canonical": "(-2) ^ 2",
+   "type": "flex",
+   "value": 4.0,
+   "bits": "0x4010000000000000"
+  },
+  {
+   "id": "e439",
+   "text": "2 ^ -1 ^ 2",
+   "field": "ratio",
+   "canonical": "2 ^ -(1 ^ 2)",
+   "type": "flex",
+   "value": 0.5,
+   "bits": "0x3fe0000000000000"
+  },
+  {
+   "id": "e440",
+   "text": "2 ^ 3 ^ 2",
+   "field": "ratio",
+   "canonical": "2 ^ 3 ^ 2",
+   "type": "flex",
+   "value": 512.0,
+   "bits": "0x4080000000000000"
+  },
+  {
+   "id": "e441",
+   "text": "(2 ^ 3) ^ 2",
+   "field": "ratio",
+   "canonical": "(2 ^ 3) ^ 2",
+   "type": "flex",
+   "value": 64.0,
+   "bits": "0x4050000000000000"
+  },
+  {
+   "id": "e442",
+   "text": "half ^ 64",
+   "field": "ratio",
+   "canonical": "half ^ 64",
+   "type": "1",
+   "value": 5.421010862427522e-20,
+   "bits": "0x3bf0000000000000"
+  },
+  {
+   "id": "e443",
+   "text": "third ^ 3",
+   "field": "ratio",
+   "canonical": "third ^ 3",
+   "type": "1",
+   "value": 0.037037037037037035,
+   "bits": "0x3fa2f684bda12f68"
+  },
+  {
+   "id": "e444",
+   "text": "1.0000001 ^ 64",
+   "field": "ratio",
+   "canonical": "1.0000001 ^ 64",
+   "type": "flex",
+   "value": 1.0000064000201634,
+   "bits": "0x3ff00006b5fe0967"
+  },
+  {
+   "id": "e445",
+   "text": "0.9999999 ^ -64",
+   "field": "ratio",
+   "canonical": "0.9999999 ^ -64",
+   "type": "flex",
+   "value": 1.0000064000207975,
+   "bits": "0x3ff00006b5fe148f"
+  },
+  {
+   "id": "e446",
+   "text": "(-1) ^ -63",
+   "field": "ratio",
+   "canonical": "(-1) ^ -63",
+   "type": "flex",
+   "value": -1.0,
+   "bits": "0xbff0000000000000"
+  },
+  {
+   "id": "e447",
+   "text": "tiny ^ 3",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e448",
+   "text": "width ^ 2 / width",
+   "field": "length",
+   "canonical": "width ^ 2 / width",
+   "type": "mm",
+   "value": 80.0,
+   "bits": "0x4054000000000000"
+  },
+  {
+   "id": "e449",
+   "text": "width ^ -2 * depth ^ 2",
+   "field": "ratio",
+   "canonical": "width ^ -2 * depth ^ 2",
+   "type": "1",
+   "value": 0.390625,
+   "bits": "0x3fd9000000000000"
+  },
+  {
+   "id": "e450",
+   "text": "holes ^ 2",
+   "field": "count",
+   "canonical": "holes ^ 2",
+   "type": "1",
+   "value": 16.0,
+   "bits": "0x4030000000000000"
+  },
+  {
+   "id": "e451",
+   "text": "width ^ 2.0",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e452",
+   "text": "width ^ (-(2))",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e453",
+   "text": "-width ^ 2",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e454",
+   "text": "!lid ^ 2",
+   "field": "bool",
+   "error": {
+    "code": "EXPR_TYPE_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e455",
+   "text": "sin(-390)",
+   "field": "ratio",
+   "canonical": "sin(-390)",
+   "type": "flex",
+   "value": -0.5,
+   "bits": "0xbfe0000000000000"
+  },
+  {
+   "id": "e456",
+   "text": "cos(-390)",
+   "field": "ratio",
+   "canonical": "cos(-390)",
+   "type": "flex",
+   "value": 0.8660254037844386,
+   "bits": "0x3febb67ae8584caa"
+  },
+  {
+   "id": "e457",
+   "text": "sin(-330)",
+   "field": "ratio",
+   "canonical": "sin(-330)",
+   "type": "flex",
+   "value": 0.5,
+   "bits": "0x3fe0000000000000"
+  },
+  {
+   "id": "e458",
+   "text": "cos(-330)",
+   "field": "ratio",
+   "canonical": "cos(-330)",
+   "type": "flex",
+   "value": 0.8660254037844386,
+   "bits": "0x3febb67ae8584caa"
+  },
+  {
+   "id": "e459",
+   "text": "sin(-210)",
+   "field": "ratio",
+   "canonical": "sin(-210)",
+   "type": "flex",
+   "value": 0.5,
+   "bits": "0x3fe0000000000000"
+  },
+  {
+   "id": "e460",
+   "text": "cos(-210)",
+   "field": "ratio",
+   "canonical": "cos(-210)",
+   "type": "flex",
+   "value": -0.8660254037844386,
+   "bits": "0xbfebb67ae8584caa"
+  },
+  {
+   "id": "e461",
+   "text": "sin(-150)",
+   "field": "ratio",
+   "canonical": "sin(-150)",
+   "type": "flex",
+   "value": -0.5,
+   "bits": "0xbfe0000000000000"
+  },
+  {
+   "id": "e462",
+   "text": "cos(-150)",
+   "field": "ratio",
+   "canonical": "cos(-150)",
+   "type": "flex",
+   "value": -0.8660254037844386,
+   "bits": "0xbfebb67ae8584caa"
+  },
+  {
+   "id": "e463",
+   "text": "sin(-120)",
+   "field": "ratio",
+   "canonical": "sin(-120)",
+   "type": "flex",
+   "value": -0.8660254037844386,
+   "bits": "0xbfebb67ae8584caa"
+  },
+  {
+   "id": "e464",
+   "text": "cos(-120)",
+   "field": "ratio",
+   "canonical": "cos(-120)",
+   "type": "flex",
+   "value": -0.5,
+   "bits": "0xbfe0000000000000"
+  },
+  {
+   "id": "e465",
+   "text": "sin(-60)",
+   "field": "ratio",
+   "canonical": "sin(-60)",
+   "type": "flex",
+   "value": -0.8660254037844386,
+   "bits": "0xbfebb67ae8584caa"
+  },
+  {
+   "id": "e466",
+   "text": "cos(-60)",
+   "field": "ratio",
+   "canonical": "cos(-60)",
+   "type": "flex",
+   "value": 0.5,
+   "bits": "0x3fe0000000000000"
+  },
+  {
+   "id": "e467",
+   "text": "sin(1410)",
+   "field": "ratio",
+   "canonical": "sin(1410)",
+   "type": "flex",
+   "value": -0.5,
+   "bits": "0xbfe0000000000000"
+  },
+  {
+   "id": "e468",
+   "text": "cos(1410)",
+   "field": "ratio",
+   "canonical": "cos(1410)",
+   "type": "flex",
+   "value": 0.8660254037844386,
+   "bits": "0x3febb67ae8584caa"
+  },
+  {
+   "id": "e469",
+   "text": "sin(1440)",
+   "field": "ratio",
+   "canonical": "sin(1440)",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e470",
+   "text": "cos(1440)",
+   "field": "ratio",
+   "canonical": "cos(1440)",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e471",
+   "text": "tan(-390)",
+   "field": "ratio",
+   "canonical": "tan(-390)",
+   "type": "flex",
+   "value": -0.5773502691896258,
+   "bits": "0xbfe279a74590331d"
+  },
+  {
+   "id": "e472",
+   "text": "tan(-210)",
+   "field": "ratio",
+   "canonical": "tan(-210)",
+   "type": "flex",
+   "value": -0.5773502691896258,
+   "bits": "0xbfe279a74590331d"
+  },
+  {
+   "id": "e473",
+   "text": "tan(-150)",
+   "field": "ratio",
+   "canonical": "tan(-150)",
+   "type": "flex",
+   "value": 0.5773502691896258,
+   "bits": "0x3fe279a74590331d"
+  },
+  {
+   "id": "e474",
+   "text": "tan(-120)",
+   "field": "ratio",
+   "canonical": "tan(-120)",
+   "type": "flex",
+   "value": 1.7320508075688772,
+   "bits": "0x3ffbb67ae8584caa"
+  },
+  {
+   "id": "e475",
+   "text": "tan(-60)",
+   "field": "ratio",
+   "canonical": "tan(-60)",
+   "type": "flex",
+   "value": -1.7320508075688772,
+   "bits": "0xbffbb67ae8584caa"
+  },
+  {
+   "id": "e476",
+   "text": "tan(-30)",
+   "field": "ratio",
+   "canonical": "tan(-30)",
+   "type": "flex",
+   "value": -0.5773502691896258,
+   "bits": "0xbfe279a74590331d"
+  },
+  {
+   "id": "e477",
+   "text": "tan(120)",
+   "field": "ratio",
+   "canonical": "tan(120)",
+   "type": "flex",
+   "value": -1.7320508075688772,
+   "bits": "0xbffbb67ae8584caa"
+  },
+  {
+   "id": "e478",
+   "text": "tan(150)",
+   "field": "ratio",
+   "canonical": "tan(150)",
+   "type": "flex",
+   "value": -0.5773502691896258,
+   "bits": "0xbfe279a74590331d"
+  },
+  {
+   "id": "e479",
+   "text": "tan(210)",
+   "field": "ratio",
+   "canonical": "tan(210)",
+   "type": "flex",
+   "value": 0.5773502691896258,
+   "bits": "0x3fe279a74590331d"
+  },
+  {
+   "id": "e480",
+   "text": "tan(240)",
+   "field": "ratio",
+   "canonical": "tan(240)",
+   "type": "flex",
+   "value": 1.7320508075688772,
+   "bits": "0x3ffbb67ae8584caa"
+  },
+  {
+   "id": "e481",
+   "text": "tan(390)",
+   "field": "ratio",
+   "canonical": "tan(390)",
+   "type": "flex",
+   "value": 0.5773502691896258,
+   "bits": "0x3fe279a74590331d"
+  },
+  {
+   "id": "e482",
+   "text": "tan(1410)",
+   "field": "ratio",
+   "canonical": "tan(1410)",
+   "type": "flex",
+   "value": -0.5773502691896258,
+   "bits": "0xbfe279a74590331d"
+  },
+  {
+   "id": "e483",
+   "text": "tan(-90)",
+   "field": "ratio",
+   "canonical": "tan(-90)",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e484",
+   "text": "tan(270)",
+   "field": "ratio",
+   "canonical": "tan(270)",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e485",
+   "text": "tan(450)",
+   "field": "ratio",
+   "canonical": "tan(450)",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e486",
+   "text": "sin(-2160)",
+   "field": "ratio",
+   "canonical": "sin(-2160)",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e487",
+   "text": "cos(-2160)",
+   "field": "ratio",
+   "canonical": "cos(-2160)",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e488",
+   "text": "tan(-2160)",
+   "field": "ratio",
+   "canonical": "tan(-2160)",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e489",
+   "text": "sin(-405)",
+   "field": "ratio",
+   "canonical": "sin(-405)",
+   "type": "flex",
+   "value": -0.7071067811865476,
+   "bits": "0xbfe6a09e667f3bcd"
+  },
+  {
+   "id": "e490",
+   "text": "cos(-405)",
+   "field": "ratio",
+   "canonical": "cos(-405)",
+   "type": "flex",
+   "value": 0.7071067811865476,
+   "bits": "0x3fe6a09e667f3bcd"
+  },
+  {
+   "id": "e491",
+   "text": "tan(-405)",
+   "field": "ratio",
+   "canonical": "tan(-405)",
+   "type": "flex",
+   "value": -1.0,
+   "bits": "0xbff0000000000000"
+  },
+  {
+   "id": "e492",
+   "text": "sin(-315)",
+   "field": "ratio",
+   "canonical": "sin(-315)",
+   "type": "flex",
+   "value": 0.7071067811865476,
+   "bits": "0x3fe6a09e667f3bcd"
+  },
+  {
+   "id": "e493",
+   "text": "cos(-315)",
+   "field": "ratio",
+   "canonical": "cos(-315)",
+   "type": "flex",
+   "value": 0.7071067811865476,
+   "bits": "0x3fe6a09e667f3bcd"
+  },
+  {
+   "id": "e494",
+   "text": "tan(-315)",
+   "field": "ratio",
+   "canonical": "tan(-315)",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e495",
+   "text": "sin(-225)",
+   "field": "ratio",
+   "canonical": "sin(-225)",
+   "type": "flex",
+   "value": 0.7071067811865476,
+   "bits": "0x3fe6a09e667f3bcd"
+  },
+  {
+   "id": "e496",
+   "text": "cos(-225)",
+   "field": "ratio",
+   "canonical": "cos(-225)",
+   "type": "flex",
+   "value": -0.7071067811865476,
+   "bits": "0xbfe6a09e667f3bcd"
+  },
+  {
+   "id": "e497",
+   "text": "tan(-225)",
+   "field": "ratio",
+   "canonical": "tan(-225)",
+   "type": "flex",
+   "value": -1.0,
+   "bits": "0xbff0000000000000"
+  },
+  {
+   "id": "e498",
+   "text": "sin(-135)",
+   "field": "ratio",
+   "canonical": "sin(-135)",
+   "type": "flex",
+   "value": -0.7071067811865476,
+   "bits": "0xbfe6a09e667f3bcd"
+  },
+  {
+   "id": "e499",
+   "text": "cos(-135)",
+   "field": "ratio",
+   "canonical": "cos(-135)",
+   "type": "flex",
+   "value": -0.7071067811865476,
+   "bits": "0xbfe6a09e667f3bcd"
+  },
+  {
+   "id": "e500",
+   "text": "tan(-135)",
+   "field": "ratio",
+   "canonical": "tan(-135)",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e501",
+   "text": "tan(315)",
+   "field": "ratio",
+   "canonical": "tan(315)",
+   "type": "flex",
+   "value": -1.0,
+   "bits": "0xbff0000000000000"
+  },
+  {
+   "id": "e502",
+   "text": "sin(405)",
+   "field": "ratio",
+   "canonical": "sin(405)",
+   "type": "flex",
+   "value": 0.7071067811865476,
+   "bits": "0x3fe6a09e667f3bcd"
+  },
+  {
+   "id": "e503",
+   "text": "cos(405)",
+   "field": "ratio",
+   "canonical": "cos(405)",
+   "type": "flex",
+   "value": 0.7071067811865476,
+   "bits": "0x3fe6a09e667f3bcd"
+  },
+  {
+   "id": "e504",
+   "text": "tan(405)",
+   "field": "ratio",
+   "canonical": "tan(405)",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e505",
+   "text": "sin(2115)",
+   "field": "ratio",
+   "canonical": "sin(2115)",
+   "type": "flex",
+   "value": -0.7071067811865476,
+   "bits": "0xbfe6a09e667f3bcd"
+  },
+  {
+   "id": "e506",
+   "text": "cos(2115)",
+   "field": "ratio",
+   "canonical": "cos(2115)",
+   "type": "flex",
+   "value": 0.7071067811865476,
+   "bits": "0x3fe6a09e667f3bcd"
+  },
+  {
+   "id": "e507",
+   "text": "tan(2115)",
+   "field": "ratio",
+   "canonical": "tan(2115)",
+   "type": "flex",
+   "value": -1.0,
+   "bits": "0xbff0000000000000"
+  },
+  {
+   "id": "e508",
+   "text": "sin(3600030)",
+   "field": "ratio",
+   "canonical": "sin(3600030)",
+   "type": "flex",
+   "value": 0.5,
+   "bits": "0x3fe0000000000000"
+  },
+  {
+   "id": "e509",
+   "text": "cos(-3600060)",
+   "field": "ratio",
+   "canonical": "cos(-3600060)",
+   "type": "flex",
+   "value": 0.5,
+   "bits": "0x3fe0000000000000"
+  },
+  {
+   "id": "e510",
+   "text": "sin(-1e-300)",
+   "field": "ratio",
+   "canonical": "sin(-1e-300)",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e511",
+   "text": "cos(-1e-300)",
+   "field": "ratio",
+   "canonical": "cos(-1e-300)",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e512",
+   "text": "tan(-1e-300)",
+   "field": "ratio",
+   "canonical": "tan(-1e-300)",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e513",
+   "text": "sin(1e22)",
+   "field": "ratio",
+   "canonical": "sin(1e+22)",
+   "type": "flex",
+   "value": -0.984807753012208,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e514",
+   "text": "sin(tilt * 2)",
+   "field": "ratio",
+   "canonical": "sin(tilt * 2)",
+   "type": "1",
+   "value": 0.5,
+   "bits": "0x3fe0000000000000"
+  },
+  {
+   "id": "e515",
+   "text": "cos(tilt * 4)",
+   "field": "ratio",
+   "canonical": "cos(tilt * 4)",
+   "type": "1",
+   "value": 0.5,
+   "bits": "0x3fe0000000000000"
+  },
+  {
+   "id": "e516",
+   "text": "tan(tilt * 3)",
+   "field": "ratio",
+   "canonical": "tan(tilt * 3)",
+   "type": "1",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e517",
+   "text": "cos(PI)",
+   "field": "ratio",
+   "canonical": "cos(PI)",
+   "type": "flex",
+   "value": 0.9984971498638638,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e518",
+   "text": "sin(tilt) ^ 2 + cos(tilt) ^ 2",
+   "field": "ratio",
+   "canonical": "sin(tilt) ^ 2 + cos(tilt) ^ 2",
+   "type": "1",
+   "value": 1.0,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e519",
+   "text": "sin(90 * holes)",
+   "field": "ratio",
+   "canonical": "sin(90 * holes)",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e520",
+   "text": "cos(360 * big)",
+   "field": "ratio",
+   "canonical": "cos(360 * big)",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e521",
+   "text": "sin(0.5 * 60)",
+   "field": "ratio",
+   "canonical": "sin(0.5 * 60)",
+   "type": "flex",
+   "value": 0.5,
+   "bits": "0x3fe0000000000000"
+  },
+  {
+   "id": "e522",
+   "text": "cos(1e300)",
+   "field": "ratio",
+   "canonical": "cos(1e+300)",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e523",
+   "text": "sin(tilt)",
+   "field": "angle",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e524",
+   "text": "acos(half)",
+   "field": "angle",
+   "canonical": "acos(half)",
+   "type": "deg",
+   "value": 60.0,
+   "bits": "0x404e000000000000"
+  },
+  {
+   "id": "e525",
+   "text": "asin(sin(30))",
+   "field": "angle",
+   "canonical": "asin(sin(30))",
+   "type": "deg",
+   "value": 30.0,
+   "bits": "0x403e000000000000"
+  },
+  {
+   "id": "e526",
+   "text": "acos(cos(60))",
+   "field": "angle",
+   "canonical": "acos(cos(60))",
+   "type": "deg",
+   "value": 60.0,
+   "bits": "0x404e000000000000"
+  },
+  {
+   "id": "e527",
+   "text": "atan(tan(45))",
+   "field": "angle",
+   "canonical": "atan(tan(45))",
+   "type": "deg",
+   "value": 45.0,
+   "bits": "0x4046800000000000"
+  },
+  {
+   "id": "e528",
+   "text": "asin(sin(45))",
+   "field": "angle",
+   "canonical": "asin(sin(45))",
+   "type": "deg",
+   "value": 45.00000000000001,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e529",
+   "text": "asin(1.0000000000000002)",
+   "field": "angle",
+   "canonical": "asin(1.0000000000000002)",
+   "type": "deg",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e530",
+   "text": "acos(-1.0000000000000002)",
+   "field": "angle",
+   "canonical": "acos(-1.0000000000000002)",
+   "type": "deg",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e531",
+   "text": "asin(width / depth)",
+   "field": "angle",
+   "canonical": "asin(width / depth)",
+   "type": "deg",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e532",
+   "text": "atan(1e300)",
+   "field": "angle",
+   "canonical": "atan(1e+300)",
+   "type": "deg",
+   "value": 90.0,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e533",
+   "text": "acos(third)",
+   "field": "angle",
+   "canonical": "acos(third)",
+   "type": "deg",
+   "value": 70.52877936550931,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e534",
+   "text": "asin(0.5)",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e535",
+   "text": "0.1 + 0.2",
+   "field": "ratio",
+   "canonical": "0.1 + 0.2",
+   "type": "flex",
+   "value": 0.30000000000000004,
+   "bits": "0x3fd3333333333334"
+  },
+  {
+   "id": "e536",
+   "text": "1 / 3",
+   "field": "ratio",
+   "canonical": "1 / 3",
+   "type": "flex",
+   "value": 0.3333333333333333,
+   "bits": "0x3fd5555555555555"
+  },
+  {
+   "id": "e537",
+   "text": "2 / 3 * 3",
+   "field": "ratio",
+   "canonical": "2 / 3 * 3",
+   "type": "flex",
+   "value": 2.0,
+   "bits": "0x4000000000000000"
+  },
+  {
+   "id": "e538",
+   "text": "1e308 * 10",
+   "field": "ratio",
+   "canonical": "1e+308 * 10",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e539",
+   "text": "5 % 3",
+   "field": "ratio",
+   "canonical": "5 % 3",
+   "type": "flex",
+   "value": 2.0,
+   "bits": "0x4000000000000000"
+  },
+  {
+   "id": "e540",
+   "text": "-5 % 3",
+   "field": "ratio",
+   "canonical": "-5 % 3",
+   "type": "flex",
+   "value": -2.0,
+   "bits": "0xc000000000000000"
+  },
+  {
+   "id": "e541",
+   "text": "5 % -3",
+   "field": "ratio",
+   "canonical": "5 % -3",
+   "type": "flex",
+   "value": 2.0,
+   "bits": "0x4000000000000000"
+  },
+  {
+   "id": "e542",
+   "text": "5.5 % 2",
+   "field": "ratio",
+   "canonical": "5.5 % 2",
+   "type": "flex",
+   "value": 1.5,
+   "bits": "0x3ff8000000000000"
+  },
+  {
+   "id": "e543",
+   "text": "-5.5 % 2",
+   "field": "ratio",
+   "canonical": "-5.5 % 2",
+   "type": "flex",
+   "value": -1.5,
+   "bits": "0xbff8000000000000"
+  },
+  {
+   "id": "e544",
+   "text": "1e300 % 7",
+   "field": "ratio",
+   "canonical": "1e+300 % 7",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e545",
+   "text": "0.3 % 0.1",
+   "field": "ratio",
+   "canonical": "0.3 % 0.1",
+   "type": "flex",
+   "value": 0.09999999999999998,
+   "bits": "0x3fb9999999999998"
+  },
+  {
+   "id": "e546",
+   "text": "7 % 0",
+   "field": "ratio",
+   "canonical": "7 % 0",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e547",
+   "text": "-0 % 5",
+   "field": "ratio",
+   "canonical": "-0 % 5",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e548",
+   "text": "-5 % 5",
+   "field": "ratio",
+   "canonical": "-5 % 5",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e549",
+   "text": "1e-320 / 2",
+   "field": "ratio",
+   "canonical": "1e-320 / 2",
+   "type": "flex",
+   "value": 5e-321,
+   "bits": "0x00000000000003f4"
+  },
+  {
+   "id": "e550",
+   "text": "4503599627370496 + 0.5",
+   "field": "ratio",
+   "canonical": "4503599627370496 + 0.5",
+   "type": "flex",
+   "value": 4503599627370496.0,
+   "bits": "0x4330000000000000"
+  },
+  {
+   "id": "e551",
+   "text": "9007199254740993",
+   "field": "ratio",
+   "canonical": "9007199254740992",
+   "type": "flex",
+   "value": 9007199254740992.0,
+   "bits": "0x4340000000000000"
+  },
+  {
+   "id": "e552",
+   "text": "0.1 * 3",
+   "field": "ratio",
+   "canonical": "0.1 * 3",
+   "type": "flex",
+   "value": 0.30000000000000004,
+   "bits": "0x3fd3333333333334"
+  },
+  {
+   "id": "e553",
+   "text": "1 - 0.9",
+   "field": "ratio",
+   "canonical": "1 - 0.9",
+   "type": "flex",
+   "value": 0.09999999999999998,
+   "bits": "0x3fb9999999999998"
+  },
+  {
+   "id": "e554",
+   "text": "1e16 + 1",
+   "field": "ratio",
+   "canonical": "10000000000000000 + 1",
+   "type": "flex",
+   "value": 1e+16,
+   "bits": "0x4341c37937e08000"
+  },
+  {
+   "id": "e555",
+   "text": "-1e308 - 1e308",
+   "field": "ratio",
+   "canonical": "-1e+308 - 1e+308",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e556",
+   "text": "1 / -0",
+   "field": "ratio",
+   "canonical": "1 / -0",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e557",
+   "text": "zero / zero",
+   "field": "ratio",
+   "canonical": "zero / zero",
+   "type": "1",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e558",
+   "text": "neg / zero",
+   "field": "ratio",
+   "canonical": "neg / zero",
+   "type": "1",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e559",
+   "text": "third * 3",
+   "field": "ratio",
+   "canonical": "third * 3",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e560",
+   "text": "half + third",
+   "field": "ratio",
+   "canonical": "half + third",
+   "type": "1",
+   "value": 0.8333333333333333,
+   "bits": "0x3feaaaaaaaaaaaaa"
+  },
+  {
+   "id": "e561",
+   "text": "round(2.5)",
+   "field": "ratio",
+   "canonical": "round(2.5)",
+   "type": "flex",
+   "value": 3.0,
+   "bits": "0x4008000000000000"
+  },
+  {
+   "id": "e562",
+   "text": "round(-2.5)",
+   "field": "ratio",
+   "canonical": "round(-2.5)",
+   "type": "flex",
+   "value": -3.0,
+   "bits": "0xc008000000000000"
+  },
+  {
+   "id": "e563",
+   "text": "round(0.49999999999999994)",
+   "field": "ratio",
+   "canonical": "round(0.49999999999999994)",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e564",
+   "text": "round(-0.4)",
+   "field": "ratio",
+   "canonical": "round(-0.4)",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e565",
+   "text": "floor(-0.5)",
+   "field": "ratio",
+   "canonical": "floor(-0.5)",
+   "type": "flex",
+   "value": -1.0,
+   "bits": "0xbff0000000000000"
+  },
+  {
+   "id": "e566",
+   "text": "ceil(-0.5)",
+   "field": "ratio",
+   "canonical": "ceil(-0.5)",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e567",
+   "text": "floor(1e300)",
+   "field": "ratio",
+   "canonical": "floor(1e+300)",
+   "type": "flex",
+   "value": 1e+300,
+   "bits": "0x7e37e43c8800759c"
+  },
+  {
+   "id": "e568",
+   "text": "ceil(2.000000000000001)",
+   "field": "ratio",
+   "canonical": "ceil(2.000000000000001)",
+   "type": "flex",
+   "value": 3.0,
+   "bits": "0x4008000000000000"
+  },
+  {
+   "id": "e569",
+   "text": "round(4503599627370495.5)",
+   "field": "ratio",
+   "canonical": "round(4503599627370495.5)",
+   "type": "flex",
+   "value": 4503599627370496.0,
+   "bits": "0x4330000000000000"
+  },
+  {
+   "id": "e570",
+   "text": "floor(-0)",
+   "field": "ratio",
+   "canonical": "floor(-0)",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e571",
+   "text": "round(-0.5)",
+   "field": "ratio",
+   "canonical": "round(-0.5)",
+   "type": "flex",
+   "value": -1.0,
+   "bits": "0xbff0000000000000"
+  },
+  {
+   "id": "e572",
+   "text": "ceil(0.1)",
+   "field": "ratio",
+   "canonical": "ceil(0.1)",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e573",
+   "text": "floor(-1e-300)",
+   "field": "ratio",
+   "canonical": "floor(-1e-300)",
+   "type": "flex",
+   "value": -1.0,
+   "bits": "0xbff0000000000000"
+  },
+  {
+   "id": "e574",
+   "text": "round(1.5)",
+   "field": "ratio",
+   "canonical": "round(1.5)",
+   "type": "flex",
+   "value": 2.0,
+   "bits": "0x4000000000000000"
+  },
+  {
+   "id": "e575",
+   "text": "abs(-0)",
+   "field": "ratio",
+   "canonical": "abs(-0)",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e576",
+   "text": "abs(neg)",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e577",
+   "text": "sqrt(-0)",
+   "field": "ratio",
+   "canonical": "sqrt(-0)",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e578",
+   "text": "sqrt(-1e-300)",
+   "field": "ratio",
+   "canonical": "sqrt(-1e-300)",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e579",
+   "text": "sqrt(1e-320)",
+   "field": "ratio",
+   "canonical": "sqrt(1e-320)",
+   "type": "flex",
+   "value": 9.99994433575849e-161,
+   "bits": "0x1eb67e93ddbc0e73"
+  },
+  {
+   "id": "e580",
+   "text": "sqrt(0.25)",
+   "field": "ratio",
+   "canonical": "sqrt(0.25)",
+   "type": "flex",
+   "value": 0.5,
+   "bits": "0x3fe0000000000000"
+  },
+  {
+   "id": "e581",
+   "text": "min(3, 1, 2)",
+   "field": "ratio",
+   "canonical": "min(3, 1, 2)",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e582",
+   "text": "max(-0, 0)",
+   "field": "ratio",
+   "canonical": "max(-0, 0)",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e583",
+   "text": "min(0.1 + 0.2, 0.3)",
+   "field": "ratio",
+   "canonical": "min(0.1 + 0.2, 0.3)",
+   "type": "flex",
+   "value": 0.3,
+   "bits": "0x3fd3333333333333"
+  },
+  {
+   "id": "e584",
+   "text": "max(1, 2, 3, 2)",
+   "field": "ratio",
+   "canonical": "max(1, 2, 3, 2)",
+   "type": "flex",
+   "value": 3.0,
+   "bits": "0x4008000000000000"
+  },
+  {
+   "id": "e585",
+   "text": "clamp(5, 1, 3)",
+   "field": "ratio",
+   "canonical": "clamp(5, 1, 3)",
+   "type": "flex",
+   "value": 3.0,
+   "bits": "0x4008000000000000"
+  },
+  {
+   "id": "e586",
+   "text": "clamp(-5, 1, 3)",
+   "field": "ratio",
+   "canonical": "clamp(-5, 1, 3)",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e587",
+   "text": "clamp(2, 1, 3)",
+   "field": "ratio",
+   "canonical": "clamp(2, 1, 3)",
+   "type": "flex",
+   "value": 2.0,
+   "bits": "0x4000000000000000"
+  },
+  {
+   "id": "e588",
+   "text": "clamp(1, 3, 2)",
+   "field": "ratio",
+   "canonical": "clamp(1, 3, 2)",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e589",
+   "text": "clamp(2, 2, 2)",
+   "field": "ratio",
+   "canonical": "clamp(2, 2, 2)",
+   "type": "flex",
+   "value": 2.0,
+   "bits": "0x4000000000000000"
+  },
+  {
+   "id": "e590",
+   "text": "hypot(3, 4)",
+   "field": "ratio",
+   "canonical": "hypot(3, 4)",
+   "type": "flex",
+   "value": 5.0,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e591",
+   "text": "hypot(1e300, 1e300)",
+   "field": "ratio",
+   "canonical": "hypot(1e+300, 1e+300)",
+   "type": "flex",
+   "value": 1.4142135623730952e+300,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e592",
+   "text": "hypot(-5, 12)",
+   "field": "ratio",
+   "canonical": "hypot(-5, 12)",
+   "type": "flex",
+   "value": 13.0,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e593",
+   "text": "min(width, depth, wall)",
+   "field": "length",
+   "canonical": "min(width, depth, wall)",
+   "type": "mm",
+   "value": 2.0,
+   "bits": "0x4000000000000000"
+  },
+  {
+   "id": "e594",
+   "text": "max(width, 1 in)",
+   "field": "length",
+   "canonical": "max(width, 1 in)",
+   "type": "mm",
+   "value": 80.0,
+   "bits": "0x4054000000000000"
+  },
+  {
+   "id": "e595",
+   "text": "clamp(width, 10 mm, 1 in)",
+   "field": "length",
+   "canonical": "clamp(width, 10 mm, 1 in)",
+   "type": "mm",
+   "value": 25.4,
+   "bits": "0x4039666666666666"
+  },
+  {
+   "id": "e596",
+   "text": "abs(neg) + wall",
+   "field": "length",
+   "canonical": "abs(neg) + wall",
+   "type": "mm",
+   "value": 5.0,
+   "bits": "0x4014000000000000"
+  },
+  {
+   "id": "e597",
+   "text": "1 in",
+   "field": "length",
+   "canonical": "1 in",
+   "type": "mm",
+   "value": 25.4,
+   "bits": "0x4039666666666666"
+  },
+  {
+   "id": "e598",
+   "text": "0.1 in",
+   "field": "length",
+   "canonical": "0.1 in",
+   "type": "mm",
+   "value": 2.54,
+   "bits": "0x400451eb851eb852"
+  },
+  {
+   "id": "e599",
+   "text": "2.5 cm",
+   "field": "length",
+   "canonical": "2.5 cm",
+   "type": "mm",
+   "value": 25.0,
+   "bits": "0x4039000000000000"
+  },
+  {
+   "id": "e600",
+   "text": "3 cm + 1 in",
+   "field": "length",
+   "canonical": "3 cm + 1 in",
+   "type": "mm",
+   "value": 55.4,
+   "bits": "0x404bb33333333333"
+  },
+  {
+   "id": "e601",
+   "text": "1e308 in",
+   "field": "length",
+   "canonical": "1e+308 in",
+   "type": "mm",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e602",
+   "text": "1 in * 2",
+   "field": "length",
+   "canonical": "1 in * 2",
+   "type": "mm",
+   "value": 50.8,
+   "bits": "0x4049666666666666"
+  },
+  {
+   "id": "e603",
+   "text": "2 * 1 cm",
+   "field": "length",
+   "canonical": "2 * 1 cm",
+   "type": "mm",
+   "value": 20.0,
+   "bits": "0x4034000000000000"
+  },
+  {
+   "id": "e604",
+   "text": "1 cm * 1 cm",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e605",
+   "text": "1 mm + 1 deg",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e606",
+   "text": "width * sin(tilt)",
+   "field": "length",
+   "canonical": "width * sin(tilt)",
+   "type": "mm",
+   "value": 20.70552360820166,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e607",
+   "text": "hypot(width, 1 in)",
+   "field": "length",
+   "canonical": "hypot(width, 1 in)",
+   "type": "mm",
+   "value": 83.93545138974353,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e608",
+   "text": "width % 7 mm",
+   "field": "length",
+   "canonical": "width % 7 mm",
+   "type": "mm",
+   "value": 3.0,
+   "bits": "0x4008000000000000"
+  },
+  {
+   "id": "e609",
+   "text": "-width % 7",
+   "field": "length",
+   "canonical": "-width % 7",
+   "type": "mm",
+   "value": -3.0,
+   "bits": "0xc008000000000000"
+  },
+  {
+   "id": "e610",
+   "text": "floor(width / 3)",
+   "field": "length",
+   "canonical": "floor(width / 3)",
+   "type": "mm",
+   "value": 26.0,
+   "bits": "0x403a000000000000"
+  },
+  {
+   "id": "e611",
+   "text": "round(width / 3 mm) * 3",
+   "field": "length",
+   "canonical": "round(width / 3 mm) * 3",
+   "type": "flex",
+   "value": 81.0,
+   "bits": "0x4054400000000000"
+  },
+  {
+   "id": "e612",
+   "text": "width / 0",
+   "field": "length",
+   "canonical": "width / 0",
+   "type": "mm",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e613",
+   "text": "width * 1e308",
+   "field": "length",
+   "canonical": "width * 1e+308",
+   "type": "mm",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e614",
+   "text": "sqrt(neg)",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e615",
+   "text": "1 in / 1 mm",
+   "field": "ratio",
+   "canonical": "1 in / 1 mm",
+   "type": "1",
+   "value": 25.4,
+   "bits": "0x4039666666666666"
+  },
+  {
+   "id": "e616",
+   "text": "holes / 2",
+   "field": "ratio",
+   "canonical": "holes / 2",
+   "type": "flex",
+   "value": 2.0,
+   "bits": "0x4000000000000000"
+  },
+  {
+   "id": "e617",
+   "text": "width / depth * half",
+   "field": "ratio",
+   "canonical": "width / depth * half",
+   "type": "1",
+   "value": 0.8,
+   "bits": "0x3fe999999999999a"
+  },
+  {
+   "id": "e618",
+   "text": "2 / width",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e619",
+   "text": "90 deg",
+   "field": "angle",
+   "canonical": "90 deg",
+   "type": "deg",
+   "value": 90.0,
+   "bits": "0x4056800000000000"
+  },
+  {
+   "id": "e620",
+   "text": "tilt + 30",
+   "field": "angle",
+   "canonical": "tilt + 30",
+   "type": "deg",
+   "value": 45.0,
+   "bits": "0x4046800000000000"
+  },
+  {
+   "id": "e621",
+   "text": "tilt / half",
+   "field": "angle",
+   "canonical": "tilt / half",
+   "type": "deg",
+   "value": 30.0,
+   "bits": "0x403e000000000000"
+  },
+  {
+   "id": "e622",
+   "text": "atan(half) + tilt",
+   "field": "angle",
+   "canonical": "atan(half) + tilt",
+   "type": "deg",
+   "value": 41.56505117707799,
+   "tolerance_rel": 1e-15
+  },
+  {
+   "id": "e623",
+   "text": "2 * atan2(1, 1)",
+   "field": "angle",
+   "canonical": "2 * atan2(1, 1)",
+   "type": "deg",
+   "value": 90.0,
+   "bits": "0x4056800000000000"
+  },
+  {
+   "id": "e624",
+   "text": "asin(half) - acos(half)",
+   "field": "angle",
+   "canonical": "asin(half) - acos(half)",
+   "type": "deg",
+   "value": -30.0,
+   "bits": "0xc03e000000000000"
+  },
+  {
+   "id": "e625",
+   "text": "big * 2",
+   "field": "count",
+   "canonical": "big * 2",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_NOT_INTEGER",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e626",
+   "text": "holes * 2.5",
+   "field": "count",
+   "canonical": "holes * 2.5",
+   "type": "flex",
+   "value": 10.0,
+   "bits": "0x4024000000000000"
+  },
+  {
+   "id": "e627",
+   "text": "holes / 8",
+   "field": "count",
+   "canonical": "holes / 8",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_NOT_INTEGER",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e628",
+   "text": "floor(width / 30 mm)",
+   "field": "count",
+   "canonical": "floor(width / 30 mm)",
+   "type": "1",
+   "value": 2.0,
+   "bits": "0x4000000000000000"
+  },
+  {
+   "id": "e629",
+   "text": "round(third * 9)",
+   "field": "count",
+   "canonical": "round(third * 9)",
+   "type": "flex",
+   "value": 3.0,
+   "bits": "0x4008000000000000"
+  },
+  {
+   "id": "e630",
+   "text": "holes - 4",
+   "field": "count",
+   "canonical": "holes - 4",
+   "type": "1",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e631",
+   "text": "0.1 + 0.2 - 0.30000000000000004",
+   "field": "count",
+   "canonical": "0.1 + 0.2 - 0.30000000000000004",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e632",
+   "text": "floor(width / 30)",
+   "field": "count",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e633",
+   "text": "holes ^ 16",
+   "field": "count",
+   "canonical": "holes ^ 16",
+   "type": "1",
+   "error": {
+    "code": "EXPR_NOT_INTEGER",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e634",
+   "text": "-(2 ^ 31)",
+   "field": "count",
+   "canonical": "-(2 ^ 31)",
+   "type": "flex",
+   "value": -2147483648.0,
+   "bits": "0xc1e0000000000000"
+  },
+  {
+   "id": "e635",
+   "text": "1e-320",
+   "field": "count",
+   "canonical": "1e-320",
+   "type": "flex",
+   "error": {
+    "code": "EXPR_NOT_INTEGER",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e636",
+   "text": "width > depth",
+   "field": "bool",
+   "canonical": "width > depth",
+   "type": "bool",
+   "value": true
+  },
+  {
+   "id": "e637",
+   "text": "width == 80",
+   "field": "bool",
+   "canonical": "width == 80",
+   "type": "bool",
+   "value": true
+  },
+  {
+   "id": "e638",
+   "text": "!lid || width < 1",
+   "field": "bool",
+   "canonical": "!lid || width < 1",
+   "type": "bool",
+   "value": false
+  },
+  {
+   "id": "e639",
+   "text": "1 / 0 > 0 && off",
+   "field": "bool",
+   "canonical": "1 / 0 > 0 && off",
+   "type": "bool",
+   "error": {
+    "code": "EXPR_DOMAIN",
+    "stage": "E"
+   }
+  },
+  {
+   "id": "e640",
+   "text": "off ? 1 / 0 > 0 : lid",
+   "field": "bool",
+   "canonical": "off ? 1 / 0 > 0 : lid",
+   "type": "bool",
+   "value": true
+  },
+  {
+   "id": "e641",
+   "text": "0.1 + 0.2 == 0.3",
+   "field": "bool",
+   "canonical": "0.1 + 0.2 == 0.3",
+   "type": "bool",
+   "value": false
+  },
+  {
+   "id": "e642",
+   "text": "0.1 + 0.2 != 0.3",
+   "field": "bool",
+   "canonical": "0.1 + 0.2 != 0.3",
+   "type": "bool",
+   "value": true
+  },
+  {
+   "id": "e643",
+   "text": "width >= 80 mm && depth <= 5 cm",
+   "field": "bool",
+   "canonical": "width >= 80 mm && depth <= 5 cm",
+   "type": "bool",
+   "value": true
+  },
+  {
+   "id": "e644",
+   "text": "tilt == 15 deg",
+   "field": "bool",
+   "canonical": "tilt == 15 deg",
+   "type": "bool",
+   "value": true
+  },
+  {
+   "id": "e645",
+   "text": "holes > 3 == lid",
+   "field": "bool",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e646",
+   "text": "(width > 1) == (depth > 1)",
+   "field": "bool",
+   "canonical": "(width > 1) == (depth > 1)",
+   "type": "bool",
+   "value": true
+  },
+  {
+   "id": "e647",
+   "text": "lid ? width > 1 : 1 / 0 > 0",
+   "field": "bool",
+   "canonical": "lid ? width > 1 : 1 / 0 > 0",
+   "type": "bool",
+   "value": true
+  },
+  {
+   "id": "e648",
+   "text": "!(lid && off)",
+   "field": "bool",
+   "canonical": "!(lid && off)",
+   "type": "bool",
+   "value": true
+  },
+  {
+   "id": "e649",
+   "text": "width < lid",
+   "field": "bool",
+   "error": {
+    "code": "EXPR_TYPE_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e650",
+   "text": "width == tilt",
+   "field": "bool",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e651",
+   "text": "-0 == 0",
+   "field": "bool",
+   "canonical": "-0 == 0",
+   "type": "bool",
+   "value": true
+  },
+  {
+   "id": "e652",
+   "text": "zero == -zero",
+   "field": "bool",
+   "canonical": "zero == -zero",
+   "type": "bool",
+   "value": true
+  },
+  {
+   "id": "e653",
+   "text": "third * 3 == 1",
+   "field": "bool",
+   "canonical": "third * 3 == 1",
+   "type": "bool",
+   "value": true
+  },
+  {
+   "id": "e654",
+   "text": "big == 2 ^ 31",
+   "field": "bool",
+   "canonical": "big == 2 ^ 31",
+   "type": "bool",
+   "value": true
+  },
+  {
+   "id": "e655",
+   "text": "lid ? width : tilt",
+   "field": "length",
+   "error": {
+    "code": "EXPR_UNIT_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e656",
+   "text": "lid ? width : 2",
+   "field": "length",
+   "canonical": "lid ? width : 2",
+   "type": "mm",
+   "value": 80.0,
+   "bits": "0x4054000000000000"
+  },
+  {
+   "id": "e657",
+   "text": "lid ? 2 : width",
+   "field": "length",
+   "canonical": "lid ? 2 : width",
+   "type": "mm",
+   "value": 2.0,
+   "bits": "0x4000000000000000"
+  },
+  {
+   "id": "e658",
+   "text": "width > 1 ? 1 : 0",
+   "field": "count",
+   "canonical": "width > 1 ? 1 : 0",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e659",
+   "text": "width + (lid ? 1 : 2)",
+   "field": "length",
+   "canonical": "width + (lid ? 1 : 2)",
+   "type": "mm",
+   "value": 81.0,
+   "bits": "0x4054400000000000"
+  },
+  {
+   "id": "e660",
+   "text": "1e-400",
+   "field": "ratio",
+   "canonical": "0",
+   "type": "flex",
+   "value": 0.0,
+   "bits": "0x0000000000000000"
+  },
+  {
+   "id": "e661",
+   "text": "1e400",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e662",
+   "text": ".5",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e663",
+   "text": "5.",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e664",
+   "text": "1e",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e665",
+   "text": "1E+2",
+   "field": "ratio",
+   "canonical": "100",
+   "type": "flex",
+   "value": 100.0,
+   "bits": "0x4059000000000000"
+  },
+  {
+   "id": "e666",
+   "text": "sin (30)",
+   "field": "ratio",
+   "canonical": "sin(30)",
+   "type": "flex",
+   "value": 0.5,
+   "bits": "0x3fe0000000000000"
+  },
+  {
+   "id": "e667",
+   "text": "1\t+\t2",
+   "field": "ratio",
+   "canonical": "1 + 2",
+   "type": "flex",
+   "value": 3.0,
+   "bits": "0x4008000000000000"
+  },
+  {
+   "id": "e668",
+   "text": "1 +\n2",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e669",
+   "text": "a < b < c",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e670",
+   "text": "width mm",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e671",
+   "text": "2 mm mm",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e672",
+   "text": "PI * 2",
+   "field": "ratio",
+   "canonical": "PI * 2",
+   "type": "flex",
+   "value": 6.283185307179586,
+   "bits": "0x401921fb54442d18"
+  },
+  {
+   "id": "e673",
+   "text": "0.000001",
+   "field": "ratio",
+   "canonical": "0.000001",
+   "type": "flex",
+   "value": 1e-06,
+   "bits": "0x3eb0c6f7a0b5ed8d"
+  },
+  {
+   "id": "e674",
+   "text": "1e-7",
+   "field": "ratio",
+   "canonical": "1e-7",
+   "type": "flex",
+   "value": 1e-07,
+   "bits": "0x3e7ad7f29abcaf48"
+  },
+  {
+   "id": "e675",
+   "text": "100000000000000000000",
+   "field": "ratio",
+   "canonical": "100000000000000000000",
+   "type": "flex",
+   "value": 1e+20,
+   "bits": "0x4415af1d78b58c40"
+  },
+  {
+   "id": "e676",
+   "text": "1e21",
+   "field": "ratio",
+   "canonical": "1e+21",
+   "type": "flex",
+   "value": 1e+21,
+   "bits": "0x444b1ae4d6e2ef50"
+  },
+  {
+   "id": "e677",
+   "text": "123456789012345680000",
+   "field": "ratio",
+   "canonical": "123456789012345680000",
+   "type": "flex",
+   "value": 1.2345678901234568e+20,
+   "bits": "0x441ac53a7e04bcda"
+  },
+  {
+   "id": "e678",
+   "text": "0.1e1",
+   "field": "ratio",
+   "canonical": "1",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e679",
+   "text": "00012",
+   "field": "ratio",
+   "canonical": "12",
+   "type": "flex",
+   "value": 12.0,
+   "bits": "0x4028000000000000"
+  },
+  {
+   "id": "e680",
+   "text": "1_000",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e681",
+   "text": "width@2",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e682",
+   "text": "",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e683",
+   "text": " ",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e684",
+   "text": "(1",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e685",
+   "text": "1)",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e686",
+   "text": "f(1,)",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e687",
+   "text": "min(,1)",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e688",
+   "text": "1 ? 2 : 3",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_TYPE_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e689",
+   "text": "lid ? 1",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e690",
+   "text": "!1",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_TYPE_MISMATCH",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e691",
+   "text": "--1",
+   "field": "ratio",
+   "canonical": "--1",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e692",
+   "text": "-(-1)",
+   "field": "ratio",
+   "canonical": "--1",
+   "type": "flex",
+   "value": 1.0,
+   "bits": "0x3ff0000000000000"
+  },
+  {
+   "id": "e693",
+   "text": "+1",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e694",
+   "text": "1 ** 2",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e695",
+   "text": "2 ^^ 3",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e696",
+   "text": "lid && && off",
+   "field": "ratio",
+   "error": {
+    "code": "EXPR_SYNTAX",
+    "stage": "R"
+   }
+  },
+  {
+   "id": "e697",
+   "text": "2 ^ 65",
+   "field": "ratio",
+   "canonical": "2 ^ 65",
+   "type": "flex",
+   "value": 3.6893488147419103e+19,
+   "bits": "0x4400000000000000"
+  },
+  {
+   "id": "e698",
+   "text": "hypot(3, 4)",
+   "field": "ratio",
+   "canonical": "hypot(3, 4)",
+   "type": "flex",
+   "value": 5.0,
+   "bits": "0x4014000000000000"
+  },
+  {
+   "id": "e699",
+   "text": "hypot(-5, 12)",
+   "field": "ratio",
+   "canonical": "hypot(-5, 12)",
+   "type": "flex",
+   "value": 13.0,
+   "bits": "0x402a000000000000"
   }
  ]
 }

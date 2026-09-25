@@ -1,0 +1,94 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "negative_zero_fields",
+    "description": "SPEC-v1 [W0-24]: literal feature fields are stored and migrated as written, -0.0 included (only parameter values and expression results are normalized to +0)"
+  },
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "base",
+          "plane": {
+            "origin": [
+              -0.0,
+              0.0,
+              -0.0
+            ],
+            "normal": [
+              -0.0,
+              0.0,
+              1.0
+            ],
+            "x_dir": [
+              1.0,
+              -0.0,
+              0.0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "line",
+              "id": "bottom",
+              "start": [
+                -0.0,
+                -0.0
+              ],
+              "end": [
+                20.0,
+                -0.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "right",
+              "start": [
+                20.0,
+                -0.0
+              ],
+              "end": [
+                20.0,
+                10.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "top",
+              "start": [
+                20.0,
+                10.0
+              ],
+              "end": [
+                -0.0,
+                10.0
+              ]
+            },
+            {
+              "kind": "line",
+              "id": "left",
+              "start": [
+                -0.0,
+                10.0
+              ],
+              "end": [
+                -0.0,
+                -0.0
+              ]
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "plate",
+          "sketch": "s1",
+          "distance": 5.0
+        }
+      ]
+    }
+  ]
+}

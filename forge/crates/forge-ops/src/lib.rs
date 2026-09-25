@@ -21,6 +21,8 @@
 pub mod boolean;
 mod error;
 mod extrude;
+pub mod hole;
+pub mod pattern;
 mod plan;
 mod plane;
 pub mod revolve;
@@ -32,6 +34,8 @@ pub use boolean::{
 };
 pub use error::{CurveEnd, OpError};
 pub use extrude::extrude;
+pub use hole::{apply_hole, hole_tools};
+pub use pattern::{apply_seed, pattern_instances};
 pub use plane::sketch_frame;
 pub use revolve::{AxisSide, check_revolve_profile, revolve};
 pub use sketch::{Junction, Loop, LoopCurve, LoopCurveGeom, Region, regions};

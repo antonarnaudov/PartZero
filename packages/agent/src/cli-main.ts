@@ -36,9 +36,10 @@ import {
   type ProviderTransport,
 } from "@aicad/llm-gateway";
 import { FixtureEngine, ForgeCliEngine, IR0_CAPABILITIES, isSupported, loadTasks, OracleEngine, TaskLoadError, TIERS, type Engine, type Tier } from "@aicad/evals";
-import { summarizeTests } from "@aicad/agent-tools";
-import { Agent } from "./agent.js";
+import { summarizeTests, v1 as tv1 } from "@aicad/agent-tools";
+import { Agent, type AgentOptions } from "./agent.js";
 import { runBakeOff } from "./bench.js";
+import { BENCH_LIMITS, type AgentLimits } from "./run-context.js";
 import { resolveModels, type ModelOverrides } from "./models.js";
 import type { AgentRuntime, CliModeOption } from "./runtime.js";
 import { formatTraceSummary } from "./trace.js";
@@ -54,6 +55,8 @@ export interface CliIo {
 export interface CliDeps {
   makeGateway?: (config: GatewayConfig | undefined) => LLMGateway;
   makeEngine?: (kind: string) => Engine;
+  /** `--ir v1`: the engine returning `aicad.metrics/1` reports (default: Forge's CLI). */
+  makeEngineV1?: () => tv1.EngineV1;
   env?: Record<string, string | undefined>;
   /** CLI agents: the binary per provider (default: detection) and the MCP host (default: `@aicad/mcp-server` when installed). */
   cli?: {
@@ -82,6 +85,9 @@ export const USAGE = `Usage:
       --replay <file.json>        replay recorded exchanges instead of calling providers (no keys needed)
       --cli-mode auto|completion|runtime   CLI profiles: how the tool loops run (default auto: runtime when possible)
       --cli-bin <provider>=<path>  use this CLI binary (repeatable), e.g. claude-cli=/opt/bin/claude
+      --ir v0|v1                  the CadScript dialect (default v0); v1 = parameters, queries, holes, blends, patterns (engine: Forge, or --engine oracle)
+      --task-wall <seconds>       stop the task after this much wall time (default: none; bench 480)
+      --max-failed-applies <n>    stop after this many failed applies (default 10, 6 in CLI runtime mode and in bench)
   aicad-agent bench --tasks <dir> --models <id,id,…> [options]
       MakerBench bake-off: run every task once per designer model, write per-model results and a comparison table.
       --engine auto|oracle|forge|fixture   (default oracle)
@@ -91,6 +97,8 @@ export const USAGE = `Usage:
       --concurrency <n>           parallel tasks per model (default 2; 1 on a CLI plan)
       --gateway-config <file>
       --cli-mode auto|completion|runtime   --cli-bin <provider>=<path>
+      --task-wall <seconds>       per-task wall-time cap (default 480)
+      --max-failed-applies <n>    per-task failed-apply stop (default 6)
       On a CLI plan (subscription profiles) the bench runs 5 tasks unless --limit is given; --limit 0 runs all.
 Models: API profiles (claude-opus-5-5, gpt-6-sol, …), local ones (ollama:<tag>) and CLI agents on your own
   logged-in plan: claude-cli:opus|sonnet|haiku|fable, gemini-cli:pro|flash|flash-lite|auto, codex-cli:default|gpt-6-sol|gpt-6-luna.
@@ -126,6 +134,9 @@ const VALUE_FLAGS = new Set([
   "--replay",
   "--cli-mode",
   "--cli-bin",
+  "--ir",
+  "--task-wall",
+  "--max-failed-applies",
 ]);
 
 /** Flags that may be given more than once (values joined with ","). */
@@ -296,6 +307,14 @@ function planLine(u: PlanUsage): string {
   return `plan usage (${u.provider}): ${u.status}${w ? `; ${w}` : ""}`;
 }
 
+/** `--task-wall` / `--max-failed-applies` as agent limits (only what was given). */
+function limitFlags(flags: Map<string, string>): Partial<AgentLimits> {
+  const out: Partial<AgentLimits> = {};
+  if (flags.has("--task-wall")) out.maxWallMs = num(flags, "--task-wall", 0, (x) => Number.isFinite(x) && x > 0) * 1000;
+  if (flags.has("--max-failed-applies")) out.maxFailedApplies = num(flags, "--max-failed-applies", 0, (x) => Number.isInteger(x) && x > 0);
+  return out;
+}
+
 function overrides(flags: Map<string, string>): ModelOverrides {
   const o: ModelOverrides = {};
   const d = flags.get("--designer-model");
@@ -314,10 +333,30 @@ async function cmdRun(flags: Map<string, string>, io: CliIo, deps: CliDeps): Pro
   const context = contextFile ? readFileSync(resolve(io.cwd, contextFile), "utf8") : undefined;
   const kind = flags.get("--kind") as TriageKind | undefined;
   if (kind !== undefined && !["design", "quick_edit", "ask"].includes(kind)) throw new UsageError(`--kind must be design, quick_edit or ask`);
-  const engine = await makeEngine(flags.get("--engine") ?? "auto", flags, io, deps);
-  const a = await engine.availability();
+  const ir = flags.get("--ir") ?? "v0";
+  if (ir !== "v0" && ir !== "v1") throw new UsageError("--ir must be v0 or v1");
+  const limits = limitFlags(flags);
+  let engine: Engine;
+  let engineV1: tv1.EngineV1 | undefined;
+  if (ir === "v1") {
+    const e = flags.get("--engine") ?? "auto";
+    if (e !== "auto" && e !== "forge" && e !== "oracle") {
+      throw new UsageError("--ir v1 runs on Forge (--engine forge, or auto) or on the OCCT oracle's v1 pipeline (--engine oracle: CI/dev only, for operations Forge does not evaluate yet, e.g. draft); --engine fixture replays aicad.metrics/0 reports only");
+    }
+    engineV1 = deps.makeEngineV1
+      ? deps.makeEngineV1()
+      : e === "oracle"
+        ? new tv1.OracleCliEngineV1(flags.get("--oracle-dir") ? { oracleDir: resolve(io.cwd, flags.get("--oracle-dir")!) } : {})
+        : new tv1.ForgeCliEngineV1(flags.get("--forge-bin") ? { bin: resolve(io.cwd, flags.get("--forge-bin")!) } : {});
+    // The v0 engine is not used by a v1 run; the option stays required for v0 callers.
+    engine = new ForgeCliEngine(flags.get("--forge-bin") ? { bin: resolve(io.cwd, flags.get("--forge-bin")!) } : {});
+  } else {
+    engine = await makeEngine(flags.get("--engine") ?? "auto", flags, io, deps);
+  }
+  const probed = engineV1 ?? engine;
+  const a = await probed.availability();
   if (!a.available) {
-    io.stderr(`aicad-agent: engine ${engine.kind} is not available: ${a.detail}\n`);
+    io.stderr(`aicad-agent: engine ${probed.kind} is not available: ${a.detail}\n`);
     return 2;
   }
   const config = loadConfig(flags, io);
@@ -357,9 +396,11 @@ async function cmdRun(flags: Map<string, string>, io: CliIo, deps: CliDeps): Pro
     host = await cliHost(Object.values(roles).map((c) => c.model), probe, flags, io, deps, deps.env ?? process.env);
     gateway = new LLMGateway(withCli(base, host));
   }
-  const agent = new Agent({
+  const options: AgentOptions = {
     gateway,
     engine,
+    ...(engineV1 ? { ir: "v1" as const, engineV1 } : {}),
+    ...(Object.keys(limits).length > 0 ? { limits } : {}),
     models: overrides(flags),
     budgetUsd: num(flags, "--budget", 1.5, (x) => x > 0),
     mode: "eval",
@@ -367,7 +408,8 @@ async function cmdRun(flags: Map<string, string>, io: CliIo, deps: CliDeps): Pro
     ...(host?.runtime ? { runtime: host.runtime } : {}),
     ...(kind ? { kind } : {}),
     hooks: { onEvent: (e) => io.stderr(`  [${(e.t / 1000).toFixed(1)}s ${e.state}] ${e.type}: ${e.text.split("\n")[0]}\n`) },
-  });
+  };
+  const agent = new Agent(options);
   const r = await agent.run({ prompt, context, name: contextFile ? contextFile.replace(/.*\//, "").replace(/\.cad\.ts$/, "") : "design", process: flags.get("--process") });
   if (r.answer !== undefined) io.stdout(`${r.answer}\n`);
   else io.stdout(r.cadscript.endsWith("\n") ? r.cadscript : `${r.cadscript}\n`);
@@ -405,6 +447,7 @@ async function cmdBench(flags: Map<string, string>, io: CliIo, deps: CliDeps): P
   if (!dir) throw new UsageError("--tasks <dir> is required");
   const models = list(flags.get("--models"));
   if (!models || models.length === 0) throw new UsageError("--models <id,id,…> is required");
+  if ((flags.get("--ir") ?? "v0") !== "v0") throw new UsageError("bench runs the v0 MakerBench tasks (--ir v0); v1 tasks and checks come with MakerBench v1");
   let tasks = loadTasks(resolve(io.cwd, dir)).filter((t) => isSupported(t, IR0_CAPABILITIES));
   const tiers = list(flags.get("--tier"));
   if (tiers) {
@@ -464,7 +507,7 @@ async function cmdBench(flags: Map<string, string>, io: CliIo, deps: CliDeps): P
     budgetUsd: num(flags, "--budget", 1.5, (x) => x > 0),
     concurrency: num(flags, "--concurrency", onPlan ? 1 : 2, (x) => Number.isInteger(x) && x > 0),
     outDir: out,
-    agent: { cliMode: cliMode(flags), ...(host?.runtime ? { runtime: host.runtime } : {}) },
+    agent: { cliMode: cliMode(flags), ...(host?.runtime ? { runtime: host.runtime } : {}), limits: { ...BENCH_LIMITS, ...limitFlags(flags) } },
     onResult: (model, line) => io.stderr(`  ${model}: ${line}\n`),
   });
   io.stdout(`${table}\n\nwrote ${join(out, "comparison.md")}\n`);

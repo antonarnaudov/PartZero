@@ -9,6 +9,8 @@
 //! | explicit and constrained sketches, regions by member | `forge-sketch` (W2) | §4 |
 //! | plane/axis references, datums, tags, body references | `forge-refs` (W3) | §3, §5 |
 //! | `join` / `cut` / `intersect` on extrude, revolve and `boolean` | `forge-ops` booleans (W4) | §6.0.3–§6.0.5, §6.4 |
+//! | `hole`, `pattern` (linear, circular, mirror; feature and body seeds) | `forge-ops` holes and patterns (W5) | §6.5, §6.10 |
+//! | `fillet`, `chamfer`, `shell` | `forge-blend` (W6) | §6.6–§6.8 |
 //!
 //! Per feature, the checks of §7.1 step 2 run in order and the first failure decides the code:
 //! `PARAM_FAILED` → features referenced by id (`SKETCH_SUPPRESSED`, `DEPENDENCY_SUPPRESSED`,
@@ -22,20 +24,21 @@
 //! in field order before its expressions (§7.1 step 2), so a failed or suppressed tag decides
 //! the code even when a range check of the feature would also fail.
 //!
-//! Feature types (SPEC-v1 §0.2 rule 3, §7.5 stages), both **rejections** (stage R, CLI exit 2,
-//! no feature is evaluated), exactly as the frozen text states them:
+//! Feature types (SPEC-v1 §0.2 rule 3, §7.5 stages): every mandatory type is evaluated
+//! ([`SUPPORTED_FEATURE_TYPES`], Phase C: `hole`, `pattern`, `fillet`, `chamfer`, `shell`
+//! joined). The **rejections** (stage R, CLI exit 2, no feature is evaluated), exactly as the
+//! frozen text states them:
 //! - the optional `draft` (§6.9), which this engine does not implement: [`load`] runs the
 //!   rejection pipeline with [`validate_options`], so a document using it gets
-//!   `UNSUPPORTED_FEATURE` at the feature's `/type`;
-//! - the mandatory types this build does not implement yet ([`UNIMPLEMENTED_FEATURE_TYPES`]:
-//!   `hole`, `pattern` (W5), `fillet`, `chamfer`, `shell` (W6)): "an engine that does not
-//!   implement a feature's `v` rejects the document with `UNSUPPORTED_FEATURE_VERSION` (path of
-//!   the `v` field)" — [`load`] adds one problem per such feature, suppressed or not, at
-//!   `…/features/<i>/v` (written or omitted), details `{ type, v, supported: [] }`, to the
-//!   pipeline's own problems. (Until 2026-09-24 they failed at evaluation with the
-//!   uncatalogued `FORGE_UNSUPPORTED_FEATURE`; the review found that the SPEC does not
-//!   sanction it.) [`evaluate`] of a document that bypassed [`load`] still never evaluates
-//!   them: the feature fails with the engine-internal [`UNSUPPORTED_CODE`].
+//!   `UNSUPPORTED_FEATURE` at the feature's `/type` (suppressed or not: rule 3 is about the
+//!   document);
+//! - a mandatory type this build does not implement ([`UNIMPLEMENTED_FEATURE_TYPES`], empty
+//!   since Phase C; kept for the next type): "an engine that does not implement a feature's `v`
+//!   rejects the document with `UNSUPPORTED_FEATURE_VERSION` (path of the `v` field)" —
+//!   [`load`] adds one problem per such feature at `…/features/<i>/v`, details
+//!   `{ type, v, supported: [] }`. [`evaluate`] of a document that bypassed [`load`] never
+//!   evaluates an unsupported type: the feature fails with the engine-internal
+//!   [`UNSUPPORTED_CODE`].
 //!
 //! A join or cut that leaves targets as they were (tools inside or equal to a target, a cut
 //! tool missing a target, a join target no tool reaches) does not list them in `bodies`
@@ -55,10 +58,13 @@
 //! Deterministic: every map is ordered, bodies are ordered canonically, and all numerics come
 //! from the workstream crates (bit-identical on every target).
 
+mod blend;
 mod bodies;
 mod deps;
 mod error;
+mod hole;
 mod part;
+mod pattern;
 
 use forge_ir::v1::metrics::{EvalReport, ParamReport, PartReport, ReportError, Status};
 use forge_ir::v1::{
@@ -76,14 +82,13 @@ pub use part::{NO_CHANGE_CODE, PartResult, SUPPORTED_FEATURE_TYPES, UNSUPPORTED_
 /// (§0.2 rule 3, §7.5 stage R).
 pub const REJECTED_FEATURE_TYPES: [&str; 1] = ["draft"];
 
-/// Mandatory IR v1 feature types this build does not implement yet (W5: `hole`, `pattern`;
-/// W6: `fillet`, `chamfer`, `shell`). [`load`] rejects a document that uses one with
-/// `UNSUPPORTED_FEATURE_VERSION` at the feature's `/v` (SPEC-v1 §0.2 rule 3; details `{ type,
-/// v, supported: [] }`, §7.5). Together with [`SUPPORTED_FEATURE_TYPES`] and
-/// [`REJECTED_FEATURE_TYPES`] this partitions `forge_ir::v1::FEATURE_TYPES`; a workstream that
-/// implements a type moves it to [`SUPPORTED_FEATURE_TYPES`].
-pub const UNIMPLEMENTED_FEATURE_TYPES: [&str; 5] =
-    ["hole", "fillet", "chamfer", "shell", "pattern"];
+/// Mandatory IR v1 feature types this build does not implement yet: none since Phase C
+/// (`hole`, `pattern`: W5; `fillet`, `chamfer`, `shell`: W6). [`load`] rejects a document that
+/// uses one with `UNSUPPORTED_FEATURE_VERSION` at the feature's `/v` (SPEC-v1 §0.2 rule 3;
+/// details `{ type, v, supported: [] }`, §7.5). Together with [`SUPPORTED_FEATURE_TYPES`] and
+/// [`REJECTED_FEATURE_TYPES`] this partitions `forge_ir::v1::FEATURE_TYPES`; a future mandatory
+/// type starts here until it is implemented.
+pub const UNIMPLEMENTED_FEATURE_TYPES: [&str; 0] = [];
 
 /// The code of [`load`]'s rejection of an [`UNIMPLEMENTED_FEATURE_TYPES`] feature.
 pub const UNIMPLEMENTED_CODE: &str = "UNSUPPORTED_FEATURE_VERSION";

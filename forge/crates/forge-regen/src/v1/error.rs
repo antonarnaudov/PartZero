@@ -85,6 +85,26 @@ impl From<BooleanError> for FeatureError {
     }
 }
 
+impl From<forge_ops::hole::HoleError> for FeatureError {
+    fn from(e: forge_ops::hole::HoleError) -> Self {
+        let details = serde_json::to_value(e.details()).unwrap_or(Value::Null);
+        FeatureError::new(e.code(), e.to_string(), details)
+    }
+}
+
+impl From<forge_ops::pattern::PatternError> for FeatureError {
+    fn from(e: forge_ops::pattern::PatternError) -> Self {
+        let details = serde_json::to_value(e.details()).unwrap_or(Value::Null);
+        FeatureError::new(e.code(), e.to_string(), details)
+    }
+}
+
+impl From<forge_blend::BlendError> for FeatureError {
+    fn from(e: forge_blend::BlendError) -> Self {
+        FeatureError::new(e.code(), e.to_string(), Value::Object(e.details()))
+    }
+}
+
 impl From<CheckError> for FeatureError {
     fn from(e: CheckError) -> Self {
         FeatureError::new(e.code(), e.to_string(), json!({}))

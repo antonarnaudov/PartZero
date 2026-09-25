@@ -26,5 +26,10 @@ web-sys = { version = "0.3", features = ["HtmlCanvasElement", "OffscreenCanvas"]
 # Readable panic messages in the browser console (MIT OR Apache-2.0).
 console_error_panic_hook = "0.1"
 
+# proptest for the command layer's properties (the renameCurve property, commands_tests.rs);
+# native only, as in forge-core and forge-ops (its default features do not build for wasm).
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+proptest.workspace = true
+
 [lints]
 workspace = true

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { compile, DIAGNOSTIC_CODES } from "@aicad/cadscript";
-import type { IrDocument } from "@aicad/ir-types";
+import type { EvalReport, IrDocument } from "@aicad/ir-types";
 import { coveredCodes, DOCUMENT_ERROR_CODES, ENGINE_ERROR_CODES, KERNEL_ERROR_CODES, PLAYBOOK, repairHint, staticHint } from "../src/index.js";
 import { SCENARIOS } from "./scenarios.js";
 
@@ -59,6 +59,12 @@ describe("computed hints", () => {
     expect(h).toMatch(/center is 2 mm from 'right' but its radius is 3/);
   });
 
+  it("REVOLVE_CROSSES_AXIS names the crossing region from the report's regions (not the message)", () => {
+    const report = { schema: "aicad.metrics/0", engine: "t", document: "d", status: "error", features: [{ part: "rod", feature: "profile", type: "sketch", status: "ok", regions: [{ area: 1, loops: 1, outer_curves: ["axis_side", "cap", "on_axis", "outer"] }] }] } as EvalReport;
+    const h = repairHint("REVOLVE_CROSSES_AXIS", { ir: ir(SCENARIOS.rod_cross), feature: "rod", message: "region ['zz'] of sketch 'x'", report });
+    expect(h).toContain("The profile region [axis_side, cap, on_axis, outer] lies mostly on the u > 0 side");
+  });
+
   it("REVOLVE_CROSSES_AXIS lists the curves on the wrong side of the axis", () => {
     const h = repairHint("REVOLVE_CROSSES_AXIS", {
       ir: ir(SCENARIOS.rod_cross),
@@ -72,8 +78,13 @@ describe("computed hints", () => {
   });
 
   it("DEPENDENCY_FAILED points at the sketch to fix", () => {
-    const h = repairHint("DEPENDENCY_FAILED", { ir: ir(SCENARIOS.plate_open), feature: "slab", message: "sketch 'base' failed with SKETCH_OPEN_LOOP: …" });
+    // The upstream code comes from the report (the sketch's own entry), never from the message.
+    const report = { schema: "aicad.metrics/0", engine: "t", document: "d", status: "error", features: [{ part: "plate", feature: "base", type: "sketch", status: "error", error: { code: "SKETCH_OPEN_LOOP", message: "…" } }] } as EvalReport;
+    const h = repairHint("DEPENDENCY_FAILED", { ir: ir(SCENARIOS.plate_open), feature: "slab", message: "sketch 'zz' failed with SKETCH_BRANCHING: …", report });
     expect(h).toBe("'slab' consumes sketch 'base', which failed with SKETCH_OPEN_LOOP. Fix 'base' (see its own error and hint); 'slab' recovers automatically.");
+    expect(repairHint("DEPENDENCY_FAILED", { ir: ir(SCENARIOS.plate_open), feature: "slab", message: "sketch 'base' failed with SKETCH_OPEN_LOOP: …" })).toBe(
+      "'slab' consumes sketch 'base', which failed. Fix 'base' (see its own error and hint); 'slab' recovers automatically.",
+    );
   });
 
   it("INCONSISTENT_ARC computes the corrected end point from the source", () => {

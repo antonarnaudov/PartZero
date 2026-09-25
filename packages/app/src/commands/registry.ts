@@ -53,6 +53,12 @@ export interface CommandError {
   message: string;
   /** For INVALID_ARGS: one entry per invalid argument. */
   issues?: Array<{ path: string; message: string }>;
+  /**
+   * For FAILED: the machine-readable cause when the command's error carries one (a string
+   * `code`, e.g. the IR command layer's `COMMAND_REF_FAILED` or an IR rejection code, with its
+   * `errors` and `details`), for the agent's repair playbooks.
+   */
+  detail?: { code: string; errors?: unknown[]; details?: Record<string, unknown> };
 }
 
 export type CommandResult<R> = { ok: true; value: R } | { ok: false; error: CommandError };
@@ -175,9 +181,10 @@ export class CommandRegistry<M extends SpecMap<C>, C> {
       const value = await spec.run(parsed.data, ctx, meta);
       return this.finish({ id, args, source: meta.source }, t0, { ok: true, value });
     } catch (e) {
+      const detail = errorDetail(e);
       return this.finish({ id, args, source: meta.source }, t0, {
         ok: false,
-        error: { code: "FAILED", message: e instanceof Error ? e.message : String(e) },
+        error: { code: "FAILED", message: e instanceof Error ? e.message : String(e), ...(detail ? { detail } : {}) },
       });
     }
   }
@@ -233,6 +240,17 @@ export class CommandRegistry<M extends SpecMap<C>, C> {
     for (const l of [...this.listeners]) l(record);
     return result;
   }
+}
+
+/** The machine-readable cause of a thrown error: its string `code`, `errors` and `details`, if any. */
+function errorDetail(e: unknown): CommandError["detail"] | undefined {
+  if (typeof e !== "object" || e === null) return undefined;
+  const o = e as Record<string, unknown>;
+  if (typeof o["code"] !== "string") return undefined;
+  const out: NonNullable<CommandError["detail"]> = { code: o["code"] };
+  if (Array.isArray(o["errors"])) out.errors = o["errors"];
+  if (typeof o["details"] === "object" && o["details"] !== null) out.details = o["details"] as Record<string, unknown>;
+  return out;
 }
 
 /** Whether a schema accepts `{}` (i.e. the command needs no arguments). */

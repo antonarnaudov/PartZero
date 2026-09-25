@@ -9,9 +9,9 @@
 //! or missing schema is rejected with `UNSUPPORTED_SCHEMA`, and a document using the optional
 //! `draft` (not implemented, §6.9) with `UNSUPPORTED_FEATURE`.
 //!
-//! A document using a mandatory type Forge does not implement yet (`hole`, `fillet`, `chamfer`,
-//! `shell`, `pattern`) is rejected with `UNSUPPORTED_FEATURE_VERSION` at the feature's `/v`
-//! (SPEC-v1 §0.2 rule 3), like `aicad eval`.
+//! A feature at a behavior version `v` Forge does not implement (SPEC-v1 §0.2 rule 3; since
+//! Phase C every mandatory type is implemented at `v: 1`) is rejected with
+//! `UNSUPPORTED_FEATURE_VERSION` at the feature's `/v`, like `aicad eval`.
 //!
 //! Report version: [`ReportVersion::Auto`] (the default) keeps the v0 report for a v0 input, as
 //! `aicad eval` without `--report-version v1` does; [`ReportVersion::V1`] migrates it and
@@ -20,8 +20,9 @@
 //! current v0 consumer parses `aicad.metrics/0`.
 //!
 //! Command-layer entry points (SPEC-v1 §0.6, W9): [`migrate`] (§9.1, with the rename report),
+//! [`canonicalize`] (the migrated document with canonical expressions: what a DocStore stores),
 //! [`params`] (the report's `params` block, no feature evaluated) and [`write_back`]
-//! (`writeBackSolution`).
+//! (`writeBackSolution`, to its fixed point).
 
 use forge_ir::{EvalReport, IrError, METRICS_SCHEMA, ReportError, Status};
 use forge_mesh::{BodyMesh, RenderMesh, TessParams};
@@ -269,6 +270,41 @@ pub fn evaluate_document(
     })
 }
 
+/// The metrics report of [`evaluate_document`] without tessellating anything (the command
+/// layer reads references, candidates and parameter values from it). Same report, same
+/// version rules.
+pub fn report(ir_json: &str, version: ReportVersion) -> Report {
+    if version == ReportVersion::V1 || !is_v0(ir_json) {
+        let (r, _) = forge_regen::v1::evaluate_text(ir_json, &forge_regen::engine_id(), "");
+        return Report::V1(r);
+    }
+    let name = meta_name(ir_json).unwrap_or_default();
+    match forge_ir::from_json(ir_json) {
+        Ok(doc) => {
+            let evaluation = forge_regen::evaluate(&doc);
+            Report::V0(forge_regen::report(
+                &doc,
+                &evaluation,
+                &forge_regen::engine_id(),
+                &name,
+            ))
+        }
+        Err(e) => {
+            let (code, message) = match &e {
+                IrError::Parse(p) => ("IR_PARSE_ERROR".to_string(), p.to_string()),
+                IrError::Invalid(errs) => (
+                    errs.first().map_or("IR_INVALID", |x| x.code).to_string(),
+                    errs.iter()
+                        .map(ToString::to_string)
+                        .collect::<Vec<_>>()
+                        .join("; "),
+                ),
+            };
+            Report::V0(rejected(name, &code, message))
+        }
+    }
+}
+
 /// Mesh export formats.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ExportFormat {
@@ -492,20 +528,24 @@ fn v1_export_meshes(
 
 /// A rejected input of a command-layer entry point: the first problem's `code` and the message
 /// of all of them, and every problem as `{ code, path, message, details }` (none for a parse
-/// error or a usage error).
+/// error or a usage error). A command-layer refusal that is not an IR rejection (an unknown
+/// feature, a reference without a proposal, …; see [`crate::commands`]) has no `errors` and
+/// carries its structured context in `details`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Rejection {
-    /// Stable machine-readable code (`IR_PARSE_ERROR`, a rejection code of SPEC-v1 §7.5, or
-    /// `WRITE_BACK_UNKNOWN_SKETCH`).
+    /// Stable machine-readable code (`IR_PARSE_ERROR`, a rejection code of SPEC-v1 §7.5,
+    /// `WRITE_BACK_UNKNOWN_SKETCH`, or a `COMMAND_*` code of [`crate::commands`]).
     pub code: String,
     /// Human-readable message.
     pub message: String,
     /// Every problem, `{ code, path, message, details }`.
     pub errors: Vec<serde_json::Value>,
+    /// Structured context of a command-layer refusal (an empty object for IR rejections).
+    pub details: serde_json::Value,
 }
 
 impl Rejection {
-    fn of(e: &forge_ir::v1::LoadError) -> Self {
+    pub(crate) fn of(e: &forge_ir::v1::LoadError) -> Self {
         let r = forge_regen::v1::rejected_report(e, &forge_regen::engine_id(), "");
         let err = r
             .error
@@ -523,6 +563,7 @@ impl Rejection {
                 .and_then(serde_json::Value::as_array)
                 .cloned()
                 .unwrap_or_default(),
+            details: serde_json::Value::Object(serde_json::Map::new()),
         }
     }
 }
@@ -541,13 +582,36 @@ pub struct Migrated {
 /// canonical form. Engine-independent: validated with the default pipeline (a document with
 /// types Forge does not evaluate is still migrated).
 pub fn migrate(ir_json: &str) -> Result<Migrated, Rejection> {
-    let (doc, report) = match forge_ir::VersionedDocument::from_json(ir_json) {
-        Ok(forge_ir::VersionedDocument::V0(d)) => forge_ir::v1::migrate_v0_to_v1_report(&d),
-        Ok(forge_ir::VersionedDocument::V1(d)) => (d, forge_ir::v1::MigrationReport::default()),
-        Err(e) => return Err(Rejection::of(&e)),
-    };
+    let (doc, report) = migrated(ir_json)?;
     Ok(Migrated {
         document: forge_ir::v1::to_json(&doc) + "\n",
+        report,
+    })
+}
+
+fn migrated(
+    ir_json: &str,
+) -> Result<(forge_ir::v1::Document, forge_ir::v1::MigrationReport), Rejection> {
+    match forge_ir::VersionedDocument::from_json(ir_json) {
+        Ok(forge_ir::VersionedDocument::V0(d)) => Ok(forge_ir::v1::migrate_v0_to_v1_report(&d)),
+        Ok(forge_ir::VersionedDocument::V1(d)) => Ok((d, forge_ir::v1::MigrationReport::default())),
+        Err(e) => Err(Rejection::of(&e)),
+    }
+}
+
+/// The document of record a DocStore stores (SPEC-v1 §0.4, §2.4: "the CadScript compiler and
+/// the DocStore MUST store the canonical form"): [`migrate`], then every expression in its
+/// canonical form (`forge_ir::v1::expr::canonicalize_expressions`: `"8"` → `8`, `"width/10"` →
+/// `"width / 10"`). Engine-independent like [`migrate`]. Refused, never stored non-canonically,
+/// when the canonical form would be rejected ([W0-20]: a string literal `"-5"` whose literal
+/// `-5` fails its range, a canonical text beyond the length limit): the rejection's code with
+/// every problem at its site's path.
+pub fn canonicalize(ir_json: &str) -> Result<Migrated, Rejection> {
+    let (doc, report) = migrated(ir_json)?;
+    let doc =
+        crate::commands::canonical_expressions(&doc, &forge_ir::v1::ValidateOptions::default())?;
+    Ok(Migrated {
+        document: crate::commands::canonical(&doc),
         report,
     })
 }
@@ -563,32 +627,381 @@ pub fn params(ir_json: &str) -> Result<Vec<forge_ir::v1::metrics::ParamReport>, 
 /// Result of [`write_back`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct WrittenBack {
-    /// The canonical `aicad.ir/1` text with the solutions written back, ending with a newline.
+    /// The canonical `aicad.ir/1` text with the solutions written back, ending with a newline:
+    /// the fixed point (writing back again changes nothing).
     pub document: String,
-    /// The sketches written, in document order.
+    /// `false` when the document was already at its fixed point (the output equals the
+    /// canonical input).
+    pub changed: bool,
+    /// The sketches written by any pass, in document order.
     pub written: Vec<String>,
-    /// `{ sketch, reason, code? }` for each selected sketch that was not written.
+    /// `{ sketch, reason, code? }` for each selected sketch not written, in document order:
+    /// `explicit`, `suppressed`, `failed` (its evaluation fails, `code`), or `would-fail` — it
+    /// solves, but its written-back solution would fail it (`code`, e.g. a driving distance
+    /// ≤ *tol* that the weld turns into `SKETCH_CONSTRAINT_CONFLICT`, SPEC-v1 §4.4 rule 9
+    /// [W0-31]), so it is withheld and its stored geometry left as it was.
     pub skipped: Vec<serde_json::Value>,
+    /// The passes run, the confirming one included (1 when nothing changed; 2 for an ordinary
+    /// write-back; 3 when the solution welded ends the stored geometry did not weld).
+    pub passes: usize,
 }
 
-/// `writeBackSolution` (SPEC-v1 §0.6): [`forge_regen::v1::write_back`] on the loaded document
-/// (a v0 input is migrated; the output is always v1). `sketches` restricts it to those ids.
+/// The most passes [`write_back`] runs. SPEC-v1 §4.4 rule 9 [W0-31]: a solution that brings
+/// ends together the stored geometry did not weld changes the next evaluation (it welds them),
+/// and "the second write-back is the fixed point"; the third pass confirms it.
+pub const WRITE_BACK_PASSES: usize = 3;
+
+/// `writeBackSolution` (SPEC-v1 §0.6, §4.4 rule 9) **to its fixed point**:
+/// [`forge_regen::v1::write_back`] repeated until the document stops changing, at most
+/// [`WRITE_BACK_PASSES`] passes, so the op is idempotent (`write_back(write_back(d)) ==
+/// write_back(d)`) even when a solve welds ends: the second pass's geometry change (up to *tol*)
+/// is part of this edit, never carried by the next unrelated one. A document that still changes
+/// after the last pass is refused with `COMMAND_NOT_EXACT` (`{ op, reason, passes, sketches }`,
+/// the sketches still moving); nothing is written. The document is loaded like every
+/// command-layer op (a v0 input is migrated, expressions are stored canonically; the output is
+/// canonical v1). `sketches` restricts it to those ids.
+///
+/// **A write-back never makes the model fail.** §0.6 writes back a sketch that re-solved
+/// successfully; [W0-31] notes that the next evaluation welds ends the solve brought within
+/// *tol*, which can turn a successful sketch into a failing one (a driving `distance` ≤ *tol*
+/// between them becomes `SKETCH_CONSTRAINT_CONFLICT`). Such a sketch is **withheld**: the
+/// write-back is recomputed without it, and it is listed in `skipped` with reason `would-fail`
+/// and the code it would fail with; its stored geometry is unchanged, so the document still
+/// evaluates as before. Then, when anything changed, every feature that succeeded before must
+/// still succeed; otherwise the write-back is refused (`COMMAND_NOT_EXACT`, reason "a feature
+/// would fail", `features: [{ feature, code }]`) and nothing is written. (W9 rules, beyond
+/// §0.6's "a constrained sketch that re-solved successfully" and §4.4 rule 9's two passes:
+/// listed as a W0 contract issue in the W9 report.)
+///
+/// **Cost.** Only the evaluation of what a solve depends on is run: nothing at all when no
+/// selected sketch has constraints (nothing to write), else each part up to its last selected
+/// constrained sketch (features only reference earlier ones, so the prefix's solutions are the
+/// whole document's). The whole model is evaluated only to check a write-back that changed the
+/// document.
 pub fn write_back(ir_json: &str, sketches: Option<&[String]>) -> Result<WrittenBack, Rejection> {
-    let l = forge_regen::v1::load(ir_json).map_err(|e| Rejection::of(&e))?;
-    let wb = forge_regen::v1::write_back(&l.doc, sketches).map_err(|e| Rejection {
-        code: e.code.to_string(),
-        message: e.message,
-        errors: Vec::new(),
-    })?;
-    Ok(WrittenBack {
-        document: forge_ir::v1::to_json(&wb.doc) + "\n",
-        written: wb.written,
-        skipped: wb
+    let doc = crate::commands::load(ir_json)?;
+    let input = crate::commands::canonical(&doc);
+    let order: Vec<String> = doc
+        .parts
+        .iter()
+        .flat_map(|p| &p.features)
+        .map(|f| f.id().to_string())
+        .collect();
+    let is_sketch = |id: &str| {
+        doc.parts
+            .iter()
+            .flat_map(|p| &p.features)
+            .any(|f| matches!(f, forge_ir::v1::Feature::Sketch(s) if s.id == id))
+    };
+    if let Some(id) = sketches.and_then(|ids| ids.iter().find(|id| !is_sketch(id))) {
+        return Err(unknown_sketch(id));
+    }
+    if !doc
+        .parts
+        .iter()
+        .flat_map(|p| &p.features)
+        .any(|f| written_back(f, sketches))
+    {
+        // Nothing to write: the requested sketches without constraints are `explicit`, as
+        // forge-regen's write-back lists them.
+        let skipped = doc
+            .parts
+            .iter()
+            .flat_map(|p| &p.features)
+            .filter_map(|f| match f {
+                forge_ir::v1::Feature::Sketch(s)
+                    if sketches.is_some_and(|ids| ids.contains(&s.id)) =>
+                {
+                    Some(serde_json::json!({ "sketch": s.id, "reason": "explicit" }))
+                }
+                _ => None,
+            })
+            .collect();
+        return Ok(WrittenBack {
+            document: input,
+            changed: false,
+            written: Vec::new(),
+            skipped,
+            passes: 1,
+        });
+    }
+    // Sketches whose written-back solution would fail them, with that code.
+    let mut withheld: Vec<(String, Option<String>)> = Vec::new();
+    let fp = loop {
+        let only: Option<Vec<String>> = if withheld.is_empty() {
+            sketches.map(<[String]>::to_vec)
+        } else {
+            let selected: Vec<String> = match sketches {
+                Some(s) => s.to_vec(),
+                None => doc
+                    .parts
+                    .iter()
+                    .flat_map(|p| &p.features)
+                    .filter_map(|f| match f {
+                        forge_ir::v1::Feature::Sketch(s) if !s.constraints.is_empty() => {
+                            Some(s.id.clone())
+                        }
+                        _ => None,
+                    })
+                    .collect(),
+            };
+            Some(
+                selected
+                    .into_iter()
+                    .filter(|s| withheld.iter().all(|(w, _)| w != s))
+                    .collect(),
+            )
+        };
+        let fp = fixed_point(&doc, &input, only.as_deref())?;
+        // A sketch some pass wrote whose written-back geometry then fails its evaluation.
+        let broke: Vec<(String, Option<String>)> = fp
             .skipped
             .iter()
-            .map(forge_regen::v1::WriteBackSkip::to_json)
+            .filter(|s| s.reason == "failed" && fp.written.contains(&s.sketch))
+            .map(|s| (s.sketch.clone(), s.code.clone()))
+            .collect();
+        if broke.is_empty() {
+            break fp;
+        }
+        withheld.extend(broke);
+    };
+    let changed = fp.text != input;
+    if changed {
+        let broken = newly_failing(&doc, &fp.doc);
+        if !broken.is_empty() {
+            let names: Vec<&str> = broken
+                .iter()
+                .filter_map(|b| b["feature"].as_str())
+                .collect();
+            return Err(Rejection {
+                code: "COMMAND_NOT_EXACT".into(),
+                message: format!(
+                    "writeBackSolution was not applied: its result failed verification (the \
+                     written-back document fails {} that succeeded before: {})",
+                    if broken.len() == 1 {
+                        "a feature"
+                    } else {
+                        "features"
+                    },
+                    names.join(", ")
+                ),
+                errors: Vec::new(),
+                details: serde_json::json!({
+                    "op": "writeBackSolution",
+                    "reason": "a feature would fail",
+                    "features": broken,
+                }),
+            });
+        }
+    }
+    let mut skipped: Vec<(usize, serde_json::Value)> = fp
+        .skipped
+        .iter()
+        .map(|s| (0, forge_regen::v1::WriteBackSkip::to_json(s)))
+        .chain(withheld.iter().map(|(s, code)| {
+            let mut o = serde_json::json!({ "sketch": s, "reason": "would-fail" });
+            if let Some(c) = code {
+                o["code"] = serde_json::json!(c);
+            }
+            (0, o)
+        }))
+        .collect();
+    for (rank, s) in skipped.iter_mut() {
+        *rank = order
+            .iter()
+            .position(|id| s["sketch"].as_str() == Some(id.as_str()))
+            .unwrap_or(usize::MAX);
+    }
+    // Stable: a sketch appears once (withheld sketches are not selected by the last run).
+    skipped.sort_by_key(|(rank, _)| *rank);
+    Ok(WrittenBack {
+        changed,
+        document: fp.text,
+        written: order
+            .iter()
+            .filter(|id| fp.written.contains(*id))
+            .cloned()
             .collect(),
+        skipped: skipped.into_iter().map(|(_, s)| s).collect(),
+        passes: fp.passes,
     })
+}
+
+/// `{ feature, code }` of every feature that succeeds in `before` and fails in `after`, in
+/// `after`'s timeline order.
+fn newly_failing(
+    before: &forge_ir::v1::Document,
+    after: &forge_ir::v1::Document,
+) -> Vec<serde_json::Value> {
+    let status = |d: &forge_ir::v1::Document| -> Vec<(String, bool, Option<String>)> {
+        let ev = forge_regen::v1::evaluate(d);
+        forge_regen::v1::report(&ev, &forge_regen::engine_id(), &d.meta.name, None)
+            .features
+            .into_iter()
+            .map(|f| {
+                let failed = f.status == forge_ir::v1::metrics::Status::Error;
+                (f.feature_id, failed, f.error.map(|e| e.code))
+            })
+            .collect()
+    };
+    let was = status(before);
+    status(after)
+        .into_iter()
+        .filter(|(id, failed, _)| *failed && was.iter().any(|(b, f, _)| b == id && !*f))
+        .map(|(id, _, code)| serde_json::json!({ "feature": id, "code": code }))
+        .collect()
+}
+
+/// A write-back run to its fixed point (see [`write_back`]).
+struct FixedPoint {
+    doc: forge_ir::v1::Document,
+    /// Canonical text of `doc`.
+    text: String,
+    /// Sketches written by any pass.
+    written: std::collections::BTreeSet<String>,
+    /// The last pass's skipped sketches.
+    skipped: Vec<forge_regen::v1::WriteBackSkip>,
+    passes: usize,
+}
+
+/// Whether feature `f` is a sketch the write-back selects (`only`, or every one) and would
+/// write: it has constraints (forge-regen never writes an explicit sketch).
+fn written_back(f: &forge_ir::v1::Feature, only: Option<&[String]>) -> bool {
+    matches!(f, forge_ir::v1::Feature::Sketch(s)
+        if !s.constraints.is_empty() && only.is_none_or(|ids| ids.contains(&s.id)))
+}
+
+/// `WRITE_BACK_UNKNOWN_SKETCH` (forge-regen's code and message): `id` is not a sketch of the
+/// document.
+fn unknown_sketch(id: &str) -> Rejection {
+    let valid = forge_ir::v1::ids::is_id(id);
+    let shown = if valid {
+        format!("{id:?}")
+    } else {
+        format!("(an invalid id of {} bytes)", id.len())
+    };
+    Rejection {
+        code: "WRITE_BACK_UNKNOWN_SKETCH".into(),
+        message: format!("{shown} is not the id of a sketch of the document"),
+        errors: Vec::new(),
+        details: serde_json::json!({ "sketch": if valid { serde_json::json!(id) } else { serde_json::Value::Null } }),
+    }
+}
+
+/// The prefix of `doc` a write-back evaluates: each part up to its last sketch that
+/// [`written_back`] selects (a part with none keeps no feature). A feature only references
+/// earlier features of its part, so the prefix's sketches solve as in the whole document.
+fn solve_prefix(doc: &forge_ir::v1::Document, only: Option<&[String]>) -> forge_ir::v1::Document {
+    let mut out = doc.clone();
+    for p in &mut out.parts {
+        let keep = p
+            .features
+            .iter()
+            .rposition(|f| written_back(f, only))
+            .map_or(0, |i| i + 1);
+        p.features.truncate(keep);
+    }
+    out
+}
+
+/// [`forge_regen::v1::write_back`] from `doc` (whose canonical text is `input`) until the
+/// document stops changing, at most [`WRITE_BACK_PASSES`] passes. Each pass evaluates the
+/// [`solve_prefix`] only and writes its solutions into the whole document.
+fn fixed_point(
+    doc: &forge_ir::v1::Document,
+    input: &str,
+    only: Option<&[String]>,
+) -> Result<FixedPoint, Rejection> {
+    let mut cur = doc.clone();
+    let mut text = input.to_string();
+    let mut written = std::collections::BTreeSet::new();
+    let mut pass = 0;
+    loop {
+        pass += 1;
+        let prefix = solve_prefix(&cur, only);
+        let sketch_ids = |d: &forge_ir::v1::Document| -> Vec<String> {
+            d.parts
+                .iter()
+                .flat_map(|p| &p.features)
+                .filter_map(|f| match f {
+                    forge_ir::v1::Feature::Sketch(s) => Some(s.id.clone()),
+                    _ => None,
+                })
+                .collect()
+        };
+        let in_prefix = sketch_ids(&prefix);
+        // The requested ids the prefix has (the others are sketches after the last constrained
+        // one, so explicit: listed as forge-regen lists them).
+        let asked: Option<Vec<String>> = only.map(|ids| {
+            ids.iter()
+                .filter(|id| in_prefix.contains(id))
+                .cloned()
+                .collect()
+        });
+        let mut wb =
+            forge_regen::v1::write_back(&prefix, asked.as_deref()).map_err(|e| Rejection {
+                code: e.code.to_string(),
+                message: e.message,
+                errors: Vec::new(),
+                details: serde_json::Value::Object(serde_json::Map::new()),
+            })?;
+        if let Some(ids) = only {
+            for id in sketch_ids(&cur) {
+                if !in_prefix.contains(&id) && ids.contains(&id) {
+                    wb.skipped.push(forge_regen::v1::WriteBackSkip {
+                        sketch: id,
+                        reason: "explicit",
+                        code: None,
+                    });
+                }
+            }
+        }
+        written.extend(wb.written.iter().cloned());
+        let mut next_doc = cur.clone();
+        for (part, solved) in next_doc.parts.iter_mut().zip(&wb.doc.parts) {
+            for (f, s) in part.features.iter_mut().zip(&solved.features) {
+                *f = s.clone();
+            }
+        }
+        let next = crate::commands::canonical(&next_doc);
+        if next == text {
+            return Ok(FixedPoint {
+                doc: next_doc,
+                text: next,
+                written,
+                skipped: wb.skipped,
+                passes: pass,
+            });
+        }
+        if pass == WRITE_BACK_PASSES {
+            let moving: Vec<String> = cur
+                .parts
+                .iter()
+                .zip(&next_doc.parts)
+                .flat_map(|(a, b)| a.features.iter().zip(&b.features))
+                .filter(|(a, b)| a != b)
+                .map(|(a, _)| a.id().to_string())
+                .collect();
+            return Err(Rejection {
+                code: "COMMAND_NOT_EXACT".into(),
+                message: format!(
+                    "writeBackSolution was not applied: its result failed verification (the \
+                     write-back did not reach its fixed point in {WRITE_BACK_PASSES} passes; \
+                     still moving: {})",
+                    moving.join(", ")
+                ),
+                errors: Vec::new(),
+                details: serde_json::json!({
+                    "op": "writeBackSolution",
+                    "reason": "no fixed point",
+                    "passes": WRITE_BACK_PASSES,
+                    "sketches": moving,
+                }),
+            });
+        }
+        cur = next_doc;
+        text = next;
+    }
 }
 
 #[cfg(test)]
@@ -901,38 +1314,42 @@ mod tests {
         assert_eq!(a.report, b.report);
     }
 
-    /// SPEC-v1 §0.2 rule 3: a mandatory type Forge does not implement yet rejects the document
-    /// (`UNSUPPORTED_FEATURE_VERSION` at its `/v`), in the viewer as in the CLI.
+    /// SPEC-v1 §0.2 rule 3: a feature at a behavior version this engine does not implement
+    /// rejects the document (`UNSUPPORTED_FEATURE_VERSION` at its `/v`, details `{ type, v,
+    /// supported }`), in the viewer as in the CLI. Since Phase C every mandatory type is
+    /// implemented at `v: 1` (forge-regen's `UNIMPLEMENTED_FEATURE_TYPES` is empty; `fillet`,
+    /// which this test used before, now evaluates), so a version the contract does not define
+    /// is the case left: it is rejected by the contract's pipeline too, so `migrate` refuses it.
     #[test]
-    fn a_document_with_an_unimplemented_type_is_rejected() {
-        let with_fillet = V1_PLATE.replace(
-            "\n      ]}]\n    }",
-            r#",
-        { "type": "fillet", "id": "f1", "name": "round", "r": 1,
-          "edges": { "kind": "edge", "q": { "op": "edges", "of": { "op": "body", "feature": "e1" } } } }
-      ]}]
-    }"#,
+    fn a_feature_at_an_unimplemented_version_is_rejected() {
+        let v2 = V1_PLATE.replace(
+            r#"{ "type": "extrude", "id": "e1", "name": "slab","#,
+            r#"{ "type": "extrude", "id": "e1", "v": 2, "name": "slab","#,
         );
-        assert_ne!(with_fillet, V1_PLATE);
+        assert_ne!(v2, V1_PLATE);
         let p = tess_params(None, None);
-        let out = evaluate_document(&with_fillet, &p, ReportVersion::Auto, &clock).expect("ok");
+        let out = evaluate_document(&v2, &p, ReportVersion::Auto, &clock).expect("ok");
         assert_eq!(out.report.error_code(), Some("UNSUPPORTED_FEATURE_VERSION"));
         let Report::V1(r) = &out.report else {
             panic!("expected an aicad.metrics/1 report");
         };
         let e = &r.error.as_ref().unwrap().details["errors"][0];
-        assert_eq!(e["path"], "/parts/0/features/4/v");
-        assert_eq!(e["details"]["type"], "fillet");
+        assert_eq!(e["path"], "/parts/0/features/1/v");
+        assert_eq!(e["details"]["type"], "extrude");
+        assert_eq!(e["details"]["supported"], serde_json::json!([1]));
         assert!(out.bodies.is_empty() && r.features.is_empty());
-        let e = export_mesh(&with_fillet, ExportFormat::Stl, &p, true).unwrap_err();
+        let e = export_mesh(&v2, ExportFormat::Stl, &p, true).unwrap_err();
         assert_eq!(e.code, "UNSUPPORTED_FEATURE_VERSION");
         // The command layer answers the same way.
+        assert_eq!(params(&v2).unwrap_err().code, "UNSUPPORTED_FEATURE_VERSION");
         assert_eq!(
-            params(&with_fillet).unwrap_err().code,
+            migrate(&v2).unwrap_err().code,
             "UNSUPPORTED_FEATURE_VERSION"
         );
-        // Migration is engine-independent: the document is still printed.
-        assert!(migrate(&with_fillet).is_ok());
+        assert_eq!(
+            write_back(&v2, None).unwrap_err().code,
+            "UNSUPPORTED_FEATURE_VERSION"
+        );
     }
 
     fn repo(rel: &str) -> std::path::PathBuf {
@@ -978,6 +1395,23 @@ mod tests {
         let e = migrate(&BOX.replace("\"distance\": 8", "\"distance\": -1")).unwrap_err();
         assert_eq!(e.code, "INVALID_DISTANCE");
         assert_eq!(e.errors[0]["path"], "/parts/0/features/1/distance");
+    }
+
+    /// `report` is `evaluate_document`'s report, bit for bit, for both versions and rejections.
+    #[test]
+    fn report_is_the_evaluation_report_without_meshes() {
+        let p = tess_params(None, None);
+        for text in [
+            BOX.to_string(),
+            V1_PLATE.to_string(),
+            "{ nope".to_string(),
+            BOX.replace("\"distance\": 8", "\"distance\": -1"),
+        ] {
+            for version in [ReportVersion::Auto, ReportVersion::V1] {
+                let full = evaluate_document(&text, &p, version, &clock).expect("ok");
+                assert_eq!(report(&text, version), full.report, "{text} {version:?}");
+            }
+        }
     }
 
     #[test]
@@ -1027,9 +1461,197 @@ mod tests {
         assert_eq!(e.code, "WRITE_BACK_UNKNOWN_SKETCH");
         let wb = write_back(V1_PLATE, Some(&["s1".to_string()])).expect("ok");
         assert!(wb.written.is_empty());
+        assert!(!wb.changed);
+        assert_eq!(wb.passes, 1);
         assert_eq!(
             wb.skipped,
             [serde_json::json!({ "sketch": "s1", "reason": "explicit" })]
         );
+    }
+
+    /// One `forge_regen::v1::write_back` pass on `text` (canonical text).
+    fn one_pass(text: &str) -> String {
+        let doc = forge_regen::v1::load(text).expect("loads").doc;
+        forge_ir::v1::to_json(&forge_regen::v1::write_back(&doc, None).expect("ok").doc) + "\n"
+    }
+
+    /// SPEC-v1 §4.4 rule 9 [W0-31]: a solve that brings together ends the stored geometry did
+    /// not weld changes the next evaluation, so one pass is not a fixed point; `write_back`
+    /// runs to it, and is then idempotent.
+    #[test]
+    fn write_back_reaches_its_fixed_point_when_a_solve_welds_ends() {
+        let plate: serde_json::Value = forge_ir::v1::json::parse(
+            &std::fs::read_to_string(repo("corpus/v1/programs/constrained_plate.json")).unwrap(),
+        )
+        .unwrap();
+        // The corner bottom.end / right.start opened by 0.36 mm and closed by a `coincident`.
+        let mut open = plate.clone();
+        open["parts"][0]["features"][0]["curves"][1]["start"] = serde_json::json!([40.3, -25.2]);
+        open["parts"][0]["features"][0]["constraints"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({ "type": "coincident", "id": "cc",
+                                      "a": "bottom.end", "b": "right.start" }));
+        // A triangle whose `a.end` / `b.start` gap (0.001, 0.0007) is closed by `k1`.
+        let triangle = serde_json::json!({
+            "schema": "aicad.ir/1", "meta": { "name": "t" },
+            "parts": [{ "id": "p1", "name": "part", "features": [
+                { "type": "sketch", "id": "s1", "name": "base", "plane": "XY", "curves": [
+                    { "kind": "line", "id": "a", "start": [0, 0], "end": [10, 0] },
+                    { "kind": "line", "id": "b", "start": [10.001, 0.0007], "end": [5, 8] },
+                    { "kind": "line", "id": "c", "start": [5, 8], "end": [0, 0] } ],
+                  "constraints": [
+                    { "type": "coincident", "id": "k1", "a": "a.end", "b": "b.start" },
+                    { "type": "horizontal", "id": "h", "line": "a" },
+                    { "type": "distance", "id": "L", "a": "a.start", "b": "a.end", "value": 10 },
+                    { "type": "fix", "id": "f", "entity": "a.start" } ] },
+                { "type": "extrude", "id": "e1", "name": "slab", "sketch": "s1", "distance": 3 }
+            ]}]
+        });
+        for (name, doc) in [("plate", open), ("triangle", triangle)] {
+            let text = crate::commands::canonical(
+                &forge_regen::v1::load(&doc.to_string()).expect("loads").doc,
+            );
+            // One pass is not the fixed point: the second pass moves the geometry again.
+            let p1 = one_pass(&text);
+            let p2 = one_pass(&p1);
+            assert_ne!(p1, text, "{name}: pass 1 writes the solution");
+            assert_ne!(p2, p1, "{name}: pass 2 moves the welded geometry ([W0-31])");
+            // The op runs to the fixed point in one call…
+            let wb = write_back(&text, None).expect("ok");
+            assert!(wb.changed, "{name}");
+            assert_eq!(wb.passes, 3, "{name}");
+            assert_eq!(wb.written, ["s1"], "{name}");
+            assert_eq!(one_pass(&wb.document), wb.document, "{name}: a fixed point");
+            // …so write_back ∘ write_back = write_back.
+            let again = write_back(&wb.document, None).expect("ok");
+            assert!(!again.changed, "{name}");
+            assert_eq!(again.passes, 1, "{name}");
+            assert_eq!(again.document, wb.document, "{name}");
+        }
+    }
+
+    /// `(feature id, error code)` of every feature of `text`'s v1 report.
+    fn feature_codes(text: &str) -> Vec<(String, Option<String>)> {
+        let doc = forge_regen::v1::load(text).expect("loads").doc;
+        let ev = forge_regen::v1::evaluate(&doc);
+        forge_regen::v1::report(&ev, &forge_regen::engine_id(), "t", None)
+            .features
+            .into_iter()
+            .map(|f| (f.feature_id, f.error.map(|e| e.code)))
+            .collect()
+    }
+
+    /// W9 review 3: a write-back must not turn a successful model into a failing one. [W0-31]:
+    /// the weld of ends a solve brought within *tol* turns a driving distance ≤ *tol* between
+    /// them into a conflict on the next evaluation. Such a sketch is withheld (`would-fail`,
+    /// with the code), the others are written, and the document still evaluates as before.
+    #[test]
+    fn write_back_withholds_a_sketch_whose_weld_would_fail_it() {
+        let line = |id: &str, a: [f64; 2], b: [f64; 2]| serde_json::json!({ "kind": "line", "id": id, "start": a, "end": b });
+        let doc = serde_json::json!({
+            "schema": "aicad.ir/1", "meta": { "name": "t" },
+            "parts": [{ "id": "p1", "name": "part", "features": [
+                // `a.end` / `b.start` stored 0.0012 apart, driven to 5e-7 apart by `g`.
+                { "type": "sketch", "id": "s1", "name": "tri", "plane": "XY", "curves": [
+                    line("a", [0.0, 0.0], [10.0, 0.0]),
+                    line("b", [10.001, 0.0007], [5.0, 8.0]),
+                    line("c", [5.0, 8.0], [0.0, 0.0]) ],
+                  "constraints": [
+                    { "type": "distance", "id": "g", "a": "a.end", "b": "b.start", "value": 5e-7 },
+                    { "type": "horizontal", "id": "h", "line": "a" },
+                    { "type": "distance", "id": "L", "a": "a.start", "b": "a.end", "value": 10 },
+                    { "type": "fix", "id": "f", "entity": "a.start" } ] },
+                { "type": "extrude", "id": "e1", "name": "slab", "sketch": "s1", "distance": 3 },
+                // An ordinary sketch whose solution moves a welded corner by 0.5 mm.
+                { "type": "sketch", "id": "s2", "name": "tri2", "plane": "XY", "curves": [
+                    line("p", [0.0, 20.0], [10.5, 20.0]),
+                    line("q", [10.5, 20.0], [5.0, 28.0]),
+                    line("r", [5.0, 28.0], [0.0, 20.0]) ],
+                  "constraints": [
+                    { "type": "horizontal", "id": "h2", "line": "p" },
+                    { "type": "distance", "id": "L2", "a": "p.start", "b": "p.end", "value": 10 },
+                    { "type": "fix", "id": "f2", "entity": "p.start" } ] },
+                { "type": "extrude", "id": "e2", "name": "slab2", "sketch": "s2", "distance": 3 }
+            ]}]
+        });
+        let text = crate::commands::canonical(
+            &forge_regen::v1::load(&doc.to_string()).expect("loads").doc,
+        );
+        let ok = |t: &str| feature_codes(t).into_iter().all(|(_, c)| c.is_none());
+        assert!(ok(&text), "{:?}", feature_codes(&text));
+        // What one raw pass does: s1 is written and then fails (its consumer with it).
+        let raw_text = one_pass(&text);
+        let raw = feature_codes(&raw_text);
+        assert!(
+            raw.contains(&("s1".into(), Some("SKETCH_CONSTRAINT_CONFLICT".into()))),
+            "{raw:?}"
+        );
+        // The last guard of the op (a feature that succeeded and would fail refuses the whole
+        // write-back) sees exactly those features.
+        let load = |t: &str| forge_regen::v1::load(t).expect("loads").doc;
+        let broken = newly_failing(&load(&text), &load(&raw_text));
+        let ids: Vec<&str> = broken
+            .iter()
+            .filter_map(|b| b["feature"].as_str())
+            .collect();
+        assert_eq!(ids, ["s1", "e1"], "{broken:?}");
+        assert_eq!(broken[0]["code"], "SKETCH_CONSTRAINT_CONFLICT");
+        assert!(newly_failing(&load(&raw_text), &load(&text)).is_empty());
+        // The op withholds s1 and writes s2.
+        let wb = write_back(&text, None).expect("ok");
+        assert!(wb.changed);
+        assert_eq!(wb.written, ["s2"]);
+        let withheld = serde_json::json!([{ "sketch": "s1", "reason": "would-fail",
+                                            "code": "SKETCH_CONSTRAINT_CONFLICT" }]);
+        assert_eq!(serde_json::Value::from(wb.skipped.clone()), withheld);
+        assert!(ok(&wb.document), "{:?}", feature_codes(&wb.document));
+        let sketch = |t: &str, i: usize| {
+            forge_ir::v1::json::parse(t).unwrap()["parts"][0]["features"][i].clone()
+        };
+        assert_eq!(sketch(&wb.document, 0), sketch(&text, 0), "s1 is untouched");
+        assert_ne!(sketch(&wb.document, 2), sketch(&text, 2), "s2 is written");
+        // Idempotent, and the same answer when s1 is asked for explicitly.
+        let again = write_back(&wb.document, None).expect("ok");
+        assert!(!again.changed);
+        assert_eq!(serde_json::Value::from(again.skipped), withheld);
+        let only = write_back(&text, Some(&["s1".to_string()])).expect("ok");
+        assert!(!only.changed);
+        assert!(only.written.is_empty());
+        assert_eq!(serde_json::Value::from(only.skipped), withheld);
+    }
+
+    /// The DocStore's document of record (SPEC-v1 §2.4): canonical expressions, or a refusal
+    /// with the canonical form's rejections at their sites ([W0-20]).
+    #[test]
+    fn canonicalize_stores_canonical_expressions_and_refuses_rejected_forms() {
+        let text = std::fs::read_to_string(repo("corpus/v1/programs/params_plate.json")).unwrap();
+        let mut v: serde_json::Value = forge_ir::v1::json::parse(&text).unwrap();
+        v["params"][1]["value"] = serde_json::json!("width/10");
+        v["params"][2]["value"] = serde_json::json!("8.50");
+        let m = canonicalize(&v.to_string()).expect("ok");
+        let c: serde_json::Value = forge_ir::v1::json::parse(&m.document).unwrap();
+        assert_eq!(c["params"][1]["value"], "width / 10");
+        assert_eq!(c["params"][2]["value"], serde_json::json!(8.5));
+        // migrate alone keeps the text as stored; canonicalize is idempotent.
+        assert!(
+            migrate(&v.to_string())
+                .unwrap()
+                .document
+                .contains("\"width/10\"")
+        );
+        assert_eq!(canonicalize(&m.document).unwrap().document, m.document);
+        // A literal string that its literal form would reject (`thick` has min 2).
+        v["params"][2]["value"] = serde_json::json!("1");
+        assert!(migrate(&v.to_string()).is_ok(), "the stored text loads");
+        let e = canonicalize(&v.to_string()).expect_err("its canonical form does not");
+        assert_eq!(e.code, "PARAM_OUT_OF_RANGE");
+        assert_eq!(e.errors[0]["path"], "/params/2/value");
+        // Engine-independent, like migrate: a document with a type Forge does not evaluate.
+        let features =
+            std::fs::read_to_string(repo("corpus/v1/programs/plate_features.json")).unwrap();
+        assert!(canonicalize(&features).is_ok());
+        // A v0 document is migrated.
+        assert!(canonicalize(BOX).unwrap().document.contains("aicad.ir/1"));
     }
 }

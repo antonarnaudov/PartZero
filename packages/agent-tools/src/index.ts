@@ -9,6 +9,10 @@
  *   set_spec_tests, submit_spec, run_tests, checkpoint, rollback, ask_user, propose).
  * - {@link repairHint}: operation playbooks — an actionable, computed-where-possible hint for
  *   every error code.
+ * - {@link v1}: IR v1 / CadScript v1 — `aicad.metrics/1` engines, the v1 playbooks (every code of
+ *   the SPEC-v1 §7.5 catalogue, computed from `details`), the v1 design session (L1 warnings, the
+ *   editability probe) and its tools (set_param, accept_ref_candidate, accept_ref_proposal,
+ *   sketch_edit, query, describe, …).
  */
 export * from "./format.js";
 export * from "./playbooks.js";
@@ -19,3 +23,5 @@ export * from "./source.js";
 export * from "./spec.js";
 export * from "./summaries.js";
 export * from "./tools.js";
+/** IR v1 / CadScript v1: engines, playbooks, the v1 design session and its tools. */
+export * as v1 from "./v1/index.js";

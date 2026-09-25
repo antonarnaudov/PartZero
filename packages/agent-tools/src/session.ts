@@ -385,7 +385,7 @@ export class DesignSession {
         const code = f.error?.code ?? "UNKNOWN";
         out.code = code;
         out.message = f.error?.message ?? "";
-        out.hint = repairHint(code, { ir, feature: f.feature, message: out.message });
+        out.hint = repairHint(code, { ir, feature: f.feature, message: out.message, report });
       }
       return out;
     });

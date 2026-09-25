@@ -14,8 +14,8 @@ export { comparisonRows, comparisonTable, runBakeOff, type BakeOffOptions, type 
 export { main as cliMain, USAGE, type CliDeps, type CliIo } from "./cli-main.js";
 export { AGENT_ROLES, DEFAULT_MAX_OUTPUT_TOKENS, resolveModels, SMALL_MODEL_BY_PROVIDER, type AgentModels, type AgentRole, type ModelChoice, type ModelOverrides } from "./models.js";
 export { DEFAULT_PROMPT_VERSION, defaultPromptsDir, loadPrompt, type PromptInfo, type PromptRole } from "./prompts.js";
-export { cadscriptReference } from "./reference.js";
-export { AgentStop, DEFAULT_LIMITS, throwIfCancelled, type AgentLimits } from "./run-context.js";
+export { cadscriptReference, cadscriptReferenceV1 } from "./reference.js";
+export { AgentStop, BENCH_LIMITS, CLI_RUNTIME_MAX_FAILED_APPLIES, DEFAULT_LIMITS, throwIfCancelled, type AgentLimits } from "./run-context.js";
 export { LLMSolver, type AgentRunRecord, type LLMSolverOptions } from "./solver.js";
 export {
   CLI_COMPLETION_DESIGNER_WALL_MS,
@@ -41,7 +41,7 @@ export {
   type RuntimeTurnRecord,
   type TurnEndDecision,
 } from "./runtime.js";
-export { runSpecWriter, runSpecWriterRuntime, type Clarification, type SpecOutcome } from "./spec-writer.js";
+export { runSpecWriter, runSpecWriterRuntime, specGateRequest, type Clarification, type SpecOutcome } from "./spec-writer.js";
 export { describeCall, ScriptedTransport, scriptedGateway, type ScriptedCall, type ScriptRole, type ScriptStep, type Scripts, type ScriptTurn } from "./testing.js";
 export { formatTraceSummary, TraceRecorder, type AgentState, type AgentStopReason, type LlmCallMode, type LlmCallRecord, type TraceEvent, type TraceSummary } from "./trace.js";
 export { CLASSIFY_TOOL, classifySchema, runTriage, type Complexity, type TriageKind, type TriageResult } from "./triage.js";

@@ -1,0 +1,13 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc a689106f2aedb48d23ba1f18cd13bbbe527e77f8521996d483ade2a6a3b6321a # shrinks to q_big_r = 15, q_r = 2, q_z0 = 2, q_y_lo = 0, q_y_len = 4, b_seam_at_contact = false, placed = false, n = (0.0, 0.0, 0.0), m = (0.0, 0.0, 0.0), t = (0.0, 0.0, 0.0)
+cc 5f174dd3a2eca3ff2630750c9e6badf8706ec9ac7b70e95ce2067c2317e02244 # shrinks to q_big_r = 20, q_r = 18, q_z0 = 2, q_y_lo = 0, q_y_len = 4, b_seam_at_contact = false, placed = false, n = (0.0, 0.0, 0.0), m = (0.0, 0.0, 0.0), t = (0.0, 0.0, 0.0)
+cc 9ffd651d0cf9f9968616bdbc8b62ab6d0a469b879a82ec2cdd28f2b95585ff2c # shrinks to q_big_r = 20, q_r = 19, q_z0 = 8, q_y_lo = -3, q_y_len = 14, b_seam_at_contact = false, placed = true, n = (0.9016764501628245, 0.2631038385663871, 0.0), m = (0.0, -0.18875833825569646, 0.0), t = (0.0, 5.270170181730753, 0.0)
+cc 8000237bd49cbf8be1446486d9c6fda5fdb5ba62620f702ce2924f6c4fde5c7b # shrinks to q_big_r = 29, q_r = 14, q_z0 = 12, q_y_lo = -1, q_y_len = 4, b_seam_at_contact = false, placed = false, n = (0.0, 0.0, 0.0), m = (0.0, 0.0, 0.0), t = (0.0, 0.0, 0.0)
+cc 4b655935a20b27379505d1889d498488de7730c021bfb3164d52fe016b65879d # shrinks to q_big_r = 9, q_r = 5, q_z0 = 2, q_y_lo = -24, q_y_len = 15, b_seam_at_contact = false, placed = false, n = (0.0, 0.0, 0.0), m = (0.0, 0.0, 0.0), t = (0.0, 0.0, 0.0)
+cc b3f67964926e10a42ef18522e6d0b699a350be10d672141afc8bad2a2168fd20 # shrinks to q_big_r = 28, q_r = 14, q_z0 = 6, q_y_lo = -2, q_y_len = 16, b_seam_at_contact = true, placed = true, n = (-0.842389117898493, 0.09242841628249504, -0.5387759920676457), m = (-0.46981072589010897, 0.0, -0.8830210892786042), t = (0.0, 0.0, 9.693840068208491)
+cc b56315e2e419f30d1499c70b01ea379fb746600ff1032efac7c1cbfce1781b0b # shrinks to q_big_r = 13, q_r = 10, q_z0 = 6, q_y_lo = -22, q_y_len = 10, b_seam_at_contact = false, seam_offset = 0.0, placed = false, n = (0.0, 0.0, 0.0), m = (0.0, 0.0, 0.0), t = (0.0, 0.0, 0.0)

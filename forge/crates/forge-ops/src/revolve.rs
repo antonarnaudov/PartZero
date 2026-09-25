@@ -70,8 +70,9 @@ pub enum AxisSide {
 ///
 /// The candidate extreme points are the junction points of the outer loop and, for arcs
 /// and circles, the carrier-circle points farthest from the axis on either side when
-/// they lie on the curve. A point within `tol` of the axis is on it; beyond that its side
-/// is the exact sign of [`orient2d`] against the axis line.
+/// they lie on the curve. A point within `tol` of the axis is on it (up to the rounding of
+/// its coordinates, [`round_slack`]); beyond that its side is the exact sign of
+/// [`orient2d`] against the axis line.
 pub fn check_revolve_profile(
     region: &Region,
     axis: &SketchAxis,
@@ -87,6 +88,11 @@ pub fn check_revolve_profile(
     let nrm = dh.perp();
     let o2 = o + raw;
     let mut pts: Vec<Point2> = Vec::new();
+    // Signed distances of carrier-circle points farthest from the axis: `dc ± r` for the
+    // centre's signed distance `dc`, the arithmetic of the side surfaces' carrier gap
+    // (`ρc − r`), so a point exactly `tol` from the axis is on it here as it is there (the
+    // point `circle_point(c, r, t)` rounds differently, review finding).
+    let mut extremes: Vec<(f64, f64)> = Vec::new();
     let lp = &region.outer;
     for (k, c) in lp.curves.iter().enumerate() {
         match c.geom {
@@ -104,15 +110,19 @@ pub fn check_revolve_profile(
                 } else {
                     (start_angle + sweep, -sweep)
                 };
+                let dc = dh.perp_dot(center - o);
+                let slack = round_slack((center - o).norm() + radius);
                 for s in [1.0, -1.0] {
                     let t = math::atan2(s * nrm.y, s * nrm.x);
                     if contains_angle(t0, sw, false, t, 0.0) {
-                        pts.push(circle_point(center, radius, t));
+                        extremes.push((dc + s * radius, slack));
                     }
                 }
             }
             LoopCurveGeom::Circle { center, radius, .. } => {
-                pts.extend([center + nrm * radius, center - nrm * radius]);
+                let dc = dh.perp_dot(center - o);
+                let slack = round_slack((center - o).norm() + radius);
+                extremes.extend([(dc + radius, slack), (dc - radius, slack)]);
             }
         }
     }
@@ -122,8 +132,20 @@ pub fn check_revolve_profile(
         let d = dh.perp_dot(p - o);
         lo = lo.min(d);
         hi = hi.max(d);
-        if d.abs() > tol {
+        if d.abs() > tol + round_slack((p - o).norm()) {
             if orient2d(o, o2, p) > 0.0 {
+                left = true;
+            } else {
+                right = true;
+            }
+        }
+    }
+    // Beyond the tolerance band the sign of the distance is exact enough.
+    for (d, slack) in extremes {
+        lo = lo.min(d);
+        hi = hi.max(d);
+        if d.abs() > tol + slack {
+            if d > 0.0 {
                 left = true;
             } else {
                 right = true;
@@ -144,6 +166,16 @@ pub fn check_revolve_profile(
             region.outer_curves
         ))),
     }
+}
+
+/// Rounding slack of a "within `tol` of the axis" test on sketch quantities of magnitude
+/// `scale` (mm): the inclusive boundary `|ρ| ≤ tol` of [R-3] up to the rounding of the
+/// sketch's own arithmetic. An IR rounded-rectangle corner measures its radius across a
+/// subtraction (`y1 − (y1 − r)`, off by up to half an ulp of `y1`), so a corner whose side
+/// lies exactly `tol` from the axis had a carrier crossing it by `tol + 7e-16` mm and failed
+/// `REVOLVE_CROSSES_AXIS` (review finding). 32 ulps of the scale: `1e-13` mm at 15 mm.
+fn round_slack(scale: f64) -> f64 {
+    32.0 * f64::EPSILON * scale
 }
 
 // ---- profile ----------------------------------------------------------------------------
@@ -167,6 +199,8 @@ enum PKind {
 struct PCurve {
     id: String,
     kind: PKind,
+    /// [`round_slack`] of the curve's sketch quantities (arcs and circles: centre and radius).
+    slack: f64,
 }
 
 struct PLoop {
@@ -204,7 +238,7 @@ impl ProfileMap {
             .iter()
             .map(|j| {
                 let mut p = self.point(j.point);
-                let on_axis = p.x.abs() <= self.tol;
+                let on_axis = p.x.abs() <= self.tol + round_slack((j.point - self.o).norm());
                 let mut tol = j.tolerance;
                 if on_axis {
                     tol += p.x.abs();
@@ -225,6 +259,13 @@ impl ProfileMap {
             .enumerate()
             .map(|(k, c)| PCurve {
                 id: c.id.clone(),
+                slack: match c.geom {
+                    LoopCurveGeom::Line { .. } => 0.0,
+                    LoopCurveGeom::Arc { center, radius, .. }
+                    | LoopCurveGeom::Circle { center, radius, .. } => {
+                        round_slack((center - self.o).norm() + radius)
+                    }
+                },
                 kind: match c.geom {
                     LoopCurveGeom::Line { .. } => PKind::Line {
                         a: junctions[k].p,
@@ -440,7 +481,7 @@ pub fn revolve(
                 }
                 continue;
             }
-            let etol = pj.tol.max(dev(j)).max(dev((j + n - 1) % n));
+            let etol = dev_tolerance(pj.tol, dev(j).max(dev((j + n - 1) % n)));
             let circ = Circle3::new(ff.with_origin(on_axis_point(pj.p.y)), pj.p.x)?;
             if full {
                 sweep_edge[j] = Some(plan.ring(circ, (0.0, math::TAU), etol, pj.key.clone()));
@@ -490,7 +531,7 @@ pub fn revolve(
                                 (0.0, pa.distance(pb)),
                                 va,
                                 vb,
-                                tol.linear.max(dev(k)),
+                                dev_tolerance(tol.linear, dev(k)),
                                 format!("{}@{w}", c.id),
                             );
                             copies[w] = Some((e, true));
@@ -508,12 +549,14 @@ pub fn revolve(
                             let vb =
                                 v_at[kn][w].ok_or_else(|| OpError::Internal("vertex".into()))?;
                             let (vs, ve) = if sw > 0.0 { (va, vb) } else { (vb, va) };
+                            // On a snapped (horn) torus the copy lies `dev` from the
+                            // face, as a snapped line's copy does (review finding).
                             let e = plan.edge(
                                 Circle3::new(meridian_frame(&p3, &dirs, d, ctr, w)?, r)?,
                                 range,
                                 vs,
                                 ve,
-                                tol.linear,
+                                dev_tolerance(tol.linear, dev(k)),
                                 format!("{}@{w}", c.id),
                             );
                             copies[w] = Some((e, sw > 0.0));
@@ -524,7 +567,7 @@ pub fn revolve(
                             let e = plan.ring(
                                 Circle3::new(meridian_frame(&p3, &dirs, d, ctr, w)?, r)?,
                                 (0.0, math::TAU),
-                                tol.linear,
+                                dev_tolerance(tol.linear, dev(k)),
                                 format!("{}@{w}", c.id),
                             );
                             *slot = Some((e, ccw));
@@ -679,11 +722,12 @@ fn classify(
                     dev: 0.0,
                 }));
             }
-            if ctr.x > 0.0 && r <= ctr.x + tol {
+            if ctr.x > 0.0 && r <= ctr.x + tol + c.slack {
+                let minor = torus_minor(c.kind, js, k, ctr.x, r, tol + c.slack);
                 return Ok(Some(Side {
-                    surface: Torus::new(frame, ctr.x, r.min(ctr.x))?.into(),
+                    surface: Torus::new(frame, ctr.x, minor)?.into(),
                     param: Param::Round { lemon: false },
-                    dev: 0.0,
+                    dev: (r - minor).abs(),
                 }));
             }
             if !is_arc {
@@ -716,6 +760,54 @@ fn classify(
                 dev: 0.0,
             }))
         }
+    }
+}
+
+/// The minor radius of the torus of an arc or circle whose carrier does not cross the axis
+/// by more than `tol` (`r ≤ ρc + tol`, `ρc > 0` the centre's distance from the axis).
+///
+/// - A carrier crossing the axis by at most `tol` touches it ([R-3]): a **horn** torus,
+///   minor = major = `ρc` (as before).
+/// - [R-16] (an arc end on the axis): an arc with an end junction on the axis (snapped there,
+///   `ρ ≤ tol`) lies on a carrier at most `tol` from the axis (`ρc − r ≤ ρ_end ≤ tol`, up to
+///   rounding), and that end sweeps to a singular point with no edge ([R-8, R-9]). The surface
+///   must then be singular there too: a horn torus, minor = major = `ρc`, decided from the
+///   junction (with the rounding of `ρc` and `r` allowed on the gap). The ring torus of the raw radius (`r` a few ulps under `ρc`, as for a
+///   rounded-rectangle corner whose radius is measured across a subtraction) has a
+///   non-singular inner equator at `ρc − r ≈ 1e-15` mm, so the full revolve's side face had
+///   one bounding edge and no singular line to close its domain (`FORGE_UNBOUNDED_DOMAIN`, v1
+///   seed 47 #675/#975). Comparing `r ≥ ρc − tol` instead (review finding) failed at the
+///   inclusive boundary: the junction's `|ρ| ≤ tol` and the carrier gap `(x0 + r) − r` round
+///   differently, so an end exactly `tol` from the axis was snapped onto it while its carrier
+///   stayed a ring torus. The other end moves by `|r − ρc|` (the face's `dev`, at most `tol`
+///   plus rounding), like the sphere of [R-16]; every edge on the face carries it
+///   ([`dev_tolerance`]).
+/// - Otherwise the raw radius: a ring torus (or a horn torus when `r = ρc` exactly).
+fn torus_minor(kind: PKind, js: &[PJunction], k: usize, rho_c: f64, r: f64, tol: f64) -> f64 {
+    let n = js.len();
+    let end_on_axis =
+        matches!(kind, PKind::Arc { .. }) && n > 0 && (js[k].on_axis || js[(k + 1) % n].on_axis);
+    // An end within `tol` of the axis bounds the carrier gap by `tol` (the caller's `tol`
+    // includes the rounding slack of `ρc` and `r`); a gap beyond that is an arc whose end is
+    // off its carrier: not snapped, so the body fails validation instead of moving the arc
+    // by more than `tol`.
+    let touches = end_on_axis && rho_c - r <= tol;
+    if r >= rho_c || touches { rho_c } else { r }
+}
+
+/// Rounding slack added to a snapped side surface's deviation (mm): the validator measures
+/// the distance of an edge `dev` from the surface through projections that round at the
+/// coordinates' scale (`1.4e-16` mm over `dev = 1e-6` for a 0.3 mm corner, review finding).
+const DEV_SLACK: f64 = 1e-12;
+
+/// Tolerance of an edge on side surfaces that deviate from the profile by `dev` (the snapped
+/// cylinder, plane or horn torus of [R-16]): `tol` when nothing was snapped, else enough to
+/// cover the deviation as measured.
+fn dev_tolerance(tol: f64, dev: f64) -> f64 {
+    if dev > 0.0 {
+        tol.max(dev + DEV_SLACK)
+    } else {
+        tol
     }
 }
 
@@ -935,5 +1027,56 @@ mod tests {
         assert!((p.v_of_h(5.0) + 3.0).abs() == 0.0);
         let l = Param::Round { lemon: true };
         assert!((l.v_of_psi(0.25) - (math::PI - 0.25)).abs() == 0.0);
+    }
+
+    fn junction(x: f64) -> PJunction {
+        PJunction {
+            p: Point2::new(x, 0.0),
+            on_axis: x == 0.0,
+            tol: 1e-6,
+            key: String::new(),
+        }
+    }
+
+    #[test]
+    fn torus_minor_is_horn_exactly_when_the_carrier_touches_the_axis() {
+        let arc = PKind::Arc {
+            c: Point2::new(2.0, 0.0),
+            r: 2.0,
+            a0: 0.0,
+            sw: 1.0,
+        };
+        let circle = PKind::Circle {
+            c: Point2::new(2.0, 0.0),
+            r: 2.0,
+            ccw: true,
+        };
+        let below = 2.0 - 4.0 * f64::EPSILON;
+        let on = [junction(3.0), junction(0.0)];
+        let on_rev = [junction(0.0), junction(3.0)];
+        let off = [junction(3.0), junction(1.0)];
+        let minor =
+            |k: PKind, js: &[PJunction], r: f64| torus_minor(k, js, 0, 2.0, r, 1e-6).to_bits();
+        let horn = 2.0f64.to_bits();
+        // Crossing by at most tol, or exactly tangent: horn.
+        assert_eq!(minor(arc, &off, 2.0 + 5e-7), horn);
+        assert_eq!(minor(arc, &off, 2.0), horn);
+        // An arc end snapped onto the axis: horn, from either end, for a radius up to tol under.
+        assert_eq!(minor(arc, &on, below), horn);
+        assert_eq!(minor(arc, &on_rev, below), horn);
+        assert_eq!(minor(arc, &on, 2.0 - 9e-7), horn);
+        // The inclusive boundary: a gap of exactly tol, and tol plus the rounding of ρc − r.
+        assert_eq!(minor(arc, &on, 2.0 - 1e-6), horn);
+        let past = f64::from_bits((2.0f64 - 1e-6).to_bits() - 4);
+        assert_eq!(minor(arc, &on, past), past.to_bits());
+        let slack =
+            |k: PKind, js: &[PJunction], r: f64| torus_minor(k, js, 0, 2.0, r, 1e-6 + 1e-13);
+        assert_eq!(slack(arc, &on, past).to_bits(), horn);
+        // A gap beyond that is an arc whose end is off its carrier: never snapped.
+        assert_eq!(minor(arc, &on, 2.0 - 1.1e-6), (2.0f64 - 1.1e-6).to_bits());
+        // No end on the axis, or a full circle: the raw radius (a ring torus).
+        assert_eq!(minor(arc, &off, below), below.to_bits());
+        assert_eq!(minor(circle, &[], below), below.to_bits());
+        assert_eq!(minor(arc, &on, 1.5), 1.5f64.to_bits());
     }
 }

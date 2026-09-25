@@ -9,6 +9,7 @@ import { WorkerCadScriptService } from "./cadscript/worker-service";
 import { createCommandRegistry, type AppCommandRegistry } from "./commands/commands";
 import type { CommandInfo, CommandResult } from "./commands/registry";
 import { DocStore } from "./doc/doc-store";
+import { IrDocStore } from "./doc/v1/ir-doc-store";
 import { collectProblems } from "./doc/problems";
 import { findFeature } from "./doc/provenance";
 import { EngineManager, type EngineFactories } from "./engine/engine-manager";
@@ -211,6 +212,7 @@ export async function bootstrap(): Promise<Bootstrapped> {
     viewport: new ViewportController(),
     templates: TEMPLATES,
     agent,
+    ir: new IrDocStore({ engine: () => engines.active.commands ?? null }),
     confirm: (message) => Promise.resolve(window.confirm(message)),
   };
   const commands = createCommandRegistry(() => services);

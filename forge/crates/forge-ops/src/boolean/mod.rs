@@ -30,15 +30,27 @@
 //! 3. **Fragments** (`classify`): each face is re-arranged in its chart with the pieces on
 //!    it; interior pieces that separate nothing (tangent contact lines: a slit inside a
 //!    face, or a line across a band whose sides are one face) are dropped from the face and
-//!    recorded as contacts. Each fragment is classified in / out / on-same / on-opposite
-//!    (coincidence test, then certified ray casting; further interior points when one
-//!    lands on the other operand's boundary).
-//! 4. **Assembly** (`assemble`): selection by operation (a join without overlap or a cut
+//!    recorded as contacts (not when the piece lies outside the face, attached to it
+//!    within the tolerance along a narrow face). Each fragment is classified in / out /
+//!    on-same / on-opposite (coincidence test, then certified ray casting; further interior
+//!    points when one lands on the other operand's boundary; a fragment narrower than twice
+//!    the tolerance — every interior point tried within twice the tolerance of that
+//!    boundary, checked — by the unanimous side of its transversal and coincident boundary
+//!    pieces, `classify::boundary_fallback`; any other unclassifiable fragment is an error).
+//! 4. **Common part** (`thin`, SPEC [W0-41], [W0-48], [W0-53]): for a cut or join, the
+//!    common part's components nowhere thicker than the tolerance are contacts: all thin, the
+//!    step changes nothing (no overlap for a join without a shared face); thin beside thick,
+//!    thin beside a shared join face, or a thin part inside a thick component (an edge within
+//!    the tolerance of a face it does not cross, a fragment thin throughout),
+//!    `FORGE_BOOLEAN_NEAR_COINCIDENT`. A thin verdict is sampled, not certified: a
+//!    multi-operand operation that succeeds beside a step it skipped as a contact fails with
+//!    `FORGE_BOOLEAN_NEAR_COINCIDENT` instead of applying it silently.
+//! 5. **Assembly** (`assemble`): selection by operation (a join without overlap or a cut
 //!    that changes nothing stops here: `BOOLEAN_NO_INTERSECTION` at the caller), edge-use,
 //!    vertex-fan, contact-point and contact-line checks (non-manifold results are
 //!    `BOOLEAN_NON_MANIFOLD`), shells, voids, validated bodies whose edge tolerances cover
 //!    the SSI `error_bound` and every pcurve deviation.
-//! 5. **Unify** (`unify`): SPEC §6.0.4, with the key and alias rules of §5.2: faces on
+//! 6. **Unify** (`unify`): SPEC §6.0.4, with the key and alias rules of §5.2: faces on
 //!    one carrier merged; edges on one line, circle or ellipse, or pieces of one
 //!    intersection curve (B-splines, concatenated exactly across a closed curve's end),
 //!    merged at vertices no other edge uses; a closed edge alone in its loops becomes a
@@ -86,11 +98,15 @@
 //! finally surviving key across the steps of a multi-operand operation. Result bodies inherit the origin of the target they come from;
 //! a join component containing several targets takes the one that sorts first (timeline
 //! index, then member) and reports the others in `merged_into`; a target cut into pieces
-//! yields several bodies with one origin (`BOOLEAN_SPLIT`); a consumed target is reported
-//! in `removed` (`BOOLEAN_BODY_CONSUMED`). A target a join or cut leaves as it was (a
-//! nested join tool, a cut tool that misses it) is `untouched`, not modified; a target
-//! lying inside an intersect's tools is its own intersection and is reported `modified`
-//! (SPEC §6.0.3 intersects every target; §6.0.5, as the oracle reports it).
+//! yields several bodies with one origin (`BOOLEAN_SPLIT`); a consumed target
+//! (`BOOLEAN_BODY_CONSUMED`) and a merged one are reported in `removed` unless a result body
+//! or an untouched target still carries their origin ([W0-40]: a consumed or merged piece
+//! whose sibling piece survives removes nothing).
+//! [W0-39]: *modified* means acted on — a join target whose component contains a tool (even
+//! a tool equal to it or inside it, which leaves its geometry unchanged), a cut target some
+//! tool meets, every intersect target not consumed (one inside the tools is its own
+//! intersection). Any other target (a join target no tool reaches, a cut target no tool
+//! meets) is `untouched`: in neither `bodies` nor `removed`.
 //!
 //! # Canonical order (SPEC §5.4)
 //! Result bodies by origin (timeline index, member, instance), then pieces of one origin
@@ -122,6 +138,7 @@ mod intersect;
 mod keys;
 mod model;
 mod near;
+mod thin;
 mod unify;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -215,18 +232,26 @@ pub struct BodyOpResult {
     /// Bodies created or modified by the operation, in canonical order (origin, then
     /// centroid; SPEC §5.4).
     pub bodies: Vec<ResultBody>,
-    /// Targets a join or cut left as they were (a nested join tool, a cut tool missing
-    /// that target; not listed in `bodies`), in canonical order. An intersect never leaves
-    /// a target untouched: one inside the tools is listed in `bodies` as `modified`.
+    /// Targets a join or cut did not act on (SPEC [W0-39]: a join target whose component
+    /// holds no tool, a cut target no tool meets; not listed in `bodies`), in canonical
+    /// order. A join tool equal to or inside its target acts on it (`modified`). An
+    /// intersect never leaves a target untouched: one inside the tools is listed in
+    /// `bodies` as `modified`.
     pub untouched: Vec<Origin>,
     /// The indices (into the caller's `targets` slice) of the targets listed in
     /// `untouched`, in the same order. Split pieces share their origin, so the origins
     /// alone cannot tell the caller which piece a later operation left as it was
     /// (integration: forge-regen keeps exactly these bodies in the part).
     pub untouched_targets: Vec<usize>,
-    /// Join: targets merged into another target's body, `(merged, into)`.
+    /// Join: every other target origin of a component, mapped to the origin the component
+    /// kept, `(merged, into)` (SPEC §6.0.3; never the kept origin itself). A merged origin
+    /// may still be carried by a sibling piece elsewhere; `removed` says which vanished.
     pub merged_into: Vec<(Origin, Origin)>,
-    /// Origins of consumed targets.
+    /// SPEC [W0-40]: the origins of targets consumed, or merged into another origin
+    /// (`merged_into` keys), that no result body or untouched target still carries — once
+    /// each, in canonical origin order (timeline index, member, instance). The caller only
+    /// removes the origins that bodies of the part outside the operation still carry; it
+    /// must not add `merged_into` keys back.
     pub removed: Vec<Origin>,
     /// Targets split into several bodies, `(origin, pieces)`.
     pub splits: Vec<(Origin, usize)>,
@@ -260,6 +285,10 @@ struct Two {
     contact: Option<(Point3, EntityKind)>,
     uncertified: bool,
     aliases: Aliases,
+    /// The step is a contact by a sampled thin verdict ([`thin::Common::Thin`], never
+    /// certified): what the thin part is. A multi-operand operation that succeeds beside it
+    /// fails instead (`thin::uncertified`), so a wrong verdict is never applied silently.
+    thin: Option<thin::ThinPart>,
 }
 
 /// `A op B` for two solids. Joins without overlap, cuts that change nothing and
@@ -288,6 +317,7 @@ fn boolean2(
             contact: None,
             uncertified: false,
             aliases: Vec::new(),
+            thin: None,
         });
     }
     // SPEC [R-3]: aligned faces within the linear tolerance are coincident; B is translated
@@ -356,6 +386,55 @@ fn boolean2_on(
     let overlap = classes
         .iter()
         .any(|c| matches!(c, Class::In | Class::OnSame | Class::OnOpp));
+    // SPEC [W0-41] (1)–(2), [W0-48], [W0-53]: a common part nowhere thicker than the
+    // tolerance is a contact, not volume (`thin`). A cut then does not meet the target and a
+    // join tool shares no volume with it (a join still overlaps through a shared face). A
+    // thin part beside a real overlap would have to be realized as coincident faces, which
+    // Forge does for aligned faces only (`near::snap`): an explicit failure, never a body
+    // with a face narrower than the tolerance.
+    if matches!(op, BodyOp::Cut | BodyOp::Join) {
+        let shared_face = classes.contains(&Class::OnOpp);
+        match thin::common(m, &imp, &frags, &classes, &charts) {
+            thin::Common::Thin(t) if op == BodyOp::Cut || !shared_face => {
+                // A contact: the cut changes nothing; the join tool shares no volume (nor a
+                // face) with the target.
+                return Ok(Two {
+                    bodies: Vec::new(),
+                    masses: Vec::new(),
+                    changed_a: false,
+                    overlap: shared_face,
+                    contact: imp.contact,
+                    uncertified: imp.uncertified,
+                    aliases: Vec::new(),
+                    thin: Some(t),
+                });
+            }
+            thin::Common::Thin(t) => {
+                return Err(thin::unresolved(&t, "the join shares a face beside it"));
+            }
+            thin::Common::Mixed(t) => {
+                return Err(thin::unresolved(
+                    &t,
+                    "the operation meets the target elsewhere",
+                ));
+            }
+            thin::Common::Thick => {
+                // A thin part inside a component that is thick elsewhere (review round 5):
+                // an edge within the tolerance of a face it does not cross, or a fragment
+                // thin throughout.
+                if let Some(t) = thin::edge_sliver(m, &imp, &frags, &classes) {
+                    return Err(thin::sliver(&t));
+                }
+                if let Some(t) = thin::thin_fragment(m, &imp, &frags, &classes, &charts) {
+                    return Err(thin::unresolved(
+                        &t,
+                        "it is part of one connected overlap that is thick elsewhere",
+                    ));
+                }
+            }
+            thin::Common::Empty => {}
+        }
+    }
     let sel = assemble::select(op, m, &frags, &classes);
     let kept: BTreeSet<usize> = sel.iter().map(|r| r.frag).collect();
     // The result differs from A if one of A's fragments is dropped or one of B's is kept.
@@ -371,6 +450,7 @@ fn boolean2_on(
         contact: imp.contact,
         uncertified: imp.uncertified,
         aliases: Vec::new(),
+        thin: None,
     };
     // A join without overlap, or a cut that changes nothing, fails or keeps the target at
     // the caller (SPEC §6.0.3); touching along an edge or at a point is not reported as a
@@ -451,6 +531,7 @@ fn boolean2_on(
         contact: imp.contact,
         uncertified: imp.uncertified || !measured,
         aliases,
+        thin: None,
     })
 }
 
@@ -819,12 +900,53 @@ fn apply(
         BodyOp::Cut => cut(targets, tools, &ctx, &mut res)?,
         BodyOp::Intersect => intersect_op(targets, tools, &ctx, &mut res)?,
     }
+    removed_not_carried(&mut res, targets);
     res.aliases = collapse_aliases(std::mem::take(&mut res.aliases));
     // Sources back to face names where unambiguous (`keys`).
     for rb in &mut res.bodies {
         rb.body = keys::denormalize(&rb.body)?;
     }
     Ok(res)
+}
+
+/// SPEC [W0-40] (§6.0.5): `removed` lists, once each and in canonical origin order (§5.4),
+/// the origins of targets that no body carries after the operation: consumed targets and
+/// the keys of `merged_into` (targets merged into a join component that took another
+/// origin) — never an origin a result body or an untouched target still carries. So a
+/// consumed piece whose sibling piece survives (beside the tool or untouched) removes
+/// nothing, its `BOOLEAN_BODY_CONSUMED` note stays (one per consumed target body); and a
+/// piece merged into another origin's component removes nothing while a sibling piece is a
+/// result body (its own component) or untouched, although `merged_into` still maps the
+/// origin (§6.0.3: every other target origin of the component). This is the report's
+/// `removed` as far as the operands tell: bodies of the part that are not targets are the
+/// caller's to check (forge-regen drops any origin they still carry).
+fn removed_not_carried(res: &mut BodyOpResult, targets: &[OpBody]) {
+    let carried: Vec<&Origin> = res
+        .bodies
+        .iter()
+        .map(|b| &b.origin)
+        .chain(res.untouched.iter())
+        .collect();
+    let candidates: Vec<Origin> = std::mem::take(&mut res.removed)
+        .into_iter()
+        .chain(res.merged_into.iter().map(|(m, _)| m.clone()))
+        .collect();
+    let mut kept: Vec<(OriginKey, Origin)> = Vec::with_capacity(candidates.len());
+    for o in candidates {
+        if carried.contains(&&o) || kept.iter().any(|(_, k)| *k == o) {
+            continue;
+        }
+        // Every candidate is a target's origin; the fallback only keeps the order total.
+        let key = targets
+            .iter()
+            .find(|t| t.origin == o)
+            .map(origin_key)
+            .unwrap_or((usize::MAX, o.member.clone(), o.instance.clone()));
+        kept.push((key, o));
+    }
+    // `String` orders byte-wise (§5.4); the feature breaks ties of the fallback key.
+    kept.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.feature.cmp(&b.1.feature)));
+    res.removed = kept.into_iter().map(|(_, o)| o).collect();
 }
 
 /// What every two-solid boolean of one operation shares.
@@ -898,6 +1020,16 @@ impl<'a> Graph<'a> {
 
     fn overlap(&self, i: usize, j: usize) -> bool {
         self.get(i, j).is_some_and(|t| t.overlap)
+    }
+
+    /// The first pair (in pair order) judged a contact by a sampled thin verdict whose
+    /// operands ended in different components (`comp_of`): the verdict decided that they
+    /// stay apart, and a successful operation would apply it silently.
+    fn thin_between(&self, comp_of: &[usize]) -> Option<&thin::ThinPart> {
+        self.pairs
+            .iter()
+            .find(|((i, j), t)| t.thin.is_some() && comp_of[*i] != comp_of[*j])
+            .and_then(|(_, t)| t.thin.as_ref())
     }
 
     /// Where `i` and `j` touch without overlapping, if they do.
@@ -1077,19 +1209,29 @@ fn join(
         if comp.len() == 1 {
             continue;
         }
-        let (body, changed, _) = g.unite(comp, ctx, res)?;
+        let (body, _, _) = g.unite(comp, ctx, res)?;
         // Every component with several members holds a target (tools overlap targets), and
         // targets sort first.
         let keep = comp[0];
         let merged: Vec<usize> = comp[1..].iter().copied().filter(|&i| i < nt).collect();
-        if !changed && merged.is_empty() {
-            continue;
-        }
+        // SPEC [W0-39] (§6.0.5): a join target is `modified` iff its component contains a
+        // tool — *acted on*, not *geometrically changed*: a tool equal to its target, inside
+        // it, or embedded 1.5e-6 mm thin ([W0-48]) modifies it although the union is the
+        // target itself. So every component with several members is modified: it holds a
+        // tool, or — no tool — several targets that overlap each other, which the union of
+        // §6.0.3 merges into one body (the kept origin `modified`, the others
+        // `merged_into`). [W0-39] reads "untouched" for the latter, §6.0.3's connected
+        // components "merged": a contract question awaiting a ruling (the test
+        // `overlapping_targets_without_a_tool_are_merged_pending_a_ruling` pins Forge's
+        // reading).
+        debug_assert!(comp.iter().any(|&i| i >= nt) || !merged.is_empty());
         modified[ci] = true;
+        // Every other target origin once (§6.0.3): several pieces of one origin may fall into
+        // the component (review finding: `[(a, b), (a, b)]`).
         for &o in &merged {
-            if targets[o].origin != targets[keep].origin {
-                res.merged_into
-                    .push((targets[o].origin.clone(), targets[keep].origin.clone()));
+            let pair = (targets[o].origin.clone(), targets[keep].origin.clone());
+            if pair.0 != pair.1 && !res.merged_into.contains(&pair) {
+                res.merged_into.push(pair);
             }
         }
         out.push((
@@ -1116,6 +1258,13 @@ fn join(
                 return Err(non_manifold(c));
             }
         }
+    }
+    // A sampled thin verdict that kept two operands apart would be applied silently.
+    if let Some(t) = g.thin_between(&comp_of) {
+        return Err(thin::uncertified(
+            t,
+            "the join succeeds beside it with these operands in separate bodies",
+        ));
     }
     for &i in order.iter().filter(|&&i| i < nt) {
         if !modified[comp_of[i]] {
@@ -1149,6 +1298,8 @@ fn cut(
     let mut out: Vec<(usize, ResultBody)> = Vec::new();
     let mut hit = vec![false; tools.len()];
     let mut touch = vec![false; tools.len()];
+    // The first step skipped as a contact by a sampled thin verdict.
+    let mut thin_step: Option<thin::ThinPart> = None;
     for &ti in order.iter().filter(|&&i| i < nt) {
         let t = &targets[ti];
         let mut pieces: Vec<(Body, Mass)> = vec![(t.body.clone(), operand_mass(&t.body))];
@@ -1168,6 +1319,9 @@ fn cut(
                 )?;
                 res.uncertified |= two.uncertified;
                 touch[ki] |= two.overlap || two.contact.is_some();
+                if thin_step.is_none() {
+                    thin_step = two.thin.clone();
+                }
                 if two.changed_a {
                     changed = true;
                     hit[ki] = true;
@@ -1240,6 +1394,13 @@ fn cut(
             min_distance: d,
         });
     }
+    // A tool meets a target: a step skipped by a sampled thin verdict would be silent.
+    if let Some(t) = &thin_step {
+        return Err(thin::uncertified(
+            t,
+            "another step of the cut meets a target, so this one would be skipped silently",
+        ));
+    }
     finish(out, targets, scale, res)
 }
 
@@ -1274,7 +1435,14 @@ fn intersect_op(
     )?;
     let all: Vec<usize> = (0..tools.len()).collect();
     let mut unions: Vec<(Body, Mass)> = Vec::new();
-    for comp in g.components(&all) {
+    let comps = g.components(&all);
+    let mut comp_of = vec![0usize; tools.len()];
+    for (ci, c) in comps.iter().enumerate() {
+        for &i in c {
+            comp_of[i] = ci;
+        }
+    }
+    for comp in comps {
         let (body, _, mass) = g.unite(&comp, ctx, res)?;
         unions.push((body, mass));
     }
@@ -1408,6 +1576,13 @@ fn intersect_op(
                 .map(|&i| targets[i].origin.clone())
                 .collect(),
         });
+    }
+    // Tools kept apart by a sampled thin verdict would give a result silently.
+    if let Some(t) = g.thin_between(&comp_of) {
+        return Err(thin::uncertified(
+            t,
+            "the intersection succeeds with these tools in separate unions",
+        ));
     }
     finish(out, targets, scale, res)
 }

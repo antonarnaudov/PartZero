@@ -73,13 +73,14 @@ import {
   type ToolOutput,
   type ToolRegistry,
   type UserQuestion,
+  v1 as tv1,
 } from "@aicad/agent-tools";
 import { describeTest, type Engine, type HiddenTest } from "@aicad/evals";
 import type { EvalReport, IrDocument } from "@aicad/ir-types";
 import { resolveModels, type AgentModels, type AgentRole, type ModelOverrides } from "./models.js";
 import { loadPrompt, type PromptInfo } from "./prompts.js";
-import { cadscriptReference } from "./reference.js";
-import { AgentStop, callModel, DEFAULT_LIMITS, responseText, throwIfCancelled, type AgentLimits, type RunContext, type RuntimeContext, type UserWait } from "./run-context.js";
+import { cadscriptReference, cadscriptReferenceV1 } from "./reference.js";
+import { AgentStop, callModel, CLI_RUNTIME_MAX_FAILED_APPLIES, DEFAULT_LIMITS, responseText, throwIfCancelled, type AgentLimits, type RunContext, type RuntimeContext, type UserWait } from "./run-context.js";
 import {
   CLI_PHASE_LIMITS,
   CLI_QUESTION_WAIT_MS,
@@ -146,7 +147,17 @@ export interface AgentHooks {
 
 export interface AgentOptions {
   gateway: LLMGateway;
+  /** The v0 engine (`aicad.metrics/0`); with `ir: "v1"` the run uses `engineV1` instead. */
   engine: Engine;
+  /**
+   * The IR dialect the designer writes: `"v0"` (default: CadScript v0, the v0 tools and prompts) or
+   * `"v1"` (CadScript v1: parameters, queries, holes, blends, patterns; the v1 tools — set_param,
+   * accept_ref_candidate, accept_ref_proposal, sketch_edit, query, describe —, the v1 playbooks,
+   * the generated v1 reference and prompt version "v2"; needs `engineV1`).
+   */
+  ir?: "v0" | "v1";
+  /** With `ir: "v1"`: the engine that returns `aicad.metrics/1` reports (e.g. `v1.ForgeCliEngineV1`). */
+  engineV1?: tv1.EngineV1;
   /** Per-role model overrides (profile ids); defaults come from the gateway router. */
   models?: ModelOverrides;
   /** Hard USD cap for the whole task (default 1.5, the T1 cap). */
@@ -188,6 +199,8 @@ export type AgentStatus = "proposed" | "answered" | "stopped" | "failed";
 
 export interface AgentResult {
   status: AgentStatus;
+  /** (additive) The IR dialect the run used. */
+  ir?: "v0" | "v1";
   stopReason: AgentStopReason;
   message: string;
   /** The final CadScript (the proposal, or the best verified state when stopped). */
@@ -236,6 +249,21 @@ export class Agent {
 const MAX_REFINE_TESTS = 8;
 
 /**
+ * What each v1 engine evaluates, asked once per engine instance (a bench run shares one): the
+ * designer is told up front which operations the attached engine rejects, so it does not spend a
+ * failed apply finding out. Only answers are kept; an engine that could not answer is asked again.
+ */
+const ENGINE_CAPABILITIES = new WeakMap<tv1.EngineV1, tv1.EngineCapabilitiesV1>();
+
+async function engineCapabilities(engine: tv1.EngineV1, timeoutMs: number): Promise<tv1.EngineCapabilitiesV1 | undefined> {
+  const known = ENGINE_CAPABILITIES.get(engine);
+  if (known) return known;
+  const c = await tv1.probeEngineCapabilitiesV1(engine, Number.isFinite(timeoutMs) ? { timeoutMs: Math.max(1, Math.ceil(timeoutMs)) } : {});
+  if (c) ENGINE_CAPABILITIES.set(engine, c);
+  return c;
+}
+
+/**
  * Spec text is the spec writer's output, which read the user's file: data, one line per item,
  * bounded, and shown only inside nonce-tagged data blocks with a label at the start of every line.
  */
@@ -267,6 +295,10 @@ function specBlocks(spec: DesignSpec | undefined, tests: readonly HiddenTest[], 
   return out;
 }
 
+/** A design session of either dialect. */
+type AnySession = DesignSession | tv1.DesignSessionV1;
+type AnyCheckpoint = Checkpoint | tv1.CheckpointV1;
+
 class AgentRun {
   readonly #o: AgentOptions;
   readonly #req: AgentRequest;
@@ -275,7 +307,9 @@ class AgentRun {
   readonly #trace: TraceRecorder;
   #models!: AgentModels;
   #rc!: RunContext;
-  #session!: DesignSession;
+  #session!: AnySession;
+  /** The run writes CadScript v1 (AgentOptions.ir). */
+  readonly #v1: boolean;
   #registry: ToolRegistry<DesignToolContext> = designerRegistry();
   #prompts: { designer?: PromptInfo; spec_writer?: PromptInfo; triage?: PromptInfo } = {};
   #system: SystemBlock[] = [];
@@ -296,9 +330,13 @@ class AgentRun {
   #refines = 0;
   #proposeRejects = 0;
   #askRounds = 0;
-  #lastGood: Checkpoint | undefined;
-  #best: { cp: Checkpoint; passed: number } | undefined;
+  #lastGood: AnyCheckpoint | undefined;
+  #best: { cp: AnyCheckpoint; passed: number } | undefined;
   #proposal: Proposal | undefined;
+  /** Requested features no frozen spec test checks (the spec writer's fallback): told to the designer, listed in known_issues. */
+  #specGaps: string[] = [];
+  /** CadScript v1: what the attached engine evaluates (undefined when it could not say). */
+  #capabilities: tv1.EngineCapabilitiesV1 | undefined;
   #answer: string | undefined;
   #ended = false;
   #pendingStop: AgentStop | undefined;
@@ -325,6 +363,7 @@ class AgentRun {
     this.#o = options;
     this.#req = request;
     this.#limits = { ...DEFAULT_LIMITS, ...options.limits };
+    this.#v1 = options.ir === "v1";
     this.#now = options.now ?? (() => performance.now());
     this.#trace = new TraceRecorder(this.#now, options.hooks?.onEvent);
   }
@@ -351,20 +390,33 @@ class AgentRun {
       cliCompletionLimits: o.cliLimits?.completion,
       onPlanUsage: (u) => this.#onPlanUsage(u),
       runtime: o.runtime ? this.#runtimeContext(o.runtime) : undefined,
+      wallLeftMs: () => this.#wallLeftMs(),
     };
     const variant = (role: "designer" | "spec_writer" | "triage") => o.gateway.profile(this.#models[role].model).promptVariant;
     const load = (role: "designer" | "spec_writer" | "triage") =>
-      loadPrompt(role, { variant: variant(role), ...(o.promptVersion ? { version: o.promptVersion } : {}), ...(o.promptsDir ? { dir: o.promptsDir } : {}) });
+      loadPrompt(role, { variant: variant(role), ...(this.#promptVersion() ? { version: this.#promptVersion()! } : {}), ...(o.promptsDir ? { dir: o.promptsDir } : {}) });
     this.#prompts.designer = load("designer");
     this.#system = [
       { type: "text", text: this.#prompts.designer.text },
-      { type: "text", text: cadscriptReference() },
+      { type: "text", text: this.#v1 ? cadscriptReferenceV1() : cadscriptReference() },
       ...(o.conventions ? [{ type: "text" as const, text: `# Project conventions\n\n${o.conventions}` }] : []),
     ];
     try {
-      const availability = await o.engine.availability();
-      if (!availability.available) throw new AgentStop("engine_unavailable", `engine ${o.engine.kind} unavailable: ${availability.detail}`);
-      this.#session = await DesignSession.open({ engine: o.engine, ...(this.#req.context ? { source: this.#req.context } : {}), name: this.#req.name ?? "design" });
+      if (this.#v1 && !o.engineV1) throw new AgentStop("engine_unavailable", 'ir "v1" needs engineV1 (an engine that returns aicad.metrics/1 reports)');
+      const engine = this.#v1 ? o.engineV1! : o.engine;
+      const availability = await engine.availability();
+      if (!availability.available) throw new AgentStop("engine_unavailable", `engine ${engine.kind} unavailable: ${availability.detail}`);
+      const opening = { ...(this.#req.context ? { source: this.#req.context } : {}), name: this.#req.name ?? "design" };
+      if (this.#v1) {
+        // Every engine evaluation is cut at the task's wall-time cap (ENGINE_TIMEOUT; the next gate stops the run).
+        this.#session = await tv1.DesignSessionV1.open({ engine: o.engineV1!, ...opening, timeLeftMs: () => this.#wallLeftMs() });
+        this.#registry = tv1.designerRegistryV1() as unknown as ToolRegistry<DesignToolContext>;
+        if (this.#wallLeftMs() > 0) this.#capabilities = await engineCapabilities(o.engineV1!, this.#wallLeftMs());
+        const rejected = this.#capabilities?.unsupported ?? [];
+        this.#trace.note(this.#capabilities ? `engine capabilities: ${rejected.length > 0 ? `does not evaluate ${rejected.map((u) => u.op).join(", ")}` : "evaluates every probed operation"}${this.#capabilities.unknown.length > 0 ? `; unknown: ${this.#capabilities.unknown.join(", ")}` : ""}` : "engine capabilities: the engine could not say");
+      } else {
+        this.#session = await DesignSession.open({ engine: o.engine, ...opening });
+      }
       if (this.#session.checkpoints.length === 0) this.#session.checkpoint("start");
       else this.#lastGood = this.#session.state.verification.ok ? this.#session.checkpoints[0] : undefined;
 
@@ -384,6 +436,29 @@ class AgentRun {
       else this.#stopWith("model_error", `internal error: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`);
     }
     return this.#finish();
+  }
+
+  /** The prompt version: the caller's, else "v2" for CadScript v1 (the v1 prompts), else the default. */
+  #promptVersion(): string | undefined {
+    return this.#o.promptVersion ?? (this.#v1 ? "v2" : undefined);
+  }
+
+  /** The IR summary of a state, in the session's dialect. */
+  #summary(ir: unknown, report: unknown, maxChars: number): string {
+    if (this.#v1) return tv1.irSummaryV1(ir as tv1.IrV1, report as tv1.ReportV1 | null, { maxChars });
+    return irSummary(ir as IrDocument, report as EvalReport | null, { maxChars });
+  }
+
+  /** Failed applies before the run stops: the caller's cap, else the default — tighter in CLI runtime mode. */
+  #maxFailedApplies(): number {
+    if (this.#o.limits?.maxFailedApplies !== undefined) return this.#limits.maxFailedApplies;
+    return this.#modeFor("designer", "BUILD") === "runtime" ? Math.min(this.#limits.maxFailedApplies, CLI_RUNTIME_MAX_FAILED_APPLIES) : this.#limits.maxFailedApplies;
+  }
+
+  /** Milliseconds left of the per-task wall-time cap (Infinity without one). */
+  #wallLeftMs(): number {
+    const cap = this.#limits.maxWallMs;
+    return Number.isFinite(cap) ? cap - this.#trace.elapsed() : Infinity;
   }
 
   // ── CLI agents: mode selection, runtime accounting (ADR 0014) ──
@@ -446,6 +521,9 @@ class AgentRun {
     // BUILD: the designer's turn limit plus 2 turns of slack for closing.
     if (phase === "BUILD") base.maxTurns = this.#limits.maxTurns + 2;
     const limits: CliLimits = { ...base, ...(this.#o.cliLimits?.[phase] ?? {}) };
+    // The task's wall-time cap bounds the CLI process too (at least 1 s, so the phase can start and close).
+    const left = this.#wallLeftMs();
+    if (Number.isFinite(left)) limits.wallMs = Math.max(1000, Math.min(limits.wallMs ?? Number.POSITIVE_INFINITY, Math.floor(left)));
     if (limits.maxBudgetUsd === undefined) {
       const b = this.#rc.task.budget;
       const remaining = b.capUsd - b.spentUsd - b.reservedUsd - this.#unsettledUsd;
@@ -536,7 +614,7 @@ class AgentRun {
     const answer =
       this.#o.mode === "interactive" && this.#o.askUser ? this.#o.askUser : evalModeAnswers(this.#o.recordedDefaults);
     return {
-      session: this.#session,
+      session: this.#session as DesignSession,
       readOnly,
       askUser: async (qs) => {
         const answers = await this.#answerQuestions(answer, qs);
@@ -592,7 +670,7 @@ class AgentRun {
           dataBlock(
             "starting_model",
             n,
-            `${fence}ts\n${code}\n${fence}\nIt evaluates: ${oneLine(verificationLine(v))}${this.#session.report ? `\n${irSummary(this.#session.ir!, this.#session.report, { maxChars: 5000 })}` : ""}`,
+            `${fence}ts\n${code}\n${fence}\nIt evaluates: ${oneLine(verificationLine(v))}${this.#session.report ? `\n${this.#summary(this.#session.ir, this.#session.report, 5000)}` : ""}`,
           ),
       );
     }
@@ -623,7 +701,7 @@ class AgentRun {
     this.#trace.enter("SPEC");
     this.#prompts.spec_writer = loadPrompt("spec_writer", {
       variant: this.#o.gateway.profile(this.#models.spec_writer.model).promptVariant,
-      ...(this.#o.promptVersion ? { version: this.#o.promptVersion } : {}),
+      ...(this.#promptVersion() ? { version: this.#promptVersion()! } : {}),
       ...(this.#o.promptsDir ? { dir: this.#o.promptsDir } : {}),
     });
     const input = { prompt: this.#req.prompt, process: this.#req.process, clarifications: this.#clarifications, nonce: this.#nonce };
@@ -635,6 +713,8 @@ class AgentRun {
     this.#conversations.spec_writer = out.messages;
     this.#trace.note(out.spec ? `spec frozen: ${out.spec.requirements.length} requirements, ${out.spec.tests.length} tests` : `spec: ${out.note ?? "none"}`);
     if (out.note) this.#trace.note(out.note);
+    this.#specGaps = out.gaps ?? [];
+    for (const g of this.#specGaps) this.#trace.note(g);
   }
 
   #buildHeader(kind: TriageKind): string {
@@ -642,6 +722,14 @@ class AgentRun {
     const c = clarificationsBlock(this.#clarifications, this.#nonce);
     if (c) lines.push(c);
     lines.push(...specBlocks(this.#session.spec, this.#session.tests, this.#nonce, this.#orch));
+    if (this.#specGaps.length > 0) {
+      lines.push(
+        `${this.#orch} The spec writer's spec was not accepted: no frozen test checks ${this.#specGaps.length === 1 ? "this requested feature" : `these ${this.#specGaps.length} requested features`}. Build them anyway and check each yourself (measure what it adds) before you propose; they are listed under the proposal's known_issues either way.\n` +
+          dataBlock("spec_gaps", this.#nonce, this.#specGaps.map((g) => `- ${specText(g)}`).join("\n")),
+      );
+    }
+    const unsupported = this.#v1 ? tv1.capabilitiesNoteV1(this.#capabilities) : undefined;
+    if (unsupported) lines.push(`${this.#orch} Engine: ${unsupported}`);
     const cap = this.#rc.task.budget.capUsd;
     lines.push(`${this.#orch} Budget: hard cap $${cap.toFixed(2)} for this task; the run stops at ${Math.round(this.#limits.budgetStopFraction * 100)}% of it.`);
     lines.push(
@@ -660,6 +748,9 @@ class AgentRun {
    * wraps the user's answer in a runtime tool call (the broker's deadline pauses while they decide).
    */
   async #budgetGate(wait?: UserWait): Promise<void> {
+    if (this.#wallLeftMs() <= 0) {
+      throw new AgentStop("wall_time", `the task used its ${Math.round(this.#limits.maxWallMs / 1000)} s wall-time cap (${Math.round(this.#trace.elapsed() / 1000)} s elapsed)`);
+    }
     const budget = this.#rc.task.budget;
     const spent = budget.spentUsd + this.#unsettledUsd;
     if (this.#budgetCheckpointDone || spent < this.#limits.budgetStopFraction * budget.capUsd) return;
@@ -869,6 +960,7 @@ class AgentRun {
       case "timeout":
       case "stalled":
       case "cli_error":
+        if (outcome.endedBy === "timeout" && this.#wallLeftMs() <= 1000) throw new AgentStop("wall_time", `the task used its ${Math.round(this.#limits.maxWallMs / 1000)} s wall-time cap inside the ${role} CLI phase`);
         if (failure?.code === "budget") throw new AgentStop("budget", `${role} CLI: ${failure.message}`);
         if (failure?.code === "max_turns") throw new AgentStop("max_turns", `${role} CLI: ${failure.message}`);
         throw new AgentStop("model_error", `${role} CLI run failed (${detail})`);
@@ -896,7 +988,7 @@ class AgentRun {
       system: this.#system.map((b) => b.text).join("\n\n"),
       prompt: [...this.#taskLines(), `${this.#orch} This is a question: do not change the design. Use get_code / ir_summary / measure as needed, then reply with the answer as plain text.`].join("\n\n"),
       scope: "read",
-      tools: this.#toolDefs(READ_ONLY_TOOLS),
+      tools: this.#toolDefs(this.#v1 ? tv1.READ_ONLY_TOOLS_V1 : READ_ONLY_TOOLS),
       limits: rt.limits("ASK"),
       signal: this.#o.signal,
       orchTag: this.#orch,
@@ -1030,8 +1122,9 @@ class AgentRun {
       notes.push(`${this.#orch} The same error keeps coming back (${seen} times in this task); the task stops here.`);
       return;
     }
-    if (t.failedApplies >= this.#limits.maxFailedApplies) {
-      this.#pendingStop = new AgentStop("repairs_exhausted", `${t.failedApplies} failed applies in this task (the cap is ${this.#limits.maxFailedApplies}); last error: ${sig.slice(0, 300)}`);
+    const maxFailed = this.#maxFailedApplies();
+    if (t.failedApplies >= maxFailed) {
+      this.#pendingStop = new AgentStop("repairs_exhausted", `${t.failedApplies} failed applies in this task (the cap is ${maxFailed}); last error: ${sig.slice(0, 300)}`);
       notes.push(`${this.#orch} ${t.failedApplies} applies failed in this task; the task stops here.`);
       return;
     }
@@ -1053,7 +1146,7 @@ class AgentRun {
       this.#lastFailSig = "";
       t.enter("REPLAN", `rolled back to ${target.id}`);
       this.#emitDraft("rollback");
-      const state = target.state.ir ? `\nCurrent state:\n${dataBlock("current_state", this.#nonce, irSummary(target.state.ir, target.state.report, { maxChars: 4000 }))}` : "\nCurrent state: empty file.";
+      const state = target.state.ir ? `\nCurrent state:\n${dataBlock("current_state", this.#nonce, this.#summary(target.state.ir, target.state.report, 4000))}` : "\nCurrent state: empty file.";
       notes.push(
         `${this.#orch} ${max} repairs failed, so the design was rolled back to ${target.id} ${jsonQuote(oneLine(target.label, 80))}. REPLAN: build this step a different way (another construction or simpler geometry), not another variation of the failed attempt.${state}`,
       );
@@ -1129,9 +1222,65 @@ class AgentRun {
         isError: true,
       };
     }
+    // L3 for CadScript v1: the editability probe (every driving parameter ±20 % must still evaluate),
+    // inside the task's wall-time budget: it stops before an evaluation that would not fit and lists
+    // what it could not vary.
+    if (this.#v1) {
+      const session = this.#session as tv1.DesignSessionV1;
+      const probe = this.#wallLeftMs() > 0 ? await session.editabilityProbe({ timeLeftMs: () => this.#wallLeftMs() }) : undefined;
+      const broken = probe?.failures ?? [];
+      if (broken.length > 0) this.#trace.note(`editability probe: ${broken.length} of ${(probe?.varied.length ?? 0) * 2} variants fail`);
+      if (broken.length > 0 && !options.implicit && this.#refines < this.#limits.maxRefines) {
+        this.#refines++;
+        this.#trace.refines++;
+        this.#trace.enter("REPAIR", `refine ${this.#refines}/${this.#limits.maxRefines} (editability)`);
+        return {
+          text: clip(
+            [
+              ...prelude,
+              `${this.#orch} Not accepted (REFINE ${this.#refines}/${this.#limits.maxRefines}): the model breaks when a driving parameter changes by 20 % — a maker editing it would hit these errors:`,
+              ...capList(broken, MAX_REFINE_TESTS, (f) => `  ✗ ${f.param} = ${f.value}: ${f.code} at ${oneLine(f.where, 60)} — fix: ${oneLine(f.hint, 300)}`, (n) => `  … ${n} more`),
+              `${this.#orch} Make the relations parametric (derive dependent sizes from the parameters), or give the parameter honest min/max bounds, then propose again.`,
+            ].join("\n"),
+          ),
+          isError: true,
+        };
+      }
+      for (const f of broken) {
+        const issue = `editability: ${f.param} = ${f.value} fails with ${f.code} at ${f.where}`;
+        if (!proposal.known_issues.includes(issue)) proposal.known_issues.push(issue);
+      }
+      if (!probe && session.verification.ok) {
+        const issue = "editability: not probed (the task's wall-time budget ran out)";
+        if (!proposal.known_issues.includes(issue)) proposal.known_issues.push(issue);
+      }
+      for (const n of probe?.notProbed ?? []) {
+        const issue = `editability: ${n.param}${n.value !== undefined ? ` = ${n.value}` : ""} not probed (${n.reason})`;
+        if (!proposal.known_issues.includes(issue)) proposal.known_issues.push(issue);
+      }
+      for (const w of session.acceptedWarnings) {
+        const issue = `warning ${w.code} on ${w.feature} kept on purpose: ${w.reason}`;
+        if (!proposal.known_issues.includes(issue)) proposal.known_issues.push(issue);
+      }
+      // Warnings nobody explained (on features the designer did not edit, or left from the starting model) are on record too.
+      for (const w of session.openWarnings) {
+        const issue = `warning ${w.code} on ${w.feature} (not explained): ${oneLine(w.message, 200)}`;
+        if (!proposal.known_issues.includes(issue)) proposal.known_issues.push(issue);
+      }
+      // accept_ref_candidate cannot refresh a reference's capture yet (SPEC-v1 §5.9): a later re-aim would not be reported.
+      for (const r of session.uncapturedRepairs) {
+        const issue = `reference ${r.field} of ${r.feature} was repaired by accept_ref_candidate and has no capture${r.dropped ? " (its old capture was dropped)" : ""}: if a later upstream change splits or removes that entity, its query alone decides, with no REF_SPLIT / REF_MISSING (open and save the model in the app to capture it)`;
+        if (!proposal.known_issues.includes(issue)) proposal.known_issues.push(issue);
+      }
+    }
     if (failing.length === 0 && this.#o.hooks?.visualJudge) {
       // L5: out of scope until rendering exists; only runs when a judge is plugged in.
-      const verdict = await this.#o.hooks.visualJudge({ source: this.#session.source, ir: this.#session.ir, report: this.#session.report, spec: this.#session.spec });
+      const verdict = await this.#o.hooks.visualJudge({
+        source: this.#session.source,
+        ir: this.#v1 ? null : (this.#session.ir as IrDocument | null),
+        report: this.#v1 ? null : (this.#session.report as EvalReport | null),
+        spec: this.#session.spec,
+      });
       if (!verdict.pass) {
         // The judge's findings are another model's output: data, one bounded line each.
         const findings = capList(verdict.findings, MAX_REFINE_TESTS, (f) => `- ${oneLine(clipText(f, 300))}`, (n) => `- … ${n} more`);
@@ -1167,6 +1316,8 @@ class AgentRun {
   }
 
   #accept(proposal: Proposal): void {
+    // What the spec leaves unchecked is on record, whatever the designer wrote.
+    for (const g of this.#specGaps) if (!proposal.known_issues.includes(g)) proposal.known_issues.push(g);
     this.#proposal = proposal;
     this.#ended = true;
     this.#trace.enter("PROPOSE");
@@ -1180,7 +1331,7 @@ class AgentRun {
   }
 
   #finish(): AgentResult {
-    const s = this.#session as DesignSession | undefined;
+    const s = this.#session as AnySession | undefined;
     let status: AgentStatus;
     let stopReason: AgentStopReason;
     let message: string;
@@ -1234,6 +1385,7 @@ class AgentRun {
       conversations: this.#conversations,
       billing: this.#designerBilling(),
       mode: this.#designerMode(),
+      ir: this.#v1 ? "v1" : "v0",
     };
     if (this.#planUsage) result.planUsage = this.#planUsage;
     if (this.#answer !== undefined) result.answer = this.#answer;
@@ -1242,7 +1394,7 @@ class AgentRun {
     if (this.#proposal) result.proposal = this.#proposal;
     else if (status !== "answered") {
       const failing = (tests ?? []).filter((t) => !t.pass).map((t) => `spec test ${t.id} fails: ${formatTestResult(t)}`);
-      result.proposal = { summary: `Stopped (${stopReason}): ${message}`, assumptions: [], known_issues: [message, ...failing] };
+      result.proposal = { summary: `Stopped (${stopReason}): ${message}`, assumptions: [], known_issues: [message, ...failing, ...this.#specGaps] };
     }
     return result;
   }

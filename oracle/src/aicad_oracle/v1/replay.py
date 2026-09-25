@@ -65,14 +65,11 @@ from ..compare import ABS_FLOOR, POS_TOL, REL_TOL
 from . import geom
 from .consts import LINEAR_TOLERANCE, QUERY_ANGLE_TOLERANCE, QUERY_SIZE_TIE_REL
 from .query import Evaluator, RefFailure, Scope, canonical_order, check_card, display_name, material_angle
-from .topo import outward_normal, point_shape_distance
 
 MEMBER_STATUSES = ("exact", "merged", "neighborhood_changed", "kind_changed", "split", "repaired")
 _SIZE_DIM = {"edge": 1, "face": 2, "body": 3}
 #: Cross-engine allowance on an angle test (datum directions are compared at 1e-9, §8.2).
 ANGLE_SLACK = 1e-9
-#: How close a face's outward normal must be to a probe's `normal` to disambiguate the probe.
-PROBE_NORMAL_ANGLE = 1e-3
 SIN_QA = math.sin(QUERY_ANGLE_TOLERANCE)
 
 #: Sources that designate entities by provenance key (§5.3), with their static kind.
@@ -80,6 +77,28 @@ KEYED_SOURCES = {"body": "body", "cap": "face", "endcap": "face", "side": "face"
                  "edge_at": "edge", "hole_face": "face", "created": "face", "instance": "face"}
 NAVIGATION = {"faces": "face", "edges": "edge", "vertices": "vertex", "owner": "body"}
 PICKS = ("extreme", "largest", "smallest")
+
+
+#: Questions the replay leaves to the Contract stage (W7b report, CONTRACT ISSUES), with what the
+#: oracle does meanwhile — **what §8.1 says** (W7b review 4: the oracle follows the SPEC until a
+#: ruling; before, it applied the single-candidate test on its own) — and the outcome in the diff.
+PENDING_DEVIATIONS = {
+    "single-candidate-normal": {
+        "spec": "§8.1 [W0-35]: the face/body normal test applies 'when several faces or bodies are within r'",
+        "oracle": "follows §8.1: one face or body within r is the match whatever its outward normal; the "
+                  "proposal (apply the positive-dot-product test to every candidate count, so that a face "
+                  "whose orientation contradicts the probe is not taken) waits for a Contract-stage ruling",
+        "outcome": "MATCH for a single candidate with a contradicting normal (per §8.1)",
+    },
+    "key-tie-break": {
+        "spec": "§8.1 [W0-35]: several faces or bodies left after the normal test are no match",
+        "oracle": "follows §8.1 (no tie-break by the member's key): ORACLE_PROBE_UNMATCHED; `oracle gen --ir v1` "
+                  "(classic) rejects programs whose own probes do not replay, so its corpora exclude this "
+                  "configuration, and reports the rejected attempts (`rejected`, rate next to the class counts)",
+        "outcome": "ROBUSTNESS in the diff (Forge-produced corpora); rejected generator attempts listed next to "
+                   "the class counts",
+    },
+}
 
 
 def _finding(code: str, message: str, details: dict, severity: str = "warning") -> dict:
@@ -119,18 +138,40 @@ def _unit3(x: Any) -> tuple | None:
 
 
 def _normal_agrees(face, p, n) -> bool:
-    m = outward_normal(face.shape, p)
-    return m is not None and geom.dot(m, n) >= math.cos(PROBE_NORMAL_ANGLE)
+    """[W0-35]: the face's outward normal at `p` has a positive dot product with the probe's."""
+    m = face.normal_at(p)
+    return m is not None and geom.dot(m, n) > 0.0
+
+
+def match_radius(scale: float) -> float:
+    """[W0-35] §8.1: probes match the entities within `clamp(1e-6·s, 2·tol, 5·tol)` of their point."""
+    return min(max(1e-6 * scale, 2.0 * LINEAR_TOLERANCE), 5.0 * LINEAR_TOLERANCE)
 
 
 def _match(scope: Scope, probe: Any) -> tuple[list, str]:
-    """The OCCT entities of the probe's kind within `1e-6·s` of its point (§8.1), and, when there
-    are none, why. A probe with a `normal` (§7.6: face probes, and body probes, which are the probe
-    of a face) also needs a face there whose outward normal agrees within `PROBE_NORMAL_ANGLE` —
-    for a single candidate too: a face whose orientation contradicts Forge's outward normal is not
-    the entity Forge designated (or Forge's face is flipped), so the probe is unmatched
-    (ROBUSTNESS), never silently accepted; for several candidates (coincident faces of touching
-    bodies) this is what disambiguates."""
+    """The OCCT entities of the probe's kind within `match_radius(s)` of its point (§8.1 [W0-35]),
+    and, when there is not exactly one, why.
+
+    * Face and body probes carry an outward `normal` (§7.6): when **several** faces or bodies are
+      within the radius (coincident faces of touching bodies), those whose outward normal has no
+      positive dot product with it are dropped (§8.1 [W0-35]). One candidate is the match whatever
+      its normal, as §8.1 says (W7b review 4: the oracle applied the test to a single candidate
+      too, stricter than the SPEC; that proposal waits for a Contract-stage ruling,
+      `PENDING_DEVIATIONS["single-candidate-normal"]`, and the tests pin the SPEC's outcome,
+      `ORACLE_PENDING_SINGLE_CANDIDATE_NORMAL` in `tests/test_v1_ops_replay.py`).
+    * Edge probes ([W0-50], [W0-54]): one edge within the radius is the match, with or without
+      normals; among several, a probe without `normal` (a cusp, or an engine that does not emit
+      edge normals yet) cannot choose, and otherwise the edge whose own normal (§7.6, None at a
+      cusp: never kept) has the largest positive dot product with the probe's wins; two equal
+      largest (exactly equal: §8.1 names no tolerance) are no match.
+    * When several faces or bodies are still left after the normal test — coincident at the
+      probe with agreeing normals, e.g. the coplanar overlapping caps of two separate bodies, where
+      position and normal cannot decide — the probe is **not** matched (§8.1 [W0-35]: "more than
+      one left is not a match", `ORACLE_PROBE_UNMATCHED`, ROBUSTNESS). The caller then falls back
+      to its own resolution. A tie-break by the member's key was considered and is not applied: the
+      SPEC does not contain it (`PENDING_DEVIATIONS["key-tie-break"]`; W7b report, CONTRACT ISSUES
+      2 — the replayed geometry is not the same whichever is taken in general: a hole whose default
+      target is `on_face.body` drills the body of the face it takes)."""
     if not isinstance(probe, dict):
         return [], "the probe is malformed"
     kind = probe.get("kind")
@@ -138,26 +179,45 @@ def _match(scope: Scope, probe: Any) -> tuple[list, str]:
     if (kind not in ("face", "edge", "vertex", "body") or not isinstance(pt, list) or len(pt) != 3
             or not all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in pt)):
         return [], "the probe is malformed"
-    tol = 1e-6 * scope.scale
+    tol = match_radius(scope.scale)
     p = tuple(float(x) for x in pt)
     n = _unit3(probe.get("normal"))
     if kind == "body":
-        cands = [(b, [f for f in b.faces if point_shape_distance(p, f.shape) <= tol]) for b in scope.bodies]
-        cands = [(b, fs) for b, fs in cands if fs]
-        if cands and n is not None:
-            keep = [(b, fs) for b, fs in cands if any(_normal_agrees(f, p, n) for f in fs)]
+        bc = [(b, [f for f in b.faces if f.distance(p) <= tol]) for b in scope.bodies]
+        bc = [(b, fs) for b, fs in bc if fs]
+        if len(bc) > 1 and n is not None:
+            keep = [(b, fs) for b, fs in bc if any(_normal_agrees(f, p, n) for f in fs)]
             if not keep:
-                return [], (f"it lies on {len(cands)} body(ies), but no face there has the probe's outward "
+                return [], (f"it lies on {len(bc)} body(ies), but no face there has the probe's outward "
                             f"normal {list(n)}")
+            bc = keep
+        cands = [b for b, _ in bc]
+    else:
+        cands = [e for e in _pool(scope, kind) if e.distance(p) <= tol]
+        if len(cands) > 1 and kind == "face" and n is not None:
+            keep = [e for e in cands if _normal_agrees(e, p, n)]
+            if not keep:
+                return [], (f"it lies on {len(cands)} face(s), none with the probe's outward normal {list(n)} "
+                            "(a contradicting face orientation)")
             cands = keep
-        return [b for b, _ in cands], ""
-    cands = [e for e in _pool(scope, kind) if point_shape_distance(p, e.shape) <= tol]
-    if cands and kind == "face" and n is not None:
-        keep = [e for e in cands if _normal_agrees(e, p, n)]
-        if not keep:
-            return [], (f"it lies on {len(cands)} face(s), none with the probe's outward normal {list(n)} "
-                        "(a contradicting face orientation)")
-        cands = keep
+        if kind == "edge" and len(cands) > 1:
+            if n is None:
+                return cands, "several edges lie there and the probe has no normal to choose by ([W0-54])"
+            scored = []
+            for e in cands:
+                m = e.edge_normal(p)
+                if m is not None:
+                    scored.append((geom.dot(m, n), e))
+            best = max((d for d, _ in scored), default=0.0)
+            top = [e for d, e in scored if d > 0.0 and d == best]
+            if len(top) == 1:
+                return top, ""
+            if not top:
+                return [], "no edge there has a normal with a positive dot product with the probe's ([W0-50])"
+            cands = top
+    if len(cands) > 1 and kind in ("face", "body"):
+        return cands, (f"{len(cands)} {kind}s lie there with agreeing outward normals; §8.1 [W0-35]: more than "
+                       "one left is not a match")
     return cands, ""
 
 

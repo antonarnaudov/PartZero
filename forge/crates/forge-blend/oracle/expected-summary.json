@@ -1,0 +1,394 @@
+{
+ "about": "Pinned F2 differential seeds for CI (W7c): the summaries this revision of forge-blend produces (W6 review round 6). THE F2 GATE STILL FAILS ON BOTH SEEDS (each seed's `gate` lists why): Forge's validity is below OCCT's (552 < 580, 549 < 582), MATCH + NORMALIZED is below 99 % (95.9 %, 96.1 %), and Forge bodies without an independent verdict remain (3 and 2). Potential silent-wrong rows: 0 on both seeds (seed 71 had 5). Closing the gate needs Contract rulings (chamfer corners at vertices whose faces are not mutually perpendicular, blends that run into another feature, rule 4 for plane-sphere blends and shell offsets, faces used up by a shell's offsets, values past a face's width that OCCT builds) and Forge capability (trimmed blends around another feature, NURBS cross-hole blends, three-blend D-flat corners, two-edge corners of mixed convexity, shells of mitred blends). Regenerate: BLEND_BATCH_OUT=blend<seed>.jsonl BLEND_SEED=<seed> BLEND_COUNT=400 BLEND_CURVED=60 BLEND_SEQ=100 BLEND_ADV=120 cargo test --release -p forge-blend --test oracle_batch write_blend_oracle_batch -- --ignored (about 80 s per seed); then, from oracle/, uv run python ../forge/crates/forge-blend/oracle/occt_blend_diff.py blend<seed>.jsonl --reference-all --out report.json --expect ../forge/crates/forge-blend/oracle/expected-summary.json --seed <seed> (exit status non-zero when a pinned field differs or the gate fails; about 12 min per seed). Deliberate update from the round-5 pin, with the reasons: (1) Forge refuses a corner of three chamfers at a vertex whose faces are not mutually perpendicular (SPEC §8.3 rule 3's test, |n_i . n_j| <= ANGULAR_TOLERANCE) with CHAMFER_FAILED naming the vertex: SPEC §6.7 defines no chamfer corner, and OCCT's differs from Forge's corner triangle there (up to 2.35e-3 of the volume on seed 71, the 5 METRIC_DIFF rows); on seed 17 six such rows had agreed within rule 5's 1e-5 only because the chamfers were small against the body (4 NORMALIZED, 2 MATCH), so Forge's valid count drops 558 -> 552 there, and seed 71's five potential silent-wrong rows become OCCT_ONLY (549 unchanged); the script counts these refusals as needing a Contract ruling (`gap_kind`: a *_FAILED whose reason says it awaits a Contract ruling); (2) a blend that runs into another feature of the body (a hole's or boss's rim inside a face, a tunnel, a drill point, a void) is FILLET_FAILED / CHAMFER_FAILED naming the obstacle's face, with the value that builds clear of it in the reason, instead of *_TOO_LARGE (SPEC §6.6 defines the rolling ball there): 7 and 13 OCCT_ONLY rows move from `needs_ruling` to `needs_capability` (OCCT's body equals the exact trimmed rolling-ball reference in 2 and 2 of them and differs from it by up to 1.1e-4 and 2.4e-4 in 5 and 11: evidence for the Contract ruling, in `occt_vs_reference` per row), and their `at_max` checks go (seed 17: 80 -> 60 rows; seed 71: 61 now); (3) the script applies rule 4 with the SPEC's named constants (ANGULAR_TOLERANCE, LINEAR_TOLERANCE) and reports a plane-sphere chamfer whose only difference is the bevel's boundary edges as RULE4_OUTSIDE_SPEC_TEXT instead of RULE4_EDGES (3 and 2 rows; COUNT_DIFF either way, the gate numbers do not change), and decides perpendicular corners with |a . b| <= ANGULAR_TOLERANCE (the cross-product form rounded to >= 1.0 in floating point); (4) Forge's other round-6 changes (shells of collapsing cavities are SHELL_THICKNESS_TOO_LARGE with the collapse thickness as a confirmed candidate; well-conditioned closest points for nearly parallel lines; the search from astronomically large values; face names and widths in messages) change no row of either seed.",
+ "seeds": {
+  "17": {
+   "count": 400,
+   "curved": 60,
+   "sequence": 100,
+   "adversarial": 120,
+   "gate": {
+    "passes": false,
+    "failures": [
+     "validity below OCCT (552 < 580; 20 need a Contract ruling, 23 Forge capability, 0 other)",
+     "3 Forge bodies without an independent verdict: {'total': 3, 'at_max_interference_unverified': 1, 'forge_only': 2}",
+     "MATCH + NORMALIZED 0.9590316573556797 < 99 % of the programs both engines build"
+    ]
+   },
+   "summary": {
+    "cases": 667,
+    "classes": {
+     "BOTH_FAIL": 70,
+     "COUNT_DIFF": 22,
+     "FORGE_ONLY_REF_OK": 15,
+     "FORGE_ONLY_UNADJUDICATED": 2,
+     "MATCH": 515,
+     "OCCT_ONLY": 43
+    },
+    "by_op": {
+     "chamfer:BOTH_FAIL": 14,
+     "chamfer:COUNT_DIFF": 4,
+     "chamfer:MATCH": 132,
+     "chamfer:OCCT_ONLY": 11,
+     "fillet:BOTH_FAIL": 28,
+     "fillet:COUNT_DIFF": 10,
+     "fillet:MATCH": 276,
+     "fillet:OCCT_ONLY": 24,
+     "shell:BOTH_FAIL": 28,
+     "shell:COUNT_DIFF": 8,
+     "shell:FORGE_ONLY_REF_OK": 15,
+     "shell:FORGE_ONLY_UNADJUDICATED": 2,
+     "shell:MATCH": 107,
+     "shell:OCCT_ONLY": 8
+    },
+    "forge_ok": 554,
+    "forge_valid": 552,
+    "occt_valid": 580,
+    "validity_ge_occt": false,
+    "unadjudicated": {
+     "total": 3,
+     "at_max_interference_unverified": 1,
+     "forge_only": 2
+    },
+    "match_plus_normalized_ge_99": false,
+    "normalized_le_5": true,
+    "rule1_normalized": 23,
+    "count_diff_rows": [
+     "s17-c002-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'cylinder': 4, 'plane': 6, 'sphere': 1} vs {'cylinder': 4, 'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s17-c005-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'plane': 6, 'sphere': 1} vs {'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s17-c011-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 2, 'plane': 6, 'sphere': 2} vs {'plane': 6, 'sphere': 2, 'torus': 2}",
+     "s17-c014-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.7 gives no normative blend type for the pair): {'bspline': 1, 'plane': 10, 'sphere': 1} vs {'cone': 1, 'plane': 10, 'sphere': 1}",
+     "s17-c017-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing of the blend face and its edges would match (a circle edge between a plane and a sphere: §6.7 gives no normative blend type for the pair); faces 8/8 edges 14/14 ft {'cone': 1, 'plane': 6, 'sphere': 1}/{'bspline': 1, 'plane': 6, 'sphere': 1} et {'circle': 2, 'line': 12}/{'bspline': 2, 'line': 12}",
+     "s17-c023-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'cylinder': 4, 'plane': 6, 'sphere': 1} vs {'cylinder': 4, 'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s17-c029-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'cylinder': 4, 'plane': 6, 'sphere': 1} vs {'cylinder': 4, 'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s17-c032-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'cylinder': 4, 'plane': 6, 'sphere': 1} vs {'cylinder': 4, 'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s17-c038-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'plane': 6, 'sphere': 1} vs {'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s17-c041-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing of the blend face and its edges would match (a circle edge between a plane and a sphere: §6.7 gives no normative blend type for the pair); faces 8/8 edges 14/14 ft {'cone': 1, 'plane': 6, 'sphere': 1}/{'bspline': 1, 'plane': 6, 'sphere': 1} et {'circle': 2, 'line': 12}/{'bspline': 2, 'line': 12}",
+     "s17-c047-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'cylinder': 4, 'plane': 6, 'sphere': 1} vs {'cylinder': 4, 'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s17-c050-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing of the blend face and its edges would match (a circle edge between a plane and a sphere: §6.7 gives no normative blend type for the pair); faces 8/8 edges 14/14 ft {'cone': 1, 'plane': 6, 'sphere': 1}/{'bspline': 1, 'plane': 6, 'sphere': 1} et {'circle': 2, 'line': 12}/{'bspline': 2, 'line': 12}",
+     "s17-c053-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'cylinder': 4, 'plane': 6, 'sphere': 1} vs {'cylinder': 4, 'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s17-c059-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'plane': 6, 'sphere': 1} vs {'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s17-q025-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 11, 'torus': 4} vs {'cylinder': 16, 'plane': 11, 'torus': 8}",
+     "s17-q030-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 12, 'torus': 4} vs {'cylinder': 16, 'plane': 12, 'torus': 8}",
+     "s17-q035-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 11, 'torus': 4} vs {'cylinder': 16, 'plane': 11, 'torus': 8}",
+     "s17-q045-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 12, 'torus': 4} vs {'cylinder': 16, 'plane': 12, 'torus': 8}",
+     "s17-q055-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 11, 'torus': 4} vs {'cylinder': 16, 'plane': 11, 'torus': 8}",
+     "s17-q075-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 12, 'torus': 4} vs {'cylinder': 16, 'plane': 12, 'torus': 8}",
+     "s17-q080-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 12, 'torus': 4} vs {'cylinder': 16, 'plane': 12, 'torus': 8}",
+     "s17-q090-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 12, 'torus': 4} vs {'cylinder': 16, 'plane': 12, 'torus': 8}"
+    ],
+    "count_diff_explained": {
+     "RULE4_OUTSIDE_SPEC_TEXT": 22
+    },
+    "gap": {
+     "occt_only": 43,
+     "needs_ruling": 20,
+     "needs_capability": 23,
+     "other": 0,
+     "validity_ge_occt_if_ruled_for_forge": false
+    },
+    "occt_only_spec_rule_verified": 5,
+    "occt_only_blend_vs_reference": {
+     "differs": 6,
+     "equal": 3,
+     "n/a": 5
+    },
+    "match_plus_normalized_share": 0.9590316573556797,
+    "normalized_share": 0.0,
+    "potential_silent_wrong": 0,
+    "potential_silent_wrong_flags": {},
+    "reference_checked": 418,
+    "forge_only_unadjudicated": 2,
+    "at_max": {
+     "MATCH": 58,
+     "OCCT_FAIL": 2
+    },
+    "at_max_adjudication": {
+     "REF_OK": 49,
+     "UNADJUDICATED": 11
+    },
+    "closed_form_checked": 30,
+    "interference_unverified": 0,
+    "occt_only_codes": {
+     "CHAMFER_FAILED": 11,
+     "FILLET_FAILED": 17,
+     "FILLET_RADIUS_TOO_LARGE": 7,
+     "SHELL_FAILED": 1,
+     "SHELL_THICKNESS_TOO_LARGE": 7
+    }
+   },
+   "split_informational": {
+    "adversarial": {
+     "cases": 120,
+     "classes": {
+      "BOTH_FAIL": 7,
+      "MATCH": 106,
+      "OCCT_ONLY": 7
+     },
+     "forge_ok": 106,
+     "forge_valid": 106,
+     "occt_valid": 113
+    },
+    "core": {
+     "cases": 387,
+     "classes": {
+      "BOTH_FAIL": 54,
+      "MATCH": 316,
+      "OCCT_ONLY": 17
+     },
+     "forge_ok": 316,
+     "forge_valid": 316,
+     "occt_valid": 333
+    },
+    "curved": {
+     "cases": 60,
+     "classes": {
+      "BOTH_FAIL": 3,
+      "COUNT_DIFF": 14,
+      "FORGE_ONLY_UNADJUDICATED": 2,
+      "MATCH": 29,
+      "OCCT_ONLY": 12
+     },
+     "forge_ok": 45,
+     "forge_valid": 43,
+     "occt_valid": 55
+    },
+    "sequence": {
+     "cases": 100,
+     "classes": {
+      "BOTH_FAIL": 6,
+      "COUNT_DIFF": 8,
+      "FORGE_ONLY_REF_OK": 15,
+      "MATCH": 64,
+      "OCCT_ONLY": 7
+     },
+     "forge_ok": 87,
+     "forge_valid": 87,
+     "occt_valid": 79
+    }
+   },
+   "under_spec_text": {
+    "potential_silent_wrong": 0,
+    "potential_silent_wrong_rows": [],
+    "count_diff_rule4_not_covered": 22,
+    "count_diff_rule4_not_covered_rows": [
+     "s17-c002-sphere",
+     "s17-c005-sphere",
+     "s17-c011-sphere",
+     "s17-c014-sphere",
+     "s17-c017-sphere",
+     "s17-c023-sphere",
+     "s17-c029-sphere",
+     "s17-c032-sphere",
+     "s17-c038-sphere",
+     "s17-c041-sphere",
+     "s17-c047-sphere",
+     "s17-c050-sphere",
+     "s17-c053-sphere",
+     "s17-c059-sphere",
+     "s17-q025-enc_shell",
+     "s17-q030-enc_shell",
+     "s17-q035-enc_shell",
+     "s17-q045-enc_shell",
+     "s17-q055-enc_shell",
+     "s17-q075-enc_shell",
+     "s17-q080-enc_shell",
+     "s17-q090-enc_shell"
+    ],
+    "count_diff_rule4_edges": 0
+   }
+  },
+  "71": {
+   "count": 400,
+   "curved": 60,
+   "sequence": 100,
+   "adversarial": 120,
+   "gate": {
+    "passes": false,
+    "failures": [
+     "validity below OCCT (549 < 582; 22 need a Contract ruling, 24 Forge capability, 0 other)",
+     "2 Forge bodies without an independent verdict: {'total': 2, 'at_max_interference_unverified': 1, 'forge_only': 1}",
+     "MATCH + NORMALIZED 0.960820895522388 < 99 % of the programs both engines build"
+    ]
+   },
+   "summary": {
+    "cases": 664,
+    "classes": {
+     "BOTH_FAIL": 68,
+     "COUNT_DIFF": 21,
+     "FORGE_ONLY_REF_OK": 13,
+     "FORGE_ONLY_UNADJUDICATED": 1,
+     "MATCH": 515,
+     "OCCT_ONLY": 46
+    },
+    "by_op": {
+     "chamfer:BOTH_FAIL": 14,
+     "chamfer:COUNT_DIFF": 2,
+     "chamfer:MATCH": 123,
+     "chamfer:OCCT_ONLY": 7,
+     "fillet:BOTH_FAIL": 28,
+     "fillet:COUNT_DIFF": 9,
+     "fillet:FORGE_ONLY_UNADJUDICATED": 1,
+     "fillet:MATCH": 286,
+     "fillet:OCCT_ONLY": 31,
+     "shell:BOTH_FAIL": 26,
+     "shell:COUNT_DIFF": 10,
+     "shell:FORGE_ONLY_REF_OK": 13,
+     "shell:MATCH": 106,
+     "shell:OCCT_ONLY": 8
+    },
+    "forge_ok": 550,
+    "forge_valid": 549,
+    "occt_valid": 582,
+    "validity_ge_occt": false,
+    "unadjudicated": {
+     "total": 2,
+     "at_max_interference_unverified": 1,
+     "forge_only": 1
+    },
+    "match_plus_normalized_ge_99": false,
+    "normalized_le_5": true,
+    "rule1_normalized": 32,
+    "count_diff_rows": [
+     "s71-c002-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing of the blend face and its edges would match (a circle edge between a plane and a sphere: §6.7 gives no normative blend type for the pair); faces 12/12 edges 22/22 ft {'cone': 1, 'plane': 10, 'sphere': 1}/{'bspline': 1, 'plane': 10, 'sphere': 1} et {'circle': 2, 'line': 20}/{'bspline': 2, 'line': 20}",
+     "s71-c008-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'plane': 6, 'sphere': 1} vs {'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s71-c014-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'cylinder': 4, 'plane': 6, 'sphere': 1} vs {'cylinder': 4, 'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s71-c017-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'plane': 6, 'sphere': 1} vs {'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s71-c020-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'plane': 6, 'sphere': 1} vs {'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s71-c035-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'plane': 6, 'sphere': 1} vs {'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s71-c038-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'plane': 6, 'sphere': 1} vs {'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s71-c041-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'plane': 6, 'sphere': 1} vs {'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s71-c044-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing of the blend face and its edges would match (a circle edge between a plane and a sphere: §6.7 gives no normative blend type for the pair); faces 12/12 edges 22/22 ft {'cone': 1, 'plane': 10, 'sphere': 1}/{'bspline': 1, 'plane': 10, 'sphere': 1} et {'circle': 2, 'line': 20}/{'bspline': 2, 'line': 20}",
+     "s71-c047-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'cylinder': 4, 'plane': 6, 'sphere': 1} vs {'cylinder': 4, 'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s71-c053-sphere: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (a circle edge between a plane and a sphere: §6.6 gives no normative blend type for the pair): {'bspline': 1, 'plane': 6, 'sphere': 1} vs {'plane': 6, 'sphere': 1, 'torus': 1}",
+     "s71-q005-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 12, 'torus': 4} vs {'cylinder': 16, 'plane': 12, 'torus': 8}",
+     "s71-q010-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 12, 'torus': 4} vs {'cylinder': 16, 'plane': 12, 'torus': 8}",
+     "s71-q015-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 11, 'torus': 4} vs {'cylinder': 16, 'plane': 11, 'torus': 8}",
+     "s71-q035-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 12, 'torus': 4} vs {'cylinder': 16, 'plane': 12, 'torus': 8}",
+     "s71-q040-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 11, 'torus': 4} vs {'cylinder': 16, 'plane': 11, 'torus': 8}",
+     "s71-q055-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 12, 'torus': 4} vs {'cylinder': 16, 'plane': 12, 'torus': 8}",
+     "s71-q060-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 12, 'torus': 4} vs {'cylinder': 16, 'plane': 12, 'torus': 8}",
+     "s71-q080-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 11, 'torus': 4} vs {'cylinder': 16, 'plane': 11, 'torus': 8}",
+     "s71-q090-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 11, 'torus': 4} vs {'cylinder': 16, 'plane': 11, 'torus': 8}",
+     "s71-q095-enc_shell: RULE4_OUTSIDE_SPEC_TEXT: only rule 4's re-typing would match (rule 4 covers fillet and chamfer faces, not a shell's): {'bspline': 4, 'cylinder': 16, 'plane': 12, 'torus': 4} vs {'cylinder': 16, 'plane': 12, 'torus': 8}"
+    ],
+    "count_diff_explained": {
+     "RULE4_OUTSIDE_SPEC_TEXT": 21
+    },
+    "gap": {
+     "occt_only": 46,
+     "needs_ruling": 22,
+     "needs_capability": 24,
+     "other": 0,
+     "validity_ge_occt_if_ruled_for_forge": false
+    },
+    "occt_only_spec_rule_verified": 4,
+    "occt_only_blend_vs_reference": {
+     "differs": 13,
+     "equal": 2,
+     "n/a": 7
+    },
+    "match_plus_normalized_share": 0.960820895522388,
+    "normalized_share": 0.0,
+    "potential_silent_wrong": 0,
+    "potential_silent_wrong_flags": {},
+    "reference_checked": 430,
+    "forge_only_unadjudicated": 1,
+    "at_max": {
+     "MATCH": 59,
+     "OCCT_FAIL": 2
+    },
+    "at_max_adjudication": {
+     "REF_OK": 52,
+     "UNADJUDICATED": 9
+    },
+    "closed_form_checked": 25,
+    "interference_unverified": 0,
+    "occt_only_codes": {
+     "CHAMFER_FAILED": 7,
+     "FILLET_FAILED": 22,
+     "FILLET_RADIUS_TOO_LARGE": 9,
+     "SHELL_THICKNESS_TOO_LARGE": 8
+    }
+   },
+   "split_informational": {
+    "adversarial": {
+     "cases": 120,
+     "classes": {
+      "BOTH_FAIL": 2,
+      "MATCH": 112,
+      "OCCT_ONLY": 6
+     },
+     "forge_ok": 112,
+     "forge_valid": 112,
+     "occt_valid": 118
+    },
+    "core": {
+     "cases": 384,
+     "classes": {
+      "BOTH_FAIL": 54,
+      "MATCH": 306,
+      "OCCT_ONLY": 24
+     },
+     "forge_ok": 306,
+     "forge_valid": 306,
+     "occt_valid": 330
+    },
+    "curved": {
+     "cases": 60,
+     "classes": {
+      "BOTH_FAIL": 3,
+      "COUNT_DIFF": 11,
+      "FORGE_ONLY_UNADJUDICATED": 1,
+      "MATCH": 40,
+      "OCCT_ONLY": 5
+     },
+     "forge_ok": 52,
+     "forge_valid": 51,
+     "occt_valid": 56
+    },
+    "sequence": {
+     "cases": 100,
+     "classes": {
+      "BOTH_FAIL": 9,
+      "COUNT_DIFF": 10,
+      "FORGE_ONLY_REF_OK": 13,
+      "MATCH": 57,
+      "OCCT_ONLY": 11
+     },
+     "forge_ok": 80,
+     "forge_valid": 80,
+     "occt_valid": 78
+    }
+   },
+   "under_spec_text": {
+    "potential_silent_wrong": 0,
+    "potential_silent_wrong_rows": [],
+    "count_diff_rule4_not_covered": 21,
+    "count_diff_rule4_not_covered_rows": [
+     "s71-c002-sphere",
+     "s71-c008-sphere",
+     "s71-c014-sphere",
+     "s71-c017-sphere",
+     "s71-c020-sphere",
+     "s71-c035-sphere",
+     "s71-c038-sphere",
+     "s71-c041-sphere",
+     "s71-c044-sphere",
+     "s71-c047-sphere",
+     "s71-c053-sphere",
+     "s71-q005-enc_shell",
+     "s71-q010-enc_shell",
+     "s71-q015-enc_shell",
+     "s71-q035-enc_shell",
+     "s71-q040-enc_shell",
+     "s71-q055-enc_shell",
+     "s71-q060-enc_shell",
+     "s71-q080-enc_shell",
+     "s71-q090-enc_shell",
+     "s71-q095-enc_shell"
+    ],
+    "count_diff_rule4_edges": 0
+   }
+  }
+ }
+}

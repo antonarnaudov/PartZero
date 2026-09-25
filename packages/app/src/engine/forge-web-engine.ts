@@ -4,6 +4,7 @@
  * or fails to initialise — the engine manager then falls back to the CLI engine.
  */
 import { available, source } from "virtual:aicad/forge-web";
+import { FORGE_WEB_COMMANDS, toCommandEngineError, type ForgeWebCommandName, type IrCommandEngine } from "../doc/v1/command-engine";
 import { WorkerRpc } from "../worker-rpc";
 import type { EvalResult, ForgeEngine, MeshFormat, TessellationOptions } from "./types";
 import { EngineError } from "./types";
@@ -11,7 +12,22 @@ import { EngineError } from "./types";
 export type ForgeWebRequest =
   | { type: "init" }
   | { type: "evaluate"; irJson: string; tess?: TessellationOptions }
-  | { type: "export"; irJson: string; format: MeshFormat };
+  | { type: "export"; irJson: string; format: MeshFormat }
+  | { type: "command"; name: ForgeWebCommandName; args: unknown[] };
+
+/** The command layer over the worker: each method is one RPC; refusals keep their code, errors and details. */
+function workerCommands(rpc: WorkerRpc<ForgeWebRequest>): IrCommandEngine {
+  const call =
+    (name: ForgeWebCommandName) =>
+    async (...args: unknown[]): Promise<never> => {
+      try {
+        return await rpc.call<never>({ type: "command", name, args });
+      } catch (e) {
+        throw toCommandEngineError(e);
+      }
+    };
+  return Object.fromEntries(FORGE_WEB_COMMANDS.map((n) => [n, call(n)])) as unknown as IrCommandEngine;
+}
 
 /** Whether forge-web was bundled at all (a build-time fact; init can still fail at runtime). */
 export const forgeWebBundled: boolean = available;
@@ -22,10 +38,13 @@ export class ForgeWebEngine implements ForgeEngine {
   readonly label = "forge-web · wasm";
   readonly detail: string;
   private readonly rpc: WorkerRpc<ForgeWebRequest>;
+  /** The IR v1 command layer (SPEC-v1 §0.6, §5.9), run in the worker. */
+  readonly commands: IrCommandEngine;
 
   private constructor(rpc: WorkerRpc<ForgeWebRequest>, detail: string) {
     this.rpc = rpc;
     this.detail = detail;
+    this.commands = workerCommands(rpc);
   }
 
   static async create(): Promise<ForgeWebEngine> {

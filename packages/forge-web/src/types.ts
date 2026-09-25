@@ -150,10 +150,124 @@ export interface RejectionProblem {
 export interface ForgeError extends Error {
   code: string;
   /**
-   * {@link migrate}, {@link params}, {@link writeBack}: every problem of a rejected document
-   * (empty for a parse error or a usage error such as `WRITE_BACK_UNKNOWN_SKETCH`).
+   * {@link migrate}, {@link params}, {@link writeBack} and the command-layer edits: every
+   * problem of a rejected document (empty for a parse error or a usage error such as
+   * `WRITE_BACK_UNKNOWN_SKETCH` or a `COMMAND_*` refusal).
    */
   errors?: RejectionProblem[];
+  /** The command-layer edits: the structured context of a `COMMAND_*` refusal. */
+  details?: Record<string, unknown>;
+}
+
+// ─── Command layer (SPEC-v1 §0.6, §5.9, §9.2; interface I7) ───────────────────────────────────
+
+/**
+ * The result of a command-layer edit: the edited document as canonical `aicad.ir/1` text
+ * (verified by evaluation before it is returned), whether anything changed, and the op's
+ * result (previous values for its inverse, the report data it used).
+ */
+export interface EditResult<R> {
+  document: string;
+  changed: boolean;
+  result: R;
+}
+
+/** A value {@link setParam} stores: a literal, or an expression (canonicalised). */
+export type ParamValueInput = number | boolean | string;
+
+/** A reference's report entry (SPEC-v1 §5.8): members with probes, unresolved members with candidates. */
+export type RefReport = metricsV1.RefReport;
+/** A resolved member of a reference, with its probe (SPEC-v1 §7.6). */
+export type RefMember = metricsV1.RefMember;
+/** A repair candidate for an unresolved member (SPEC-v1 §5.8). */
+export type RefCandidate = metricsV1.Candidate;
+/** An unresolved member and its candidates. */
+export type RefUnresolved = metricsV1.Unresolved;
+/** A probe: a point on the entity (and the outward normal where defined), SPEC-v1 §7.6. */
+export type Probe = metricsV1.Probe;
+/** A Ref (SPEC-v1 §5.1): kind, query, cardinality and capture. */
+export type IrRef = v1.Ref;
+/** A reference's capture (SPEC-v1 §5.6). */
+export type IrCapture = v1.Capture;
+
+export interface SetParamResult {
+  param: string;
+  /** The stored value before (a literal or expression text). */
+  previous: ParamValueInput;
+  /** The stored value after: a JSON literal, or the canonical expression text (SPEC-v1 §2.4). */
+  value: ParamValueInput;
+  /** The edited document's `params` block (every value or failure). */
+  params: ParamReport[];
+}
+
+export interface RenameFeatureResult {
+  feature: string;
+  previous: string;
+  name: string;
+}
+
+export interface UpgradeFeatureResult {
+  feature: string;
+  type: string;
+  from: number;
+  to: number;
+  /** Feature entries (by `feature_id`) and parts (by `part_id`) whose report changes. */
+  diff: Array<{ feature_id?: string; part_id?: string; before: unknown; after: unknown }>;
+}
+
+export interface CaptureRefResult {
+  feature: string;
+  field: string;
+  capture: IrCapture;
+  /** The replaced capture, or `null`. */
+  previous: IrCapture | null;
+  /** The resolved members, with probes. */
+  members: RefMember[];
+}
+
+export interface AcceptRefResult {
+  feature: string;
+  field: string;
+  /** The Ref written (query and fresh capture). */
+  ref: IrRef;
+  /** The Ref replaced. */
+  previous: IrRef;
+}
+
+export interface AcceptRefProposalResult extends AcceptRefResult {
+  /** The warning that carried the proposal: `REF_REPAIRED` or `REF_SET_CHANGED`. */
+  code: string | null;
+}
+
+export interface AcceptRefCandidateResult extends AcceptRefResult {
+  candidate: RefCandidate;
+}
+
+export interface RenameCurveResult {
+  sketch: string;
+  old: string;
+  new: string;
+  /** How many of each were rewritten: `curves`, `constraints`, `regions`, `points`, `queries`, `capture_keys`. */
+  rewritten: Record<string, number>;
+  /**
+   * Rewritten captures the engine could not check against a resolution: references of a feature
+   * that fails before resolving them (`failed`, with `code`) or Refs nested in a direction
+   * (`not-reported`). Every other rewritten reference was verified.
+   */
+  unverified: Array<{ feature: string; field: string; reason: "failed" | "not-reported"; code?: string }>;
+}
+
+/** Options of {@link acceptRefCandidate}. */
+export interface AcceptRefCandidateOptions {
+  /** The candidate's position in the member's `candidates` (split pieces share a key): a non-negative integer. */
+  candidateIndex?: number;
+  /**
+   * The candidate's `probe` as the caller read it from the report: the chosen candidate must
+   * still be that entity (same kind, within 5·tol, normal on the same side), else
+   * `COMMAND_CANDIDATE_CHANGED`. Without `candidateIndex` it picks the piece among those sharing
+   * the key. Pass it whenever the document may have changed since the report was read.
+   */
+  probe?: Probe;
 }
 
 /** An id rewritten by the migration (SPEC-v1 §9.1 rule 3); `from` is untrusted data. */
@@ -179,18 +293,31 @@ export interface WriteBackOptions {
 /** A sketch {@link writeBack} did not write. */
 export interface WriteBackSkip {
   sketch: string;
-  /** `explicit`: no constraints; `suppressed`; `failed`: its evaluation failed with `code`. */
-  reason: "explicit" | "suppressed" | "failed";
+  /**
+   * `explicit`: no constraints; `suppressed`; `failed`: its evaluation failed with `code`;
+   * `would-fail`: it solves, but its written-back solution would fail it with `code` (SPEC-v1
+   * §4.4 rule 9 [W0-31]: the weld turns a driving distance ≤ tol into a conflict), so it is
+   * withheld and its stored geometry kept.
+   */
+  reason: "explicit" | "suppressed" | "failed" | "would-fail";
   code?: string;
 }
 
 /** Result of {@link writeBack} (`writeBackSolution`, SPEC-v1 §0.6). */
 export interface WriteBackResult {
-  /** The canonical `aicad.ir/1` text with the solved geometry stored (nothing else changes). */
+  /**
+   * The canonical `aicad.ir/1` text with the solved geometry stored (nothing else changes): the
+   * fixed point — writing back again changes nothing (SPEC-v1 §4.4 rule 9 [W0-31]).
+   */
   document: string;
-  /** Sketches written, in document order. */
+  /** `false` when the document was already at its fixed point. */
+  changed: boolean;
+  /** Sketches written by any pass, in document order. */
   written: string[];
+  /** Selected sketches the last pass did not write. */
   skipped: WriteBackSkip[];
+  /** Passes run, the confirming one included (1: nothing changed; 3: a solve welded ends). */
+  passes: number;
 }
 
 /** Graphics backend in use. */

@@ -13,6 +13,14 @@
 //!   `params` block, `writeBack(irJson, sketches?)` → `{ document, written, skipped }`
 //!   (`writeBackSolution`, §0.6): the command layer's engine entry points (W9); they throw a
 //!   `code`d error with `errors` for a rejected document;
+//! - the command layer's edits (W9, interface I7; module [`commands`]): `setParam(irJson, name,
+//!   valueJson)`, `renameFeature(irJson, featureId, name)`, `upgradeFeature(irJson, featureId,
+//!   to?)`, `captureRef(irJson, featureId, field)`, `acceptRefProposal(irJson, featureId,
+//!   field)`, `acceptRefCandidate(irJson, featureId, field, memberKey, candidateKey,
+//!   candidateIndex?)`, `renameCurve(irJson, sketchId, old, new)` → `{ document, changed,
+//!   result }` (canonical `aicad.ir/1` text, verified by evaluation); they throw a `code`d error
+//!   with `errors` (rejections) or `details` (`COMMAND_*` refusals);
+//! - `report(irJson, reportVersion?)` → the report of `evaluate` without tessellation;
 //! - `exportMesh(irJson, format, chordal?, angular?, allowPartial?)` → `Uint8Array`
 //!   (3MF / binary STL / OBJ via forge-io);
 //! - `createViewport(canvas, backend, width, height, dpr)` → `RawViewport` (its
@@ -24,6 +32,7 @@
 //! scopes the viewport bindings wrap their work in) and is tested natively; the bindings
 //! themselves (module `web`) only exist on `wasm32`.
 
+pub mod commands;
 pub mod engine;
 pub mod scopes;
 

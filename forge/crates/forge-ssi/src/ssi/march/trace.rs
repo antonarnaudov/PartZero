@@ -501,7 +501,7 @@ fn trace_dir(
 }
 
 /// Distance from `p` to the true curve near a traced branch (Newton refined).
-fn distance_to_branch(m: &March<'_>, rb: &RawBranch, p: Point3) -> f64 {
+fn distance_to_branch(m: &March<'_>, rb: &RawBranch, p: Point3, crossing_leaf: &[bool]) -> f64 {
     let mut best = (f64::INFINITY, 0usize, 0.0);
     for i in 0..rb.pts.len().saturating_sub(1) {
         let (a, b) = (rb.pts[i].p, rb.pts[i + 1].p);
@@ -524,13 +524,45 @@ fn distance_to_branch(m: &March<'_>, rb: &RawBranch, p: Point3) -> f64 {
         return best.0;
     }
     let (_, i, s) = best;
+    // The refinement slides along `G = 0` from the nearest chord point to the foot of `p`,
+    // correcting the chord's sagitta. Past the end of a branch that stops at a cluster
+    // holding a crossing of the zero set (`crossing_leaf`), the slide can pass the crossing
+    // and continue onto another arm, find `p` there and report that arm's crossing seeds as
+    // already traced, so the arm is never traced (two cylinders touching on the seam of the
+    // box: `SSI_TANGENT_UNRESOLVED` with 3 branch ends). There the foot may only reach into
+    // the cluster (twice its leaf's size from the end), not through it. Elsewhere — a
+    // hairpin tip, where the curve does come back — the refinement is unchanged.
+    let n = rb.pts.len();
+    let cluster_end = if rb.closed {
+        None
+    } else if i + 2 == n && s >= 1.0 {
+        Some(1)
+    } else if i == 0 && s <= 0.0 {
+        Some(0)
+    } else {
+        None
+    }
+    .and_then(|e| match rb.ends[e] {
+        RawEnd::Cluster(l) if crossing_leaf.get(l).copied().unwrap_or(false) => {
+            Some((if e == 0 { rb.pts[0].p } else { rb.pts[n - 1].p }, l))
+        }
+        _ => None,
+    });
+    let on_this_branch = |q: Point3| -> bool {
+        cluster_end.is_none_or(|(end, l)| q.distance(end) <= 2.0 * m.cells[l].size + m.match_dist())
+    };
     let mut uv = rb.pts[i].uv.lerp(rb.pts[i + 1].uv, s);
     for _ in 0..6 {
         let Some(c) = m.correct(uv) else {
             return best.0;
         };
         let Some((tu, t3)) = m.tangent(c) else {
-            return m.p.surf.eval(c.x, c.y).distance(p);
+            let q = m.p.surf.eval(c.x, c.y);
+            return if on_this_branch(q) {
+                q.distance(p)
+            } else {
+                best.0
+            };
         };
         let q = m.p.surf.eval(c.x, c.y);
         let along = (p - q).dot(t3);
@@ -540,7 +572,14 @@ fn distance_to_branch(m: &March<'_>, rb: &RawBranch, p: Point3) -> f64 {
         }
     }
     match m.correct(uv) {
-        Some(c) => m.p.surf.eval(c.x, c.y).distance(p),
+        Some(c) => {
+            let q = m.p.surf.eval(c.x, c.y);
+            if on_this_branch(q) {
+                q.distance(p)
+            } else {
+                best.0
+            }
+        }
         None => best.0,
     }
 }
@@ -548,6 +587,19 @@ fn distance_to_branch(m: &March<'_>, rb: &RawBranch, p: Point3) -> f64 {
 /// Trace every branch from the certified crossings.
 pub(crate) fn trace_all(m: &mut March<'_>) -> Result<Vec<RawBranch>, SsiError> {
     let mut raws: Vec<RawBranch> = Vec::new();
+    // Leaves of clusters around a crossing of the zero set (a saddle of `G` on both surfaces
+    // within `fit / 4`, the test of `resolve_clusters`), for `distance_to_branch`.
+    let mut crossing_leaf = vec![false; m.cells.len()];
+    for cells in m.clusters() {
+        let info = m.cluster_info(&cells);
+        if m.cluster_saddle(&info)
+            .is_some_and(|(_, g)| g <= 0.25 * m.ctx.tol.fit)
+        {
+            for c in cells {
+                crossing_leaf[c] = true;
+            }
+        }
+    }
     for ci in 0..m.crossings.len() {
         if m.crossings[ci].visited {
             continue;
@@ -555,7 +607,7 @@ pub(crate) fn trace_all(m: &mut March<'_>) -> Result<Vec<RawBranch>, SsiError> {
         let (uv, p) = (m.crossings[ci].uv, m.crossings[ci].p);
         if raws
             .iter()
-            .any(|rb| distance_to_branch(m, rb, p) <= m.match_dist())
+            .any(|rb| distance_to_branch(m, rb, p, &crossing_leaf) <= m.match_dist())
         {
             m.mark_near(p);
             continue;
@@ -1484,12 +1536,24 @@ fn special_in_cell(m: &March<'_>, s: &crate::ssi::march::Special, c: usize) -> b
 
 fn nearest_cluster(m: &March<'_>, clusters: &[Vec<usize>], uv: Point2) -> Option<usize> {
     let c = m.canonical(uv);
+    // Distance from `x` to `[lo, hi]`, across the seam of a direction that covers a full
+    // period: a branch stuck just below the window's end (`u₀ + 2π − ε`) is next to a cluster
+    // at its start (`u₀`), e.g. a tangent point of two cylinders on `P`'s seam (boolean seed
+    // 53 #38, #387).
+    let gap = |x: f64, (lo, hi): (f64, f64), full: bool| -> f64 {
+        let d = |x: f64| (lo - x).max(x - hi).max(0.0);
+        if full {
+            d(x).min(d(x - math::TAU)).min(d(x + math::TAU))
+        } else {
+            d(x)
+        }
+    };
     let mut best = (usize::MAX, f64::INFINITY);
     for (ci, cells) in clusters.iter().enumerate() {
         for &l in cells {
             let cell = m.cells[l];
-            let du = (cell.u.0 - c.x).max(c.x - cell.u.1).max(0.0);
-            let dv = (cell.v.0 - c.y).max(c.y - cell.v.1).max(0.0);
+            let du = gap(c.x, cell.u, m.full_u);
+            let dv = gap(c.y, cell.v, m.full_v);
             let d = math::hypot(du, dv);
             if d < best.1 {
                 best = (ci, d);
@@ -2012,11 +2076,42 @@ pub(crate) fn fit_branch(
         .map(|w| w[1].p - w[0].p)
         .find(|c| c.norm() > degenerate)
         .unwrap_or(Vec3::zero());
+    // A traced point a hair *behind* the previous node on its tangent line (within `fit`
+    // of the line, at most a minimal cell back) records a stretch of curve already passed,
+    // out of order. It happens where the curve grazes a cell edge (tangent to it within
+    // ~1e-11 in the parameter, e.g. at `u = kπ/2` of an axis-aligned scene whose box start
+    // is 1e-14 off the tangent line): the two edge crossings are a near-double root of `G`
+    // along the edge, placed only to within `G`'s rounding (1e-7…1e-6 mm along the curve).
+    // Kept, the point would reverse its node's tangent (the chord picks the sign) and the
+    // fit would fail ("fit node projection"). Every traced point lies on the curve, so the
+    // one out of order is dropped — or, for the branch's last point (an end, whose position
+    // is kept), the nodes it lies behind; refinement adds nodes where they are needed.
+    // (Shorter steps back are the duplicates of `degenerate` above, handled as before.)
+    let backtracks = |last: &Node, p: Point3| -> bool {
+        let c = p - last.p;
+        let along = c.dot(last.d);
+        -along > degenerate && -along <= m.h_min && (c - last.d * along).norm() <= m.ctx.tol.fit
+    };
+    // Index in `rb.pts` of each node.
+    let mut kept: Vec<usize> = Vec::with_capacity(np);
     for i in 0..np {
-        let back = if i > 0 {
-            rb.pts[i].p - rb.pts[i - 1].p
-        } else {
-            Vec3::zero()
+        if let Some(last) = nodes.last()
+            && backtracks(last, rb.pts[i].p)
+        {
+            if i + 1 < np {
+                continue;
+            }
+            while nodes.len() > 1 && nodes.last().is_some_and(|l| backtracks(l, rb.pts[i].p)) {
+                nodes.pop();
+                kept.pop();
+            }
+            if let Some(last) = nodes.last() {
+                prev = last.uv;
+            }
+        }
+        let back = match kept.last() {
+            Some(&j) => rb.pts[i].p - rb.pts[j].p,
+            None => Vec3::zero(),
         };
         let hint = match nodes.last() {
             _ if back.norm() > degenerate => back,
@@ -2029,6 +2124,7 @@ pub(crate) fn fit_branch(
         }
         prev = node.uv;
         nodes.push(node);
+        kept.push(i);
     }
     // Drop coincident consecutive nodes.
     nodes.dedup_by(|b, a| b.t - a.t <= 1e-12 * m.len);

@@ -116,8 +116,6 @@ fn total(r: &BodyOpResult, what: &str) -> f64 {
 enum Want {
     /// Bodies of this total volume (`pieces` of them), listed in `bodies`.
     Volume { v: f64, pieces: usize },
-    /// The target unchanged and not listed (`untouched`).
-    Untouched,
     /// The target consumed (`removed`, `BOOLEAN_BODY_CONSUMED`).
     Consumed,
     /// This error code.
@@ -147,14 +145,6 @@ fn check(r: Result<BodyOpResult, BooleanError>, want: Want, scale: f64, what: &s
                 );
             }
             rel
-        }
-        (Want::Untouched, Ok(r)) => {
-            assert!(
-                r.bodies.is_empty() && r.untouched.len() == 1,
-                "{what}: expected the target untouched, got {} bodies",
-                r.bodies.len()
-            );
-            0.0
         }
         (Want::Consumed, Ok(r)) => {
             assert!(
@@ -424,9 +414,11 @@ fn napkin_rings_on_every_axis() {
                 scale,
                 &what("join"),
             ));
+            // SPEC [W0-39]: the join acts on the drill (its component holds the ball), so it
+            // is `modified`, with its own volume.
             check(
                 op(BodyOp::Join, &cy, &s),
-                Want::Untouched,
+                Want::Volume { v: vc, pieces: 1 },
                 scale,
                 &what("drill ∪ ball"),
             );
@@ -486,10 +478,11 @@ fn spheres_on_a_plane_on_every_axis() {
                 &what("intersect"),
             );
         } else if zc <= -2.0 {
-            // Inside the box, touching the top face from below at one point.
+            // Inside the box, touching the top face from below at one point: the join acts on
+            // the box ([W0-39]: `modified`, its volume unchanged).
             check(
                 op(BodyOp::Join, &bx, &s),
-                Want::Untouched,
+                Want::Volume { v: vb, pieces: 1 },
                 scale,
                 &what("join"),
             );
@@ -724,9 +717,13 @@ fn void_tools_and_targets_on_every_axis() {
             scale,
             &what("box − hollow ball"),
         );
+        // The box fills the tool's void: the union is the box, acted on ([W0-39]: `modified`).
         check(
             op(BodyOp::Join, &bx, &hollow),
-            Want::Untouched,
+            Want::Volume {
+                v: 1000.0,
+                pieces: 1,
+            },
             scale,
             &what("box ∪ hollow ball"),
         );

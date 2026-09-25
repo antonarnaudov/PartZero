@@ -29,13 +29,18 @@ use crate::checked;
 
 /// The feature types this engine evaluates (SPEC-v1 §6). [`super::load`] rejects every other
 /// IR v1 type (§0.2 rule 3): the optional ones of [`super::REJECTED_FEATURE_TYPES`] with
-/// `UNSUPPORTED_FEATURE`, the mandatory ones of [`super::UNIMPLEMENTED_FEATURE_TYPES`] with
-/// `UNSUPPORTED_FEATURE_VERSION`.
-pub const SUPPORTED_FEATURE_TYPES: [&str; 7] = [
+/// `UNSUPPORTED_FEATURE`, the mandatory ones of [`super::UNIMPLEMENTED_FEATURE_TYPES`] (none
+/// since Phase C) with `UNSUPPORTED_FEATURE_VERSION`.
+pub const SUPPORTED_FEATURE_TYPES: [&str; 12] = [
     "sketch",
     "extrude",
     "revolve",
     "boolean",
+    "hole",
+    "fillet",
+    "chamfer",
+    "shell",
+    "pattern",
     "datum_plane",
     "datum_axis",
     "tag",
@@ -60,10 +65,33 @@ pub const UNSUPPORTED_CODE: &str = "FORGE_UNSUPPORTED_FEATURE";
 pub const NO_CHANGE_CODE: &str = "FORGE_BOOLEAN_NO_CHANGE";
 
 /// A sketch's outcome, for the features that consume it by id.
-enum SketchState {
+pub(super) enum SketchState {
     Suppressed,
     Failed { code: String, message: String },
     Done(Box<SketchResult>),
+}
+
+/// A feature seed's tool bodies **as evaluated at the seed** (SPEC-v1 §6.10), kept for the
+/// patterns that name the feature in `seed.features`: an extrude's or revolve's tools (the
+/// created bodies of a `new_body` sweep) with the keys forge-refs gives their entities (junction
+/// qualifiers included), a hole's tools with their `HoleToolInfo`.
+#[derive(Clone, Debug)]
+pub(super) struct SeedTools {
+    /// What the seed does with them.
+    pub(super) op: forge_ops::pattern::SeedOp,
+    /// The tools, in the seed's order (regions, or hole positions).
+    pub(super) bodies: Vec<forge_ops::pattern::SeedBody>,
+}
+
+/// What committing a body operation's result produced for the feature entry (§6.0.5).
+pub(super) struct Committed {
+    /// The bodies created or modified, in the operation's (canonical) order.
+    pub(super) bodies: Vec<forge_ir::v1::metrics::BodyReport>,
+    /// Target origins no body of the part carries afterwards ([W0-40]).
+    pub(super) removed: Vec<Origin>,
+    /// The operation's notes (`BOOLEAN_SPLIT`, `BOOLEAN_BODY_CONSUMED`, the engine-prefixed
+    /// `FORGE_BOOLEAN_NO_CHANGE` / `FORGE_BOOLEAN_UNCERTIFIED`), in the order raised.
+    pub(super) warnings: Vec<Warning>,
 }
 
 /// The final state of a part (SPEC-v1 §7.2 `parts[]`).
@@ -92,20 +120,25 @@ pub(crate) struct PartRun {
 /// The evaluation state of one part.
 pub(crate) struct PartEval<'d> {
     doc: &'d Document,
-    pi: usize,
-    part: &'d PartStudio,
-    pv: &'d ParamValues,
+    pub(super) pi: usize,
+    pub(super) part: &'d PartStudio,
+    pub(super) pv: &'d ParamValues,
     /// Every feature of the part as references see it (types, profiles, tags from the
     /// document; statuses, sweep regions and datum values as evaluation proceeds). The scope of
     /// feature `i` holds the first `i`.
-    infos: Vec<FeatureInfo>,
+    pub(super) infos: Vec<FeatureInfo>,
     /// Feature id → timeline index.
-    index_of: BTreeMap<&'d str, usize>,
-    sketches: BTreeMap<String, SketchState>,
+    pub(super) index_of: BTreeMap<&'d str, usize>,
+    pub(super) sketches: BTreeMap<String, SketchState>,
     /// The part's current bodies.
-    bodies: Vec<PartBody>,
+    pub(super) bodies: Vec<PartBody>,
     /// Keys merged away by same-domain merging (§5.2 rule 3) → the surviving key.
-    aliases: BTreeMap<String, String>,
+    pub(super) aliases: BTreeMap<String, String>,
+    /// Ids of the features some pattern of the part names in `seed.features` (§6.10): only
+    /// these keep their tools ([`SeedTools`]).
+    pub(super) seed_ids: BTreeSet<&'d str>,
+    /// The tools of every evaluated seed feature, by feature id.
+    pub(super) seeds: BTreeMap<String, SeedTools>,
     /// Feature report entries, in timeline order (suppressed features have none).
     pub(crate) features: Vec<FeatureReport>,
     /// Check the key invariant (SPEC-v1 §5.2 rule 3) after every feature that produced bodies.
@@ -133,6 +166,20 @@ impl<'d> PartEval<'d> {
             sketches: BTreeMap::new(),
             bodies: Vec::new(),
             aliases: BTreeMap::new(),
+            seed_ids: part
+                .features
+                .iter()
+                .filter_map(|f| match f {
+                    Feature::Pattern(p) => match &p.seed {
+                        forge_ir::v1::PatternSeed::Features(ids) => Some(ids),
+                        forge_ir::v1::PatternSeed::Bodies(_) => None,
+                    },
+                    _ => None,
+                })
+                .flatten()
+                .map(String::as_str)
+                .collect(),
+            seeds: BTreeMap::new(),
             features: Vec::new(),
             check_keys: false,
             key_problems: Vec::new(),
@@ -249,6 +296,7 @@ impl<'d> PartEval<'d> {
         };
         self.infos[fi].datum = None;
         self.infos[fi].regions.clear();
+        self.seeds.remove(f.id());
         if let Feature::Sketch(s) = f {
             self.sketches.insert(
                 s.id.clone(),
@@ -328,13 +376,14 @@ impl<'d> PartEval<'d> {
                 self.resolve(fi, &t.target, "/target", Cardinality::SOME, entry)?;
                 Ok(())
             }
-            // Unreachable: failed above with FORGE_UNSUPPORTED_FEATURE.
-            Feature::Hole(_)
-            | Feature::Fillet(_)
-            | Feature::Chamfer(_)
-            | Feature::Shell(_)
-            | Feature::Draft(_)
-            | Feature::Pattern(_) => Err(FeatureError::new(
+            Feature::Hole(h) => self.hole(fi, h, entry),
+            Feature::Pattern(p) => self.pattern(fi, p, entry),
+            Feature::Fillet(x) => self.fillet(fi, x, entry),
+            Feature::Chamfer(x) => self.chamfer(fi, x, entry),
+            Feature::Shell(x) => self.shell(fi, x, entry),
+            // Unreachable: failed above with FORGE_UNSUPPORTED_FEATURE (the optional `draft`,
+            // §6.9, is rejected by `load`).
+            Feature::Draft(_) => Err(FeatureError::new(
                 "FORGE_INTERNAL",
                 "unsupported feature reached evaluation",
                 json!({}),
@@ -344,7 +393,7 @@ impl<'d> PartEval<'d> {
 
     // ---- dependencies by id (§7.1) ----------------------------------------------------------
 
-    fn name_of(&self, id: &str) -> String {
+    pub(super) fn name_of(&self, id: &str) -> String {
         self.index_of.get(id).map_or_else(
             || id.to_string(),
             |&i| self.part.features[i].name().to_string(),
@@ -411,7 +460,7 @@ impl<'d> PartEval<'d> {
 
     /// Run `f` with the scope of feature `fi` (§5.3): the part's current bodies, the earlier
     /// features, the aliases of merged keys, and the W1 evaluator behind the expression hooks.
-    fn with_scope<R>(&self, fi: usize, f: impl FnOnce(&Scope<'_>) -> R) -> R {
+    pub(super) fn with_scope<R>(&self, fi: usize, f: impl FnOnce(&Scope<'_>) -> R) -> R {
         let (pv, pi) = (self.pv, self.pi);
         let num = move |t: &str| hook_num(pv, pi, t);
         let boolean = move |t: &str| hook_bool(pv, pi, t);
@@ -431,7 +480,7 @@ impl<'d> PartEval<'d> {
     }
 
     /// Resolve one Ref-valued field (§5.7); its report entry and warnings go into `entry`.
-    fn resolve(
+    pub(super) fn resolve(
         &self,
         fi: usize,
         r: &Ref,
@@ -457,7 +506,7 @@ impl<'d> PartEval<'d> {
     }
 
     /// The part bodies a body reference resolves to (indices into the current bodies).
-    fn resolve_bodies(
+    pub(super) fn resolve_bodies(
         &self,
         fi: usize,
         r: &Ref,
@@ -485,15 +534,15 @@ impl<'d> PartEval<'d> {
 
     // ---- values -----------------------------------------------------------------------------
 
-    fn scalar(&self, s: &Scalar, field: FieldType) -> Result<f64, FeatureError> {
+    pub(super) fn scalar(&self, s: &Scalar, field: FieldType) -> Result<f64, FeatureError> {
         Ok(self.pv.scalar(self.pi, s, field)?)
     }
 
-    fn p2(&self, v: &SP2, field: FieldType) -> Result<[f64; 2], FeatureError> {
+    pub(super) fn p2(&self, v: &SP2, field: FieldType) -> Result<[f64; 2], FeatureError> {
         Ok([self.scalar(&v[0], field)?, self.scalar(&v[1], field)?])
     }
 
-    fn p3(&self, v: &SP3, field: FieldType) -> Result<[f64; 3], FeatureError> {
+    pub(super) fn p3(&self, v: &SP3, field: FieldType) -> Result<[f64; 3], FeatureError> {
         Ok([
             self.scalar(&v[0], field)?,
             self.scalar(&v[1], field)?,
@@ -537,7 +586,51 @@ impl<'d> PartEval<'d> {
     /// The frame of a sketch plane (§3.1). Named planes and explicit frames use the v0
     /// construction (so migrated v0 documents keep their exact frames); faces and datums
     /// go through forge-refs.
-    fn plane(
+    pub(super) fn plane(
+        &self,
+        fi: usize,
+        p: &PlaneRef,
+        path: &str,
+        entry: &mut FeatureReport,
+    ) -> Result<Frame, FeatureError> {
+        Ok(self.plane_on(fi, p, path, entry)?.0)
+    }
+
+    /// [`PartEval::plane`], also returning the face a `{ "face": Ref }` plane resolved to
+    /// (a hole's `on` face, §6.5: positions must lie on it, and it names the default target).
+    pub(super) fn plane_on(
+        &self,
+        fi: usize,
+        p: &PlaneRef,
+        path: &str,
+        entry: &mut FeatureReport,
+    ) -> Result<(Frame, Option<forge_refs::Entity>), FeatureError> {
+        match p {
+            PlaneRef::Face(_) => {
+                let ev = self.with_scope(fi, |s| forge_refs::plane_frame(p, s, path));
+                let face_field = format!("{path}/face");
+                let face = ev
+                    .refs
+                    .iter()
+                    .find(|r| r.report.field == face_field)
+                    .and_then(|r| r.members.first())
+                    .map(|m| m.entity);
+                take_refs(ev.refs, entry);
+                let pf = ev.result?;
+                let frame = pf.to_frame().ok_or_else(|| {
+                    FeatureError::new(
+                        "FORGE_INTERNAL",
+                        format!("{path}: the evaluated plane frame is degenerate"),
+                        json!({ "field": path }),
+                    )
+                })?;
+                Ok((frame, face))
+            }
+            _ => Ok((self.plane_frame_of(fi, p, path, entry)?, None)),
+        }
+    }
+
+    fn plane_frame_of(
         &self,
         fi: usize,
         p: &PlaneRef,
@@ -705,6 +798,20 @@ impl<'d> PartEval<'d> {
             ));
         }
         self.infos[fi].regions = regions.iter().map(|r| sweep_region(r, &frame)).collect();
+        // A pattern seed (§6.10) keeps its tools as evaluated here, keyed as forge-refs keys
+        // them (with this feature's regions, so junction edges carry their `@c.end`).
+        if self.seed_ids.contains(fid) {
+            let seed = SeedTools {
+                op: match op {
+                    IrBodyOp::NewBody => forge_ops::pattern::SeedOp::NewBody,
+                    IrBodyOp::Join => forge_ops::pattern::SeedOp::Body(BodyOp::Join),
+                    IrBodyOp::Cut => forge_ops::pattern::SeedOp::Body(BodyOp::Cut),
+                    IrBodyOp::Intersect => forge_ops::pattern::SeedOp::Body(BodyOp::Intersect),
+                },
+                bodies: self.tool_seed_bodies(fi, &tools),
+            };
+            self.seeds.insert(fid.to_string(), seed);
+        }
         match (op, targets) {
             (IrBodyOp::NewBody, _) | (_, None) => {
                 let mut made = Vec::with_capacity(tools.len());
@@ -777,7 +884,7 @@ impl<'d> PartEval<'d> {
         self.body_op(fi, op, &targets, tool_bodies, &consumed, entry)
     }
 
-    fn op_body(&self, i: usize) -> OpBody {
+    pub(super) fn op_body(&self, i: usize) -> OpBody {
         let b = &self.bodies[i];
         OpBody {
             body: b.body.clone(),
@@ -808,12 +915,35 @@ impl<'d> PartEval<'d> {
         }
         let scale = scale_of(self.bodies.iter().map(|b| &b.metrics));
         let t_ops: Vec<OpBody> = targets.iter().map(|&i| self.op_body(i)).collect();
-        let timeline_of: BTreeMap<String, usize> = t_ops
-            .iter()
-            .chain(&tools)
-            .map(|o| (o.origin.feature.clone(), o.timeline))
-            .collect();
+        let timeline_of = timelines(&t_ops, &tools);
         let res = forge_ops::apply_body_op_in_scope(op, &t_ops, &tools, fid, scale)?;
+        let c = self.commit_op(fi, op, targets, consumed, res, &timeline_of)?;
+        entry.bodies = c.bodies;
+        entry.removed = c.removed;
+        entry.warnings.extend(c.warnings);
+        Ok(())
+    }
+
+    /// Commit a body operation's result (§6.0.3, §6.0.5): every produced body passes the
+    /// validity check and is measured ([R-12]) before anything changes; then the `targets`
+    /// (indices into the current bodies) are replaced — untouched ones stay — and `consumed`
+    /// bodies disappear; the aliases of same-domain merges are recorded. A failure leaves the
+    /// part as it was. `timeline_of` maps the operands' origin features to their timeline
+    /// index (canonical order of `removed`).
+    ///
+    /// `removed` ([W0-40]) is forge-ops' list of target origins that no result body or
+    /// untouched target carries, minus the origins bodies of the part outside the operation
+    /// still carry; `merged_into` keys are never added back (a merged origin whose sibling
+    /// piece survives elsewhere did not vanish — kernel-fixes review finding 1).
+    pub(super) fn commit_op(
+        &mut self,
+        fi: usize,
+        op: BodyOp,
+        targets: &[usize],
+        consumed: &[usize],
+        res: forge_ops::BodyOpResult,
+        timeline_of: &BTreeMap<String, usize>,
+    ) -> Result<Committed, FeatureError> {
         // SPEC [R-12]: every produced body passes Forge's validity check, then is measured.
         let mut produced: Vec<(PartBody, BodyChange)> = Vec::with_capacity(res.bodies.len());
         for rb in res.bodies {
@@ -846,11 +976,11 @@ impl<'d> PartEval<'d> {
             .filter(|(i, _)| !gone.contains(i))
             .map(|(_, b)| b)
             .collect();
-        entry.bodies = produced.iter().map(|(b, c)| b.report(*c)).collect();
+        let bodies = produced.iter().map(|(b, c)| b.report(*c)).collect();
         self.bodies.extend(produced.into_iter().map(|(b, _)| b));
-        // `removed`: consumed targets and join targets merged into another (§6.0.5).
+        // `removed` ([W0-40]): target origins no body of the part carries afterwards.
         let mut removed: Vec<Origin> = res.removed.clone();
-        removed.extend(res.merged_into.iter().map(|(m, _)| m.clone()));
+        removed.retain(|o| !self.bodies.iter().any(|b| b.origin == *o));
         removed.sort_by(|a, b| {
             let ta = timeline_of.get(&a.feature).copied().unwrap_or(usize::MAX);
             let tb = timeline_of.get(&b.feature).copied().unwrap_or(usize::MAX);
@@ -859,7 +989,7 @@ impl<'d> PartEval<'d> {
                 .then_with(|| a.instance.cmp(&b.instance))
         });
         removed.dedup();
-        entry.removed = removed;
+        let mut warnings = Vec::new();
         for n in &res.notes {
             let (message, severity) = match n {
                 forge_ops::boolean::BooleanNote::Split { origin, pieces } => (
@@ -874,7 +1004,7 @@ impl<'d> PartEval<'d> {
                     Severity::Warning,
                 ),
             };
-            entry.warnings.push(Warning {
+            warnings.push(Warning {
                 code: n.code().to_string(),
                 severity,
                 message,
@@ -885,10 +1015,10 @@ impl<'d> PartEval<'d> {
             });
         }
         if !res.untouched_targets.is_empty() {
-            // Targets left as they were (a join tool inside or equal to a target, a join
-            // target no tool reaches, a cut target no tool meets): they stay in the part but are
-            // in neither `bodies` (§6.0.5 lists created or modified bodies only) nor `removed`,
-            // so this note names them — whether some or all targets were left unchanged.
+            // Targets left as they were (a join target no tool reaches, a cut target no tool
+            // meets): they stay in the part but are in neither `bodies` (§6.0.5 lists created
+            // or modified bodies only) nor `removed`, so this note names them — whether some or
+            // all targets were left unchanged.
             let name = match op {
                 BodyOp::Join => "join",
                 BodyOp::Cut => "cut",
@@ -898,7 +1028,7 @@ impl<'d> PartEval<'d> {
             let mut details = serde_json::Map::new();
             details.insert("op".into(), json!(name));
             details.insert("targets".into(), json!(res.untouched));
-            entry.warnings.push(Warning {
+            warnings.push(Warning {
                 code: NO_CHANGE_CODE.into(),
                 severity: Severity::Info,
                 message: if k == n {
@@ -912,7 +1042,7 @@ impl<'d> PartEval<'d> {
             });
         }
         if res.uncertified {
-            entry.warnings.push(Warning {
+            warnings.push(Warning {
                 code: "FORGE_BOOLEAN_UNCERTIFIED".into(),
                 severity: Severity::Info,
                 message:
@@ -925,12 +1055,79 @@ impl<'d> PartEval<'d> {
         for (alias, key) in res.aliases {
             self.aliases.insert(alias, key);
         }
-        Ok(())
+        Ok(Committed {
+            bodies,
+            removed,
+            warnings,
+        })
+    }
+
+    /// The seed bodies of the tools `(body, origin)` of feature `fi` (SPEC §6.10 "tool bodies
+    /// as evaluated at the seed"), each with the keys forge-refs gives its entities in a scope
+    /// of the tools alone (the earlier features and `fi`, whose regions are set): the copies of
+    /// a pattern are keyed `P/copy:{K}@q` from exactly these `K`.
+    pub(super) fn tool_seed_bodies(
+        &self,
+        fi: usize,
+        tools: &[(Body, Origin)],
+    ) -> Vec<forge_ops::pattern::SeedBody> {
+        let mut table = FeatureTable::new();
+        for info in &self.infos[..=fi] {
+            table.push(info.clone());
+        }
+        let mut b = ScopeBuilder::new(table);
+        for (body, origin) in tools {
+            b = b.body(body, origin.clone());
+        }
+        let scope = b.build();
+        tools
+            .iter()
+            .enumerate()
+            .map(|(k, (body, origin))| forge_ops::pattern::SeedBody {
+                body: body.clone(),
+                origin: origin.clone(),
+                keys: Some(scope_keys(&scope, k)),
+                hole: None,
+            })
+            .collect()
+    }
+}
+
+/// The origin feature → timeline index of the operands of a body operation.
+pub(super) fn timelines(targets: &[OpBody], tools: &[OpBody]) -> BTreeMap<String, usize> {
+    targets
+        .iter()
+        .chain(tools)
+        .map(|o| (o.origin.feature.clone(), o.timeline))
+        .collect()
+}
+
+/// The keys forge-refs gives every face, edge and vertex of body `b` of `scope` (SPEC §5.2),
+/// as forge-ops' pattern copies take them.
+pub(super) fn scope_keys(scope: &Scope<'_>, b: usize) -> forge_ops::pattern::SeedKeys {
+    let body = scope.body(Scope::body_entity(b));
+    let key = |id: EntityId| scope.key(forge_refs::Entity { body: b, id }).to_string();
+    forge_ops::pattern::SeedKeys {
+        faces: body
+            .faces()
+            .iter()
+            .map(|(f, _)| (f, key(EntityId::Face(f))))
+            .collect(),
+        edges: body
+            .edges()
+            .iter()
+            .map(|(e, _)| (e, key(EntityId::Edge(e))))
+            .collect(),
+        vertices: body
+            .vertices()
+            .iter()
+            .map(|(v, _)| (v, key(EntityId::Vertex(v))))
+            .collect(),
     }
 }
 
 /// Every resolution's report entry and warnings, in order, into the feature entry.
-fn take_refs(refs: Vec<Resolution>, entry: &mut FeatureReport) {
+pub(super) fn take_refs(refs: Vec<Resolution>, entry: &mut FeatureReport) {
     for r in refs {
         entry.warnings.extend(r.warnings);
         entry.refs.push(r.report);

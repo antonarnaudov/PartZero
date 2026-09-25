@@ -229,7 +229,12 @@ def lex(text: str) -> list[Tok]:
 class _Parser:
     def __init__(self, text: str):
         self.text = text
-        self.toks = lex(text)
+        try:
+            self.toks = lex(text)
+        except ExprError as e:
+            # [W0-12] [W0-46]: EXPR_SYNTAX carries `expr` (the stored text) only when it lexes
+            e.details.pop("expr", None)
+            raise
         self.i = 0
 
     def peek(self) -> Tok:
@@ -422,6 +427,32 @@ def _raw(n: Node) -> str:
     return f"{_fmt(n.left, 5)} {op} {_fmt(n.right, 6)}"
 
 
+def identifiers(n: Node) -> list[str]:
+    """The identifiers (used as values, `PI` excluded) of an expression, left to right, each once
+    in order of first appearance (§2.8 rule 3's dependency order)."""
+    out: list[str] = []
+
+    def walk(x) -> None:
+        if isinstance(x, Name):
+            if x.name != "PI" and x.name not in out:
+                out.append(x.name)
+        elif isinstance(x, Unary):
+            walk(x.operand)
+        elif isinstance(x, Binary):
+            walk(x.left)
+            walk(x.right)
+        elif isinstance(x, Cond):
+            walk(x.cond)
+            walk(x.then)
+            walk(x.other)
+        elif isinstance(x, Call):
+            for a in x.args:
+                walk(a)
+
+    walk(n)
+    return out
+
+
 def canonical(n: Node) -> str:
     return _fmt(n, 0)
 
@@ -476,50 +507,43 @@ class _Checker:
         self.features = features
         self.used: list[str] = []
 
-    # -- pass 1: names, functions, arity ------------------------------------------------------
+    # -- [W0-21] one pass: names are resolved when visited ---------------------------------------
     def names(self, n: Node) -> None:
-        if isinstance(n, Name):
-            if n.name == "PI":
-                return
-            if n.name in self.types:
-                if n.name not in self.used:
-                    self.used.append(n.name)
-                return
-            if n.name in self.other_parts:
-                raise ExprError(
-                    "EXPR_SCOPE",
-                    f"{n.name!r} is a parameter of part {self.other_parts[n.name]!r}",
-                    {"name": n.name, "part": self.other_parts[n.name]},
-                )
-            similar = sorted(k for k in self.types if _similar(k, n.name))[:5]
+        """Kept for callers: [W0-21] resolves names during the single typing pass (`ty`)."""
+        return None
+
+    def name(self, n: Name) -> Ty:
+        if n.name == "PI":
+            return FLEX
+        if n.name in self.types:
+            if n.name not in self.used:
+                self.used.append(n.name)
+            return self.types[n.name]
+        if n.name in self.other_parts:
             raise ExprError(
-                "EXPR_UNKNOWN_NAME",
-                f"{n.name!r} is not a visible parameter",
-                {"name": n.name, "is_feature": n.name in self.features, "similar": similar},
+                "EXPR_SCOPE",
+                f"{n.name!r} is a parameter of part {self.other_parts[n.name]!r}",
+                {"name": n.name, "part": self.other_parts[n.name]},
             )
-        if isinstance(n, Call):
-            if n.name not in FUNCTIONS:
-                similar = sorted(k for k in FUNCTIONS if _similar(k, n.name))[:5]
-                raise ExprError("EXPR_UNKNOWN_FUNCTION", f"unknown function {n.name!r}",
-                                {"name": n.name, "similar": similar})
-            lo, hi = FUNCTIONS[n.name]
-            k = len(n.args)
-            if k < lo or (hi is not None and k > hi):
-                exp = f">= {lo}" if hi is None else str(lo)
-                raise ExprError("EXPR_ARITY", f"{n.name} takes {exp} arguments, got {k}",
-                                {"name": n.name, "expected": exp, "found": k})
-            for a in n.args:
-                self.names(a)
-            return
-        if isinstance(n, Unary):
-            self.names(n.operand)
-        elif isinstance(n, Binary):
-            self.names(n.left)
-            self.names(n.right)
-        elif isinstance(n, Cond):
-            self.names(n.cond)
-            self.names(n.then)
-            self.names(n.other)
+        similar = sorted(k for k in self.types if _similar(k, n.name))[:5]
+        raise ExprError(
+            "EXPR_UNKNOWN_NAME",
+            f"{n.name!r} is not a visible parameter",
+            {"name": n.name, "is_feature": n.name in self.features, "similar": similar},
+        )
+
+    def function(self, n: Call) -> None:
+        """A call's name and arity, checked before its arguments are visited ([W0-21])."""
+        if n.name not in FUNCTIONS:
+            similar = sorted(k for k in FUNCTIONS if _similar(k, n.name))[:5]
+            raise ExprError("EXPR_UNKNOWN_FUNCTION", f"unknown function {n.name!r}",
+                            {"name": n.name, "similar": similar})
+        lo, hi = FUNCTIONS[n.name]
+        k = len(n.args)
+        if k < lo or (hi is not None and k > hi):
+            exp = f">= {lo}" if hi is None else str(lo)
+            raise ExprError("EXPR_ARITY", f"{n.name} takes {exp} arguments, got {k}",
+                            {"name": n.name, "expected": exp, "found": k})
 
     # -- pass 2: types --------------------------------------------------------------------------
     def unit_err(self, sub: Node, expected: str, found: str) -> ExprError:
@@ -536,14 +560,13 @@ class _Checker:
             {"expr": self.text, "subexpr": canonical(sub), "expected": expected, "found": found},
         )
 
-    def num(self, n: Node) -> Ty:
-        t = self.ty(n)
+    def num_of(self, n: Node, t: Ty) -> Ty:
+        """The rule "a number operand" on an already visited child."""
         if t.kind == "bool":
             raise self.type_err(n, "number", "bool")
         return t
 
-    def boolean(self, n: Node) -> None:
-        t = self.ty(n)
+    def bool_of(self, n: Node, t: Ty) -> None:
         if t.kind != "bool":
             raise self.type_err(n, "bool", str(t))
 
@@ -559,6 +582,9 @@ class _Checker:
         return fixed or FLEX
 
     def ty(self, n: Node) -> Ty:
+        """[W0-21]: one post-order, left-to-right pass — identifiers when visited, a call's name and
+        arity before its arguments, the `?:` condition's rule right after the condition, every other
+        rule after the node's children."""
         if isinstance(n, Num):
             if n.unit is None:
                 return FLEX
@@ -566,40 +592,43 @@ class _Checker:
         if isinstance(n, BoolLit):
             return BOOL
         if isinstance(n, Name):
-            return FLEX if n.name == "PI" else self.types[n.name]
+            return self.name(n)
         if isinstance(n, Unary):
+            t = self.ty(n.operand)
             if n.op == "!":
-                self.boolean(n.operand)
+                self.bool_of(n.operand, t)
                 return BOOL
-            return self.num(n.operand)
+            return self.num_of(n.operand, t)
         if isinstance(n, Cond):
-            self.boolean(n.cond)
+            self.bool_of(n.cond, self.ty(n.cond))
             a, b = self.ty(n.then), self.ty(n.other)
             if (a.kind == "bool") != (b.kind == "bool"):
                 raise self.type_err(n, str(a), str(b))
             return BOOL if a.kind == "bool" else self.unify(n, [a, b])
         if isinstance(n, Call):
-            return self.call(n)
+            self.function(n)
+            ts = [self.ty(a) for a in n.args]
+            return self.call(n, ts)
         assert isinstance(n, Binary)
         op = n.op
+        ta, tb = self.ty(n.left), self.ty(n.right)
         if op in ("&&", "||"):
-            self.boolean(n.left)
-            self.boolean(n.right)
+            self.bool_of(n.left, ta)
+            self.bool_of(n.right, tb)
             return BOOL
         if op in ("==", "!="):
-            a, b = self.ty(n.left), self.ty(n.right)
-            if (a.kind == "bool") != (b.kind == "bool"):
-                raise self.type_err(n, str(a), str(b))
-            if a.kind != "bool":
-                self.unify(n, [a, b])
+            if (ta.kind == "bool") != (tb.kind == "bool"):
+                raise self.type_err(n, str(ta), str(tb))
+            if ta.kind != "bool":
+                self.unify(n, [ta, tb])
             return BOOL
+        a, b = self.num_of(n.left, ta), self.num_of(n.right, tb)
         if op in ("<", "<=", ">", ">="):
-            self.unify(n, [self.num(n.left), self.num(n.right)])
+            self.unify(n, [a, b])
             return BOOL
         if op in ("+", "-", "%"):
-            return self.unify(n, [self.num(n.left), self.num(n.right)])
+            return self.unify(n, [a, b])
         if op == "*":
-            a, b = self.num(n.left), self.num(n.right)
             if a.kind == "flex" and b.kind == "flex":
                 return FLEX
             if a.kind == "flex":
@@ -608,7 +637,6 @@ class _Checker:
                 return FLEX if a.dimless else a
             return Ty("real", a.L + b.L, a.A + b.A)
         if op == "/":
-            a, b = self.num(n.left), self.num(n.right)
             if a.kind == "flex" and b.kind == "flex":
                 return FLEX
             if a.kind == "flex":
@@ -617,7 +645,6 @@ class _Checker:
                 return FLEX if a.dimless else a
             return Ty("real", a.L - b.L, a.A - b.A)
         assert op == "^"
-        a, b = self.num(n.left), self.num(n.right)
         if a.kind == "flex" or a.dimless:
             if not (b.kind == "flex" or b.dimless):
                 raise self.unit_err(n, "a dimensionless exponent", str(b))
@@ -627,33 +654,34 @@ class _Checker:
             raise self.unit_err(n, "an integer literal exponent", canonical(n.right))
         return Ty("real", a.L * k, a.A * k)
 
-    def call(self, n: Call) -> Ty:
+    def call(self, n: Call, ts: list[Ty]) -> Ty:
         f = n.name
+        ts = [self.num_of(a, t) for a, t in zip(n.args, ts)]
         if f in ("min", "max", "clamp", "hypot"):
-            return self.unify(n, [self.num(a) for a in n.args])
+            return self.unify(n, ts)
         if f in ("abs", "floor", "ceil", "round"):
-            return self.num(n.args[0])
+            return ts[0]
         if f == "sqrt":
-            t = self.num(n.args[0])
+            t = ts[0]
             if t.kind == "flex":
                 return FLEX
             if t.L % 2 or t.A % 2:
                 raise self.unit_err(n, "even exponents", str(t))
             return Ty("real", t.L // 2, t.A // 2)
         if f in ("sin", "cos", "tan"):
-            t = self.num(n.args[0])
+            t = ts[0]
             if t.kind == "flex":
                 return FLEX
             if t != ANGLE:
                 raise self.unit_err(n, "deg", str(t))
             return ONE
         if f in ("asin", "acos", "atan"):
-            t = self.num(n.args[0])
+            t = ts[0]
             if not (t.kind == "flex" or t.dimless):
                 raise self.unit_err(n, "1", str(t))
             return ANGLE
         assert f == "atan2"
-        self.unify(n, [self.num(a) for a in n.args])
+        self.unify(n, ts)
         return ANGLE
 
 
@@ -712,11 +740,14 @@ def check(text: str, fld: str, types: dict[str, Ty], *, other_parts: dict[str, s
     their types; `other_parts` maps parameters of other parts to their part (`EXPR_SCOPE`);
     `features` are feature names (for the `is_feature` detail). Raises ExprError (stage R)."""
     ast = parse(text)
-    c = _Checker(text, types, other_parts=other_parts, features=features)
+    # [W0-46]: `expr` in the details of every type and evaluation code is the canonical text
+    # (EXPR_SYNTAX alone keeps the stored text, which may not parse)
+    canon = canonical(ast)
+    c = _Checker(canon, types, other_parts=other_parts, features=features)
     c.names(ast)
     t = c.ty(ast)
-    use_site(t, fld, ast, text)
-    return Checked(ast, canonical(ast), t, c.used)
+    use_site(t, fld, ast, canon)
+    return Checked(ast, canon, t, c.used)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -785,7 +816,10 @@ def _atan2_deg(y: float, x: float) -> float | None:
         if x > 0.0:
             return 45.0 if y > 0.0 else -45.0
         return 135.0 if y > 0.0 else -135.0
-    return math.atan2(y, x) * RAD_TO_DEG
+    r = math.atan2(y, x) * RAD_TO_DEG
+    # [W0-22] the range stays (−180, 180]: a converted −180 (only by rounding, for a tiny negative
+    # y and x < 0) is 180, as atan2(±0, x < 0) = 180
+    return 180.0 if r == -180.0 else r
 
 
 def _round_half_away(x: float) -> float:

@@ -21,7 +21,9 @@ export type AgentStopReason =
   /** The caller aborted the run (`AgentOptions.signal`), e.g. the user pressed Stop. */
   | "cancelled"
   /** A CLI agent exposed or called a tool outside our CAD tools (ADR 0014 tripwires). */
-  | "lockdown_violation";
+  | "lockdown_violation"
+  /** The per-task wall-time cap (`AgentLimits.maxWallMs`) ran out. */
+  | "wall_time";
 
 /** How a model call ran (ADR 0014): an API/local model through the gateway, or a CLI agent. */
 export type LlmCallMode = "gateway" | "cli-completion" | "cli-runtime";

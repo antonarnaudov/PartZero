@@ -428,6 +428,16 @@ impl<'a> March<'a> {
         let special = self.touches_special(u, v);
         let mono = (gu.d.is_finite() && !gu.d.contains_zero())
             || (gv.d.is_finite() && !gv.d.contains_zero());
+        // A cell on the seam of a full period is regular only if it is across the seam too
+        // (see `across_seam`); its class is all that changes, never its size or split.
+        let speed = (d[1].norm().hi(), d[2].norm().hi());
+        let mono = mono
+            && self.across_seam(u, v, speed).is_none_or(|(wu, wv)| {
+                let a = self.g.eval(Dual::variable(wu), Dual::constant(wv));
+                let b = self.g.eval(Dual::constant(wu), Dual::variable(wv));
+                (a.d.is_finite() && !a.d.contains_zero())
+                    || (b.d.is_finite() && !b.d.contains_zero())
+            });
         if mono && !special {
             return (Some(Class::Regular), size, su, sv);
         }
@@ -435,6 +445,62 @@ impl<'a> March<'a> {
             return (Some(Class::Irregular), size, su, sv);
         }
         (None, size, su, sv)
+    }
+
+    /// The intervals of a cell that touches the seam of a direction covering a full period,
+    /// widened across the seam by one minimal cell; `None` for other cells.
+    ///
+    /// `u₀` and `u₀ + 2π` are one line of the surface, but each floating-point end may miss
+    /// it by a few ulps, so a point exactly on the seam can lie just outside the closed cell
+    /// at one end. A singular point of `G` there (two cylinders touching on the seam, boolean
+    /// seed 53 #38/#387) then makes the cell at that end certified-regular: its seam edge
+    /// yields a crossing *at* the singular point and traces run through the point without
+    /// meeting the irregular cluster found at the other end. Requiring regularity across
+    /// the seam makes both ends irregular there, one cluster across the seam (clusters
+    /// wrap).
+    ///
+    /// The band is the rounding of the box's ends (8 ulps) or one minimal cell (`h_min` in
+    /// 3D over the cell's parametric speed `speed`, at most the cell's own width), whichever
+    /// is larger. A band of ulps alone left the same failure for a singular point just
+    /// **inside** one end, 1e-14 to 1e-9 in `u` from the seam (a rotated scene, or a box
+    /// whose start is not the tangent line's angle bit for bit): the cell across the seam
+    /// was certified regular while the point sat an ulp-sized distance beyond its edge, so
+    /// the crossing arms were traced there as separate regular pieces whose edge crossings
+    /// nearly coincide (`SSI_TANGENT_UNRESOLVED` with an odd number of branch ends). Within
+    /// one minimal cell of the seam the point is as good as on it: both ends are irregular
+    /// and form one cluster.
+    fn across_seam(
+        &self,
+        u: (f64, f64),
+        v: (f64, f64),
+        speed: (f64, f64),
+    ) -> Option<(Interval, Interval)> {
+        let widen = |r: (f64, f64), d: (f64, f64), full: bool, speed: f64| -> ((f64, f64), bool) {
+            if !full {
+                return (r, false);
+            }
+            // Cells inherit the box's end values exactly (bit for bit) from their parents.
+            let (at_lo, at_hi) = (
+                r.0.to_bits() == d.0.to_bits(),
+                r.1.to_bits() == d.1.to_bits(),
+            );
+            if !(at_lo || at_hi) {
+                return (r, false);
+            }
+            let rounding = 8.0 * f64::EPSILON * d.0.abs().max(d.1.abs()).max(1.0);
+            let cell = if speed.is_finite() && speed > 0.0 {
+                (self.h_min / speed).min(r.1 - r.0)
+            } else {
+                0.0
+            };
+            let e = rounding.max(cell);
+            let lo = if at_lo { r.0 - e } else { r.0 };
+            let hi = if at_hi { r.1 + e } else { r.1 };
+            ((lo, hi), true)
+        };
+        let (wu, su) = widen(u, self.p.dom.u, self.full_u, speed.0);
+        let (wv, sv) = widen(v, self.p.dom.v, self.full_v, speed.1);
+        (su || sv).then(|| (Interval::new(wu.0, wu.1), Interval::new(wv.0, wv.1)))
     }
 
     fn subdivide(&mut self) -> Result<(), SsiError> {

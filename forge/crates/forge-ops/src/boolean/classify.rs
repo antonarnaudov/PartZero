@@ -103,9 +103,20 @@ pub(crate) fn split_faces(
                 );
             }
         }
+        // Parameters of each input's middle (for dropped pieces, below).
+        let mids: Vec<Point2> = inputs
+            .iter()
+            .map(|inp| inp.pcurve.eval(0.5 * (inp.range.0 + inp.range.1)))
+            .collect();
         let chart = Chart::build(&f.surface, f.sense, inputs)
             .map_err(|e| BooleanError::inconsistent(format!("face split: {e}"), f.prov.name()))?;
         for &i in chart.dropped() {
+            // A piece attached to the face within the tolerance but lying outside it (along
+            // the outside of a narrow face, touching it at an end: the 1.5e-6 mm wide root
+            // of a covered fin, SPEC [W0-53]) is no contact of this face.
+            if f.chart.contains(mids[i]) == Some(false) {
+                continue;
+            }
             if std::env::var_os("FORGE_BOOLEAN_DEBUG").is_some() {
                 let pc = &imp.pieces[piece_of_input[i]];
                 eprintln!(
@@ -240,7 +251,182 @@ pub(crate) fn classify(
             }
         }
     }
-    Err(first_err.expect("at least one point"))
+    let err = first_err.expect("at least one point");
+    if let Some(c) = boundary_fallback(m, imp, fr, &err) {
+        if std::env::var_os("FORGE_BOOLEAN_DEBUG").is_some() {
+            eprintln!(
+                "fragment {} #{} classified {c:?} by its boundary pieces",
+                m.faces[fr.face].prov.name(),
+                fr.group
+            );
+        }
+        return Ok((c, fr.uv));
+    }
+    if std::env::var_os("FORGE_BOOLEAN_DEBUG").is_some() {
+        eprintln!(
+            "fragment {} #{} unclassified: {err}",
+            m.faces[fr.face].prov.name(),
+            fr.group
+        );
+    }
+    Err(err)
+}
+
+/// The class of a fragment none of whose interior points classified (`err`: the most
+/// specific failure), read from its boundary pieces — only when the fragment is **narrow**.
+///
+/// SPEC [W0-48], [W0-53]: a fragment narrower than twice the tolerance (the hole a 1.5e-6 mm
+/// through-pin leaves in a face, the cap of a covered fin, the corner of a target 1.2e-6 mm
+/// inside a tool face) has no interior point farther than the tolerance from the other
+/// operand's boundary, so every point is "on" it. Its class is then read from its own
+/// boundary pieces, which decide it exactly ([`classify_by_boundary`]). The premise is
+/// checked, not assumed (review round 5): every interior point tried lies within twice the
+/// tolerance of the other operand's boundary (exact distances). A fragment that fails for
+/// any other reason — a wide fragment whose every ray direction is degenerate, a point on
+/// the boundary of a coincident face far from the other operand's faces — keeps its error:
+/// its boundary alone is no evidence for its interior. Near-coincident faces keep their
+/// diagnosis.
+fn boundary_fallback(m: &Model, imp: &Imprint, fr: &Fragment, err: &BooleanError) -> Option<Class> {
+    if !matches!(err, BooleanError::Inconsistent { .. }) || !narrow(m, fr) {
+        return None;
+    }
+    classify_by_boundary(m, imp, fr)
+}
+
+/// The premise of [`boundary_fallback`]: every interior point of `fr` (the one it would be
+/// classified at and the alternatives) lies within twice the tolerance of the other
+/// operand's boundary.
+fn narrow(m: &Model, fr: &Fragment) -> bool {
+    let f = &m.faces[fr.face];
+    let other = 1 - f.operand;
+    std::iter::once(fr.uv)
+        .chain(fr.alts.iter().copied())
+        .all(|uv| {
+            let p = f.surface.eval(uv.x, uv.y);
+            super::thin::boundary_distance(m, other, p, 4.0 * VTOL) <= 2.0 * VTOL
+        })
+}
+
+/// Least sine of the angle between a fragment's face and a face of the other operand for a
+/// boundary piece to vote on the fragment's side of that face (`classify_by_boundary`).
+const BOUNDARY_VOTE_SINE: f64 = 1e-2;
+
+/// The class of fragment `fr` read from its boundary pieces, when every piece that decides
+/// agrees (`None` otherwise, or when no piece decides).
+///
+/// The fragment is a connected region of its face `F` that no piece of the arrangement
+/// crosses, so its side of every face of the other operand is one side throughout. It lies
+/// on the **left** of its loops (chart convention): at a piece traversed with 3D tangent
+/// `t`, the fragment is on the side `d = n_F × t` (`n_F` the outward normal).
+/// - **Coincident face `G`** (SSI coincidence): a piece on `G`'s boundary, traversed by `G`
+///   with tangent `t_G`, has `G` on the side `n_G × t_G`; the fragment is inside `G` iff the
+///   two sides agree — for `n_F = ±n_G`, iff `±(t · t_G) > 0` — and a piece inside `G`
+///   (not on its boundary) puts the fragment inside `G`. Inside: `OnSame` / `OnOpp`.
+/// - **Transversal face `O`** (the piece lies inside `O`, which crosses `F` at a sine of at
+///   least `BOUNDARY_VOTE_SINE`): near the piece the other operand is the half-space behind
+///   `O`, so the fragment is `In` iff `d · n_O < 0`.
+///
+/// Pieces on the boundary of a transversal face (where two faces of the other operand
+/// meet) do not vote. Only used when no interior point of the fragment classifies and the
+/// fragment is narrow ([`boundary_fallback`]).
+pub(crate) fn classify_by_boundary(m: &Model, imp: &Imprint, fr: &Fragment) -> Option<Class> {
+    let f = &m.faces[fr.face];
+    let other = 1 - f.operand;
+    let outward = |fi: usize, uv: Point2| -> Option<Vec3> {
+        let face = &m.faces[fi];
+        let n = face.surface.normal(uv.x, uv.y)?;
+        Some(if face.sense { n } else { -n })
+    };
+    // Coincident faces of the other operand, with their orientation relation.
+    let coincident: Vec<(usize, bool)> = imp
+        .coincident
+        .iter()
+        .filter_map(|&(a, b, same)| {
+            if a == fr.face {
+                Some((b, same))
+            } else if b == fr.face {
+                Some((a, same))
+            } else {
+                None
+            }
+        })
+        .collect();
+    let pieces: Vec<(usize, bool)> = fr.loops.iter().flatten().copied().collect();
+    // A piece the intersection attached to face `o` without being part of its boundary
+    // lies inside it only if its middle does (pieces are attached within the tolerance, so
+    // a piece along the outside of a narrow face may be attached to it).
+    let inside_face = |pi: usize, o: &super::intersect::OnFace| -> bool {
+        let pc = &imp.pieces[pi];
+        let tm = 0.5 * (pc.range.0 + pc.range.1);
+        m.faces[o.face].chart.contains(o.pcurve.eval(tm)) == Some(true)
+    };
+    // 1. Inside a coincident face: one vote per piece on its boundary (orientation) or
+    //    inside it; conflicting votes leave the face undecided.
+    for &(g, same) in &coincident {
+        let mut inside = None::<bool>;
+        let mut conflict = false;
+        for &(pi, fwd) in &pieces {
+            let Some(on_g) = imp.pieces[pi].on.iter().find(|o| o.face == g) else {
+                continue;
+            };
+            let vote = match on_g.boundary {
+                None if inside_face(pi, on_g) => true,
+                None => continue,
+                Some(gfwd) => (fwd == gfwd) == same,
+            };
+            match inside {
+                None => inside = Some(vote),
+                Some(x) if x != vote => conflict = true,
+                Some(_) => {}
+            }
+        }
+        if !conflict && inside == Some(true) {
+            return Some(if same { Class::OnSame } else { Class::OnOpp });
+        }
+    }
+    // 2. The side of transversal faces.
+    let mut class = None::<Class>;
+    for &(pi, fwd) in &pieces {
+        let pc = &imp.pieces[pi];
+        let Some(on_f) = pc.on.iter().find(|o| o.face == fr.face) else {
+            continue;
+        };
+        let tm = 0.5 * (pc.range.0 + pc.range.1);
+        let t = pc.curve.d1(tm);
+        let Some(t) = (if fwd { t } else { -t }).normalize() else {
+            continue;
+        };
+        let Some(nf) = outward(fr.face, on_f.pcurve.eval(tm)) else {
+            continue;
+        };
+        let d = nf.cross(t);
+        for o in &pc.on {
+            if m.faces[o.face].operand != other
+                || o.boundary.is_some()
+                || coincident.iter().any(|x| x.0 == o.face)
+                || !inside_face(pi, o)
+            {
+                continue;
+            }
+            let Some(no) = outward(o.face, o.pcurve.eval(tm)) else {
+                continue;
+            };
+            if nf.cross(no).norm() < BOUNDARY_VOTE_SINE {
+                continue;
+            }
+            let vote = if d.dot(no) < 0.0 {
+                Class::In
+            } else {
+                Class::Out
+            };
+            match class {
+                None => class = Some(vote),
+                Some(c) if c != vote => return None,
+                Some(_) => {}
+            }
+        }
+    }
+    class
 }
 
 fn classify_at(
@@ -368,4 +554,98 @@ fn near_coincident(m: &Model, f: usize, uv: Point2, g: usize, p: Point3) -> Opti
             "a fragment's interior point lies on the other, parallel face".into()
         },
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::boolean::corpus::{Operand, Sweep};
+    use crate::boolean::intersect::imprint;
+    use forge_core::topo::Body;
+    use forge_ir::{Frame, PlaneSpec, SketchCurve, SketchFeature, SweepDirection};
+
+    /// The prism over the square `[-h, h]²` in the XY plane, from `z0` (`symmetric`: `h/2`
+    /// each side) over `height`.
+    fn square_prism(feature: &str, h: f64, height: f64, symmetric: bool) -> Body {
+        let pts = [[-h, -h], [h, -h], [h, h], [-h, h]];
+        let curves = (0..4)
+            .map(|k| SketchCurve::Line {
+                id: format!("e{k}"),
+                start: pts[k],
+                end: pts[(k + 1) % 4],
+            })
+            .collect();
+        Operand {
+            feature: feature.into(),
+            sketch: SketchFeature {
+                id: format!("s_{feature}"),
+                name: format!("s_{feature}"),
+                suppressed: false,
+                plane: PlaneSpec::Frame(Frame {
+                    origin: [0.0, 0.0, 0.0],
+                    normal: [0.0, 0.0, 1.0],
+                    x_dir: [1.0, 0.0, 0.0],
+                }),
+                curves,
+            },
+            sweep: Sweep::Extrude {
+                distance: height,
+                direction: if symmetric {
+                    SweepDirection::Symmetric
+                } else {
+                    SweepDirection::Normal
+                },
+            },
+        }
+        .build()
+        .expect("prism")
+    }
+
+    /// Review round 5: the fallback to a fragment's boundary pieces is taken only for a
+    /// narrow fragment. A box `[-5, 5]² × [0, 10]` and a square pin 1.2e-6 mm wide through
+    /// it: the top face splits into the pin's cross-section (narrow: its interior points lie
+    /// within 6e-7 mm of the pin's walls, "on" them, so it is classified from its boundary:
+    /// `In`) and the rest of the face (wide). The wide fragment's boundary pieces alone would
+    /// classify it (`Out`, from the pin's walls), but when its interior points fail — for any
+    /// reason, here a simulated `Inconsistent` failure — its error is kept, never a class
+    /// read from its boundary.
+    #[test]
+    fn only_a_narrow_fragment_is_classified_from_its_boundary() {
+        let target = square_prism("t", 5.0, 10.0, false);
+        let pin = square_prism("k", 0.6e-6, 30.0, true);
+        let m = Model::new(&target, &pin).expect("model");
+        let imp = imprint(&m, true).expect("imprint");
+        let (frags, _, _) = split_faces(&m, &imp).expect("split");
+        let top: Vec<&Fragment> = frags
+            .iter()
+            .filter(|fr| {
+                let f = &m.faces[fr.face];
+                f.operand == 0 && (f.surface.eval(fr.uv.x, fr.uv.y).z - 10.0).abs() < 1e-9
+            })
+            .collect();
+        assert_eq!(top.len(), 2, "the top face and the pin's cross-section");
+        let at = |fr: &Fragment| m.faces[fr.face].surface.eval(fr.uv.x, fr.uv.y);
+        let (small, wide) = if at(top[0]).x.abs() < 1e-5 && at(top[0]).y.abs() < 1e-5 {
+            (top[0], top[1])
+        } else {
+            (top[1], top[0])
+        };
+        let err = BooleanError::inconsistent("simulated: every ray direction is degenerate", "t");
+        assert!(narrow(&m, small));
+        assert_eq!(boundary_fallback(&m, &imp, small, &err), Some(Class::In));
+        // The wide fragment reaches the fallback: its boundary would say `Out`, but it is
+        // not narrow, so the failure stands.
+        assert_eq!(classify_by_boundary(&m, &imp, wide), Some(Class::Out));
+        assert!(!narrow(&m, wide));
+        assert_eq!(boundary_fallback(&m, &imp, wide, &err), None);
+        // Other failures never fall back (near-coincident faces keep their diagnosis).
+        let near = BooleanError::NearCoincident {
+            entities: "t × k".into(),
+            offset: 0.0,
+            limit: VTOL,
+            point: [0.0; 3],
+            reason: "test".into(),
+        };
+        assert_eq!(boundary_fallback(&m, &imp, small, &near), None);
+    }
 }

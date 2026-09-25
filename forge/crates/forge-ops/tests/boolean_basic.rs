@@ -5,7 +5,7 @@ use forge_core::topo::Body;
 use forge_ir::v1::metrics::Origin;
 use forge_ir::{Frame, PlaneSpec, SketchCurve, SweepDirection};
 use forge_ops::boolean::corpus::{Operand, Sweep};
-use forge_ops::boolean::{BodyOp, BodyOpResult, BooleanError, OpBody, apply_body_op};
+use forge_ops::boolean::{BodyChange, BodyOp, BodyOpResult, BooleanError, OpBody, apply_body_op};
 
 fn plane_z(z: f64) -> PlaneSpec {
     PlaneSpec::Frame(Frame {
@@ -293,16 +293,21 @@ fn a_nested_tool_cuts_a_void() {
     assert_eq!(r.bodies[0].body.shell_ids().len(), 2);
     let m = metrics(&r);
     assert!(close(m[0].0, 56.0), "{m:?}");
-    // Join and intersect with a nested tool. The join leaves the target as it was: it is
-    // reported untouched, not modified (the tool is consumed).
+    // Join and intersect with a nested tool. SPEC [W0-39]: the join acts on the target (its
+    // component holds the tool), so it is reported `modified` although its geometry is
+    // unchanged (the tool is consumed).
     let j = run(
         BodyOp::Join,
         aabox("a", [0.0, 0.0, 0.0], [4.0, 4.0, 4.0]),
         aabox("b", [1.0, 1.0, 1.0], [2.0, 2.0, 2.0]),
     );
-    assert!(j.bodies.is_empty(), "{:?}", j.bodies.len());
-    assert_eq!(j.untouched.len(), 1);
-    assert_eq!(j.untouched[0].feature, "a");
+    assert_eq!(j.bodies.len(), 1);
+    assert_eq!(j.bodies[0].origin.feature, "a");
+    assert_eq!(j.bodies[0].change, BodyChange::Modified);
+    assert!(j.untouched.is_empty() && j.removed.is_empty());
+    let jm = metrics(&j);
+    assert!(close(jm[0].0, 64.0), "{jm:?}");
+    assert_eq!(j.bodies[0].body.shell_ids().len(), 1);
     let i = metrics(&run(
         BodyOp::Intersect,
         aabox("a", [0.0, 0.0, 0.0], [4.0, 4.0, 4.0]),

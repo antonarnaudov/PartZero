@@ -7,12 +7,14 @@
  * Spec writer: set_spec_tests, submit_spec
  */
 import { z } from "zod";
+import type { HiddenTest, Subject } from "@aicad/evals";
 import type { FeatureReport } from "@aicad/ir-types";
 import { capList, clip, ident, num, oneLine, plural } from "./format.js";
 import { defineTool, ToolRegistry, type AgentTool, type ToolOutput } from "./registry.js";
 import type { ApplyOutcome, DesignSession, Verification } from "./session.js";
 import { patchSource, PatchError, featureConstNames } from "./source.js";
-import { designSpecSchema, formatTestResult, specTestProblems, specTestSchema, summarizeTests, toHiddenTests, type SpecTestResult } from "./spec.js";
+import { designSpecSchema, formatTestResult, specCoverageProblems, specTestProblems, specTestSchema, summarizeTests, toHiddenTests, type DesignSpec, type SpecTestResult } from "./spec.js";
+import { specTestProblemsV1, V1_COVERAGE_OPTIONS } from "./v1/spec-subject.js";
 import { featureResultText, irSummary, measureText, modelTotals, totalsText } from "./summaries.js";
 
 /**
@@ -48,12 +50,44 @@ export interface UserQuestion {
   default: string;
 }
 
-export interface DesignToolContext {
-  session: DesignSession;
+/**
+ * What the dialect-independent tools (get_code, ask_user, checkpoint, run_tests, propose,
+ * set_spec_tests, submit_spec) need from a session: the v0 {@link DesignSession} and the v1
+ * `v1.DesignSessionV1` both provide it.
+ */
+export interface CoreSession {
+  readonly source: string;
+  /** `"v1"` for an IR v1 session (spec tests are validated for v1 models). */
+  readonly dialect?: "v1";
+  readonly verification: { readonly ok: boolean };
+  readonly tests: readonly HiddenTest[];
+  readonly testsFrozen: boolean;
+  /** The starting model of an edit task (for `$context` tests). */
+  readonly context: Subject | undefined;
+  featureSource(name: string): { text: string; line: number; endLine: number } | undefined;
+  checkpoint(label: string): { id: string; label: string; applyIndex: number; state: { verification: { ok: boolean } } };
+  runTests(): SpecTestResult[] | undefined;
+  setSpecTests(tests: readonly HiddenTest[]): void;
+  freezeSpec(spec: Omit<DesignSpec, "tests">): DesignSpec;
+}
+
+/** The context of the dialect-independent tools. */
+export interface CoreToolContext {
+  session: CoreSession;
   /** Answers questions: the user (interactive) or the task's recorded defaults (eval). */
   askUser(questions: readonly UserQuestion[]): Promise<string[]> | string[];
   /** Ask/explain mode: tools that change the design refuse. */
   readOnly?: boolean;
+  /**
+   * The maker's request (spec writer), with the user's clarification answers appended: `submit_spec`
+   * checks that every feature it names has a requirement, and every requirement a test. It is only
+   * scanned for feature words and sizes, never shown to a model from here.
+   */
+  request?: string | undefined;
+}
+
+export interface DesignToolContext extends CoreToolContext {
+  session: DesignSession;
 }
 
 export interface Proposal {
@@ -190,7 +224,7 @@ const getCode = defineTool({
   readOnly: true,
   description: "Read the current CadScript file, or only one feature's `const` statement (with the comments above it and its line numbers).",
   input: z.strictObject({ feature: z.string().optional().describe("Feature const name; omit for the whole file.") }),
-  run(input, { session }: DesignToolContext) {
+  run(input, { session }: CoreToolContext) {
     const feature = input.feature;
     if (feature !== undefined) {
       const f = session.featureSource(feature);
@@ -299,8 +333,8 @@ const setSpecTests = defineTool({
   name: "set_spec_tests",
   description:
     "Set the executable spec tests (replaces any previous set). Each test is one measurement plus one expectation in the check DSL. Returns the problems if any test is invalid; fix them and call again.",
-  input: z.strictObject({ tests: z.array(specTestSchema).max(MAX_SPEC_TESTS).describe("3–12 tests covering the requirements.") }),
-  run(input, { session }: DesignToolContext) {
+  input: z.strictObject({ tests: z.array(specTestSchema).max(MAX_SPEC_TESTS).describe("3–12 tests covering the requirements: at least one per requirement, and one per feature the request names.") }),
+  run(input, { session }: CoreToolContext) {
     if (session.testsFrozen) {
       return {
         text: "The spec tests are frozen. The builder cannot change them; if you are certain a test contradicts the request, put its exact id in acknowledged_tests when you propose and say why in known_issues.",
@@ -309,7 +343,7 @@ const setSpecTests = defineTool({
     }
     const tests = toHiddenTests(input.tests);
     if (tests.length === 0) return { text: "Give at least one test.", isError: true };
-    const problems = specTestProblems(tests, session.context !== undefined);
+    const problems = session.dialect === "v1" ? specTestProblemsV1(tests, session.context !== undefined) : specTestProblems(tests, session.context !== undefined);
     if (problems.length > 0) {
       return { text: `Invalid tests (nothing stored):\n${capList(problems, 12, (p) => `- ${p}`).join("\n")}`, isError: true, data: { kind: "spec_tests", ok: false } };
     }
@@ -320,11 +354,27 @@ const setSpecTests = defineTool({
 
 const submitSpec = defineTool({
   name: "submit_spec",
-  description: "Finish: record the DesignSpec (summary, requirements, assumptions with defaults, key dimensions) and freeze the tests set with set_spec_tests.",
+  description:
+    "Finish: record the DesignSpec (summary, requirements, assumptions with defaults, key dimensions) and freeze the tests set with set_spec_tests. " +
+    "Refused while a requirement has no test (description starting with its id), the request names a feature (hole, bore, slot, pocket, chamfer, fillet, boss, rib, lip, thread, hollow) that no requirement mentions, " +
+    "or a requirement naming such a feature (a cosmetic thread aside) has untested_reason, only tests that cannot see it (a bbox or body count never sees a bore: use volume, face_count, edge_count, area, inner_loops — on CadScript v1 not for a hole — or, on CadScript v0 models, hole checks), " +
+    "or only tests that do not pin it (gte/lte, a between from 0, a tolerance wider than ±10 % — counts ±25 % or ±1 — or a count type the feature never has, e.g. face_count type torus or edge_count type ellipse eq 0 for a bore: pin it with eq, approx or a tight between). " +
+    "Holes, bores, slots, pockets, fillets and chamfers are small: pin their face_count/edge_count exactly (eq, e.g. face_count type cylinder eq <holes>); a volume/area test pins a cavity only within ±2 % and with a band (twice the tolerance) narrower than the cavity's own volume, which the gate reads from the sizes its requirement states (diameter and depth, or \"through\" and the part's thickness — never a height), and never pins a fillet or chamfer. " +
+    'In an edit task a test compared with the starting model ("$context") pins only what a requirement keeps as it is: a feature the request adds, removes or resizes needs its own absolute value.',
   input: designSpecSchema,
-  run(input, { session }: DesignToolContext) {
+  run(input, { session, request }: CoreToolContext) {
     if (session.testsFrozen) return { text: "The spec is already frozen.", isError: true };
     if (session.tests.length === 0) return { text: "Set valid tests with set_spec_tests first.", isError: true };
+    const gaps = specCoverageProblems(input.requirements, session.tests, request, { ...(session.dialect === "v1" ? V1_COVERAGE_OPTIONS : {}), keyDimensions: input.key_dimensions });
+    if (gaps.length > 0) {
+      return {
+        text: `Not frozen: the spec does not check everything the request asks for (one test per requested feature):\n${capList(gaps, 10, (g) => `- ${g}`).join("\n")}\nFix the tests with set_spec_tests (and the requirements), then call submit_spec again.`,
+        isError: true,
+        // The refused spec rides along: if the spec writer never gets past this, the orchestrator
+        // freezes its tests with these requirements and lists what stays unchecked (specFeatureGaps).
+        data: { kind: "spec_coverage", gaps, spec: input },
+      };
+    }
     const spec = session.freezeSpec(input);
     return { text: `Spec frozen: ${plural(spec.requirements.length, "requirement")}, ${plural(spec.tests.length, "test")}.`, data: { kind: "spec", spec } };
   },
@@ -335,7 +385,7 @@ const runTests = defineTool({
   readOnly: true,
   description: "Run the frozen spec tests on the current model. Every result has its margin: the slack left (passing) or how far outside the tolerance (failing).",
   input: z.strictObject({}),
-  run(_input, { session }: DesignToolContext) {
+  run(_input, { session }: CoreToolContext) {
     if (session.tests.length === 0) return { text: "There are no spec tests for this task; verify against the request with measure." };
     const results = session.runTests();
     if (!results) return { text: "No evaluation report: the current source does not compile or evaluate. Fix it first.", isError: true };
@@ -348,7 +398,7 @@ const checkpointTool = defineTool({
   name: "checkpoint",
   description: "Save the current state under a label, to roll back to later. (A checkpoint is also taken automatically after every successful apply.)",
   input: z.strictObject({ label: z.string().max(80).describe("Short label, e.g. 'base plate ok'.") }),
-  run(input, { session, readOnly }: DesignToolContext) {
+  run(input, { session, readOnly }: CoreToolContext) {
     if (readOnly) return readOnlyRefusal("checkpoint");
     const cp = session.checkpoint(input.label);
     return { text: `Checkpoint ${cp.id} "${cp.label}" saved (after apply #${cp.applyIndex}, ${cp.state.verification.ok ? "verified ok" : "NOT verified ok"}).`, data: { kind: "checkpoint", id: cp.id } };
@@ -393,7 +443,7 @@ const askUser = defineTool({
       )
       .describe("1–3 questions."),
   }),
-  async run(input, ctx: DesignToolContext) {
+  async run(input, ctx: CoreToolContext) {
     const qs = input.questions;
     if (qs.length === 0 || qs.length > 3) return { text: "Ask between 1 and 3 questions.", isError: true };
     const answers = await ctx.askUser(qs);
@@ -417,7 +467,7 @@ const propose = defineTool({
       .optional()
       .describe("Exact ids of failing spec tests you are certain contradict the request (say why in known_issues). Omit when every test passes."),
   }),
-  run(input, { session }: DesignToolContext) {
+  run(input, { session }: CoreToolContext) {
     const proposal: Proposal = {
       summary: input.summary,
       assumptions: input.assumptions,
@@ -429,10 +479,16 @@ const propose = defineTool({
   },
 });
 
+/** The tools every dialect shares: get_code, ask_user, checkpoint, run_tests, propose, set_spec_tests, submit_spec. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function coreTools(): AgentTool<CoreToolContext, any>[] {
+  return [askUser, checkpointTool, getCode, propose, runTests, setSpecTests, submitSpec];
+}
+
 /** All v0 design tools. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function designTools(): AgentTool<DesignToolContext, any>[] {
-  return [applyCadscript, askUser, checkpointTool, getCode, irSummaryTool, measureTool, propose, rollbackTool, runTests, setSpecTests, submitSpec];
+  return [applyCadscript, irSummaryTool, measureTool, rollbackTool, ...coreTools()];
 }
 
 export function designRegistry(): ToolRegistry<DesignToolContext> {
@@ -463,8 +519,8 @@ export function evalModeAnswers(recordedDefaults?: string): (questions: readonly
     );
 }
 
-/** A one-line verdict for traces. */
-export function verificationLine(v: Verification): string {
+/** A one-line verdict for traces (v0 and v1 verifications alike). */
+export function verificationLine(v: Pick<Verification, "ok" | "tests" | "failedAt" | "errorSignature">): string {
   if (v.ok) return `ok${v.tests ? ` (tests ${summarizeTests(v.tests).passed}/${v.tests.length})` : ""}`;
   return `failed at L${v.failedAt ?? 0}: ${oneLine(v.errorSignature.slice(0, 160))}`;
 }

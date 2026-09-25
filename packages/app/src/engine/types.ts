@@ -4,6 +4,7 @@
  */
 import type { EvalReport } from "@aicad/ir-types";
 import type { MeshFormat } from "../bridge";
+import type { IrCommandEngine } from "../doc/v1/command-engine";
 
 export type { MeshFormat };
 
@@ -73,6 +74,11 @@ export interface ForgeEngine {
   readonly detail: string;
   evaluate(irJson: string): Promise<EvalResult>;
   exportMesh(irJson: string, format: MeshFormat): Promise<Uint8Array>;
+  /**
+   * The IR v1 command layer's engine entry points (SPEC-v1 §0.6, §5.9, §9.2), when this engine
+   * has them (forge-web; the CLI does not yet).
+   */
+  readonly commands?: IrCommandEngine;
   dispose(): void;
 }
 

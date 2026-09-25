@@ -10,7 +10,7 @@
  */
 import ts from "typescript";
 import { DIAGNOSTIC_CODES, type Span } from "@aicad/cadscript";
-import type { Feature, IrDocument, RevolveFeature, SketchCurve, SketchFeature } from "@aicad/ir-types";
+import type { EvalReport, Feature, IrDocument, RevolveFeature, SketchCurve, SketchFeature } from "@aicad/ir-types";
 import { ident, num, quoteId, vec } from "./format.js";
 import {
   arcRadius,
@@ -141,8 +141,10 @@ export interface HintContext {
   source?: string | undefined;
   /** Name of the failing feature. */
   feature?: string | undefined;
-  /** The engine's or compiler's message. */
+  /** The engine's or compiler's message (shown to the model; hints never parse it). */
   message?: string | undefined;
+  /** The evaluation report (kernel errors): the failed upstream sketch's code, a sketch's regions. */
+  report?: EvalReport | null | undefined;
   /** Compile diagnostics: where the error is. */
   span?: Span | undefined;
 }
@@ -218,23 +220,31 @@ function crossingHint(sk: SketchFeature): string | undefined {
   return `${describeCurve(x.a)} and ${describeCurve(x.b)} meet${where}, not at a shared endpoint.${extra}`;
 }
 
-/** Curve ids from an engine message like `region ['a', 'b'] of sketch 's' …`. */
-function regionIdsFromMessage(message: string | undefined): string[] | undefined {
-  const m = message?.match(/region \[([^\]]*)\]/);
-  if (!m) return undefined;
-  const ids = [...m[1]!.matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1]!);
-  return ids.length > 0 ? ids : undefined;
+/**
+ * The outer-loop curve ids of the first region of the sketch that has points on both sides of the
+ * axis, from the report's region list (v0 reports carry no details: the geometry decides, never the
+ * engine's message).
+ */
+function crossingRegion(sk: SketchFeature, report: EvalReport | null | undefined, axis: { origin: P2; direction: P2 }): string[] | undefined {
+  const regions = report?.features.find((x) => x.feature === sk.name)?.regions ?? [];
+  const tol = 1e-6;
+  for (const r of regions) {
+    const curves = sk.curves.filter((c) => r.outer_curves.includes(c.id));
+    const ext = curves.map((c) => sideExtent(c, axis));
+    if (Math.max(0, ...ext.map((e) => e.max)) > tol && Math.max(0, ...ext.map((e) => -e.min)) > tol) return r.outer_curves;
+  }
+  return undefined;
 }
 
-function revolveHint(ir: IrDocument | null | undefined, feature: string | undefined, message: string | undefined): string | undefined {
+function revolveHint(ir: IrDocument | null | undefined, feature: string | undefined, report: EvalReport | null | undefined): string | undefined {
   const f = findFeatureIn(ir, feature);
   if (!f || f.type !== "revolve") return undefined;
   const rev = f as RevolveFeature;
   const sk = sketchOf(ir, rev.sketch);
   if (!sk) return undefined;
-  const ids = regionIdsFromMessage(message);
-  const curves = ids ? sk.curves.filter((c) => ids.includes(c.id)) : sk.curves;
   const axis = { origin: rev.axis.origin as P2, direction: rev.axis.direction as P2 };
+  const ids = crossingRegion(sk, report, axis);
+  const curves = ids ? sk.curves.filter((c) => ids.includes(c.id)) : sk.curves;
   const ext = curves.map((c) => ({ c, e: sideExtent(c, axis) }));
   const pos = Math.max(0, ...ext.map((x) => x.e.max));
   const neg = Math.max(0, ...ext.map((x) => -x.e.min));
@@ -254,10 +264,11 @@ function revolveHint(ir: IrDocument | null | undefined, feature: string | undefi
   );
 }
 
-function dependencyHint(ir: IrDocument | null | undefined, feature: string | undefined, message: string | undefined): string | undefined {
+function dependencyHint(ir: IrDocument | null | undefined, feature: string | undefined, report: EvalReport | null | undefined): string | undefined {
   const f = findFeatureIn(ir, feature);
   if (!f || f.type === "sketch") return undefined;
-  const code = message?.match(/failed with ([A-Z_]+)/)?.[1];
+  // The upstream sketch's own error code, from its report entry.
+  const code = report?.features.find((x) => x.feature === f.sketch)?.error?.code;
   return `${quoteId(f.name)} consumes sketch ${quoteId(f.sketch)}, which failed${code ? ` with ${code}` : ""}. Fix ${quoteId(f.sketch)} (see its own error and hint); ${quoteId(f.name)} recovers automatically.`;
 }
 
@@ -341,10 +352,10 @@ export function repairHint(code: string, ctx: HintContext = {}): string {
         break;
       }
       case "REVOLVE_CROSSES_AXIS":
-        computed = revolveHint(ctx.ir, ctx.feature, ctx.message);
+        computed = revolveHint(ctx.ir, ctx.feature, ctx.report);
         break;
       case "DEPENDENCY_FAILED":
-        computed = dependencyHint(ctx.ir, ctx.feature, ctx.message);
+        computed = dependencyHint(ctx.ir, ctx.feature, ctx.report);
         break;
       case "SKETCH_SUPPRESSED": {
         const f = findFeatureIn(ctx.ir, ctx.feature);

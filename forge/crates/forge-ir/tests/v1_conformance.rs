@@ -113,6 +113,8 @@ fn migration_pairs() -> Vec<(PathBuf, PathBuf)> {
         "conformance/migration/programs",
         "conformance/migration/makerbench",
         "conformance/migration/renames",
+        // SPEC-v1 [W0-24]: literal feature fields migrate as stored, `-0.0` included.
+        "conformance/migration/literals",
     ]
     .iter()
     .flat_map(|d| files(d, ".v0.json"))
@@ -175,6 +177,119 @@ fn migration_pairs_match_byte_for_byte() {
     }
 }
 
+/// Every number of `v` with its JSON pointer.
+fn numbers(v: &Value, at: String, out: &mut Vec<(String, f64)>) {
+    match v {
+        Value::Number(n) => out.push((at, n.as_f64().unwrap())),
+        Value::Array(a) => {
+            for (i, x) in a.iter().enumerate() {
+                numbers(x, format!("{at}/{i}"), out);
+            }
+        }
+        Value::Object(o) => {
+            for (k, x) in o {
+                numbers(x, format!("{at}/{k}"), out);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// JSON values equal with every number compared as binary64, bit for bit (`-0.0` ≠ `0.0`).
+fn same_bits(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Number(x), Value::Number(y)) => {
+            x.as_f64().unwrap().to_bits() == y.as_f64().unwrap().to_bits()
+        }
+        (Value::Array(x), Value::Array(y)) => {
+            x.len() == y.len() && x.iter().zip(y).all(|(x, y)| same_bits(x, y))
+        }
+        (Value::Object(x), Value::Object(y)) => {
+            x.len() == y.len()
+                && x.iter()
+                    .all(|(k, v)| y.get(k).is_some_and(|w| same_bits(v, w)))
+        }
+        _ => a == b,
+    }
+}
+
+/// SPEC-v1 [W0-24]: a literal feature field is stored and migrated as written, `-0.0` included
+/// (only parameter values and expression results are normalized to `+0`, §2.7 rule 8), so the
+/// migrated document evaluates to the v0 metrics bit for bit (§9.1).
+#[test]
+fn negative_zero_feature_literals_survive_migration() {
+    let v0p = corpus().join("conformance/migration/literals/negative_zero_fields.v0.json");
+    let v0 = forge_ir::from_json(&read(&v0p)).unwrap();
+    let text = v1::to_json(&v1::migrate_v0_to_v1_report(&v0).0);
+    // Exactly the twelve `-0.0` feature fields of the v0 file keep their sign bit (and every
+    // other zero is `+0`): by path, not by counting substrings of the text.
+    let mut all = Vec::new();
+    numbers(&v1::json::parse(&text).unwrap(), String::new(), &mut all);
+    let mut negative_zeros: Vec<String> = all
+        .into_iter()
+        .filter(|(_, x)| *x == 0.0 && x.is_sign_negative())
+        .map(|(p, _)| p)
+        .collect();
+    negative_zeros.sort();
+    let mut want: Vec<String> = [
+        "plane/origin/0",
+        "plane/origin/2",
+        "plane/normal/0",
+        "plane/x_dir/1",
+        "curves/0/start/0",
+        "curves/0/start/1",
+        "curves/0/end/1",
+        "curves/1/start/1",
+        "curves/2/end/0",
+        "curves/3/start/0",
+        "curves/3/end/0",
+        "curves/3/end/1",
+    ]
+    .iter()
+    .map(|p| format!("/parts/0/features/0/{p}"))
+    .collect();
+    want.sort();
+    assert_eq!(negative_zeros, want, "{text}");
+    // The ruling's observable effect: the v0 document and its migration evaluate to the same
+    // region and body metrics, bit for bit (the evaluator of record, through forge-regen).
+    let v0_report = serde_json::to_value(forge_regen::report(
+        &v0,
+        &forge_regen::evaluate(&v0),
+        "forge",
+        "v0",
+    ))
+    .unwrap();
+    let (v1_report, ev) = forge_regen::v1::evaluate_text(&text, "forge", "v1");
+    assert!(ev.is_some(), "rejected: {:?}", v1_report.error);
+    let v1_report = serde_json::to_value(&v1_report).unwrap();
+    assert_eq!(v0_report["features"][0]["type"], "sketch");
+    assert_eq!(v1_report["features"][0]["type"], "sketch");
+    let (r0, r1) = (
+        &v0_report["features"][0]["regions"],
+        &v1_report["features"][0]["regions"],
+    );
+    assert!(same_bits(r0, r1), "regions: v0 {r0} v1 {r1}");
+    let (b0, b1) = (
+        &v0_report["features"][1]["bodies"][0],
+        &v1_report["features"][1]["bodies"][0],
+    );
+    assert!(b0.is_object(), "{v0_report}");
+    for k in [
+        "volume",
+        "area",
+        "centroid",
+        "bbox_min",
+        "bbox_max",
+        "faces",
+        "edges",
+        "face_types",
+        "edge_types",
+        "valid",
+    ] {
+        assert!(same_bits(&b0[k], &b1[k]), "{k}: v0 {} v1 {}", b0[k], b1[k]);
+    }
+}
+
 #[test]
 fn migration_renames_never_leave_an_invalid_id() {
     for v0p in files("conformance/migration/renames", ".v0.json") {
@@ -199,6 +314,7 @@ fn invalid_documents_are_rejected_with_the_expected_codes_and_paths() {
     let cases = f["cases"].as_array().unwrap();
     let mut checked = 0;
     let mut w1 = 0;
+    let mut detailed = 0;
     for c in cases {
         let id = c["id"].as_str().unwrap();
         let text = serde_json::to_string(&c["document"]).unwrap();
@@ -219,6 +335,16 @@ fn invalid_documents_are_rejected_with_the_expected_codes_and_paths() {
             Err(LoadError::Invalid(errs)) => code_paths(errs),
             Err(e) => panic!("{id}: unexpected parse error {e}"),
         };
+        if let Err(LoadError::Invalid(errs)) = &result {
+            let wrong = details_problems(errs, &c["expected"]);
+            assert!(wrong.is_empty(), "{id}: details {wrong:?}");
+            detailed += c["expected"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|e| e.get("details").is_some())
+                .count();
+        }
         if requires_expr {
             // The default loader runs W1's checker (SPEC-v1 §0.5 rule 4 step 5): the codes and
             // paths must match exactly. With the checker opted out, W0 alone accepts them
@@ -244,6 +370,136 @@ fn invalid_documents_are_rejected_with_the_expected_codes_and_paths() {
         checked >= 150 && w1 >= 10,
         "checked {checked}, W1 cases {w1}"
     );
+    // SPEC-v1 [W0-46], [W0-47]: `PARAM_CYCLE`'s `cycle` and the `expr`/`subexpr` convention.
+    assert!(detailed >= 13, "entries with details: {detailed}");
+}
+
+/// SPEC-v1 [W0-47] (§9.4): an `expected` entry of `invalid/documents.json` that carries
+/// `details` must be matched by a returned error with its code and path whose details equal it
+/// on every listed key (numbers bit for bit; `null` means the key is **absent**, so a present
+/// `null` does not match). The `expected` list is a multiset: its entries are matched to
+/// **distinct** returned errors (a maximum matching), so one returned error never satisfies two
+/// entries with the same code and path. Only keys of the §7.5 catalogue may be listed
+/// (`every_fixture_detail_key_is_in_the_catalogue`).
+fn details_problems(errs: &[ValidationError], expected: &Value) -> Vec<String> {
+    let wants = expected.as_array().unwrap();
+    if wants.iter().all(|w| w.get("details").is_none()) {
+        return Vec::new();
+    }
+    let fits = |w: &Value, e: &ValidationError| {
+        w["code"] == e.code
+            && w["path"] == e.path.as_str()
+            && w.get("details")
+                .and_then(Value::as_object)
+                .into_iter()
+                .flatten()
+                .all(|(k, v)| match (e.details.get(k), v) {
+                    (None, Value::Null) => true,
+                    (Some(_), Value::Null) | (None, _) => false,
+                    (Some(g), v) => same_bits(g, v),
+                })
+    };
+    unmatched(wants.len(), errs.len(), |w, g| fits(&wants[w], &errs[g]))
+        .into_iter()
+        .map(|i| {
+            let w = &wants[i];
+            let got: Vec<&Value> = errs
+                .iter()
+                .filter(|e| w["code"] == e.code && w["path"] == e.path.as_str())
+                .map(|e| &e.details)
+                .collect();
+            format!("{} at {}: want {w}, got {got:?}", w["code"], w["path"])
+        })
+        .collect()
+}
+
+/// The indices of the `n_want` expected entries left unmatched by a maximum matching to distinct
+/// returned entries (`n_got`) under `fits` (Kuhn's augmenting paths).
+fn unmatched(n_want: usize, n_got: usize, fits: impl Fn(usize, usize) -> bool) -> Vec<usize> {
+    fn augment(
+        w: usize,
+        fits: &dyn Fn(usize, usize) -> bool,
+        owner: &mut [Option<usize>],
+        seen: &mut [bool],
+    ) -> bool {
+        for g in 0..owner.len() {
+            if seen[g] || !fits(w, g) {
+                continue;
+            }
+            seen[g] = true;
+            let free = match owner[g] {
+                None => true,
+                Some(o) => augment(o, fits, owner, seen),
+            };
+            if free {
+                owner[g] = Some(w);
+                return true;
+            }
+        }
+        false
+    }
+    let mut owner = vec![None; n_got];
+    (0..n_want)
+        .filter(|&w| !augment(w, &fits, &mut owner, &mut vec![false; n_got]))
+        .collect()
+}
+
+#[test]
+fn details_are_matched_as_a_multiset_and_null_means_absent() {
+    let err = |details: Value| ValidationError {
+        code: "PARAM_CYCLE",
+        path: "/params/0/value".into(),
+        message: String::new(),
+        details,
+    };
+    let entry =
+        |d: Value| json!({ "code": "PARAM_CYCLE", "path": "/params/0/value", "details": d });
+    // One returned error cannot satisfy two expected entries with different details.
+    let one = [err(json!({ "cycle": ["a", "b", "a"] }))];
+    let two = json!([
+        entry(json!({ "cycle": ["a", "b", "a"] })),
+        entry(json!({ "cycle": ["c", "c"] }))
+    ]);
+    assert_eq!(details_problems(&one, &two).len(), 1);
+    // Two returned errors in either order satisfy them.
+    let both = [
+        err(json!({ "cycle": ["c", "c"] })),
+        err(json!({ "cycle": ["a", "b", "a"] })),
+    ];
+    assert!(details_problems(&both, &two).is_empty());
+    // `null` in a fixture means absent: an emitted `null` does not match it.
+    let absent = json!([entry(json!({ "cycle": null }))]);
+    assert!(details_problems(&[err(json!({}))], &absent).is_empty());
+    assert_eq!(
+        details_problems(&[err(json!({ "cycle": null }))], &absent).len(),
+        1
+    );
+}
+
+/// SPEC-v1 [W0-45], [W0-47]: fixtures list only detail keys the §7.5 catalogue (`ERROR_CODES`)
+/// defines for the code, so no engine has to copy another's extra details.
+#[test]
+fn every_fixture_detail_key_is_in_the_catalogue() {
+    let f = fixture("conformance/invalid/documents.json");
+    for c in f["cases"].as_array().unwrap() {
+        for e in c["expected"].as_array().into_iter().flatten() {
+            let code = e["code"].as_str().unwrap();
+            let info = v1::codes::info(code).unwrap_or_else(|| panic!("{}: {code}", c["id"]));
+            for k in e["details"]
+                .as_object()
+                .into_iter()
+                .flatten()
+                .map(|(k, _)| k)
+            {
+                assert!(
+                    info.details.contains(&k.as_str()),
+                    "{}: {code} detail `{k}` is not in the catalogue ({:?})",
+                    c["id"],
+                    info.details
+                );
+            }
+        }
+    }
 }
 
 #[test]

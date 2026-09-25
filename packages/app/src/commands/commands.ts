@@ -17,6 +17,7 @@ import { baseName, docNameFromPath } from "../host/host";
 import { BLANK_SOURCE, findTemplate } from "../host/templates";
 import type { AppServices } from "../services";
 import type { SelectionChip } from "../ui-store";
+import { IR_COMMANDS } from "./ir-commands";
 import { CommandRegistry, defineCommand, type ExecuteMeta, type Invocation } from "./registry";
 
 const command = defineCommand<AppServices>();
@@ -906,6 +907,9 @@ export const COMMANDS = {
       return { open: true };
     },
   }),
+
+  // ─── IR v1 command layer (SPEC-v1 §0.6, §5.9, §9.2) ──────────────────────────────────────
+  ...IR_COMMANDS,
 };
 
 export type AppCommands = typeof COMMANDS;

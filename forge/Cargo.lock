@@ -319,6 +319,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
+name = "forge-blend"
+version = "0.0.1"
+dependencies = [
+ "forge-check",
+ "forge-core",
+ "forge-ir",
+ "forge-ops",
+ "forge-ssi",
+ "proptest",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "forge-check"
 version = "0.0.1"
 dependencies = [
@@ -445,6 +460,7 @@ dependencies = [
 name = "forge-regen"
 version = "0.0.1"
 dependencies = [
+ "forge-blend",
  "forge-check",
  "forge-core",
  "forge-ir",
@@ -517,6 +533,7 @@ dependencies = [
  "forge-regen",
  "forge-render",
  "js-sys",
+ "proptest",
  "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-futures",

@@ -1,0 +1,165 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "blends_box",
+    "description": "SPEC-v1 \u00a76.6-\u00a76.8: fillets of a box's vertical edges then an inward shell open at the top (offset cylinders), a chamfer of a second box's top edges (planes), and a closed outward shell of a third box (SHELL_CLOSED_VOID)"
+  },
+  "params": [],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "s1",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                0,
+                0
+              ],
+              "w": 40,
+              "h": 30
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "e1",
+          "sketch": "s1",
+          "distance": 20
+        },
+        {
+          "type": "fillet",
+          "id": "f1",
+          "name": "f1",
+          "r": 4,
+          "edges": {
+            "kind": "edge",
+            "q": {
+              "op": "filter",
+              "where": {
+                "parallel": "Z"
+              },
+              "of": {
+                "op": "edges",
+                "of": {
+                  "op": "sides",
+                  "feature": "e1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "shell",
+          "id": "sh1",
+          "name": "sh1",
+          "body": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e1"
+            }
+          },
+          "open": {
+            "kind": "face",
+            "q": {
+              "op": "cap",
+              "feature": "e1",
+              "end": "end"
+            }
+          },
+          "thickness": 2
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "s2",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                60,
+                0
+              ],
+              "w": 20,
+              "h": 20
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e2",
+          "name": "e2",
+          "sketch": "s2",
+          "distance": 10
+        },
+        {
+          "type": "chamfer",
+          "id": "c1",
+          "name": "c1",
+          "d": 1.5,
+          "edges": {
+            "kind": "edge",
+            "q": {
+              "op": "edges",
+              "of": {
+                "op": "cap",
+                "feature": "e2",
+                "end": "end"
+              }
+            }
+          }
+        },
+        {
+          "type": "sketch",
+          "id": "s3",
+          "name": "s3",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                -60,
+                0
+              ],
+              "w": 10,
+              "h": 10
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e3",
+          "name": "e3",
+          "sketch": "s3",
+          "distance": 10
+        },
+        {
+          "type": "shell",
+          "id": "sh2",
+          "name": "sh2",
+          "body": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "e3"
+            }
+          },
+          "thickness": 1,
+          "direction": "outward"
+        }
+      ]
+    }
+  ]
+}

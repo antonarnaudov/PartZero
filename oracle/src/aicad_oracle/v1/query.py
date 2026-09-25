@@ -59,6 +59,8 @@ class FeatState:
     curves: list | None = None  # sweeps: the (snapped) profile curves
     region_curves: dict[str, list[str]] = field(default_factory=dict)  # member → curve ids of its loops
     outer_curves: dict[str, list[str]] = field(default_factory=dict)  # member → outer-loop curve ids
+    #: What a pattern re-applies (§6.10): `holes.HoleSeed`, or `patterns.SweepSeed` for sweeps.
+    seed: Any = None
 
 
 @dataclass
@@ -454,23 +456,25 @@ def material_angle(e: Entity) -> float | None:
     if len(faces) != 2:
         return None
     p, t = e.edge_mid_tangent()
-    from .topo import outward_normal, point_shape_distance
+    from .topo import outward_normal
 
     ws = []
     ns = []
+    epiece = e._largest_part()  # the piece `edge_mid_tangent` evaluates (§8.3 rule 1 groups)
     for f in faces:
-        n = outward_normal(f.shape, p)
+        fpiece = f.nearest_part(p)
+        n = outward_normal(fpiece, p)
         if n is None:
             return None
         w = geom.cross(n, t)  # in the face's tangent plane, perpendicular to the edge
         # orient w into the face: decided in the face's parametric frame; the fixed 3D step
         # (1e-4·s) is only a fallback when the parametric test is inconclusive
-        sign = into_face_sign(e.shape, f.shape, w)
+        sign = into_face_sign(epiece, fpiece, w)
         if sign is None:
             m = e.body.body_metrics()
             step = 1e-4 * max(1.0, geom.dist(tuple(m["bbox_min"]), tuple(m["bbox_max"])))
-            fwd = point_shape_distance(geom.add(p, geom.mul(geom.unit(w), step)), f.shape)
-            bwd = point_shape_distance(geom.add(p, geom.mul(geom.unit(w), -step)), f.shape)
+            fwd = f.distance(geom.add(p, geom.mul(geom.unit(w), step)))
+            bwd = f.distance(geom.add(p, geom.mul(geom.unit(w), -step)))
             sign = -1 if fwd > bwd else 1
         if sign < 0:
             w = geom.mul(w, -1.0)
@@ -610,8 +614,12 @@ def resolve(ref: dict, default_card: Any, field_path: str, scope: Scope) -> Reso
                              "message": "the broad members of the reference changed",
                              "details": {"field": field_path, "added": added, "removed": removed}})
     members = [e for e, _ in result]
-    same_key = len({e.key for e in members}) == 1 and len(members) > 1
-    bad = check_card(card, members, same_key)
+    # §5.7 step 2: without a capture a reference goes straight to step 5, whose cardinality check
+    # (§5.5) gives `REF_AMBIGUOUS` for ≥ 2 members of a `one` reference — also when they are
+    # pieces sharing a key: `REF_SPLIT` comes from a captured member's split (step 3, above) or
+    # the fallback (step 4), as in Forge's `forge-refs`. (The oracle's former same-key rule gave
+    # `REF_SPLIT` here, a CODE_MISMATCH the v1 error corpus exposed.)
+    bad = check_card(card, members, False)
     entry["members"] = [
         {"key": e.key, "name": display_name(e.key, scope.names), "via": "named" if n else "broad",
          "status": statuses[id(e)], "probe": e.probe()}

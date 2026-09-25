@@ -12246,6 +12246,1634 @@
      "path": "/parts/0/features/0/name"
     }
    ]
+  },
+  {
+   "id": "w0-26-cycle-edge-from-ill-typed-expression",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": "b + 1 deg"
+     },
+     {
+      "name": "b",
+      "unit": "mm",
+      "value": "a"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] every expression that parses contributes its edges, whether or not it type-checks",
+   "expected": [
+    {
+     "code": "EXPR_UNIT_MISMATCH",
+     "path": "/params/0/value"
+    },
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/params/0/value"
+    }
+   ]
+  },
+  {
+   "id": "w0-26-cycle-bound-uses-own-parameter",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": 10,
+      "min": "a - 1"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] bounds are dependency edges: a bound that uses its own parameter is a cycle",
+   "expected": [
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/params/0/min"
+    }
+   ]
+  },
+  {
+   "id": "w0-26-cycle-through-a-bound",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": 10,
+      "max": "b"
+     },
+     {
+      "name": "b",
+      "unit": "mm",
+      "value": "a * 2"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] reported at the first member's first field (value, min, max) that uses the second",
+   "expected": [
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/params/0/max"
+    }
+   ]
+  },
+  {
+   "id": "w0-26-one-cycle-per-component",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": "b + c"
+     },
+     {
+      "name": "b",
+      "unit": "mm",
+      "value": "a"
+     },
+     {
+      "name": "c",
+      "unit": "mm",
+      "value": "a"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] one PARAM_CYCLE per strongly connected component (two elementary cycles here)",
+   "expected": [
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/params/0/value"
+    }
+   ]
+  },
+  {
+   "id": "w0-26-one-cycle-per-component-in-each-scope",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": "b"
+     },
+     {
+      "name": "b",
+      "unit": "mm",
+      "value": "a"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "params": [
+       {
+        "name": "k",
+        "unit": "mm",
+        "value": "m + a"
+       },
+       {
+        "name": "m",
+        "unit": "mm",
+        "value": "k"
+       }
+      ],
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] document and part parameters: one error per component, at its first member",
+   "expected": [
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/params/0/value"
+    },
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/parts/0/params/0/value"
+    }
+   ]
+  },
+  {
+   "id": "w0-26-bound-edge-without-cycle",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": 10,
+      "max": "b"
+     },
+     {
+      "name": "b",
+      "unit": "mm",
+      "value": 20
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] a bound that uses another parameter is an edge, not an error",
+   "expected": []
+  },
+  {
+   "id": "w0-25-count-bound-literal-not-integer",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "n",
+      "unit": "count",
+      "value": 4,
+      "min": 1.5
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "note": "[W0-25] a bound has its parameter's type: a count bound is an exact integer",
+   "expected": [
+    {
+     "code": "EXPR_NOT_INTEGER",
+     "path": "/params/0/min"
+    }
+   ]
+  },
+  {
+   "id": "w0-25-count-bound-expression-checked-at-evaluation",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "width",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "n",
+      "unit": "count",
+      "value": 4,
+      "min": "width / 30 mm"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-25] an expression bound is checked when evaluated (EXPR_NOT_INTEGER there), not at load",
+   "expected": []
+  },
+  {
+   "id": "w0-20-limits-apply-to-the-stored-text-length",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": "1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1"
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-20] 4095 bytes as stored; the canonical text (8189 bytes) is not what is checked",
+   "expected": []
+  },
+  {
+   "id": "w0-20-limits-apply-to-the-stored-text-depth",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "k",
+      "unit": "ratio",
+      "value": "-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^1"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-20] 64 levels as stored; the canonical text nests 96 levels (-(2 ^ -(2 ^ ...)))",
+   "expected": []
+  },
+  {
+   "id": "w0-20-limits-over-by-one-as-stored",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "k",
+      "unit": "ratio",
+      "value": "-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^-2^1"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-20] 66 levels as stored",
+   "expected": [
+    {
+     "code": "EXPR_SYNTAX",
+     "path": "/params/0/value"
+    }
+   ]
+  },
+  {
+   "id": "w0-20-string-literals-stay-expressions",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": "-5"
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "slab2",
+        "sketch": "s1",
+        "distance": "1e-400"
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-20] the stage follows the stored JSON type: \"-5\" and \"1e-400\" are expressions, range-checked at evaluation (INVALID_DISTANCE), while -5 and 0 would be rejected",
+   "expected": []
+  },
+  {
+   "id": "w0-19-empty-argument-list-is-a-nesting-level",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": "((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((min()))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))"
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-19] 64 groups + the empty argument list = 65 levels",
+   "expected": [
+    {
+     "code": "EXPR_SYNTAX",
+     "path": "/parts/0/features/1/distance"
+    }
+   ]
+  },
+  {
+   "id": "w0-47-cycle-detail-is-the-shortest-cycle-found-breadth-first",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": "b + c"
+     },
+     {
+      "name": "b",
+      "unit": "mm",
+      "value": "d"
+     },
+     {
+      "name": "c",
+      "unit": "mm",
+      "value": "a"
+     },
+     {
+      "name": "d",
+      "unit": "mm",
+      "value": "a"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] [W0-47] one component {a, b, c, d}: breadth-first from a finds a -> c -> a before a -> b -> d -> a",
+   "expected": [
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/params/0/value",
+     "details": {
+      "cycle": [
+       "a",
+       "c",
+       "a"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "w0-47-cycle-detail-follows-first-appearance-not-declaration-order",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": "c + b"
+     },
+     {
+      "name": "b",
+      "unit": "mm",
+      "value": "a"
+     },
+     {
+      "name": "c",
+      "unit": "mm",
+      "value": "a"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] [W0-47] two shortest cycles: a's dependencies are followed in order of first appearance (c, then b)",
+   "expected": [
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/params/0/value",
+     "details": {
+      "cycle": [
+       "a",
+       "c",
+       "a"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "w0-47-cycle-detail-starts-at-the-first-member-in-declaration-order",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "d",
+      "unit": "mm",
+      "value": 5
+     },
+     {
+      "name": "b",
+      "unit": "mm",
+      "value": "a"
+     },
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": "b * 2"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] [W0-47] the component's first member in declaration order is b",
+   "expected": [
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/params/1/value",
+     "details": {
+      "cycle": [
+       "b",
+       "a",
+       "b"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "w0-47-cycle-detail-follows-value-then-min-then-max",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": 10,
+      "max": "c",
+      "min": "b"
+     },
+     {
+      "name": "b",
+      "unit": "mm",
+      "value": "a"
+     },
+     {
+      "name": "c",
+      "unit": "mm",
+      "value": "a"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] [W0-47] dependencies in field order value, min, max whatever the JSON key order",
+   "expected": [
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/params/0/min",
+     "details": {
+      "cycle": [
+       "a",
+       "b",
+       "a"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "w0-47-cycle-detail-three-members",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": "b"
+     },
+     {
+      "name": "b",
+      "unit": "mm",
+      "value": "c"
+     },
+     {
+      "name": "c",
+      "unit": "mm",
+      "value": "a"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] [W0-47] closed: the first member is repeated at the end",
+   "expected": [
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/params/0/value",
+     "details": {
+      "cycle": [
+       "a",
+       "b",
+       "c",
+       "a"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "w0-47-cycle-detail-self-reference",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": "a + 1 mm"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] [W0-47] a parameter using itself",
+   "expected": [
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/params/0/value",
+     "details": {
+      "cycle": [
+       "a",
+       "a"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "w0-47-cycle-detail-part-parameters",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "w",
+      "unit": "mm",
+      "value": 5
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "params": [
+       {
+        "name": "k",
+        "unit": "mm",
+        "value": "m + w"
+       },
+       {
+        "name": "m",
+        "unit": "mm",
+        "value": "k"
+       }
+      ],
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] [W0-47] a part component; the document parameter it uses is not a member",
+   "expected": [
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/parts/0/params/0/value",
+     "details": {
+      "cycle": [
+       "k",
+       "m",
+       "k"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "w0-47-cycle-detail-with-an-ill-typed-member",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": "b+1deg"
+     },
+     {
+      "name": "b",
+      "unit": "mm",
+      "value": "a"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-26] [W0-46] [W0-47] the type error's expr and subexpr are canonical text; the cycle still counts its edge",
+   "expected": [
+    {
+     "code": "EXPR_UNIT_MISMATCH",
+     "path": "/params/0/value",
+     "details": {
+      "expr": "b + 1 deg",
+      "subexpr": "b + 1 deg"
+     }
+    },
+    {
+     "code": "PARAM_CYCLE",
+     "path": "/params/0/value",
+     "details": {
+      "cycle": [
+       "a",
+       "b",
+       "a"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "w0-46-literal-count-expr-detail-is-the-number",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "n",
+      "unit": "count",
+      "value": 2.5
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "note": "[W0-46] a literal's expr is the literal itself, a JSON number",
+   "expected": [
+    {
+     "code": "EXPR_NOT_INTEGER",
+     "path": "/params/0/value",
+     "details": {
+      "expr": 2.5,
+      "value": 2.5
+     }
+    }
+   ]
+  },
+  {
+   "id": "w0-46-literal-feature-count-expr-detail-is-the-number",
+   "document": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "polygon",
+          "id": "h",
+          "center": [
+           0,
+           0
+          ],
+          "n": 5.5,
+          "circumradius": 3
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "note": "[W0-46] a literal feature field's expr is the literal itself, a JSON number",
+   "expected": [
+    {
+     "code": "EXPR_NOT_INTEGER",
+     "path": "/parts/0/features/0/curves/0/n",
+     "details": {
+      "expr": 5.5,
+      "value": 5.5
+     }
+    }
+   ]
+  },
+  {
+   "id": "w0-46-unit-mismatch-expr-detail-is-the-canonical-text",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "width",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": "(width)+1deg"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-46] expr and subexpr are the canonical text (\u00a72.4) of the stored (width)+1deg",
+   "expected": [
+    {
+     "code": "EXPR_UNIT_MISMATCH",
+     "path": "/params/1/value",
+     "details": {
+      "expr": "width + 1 deg",
+      "subexpr": "width + 1 deg"
+     }
+    }
+   ]
+  },
+  {
+   "id": "w0-46-syntax-expr-detail-is-the-stored-text",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "width",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": "width*(2"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-46] [W0-12] a text that lexes but does not parse has no canonical form: expr is the stored text",
+   "expected": [
+    {
+     "code": "EXPR_SYNTAX",
+     "path": "/params/1/value",
+     "details": {
+      "expr": "width*(2"
+     }
+    }
+   ]
+  },
+  {
+   "id": "w0-46-syntax-expr-detail-is-absent-when-the-text-does-not-lex",
+   "document": {
+    "schema": "aicad.ir/1",
+    "params": [
+     {
+      "name": "width",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "a",
+      "unit": "mm",
+      "value": "width $ 2"
+     }
+    ],
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       }
+      ]
+     }
+    ]
+   },
+   "requires": [
+    "expr"
+   ],
+   "note": "[W0-46] [W0-12] a text that does not lex is never echoed: expr is absent (null in a fixture means absent)",
+   "expected": [
+    {
+     "code": "EXPR_SYNTAX",
+     "path": "/params/1/value",
+     "details": {
+      "expr": null
+     }
+    }
+   ]
   }
  ]
 }

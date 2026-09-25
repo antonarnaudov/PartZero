@@ -4,7 +4,7 @@
  */
 import { BudgetExceededError, GatewayError, type ChatRequest, type ChatResponse, type CliLimits, type LLMGateway, type PlanUsage, type Task } from "@aicad/llm-gateway";
 import type { AgentModels, AgentRole } from "./models.js";
-import { CLI_COMPLETION_DESIGNER_WALL_MS, type AgentRuntime, type CliModeOption, type RuntimePhase, type RuntimePhaseOutcome, type RuntimeTurnRecord } from "./runtime.js";
+import { CLI_COMPLETION_DESIGNER_WALL_MS, CLI_PHASE_LIMITS, type AgentRuntime, type CliModeOption, type RuntimePhase, type RuntimePhaseOutcome, type RuntimeTurnRecord } from "./runtime.js";
 import type { AgentStopReason, TraceRecorder } from "./trace.js";
 
 export interface AgentLimits {
@@ -32,6 +32,14 @@ export interface AgentLimits {
    */
   maxErrorRepeats: number;
   /**
+   * Wall-clock cap for the whole task, ms (Infinity: none). Checked before every model call and
+   * every tool call of a CLI runtime phase; a CLI phase's own wall clock is clamped to what is left,
+   * a gateway or CLI completion call is aborted when it runs past it, and so is a v1 engine
+   * evaluation (`ENGINE_TIMEOUT`). The run stops as `wall_time`, handing back the best verified state
+   * (docs/BACKLOG.md: a struggling task burned ~10 minutes of a CLI plan).
+   */
+  maxWallMs: number;
+  /**
    * The budget is a hard cap: every call is projected (and reserved) with the output-token ceiling
    * it is sent with. When the remaining budget cannot pay for a role's full ceiling, the call is
    * sent with fewer output tokens, but never fewer than this (then it is refused as over budget).
@@ -50,8 +58,25 @@ export const DEFAULT_LIMITS: AgentLimits = {
   maxAskRounds: 1,
   maxFailedApplies: 10,
   maxErrorRepeats: 2,
+  maxWallMs: Number.POSITIVE_INFINITY,
   minOutputTokens: 1024,
 };
+
+/**
+ * Failed applies before a run whose BUILD phase runs inside a CLI agent (runtime mode) stops, unless
+ * the caller set `maxFailedApplies`: each failed apply there is a full CLI turn on the user's plan.
+ */
+export const CLI_RUNTIME_MAX_FAILED_APPLIES = 6;
+
+/**
+ * Bench-mode limits (MakerBench bake-offs, `aicad-agent bench`): a per-task wall-time cap and a
+ * tighter failed-apply stop, so one struggling task cannot burn the run (docs/BACKLOG.md, CLI
+ * providers). The caller's `limits` override them.
+ */
+export const BENCH_LIMITS: Readonly<Pick<AgentLimits, "maxWallMs" | "maxFailedApplies">> = Object.freeze({ maxWallMs: 8 * 60_000, maxFailedApplies: 6 });
+
+/** A completion-mode CLI call's default wall clock (when no role override applies). */
+const CLI_PHASE_LIMITS_COMPLETION_WALL_MS = CLI_PHASE_LIMITS.completion.wallMs ?? 180_000;
 
 /** A typed stop: the orchestrator ends the run with this reason. */
 export class AgentStop extends Error {
@@ -83,6 +108,11 @@ export interface RunContext {
   onPlanUsage?: ((usage: PlanUsage) => void) | undefined;
   /** Agent-runtime mode (ADR 0014): set when the host injected a runtime. */
   runtime?: RuntimeContext | undefined;
+  /**
+   * Milliseconds left of the task's wall-time cap: a CLI completion call's wall clock never exceeds
+   * it, and any model call still running when it is used up is aborted (stop `wall_time`).
+   */
+  wallLeftMs?: (() => number) | undefined;
 }
 
 /** Wraps a wait for the user so a runtime phase's broker does not count it against its deadline. */
@@ -129,13 +159,27 @@ export function affordableOutputTokens(rc: RunContext, req: ChatRequest, ceiling
   return { maxOutputTokens: Math.max(floor, Math.min(ceiling, fit)), clamped: true };
 }
 
+/**
+ * The signal a model call is sent with: the run's (the user's Stop), and — under a wall-time cap —
+ * one that aborts the call when the task's time is used up, so a single long call cannot outlive
+ * the cap (it is checked only between calls otherwise). `deadline` tells the two apart afterwards.
+ */
+export function callSignal(rc: Pick<RunContext, "signal" | "wallLeftMs">): { signal?: AbortSignal; deadline?: AbortSignal } {
+  const left = rc.wallLeftMs?.() ?? Number.POSITIVE_INFINITY;
+  const deadline = Number.isFinite(left) ? AbortSignal.timeout(Math.max(1, Math.ceil(left))) : undefined;
+  const signals = [rc.signal, deadline].filter((x): x is AbortSignal => x !== undefined);
+  const signal = signals.length > 1 ? AbortSignal.any(signals) : signals[0];
+  return { ...(signal !== undefined ? { signal } : {}), ...(deadline !== undefined ? { deadline } : {}) };
+}
+
 /** One model call as a role: routing, budget, trace. Gateway errors become {@link AgentStop}s. */
 export async function callModel(rc: RunContext, role: AgentRole, request: Omit<ChatRequest, "model" | "maxOutputTokens" | "reasoning">): Promise<ChatResponse> {
   throwIfCancelled(rc);
   await rc.beforeCall?.(role);
   const m = rc.models[role];
   const req: ChatRequest = { ...request, model: m.model };
-  if (rc.signal !== undefined) req.signal = rc.signal;
+  const { signal, deadline } = callSignal(rc);
+  if (signal !== undefined) req.signal = signal;
   if (m.effort !== undefined) req.reasoning = { effort: m.effort };
   const profile = rc.gateway.profile(m.model);
   const ceiling = Math.max(1, Math.min(m.maxOutputTokens ?? profile.defaultMaxOutputTokens, profile.maxOutputTokens));
@@ -146,6 +190,8 @@ export async function callModel(rc: RunContext, role: AgentRole, request: Omit<C
     // Completion mode (§3.1): one fresh CLI invocation per call. A designer turn gets a longer wall clock.
     const limits: Record<string, number> = { ...(role === "designer" ? { wallMs: CLI_COMPLETION_DESIGNER_WALL_MS } : {}) };
     for (const [k, v] of Object.entries(rc.cliCompletionLimits ?? {})) if (typeof v === "number") limits[k] = v;
+    const left = rc.wallLeftMs?.() ?? Number.POSITIVE_INFINITY;
+    if (Number.isFinite(left)) limits["wallMs"] = Math.max(1000, Math.min(limits["wallMs"] ?? CLI_PHASE_LIMITS_COMPLETION_WALL_MS, Math.floor(left)));
     if (Object.keys(limits).length > 0) req.providerOptions = { ...req.providerOptions, cli: { limits } };
   }
   if (out.clamped) rc.trace.note(`${role}: output ceiling ${ceiling} → ${out.maxOutputTokens} tokens to stay within the $${rc.task.budget.capUsd.toFixed(2)} cap`);
@@ -155,7 +201,9 @@ export async function callModel(rc: RunContext, role: AgentRole, request: Omit<C
     res = await rc.task.chat(req);
   } catch (e) {
     if (e instanceof BudgetExceededError) throw new AgentStop("budget", e.message);
-    if (rc.signal?.aborted || (e instanceof GatewayError && e.code === "aborted" && rc.signal !== undefined)) throw new AgentStop("cancelled", "stopped by the user");
+    if (rc.signal?.aborted) throw new AgentStop("cancelled", "stopped by the user");
+    if (deadline?.aborted) throw new AgentStop("wall_time", `the task used its ${Math.round(rc.limits.maxWallMs / 1000)} s wall-time cap during a ${role} call (aborted)`);
+    if (e instanceof GatewayError && e.code === "aborted" && rc.signal !== undefined) throw new AgentStop("cancelled", "stopped by the user");
     if (e instanceof GatewayError) throw new AgentStop("model_error", `${role} call failed (${e.code}): ${e.message}`);
     throw e;
   }

@@ -884,7 +884,12 @@ pub const CHAIN_FINGERPRINT: (u64, usize, usize) = (2026, 4, 5);
 /// Review round 4 (intentional change): tight quintic pcurves, sphere faces re-parametrized
 /// by a 3D pole choice, near-coincident and near-tangent faces snapped (SPEC [R-3]), and
 /// sliver results dropped (`docs/spikes/03-ssi.md`, "Review round 4").
-pub const GOLDEN_CHAIN_FINGERPRINT: u64 = 0xa579_d6c1_ccb6_336a;
+/// IR v1 Phase C (intentional change, report fields only): SPEC [W0-39] — a join target whose
+/// component holds a tool is `modified` even when the union is the target itself (a nested or
+/// identical tool), so such steps list the target in `bodies` instead of `untouched`; no
+/// geometry changed (the previous value, 0xa579_d6c1_ccb6_336a, is reproduced with the old
+/// rule).
+pub const GOLDEN_CHAIN_FINGERPRINT: u64 = 0x4c0c_2511_f302_5767;
 
 /// Fingerprint of [`run_chains`] (every result body, report field and error code, as in
 /// [`batch_fingerprint`]): the chained golden of `tests/boolean_golden.rs`.
@@ -1064,7 +1069,11 @@ pub const FINGERPRINT_CASES: usize = 48;
 /// edge through one vertex and near-coincident faces are handled as described in
 /// `docs/spikes/03-ssi.md` ("Review round 3").
 /// Review round 4 (intentional change): see [`GOLDEN_CHAIN_FINGERPRINT`].
-pub const GOLDEN_FINGERPRINT: u64 = 0xd494_c53b_c179_8632;
+/// IR v1 Phase C (intentional change, report fields only): SPEC [W0-39], see
+/// [`GOLDEN_CHAIN_FINGERPRINT`]; in this batch cases #10 and #46 (nested joins) now list the
+/// target as a `modified` body instead of `untouched` (previous value 0xd494_c53b_c179_8632,
+/// reproduced with the old rule; no other case changed).
+pub const GOLDEN_FINGERPRINT: u64 = 0x7722_7ab7_0bbd_c917;
 
 /// Fingerprint of running a fixed batch of `n` corpus cases (seed `seed`), each with its
 /// operation: every result body's geometry and topology (see `Fingerprint::body`), the

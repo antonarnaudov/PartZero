@@ -888,9 +888,13 @@ def test_a_failed_sketch_replay_check_downstream_of_a_divergence_stays_silent_wr
 
 @pytest.mark.parametrize("normal, want", [
     ([0.0, 0.0, 1.0], MATCH),
-    ([0.0, math.sin(5e-4), math.cos(5e-4)], MATCH),  # within PROBE_NORMAL_ANGLE (1e-3 rad)
-    ([0.0, math.sin(2e-3), math.cos(2e-3)], ROBUSTNESS),
-    ([0.0, 0.0, -1.0], ROBUSTNESS),  # a flipped (inward) normal: a contradicting orientation
+    ([0.0, math.sin(5e-4), math.cos(5e-4)], MATCH),
+    ([0.0, math.sin(2e-3), math.cos(2e-3)], MATCH),  # [W0-35]: a positive dot product (was 1e-3 rad)
+    # §8.1 [W0-35] tests the normal only "when several faces or bodies are within r": one face is
+    # the match whatever its normal (W7b review 4: the oracle follows the SPEC; the stricter test
+    # for a single candidate is a Contract-stage proposal, `replay.PENDING_DEVIATIONS`)
+    ([0.0, math.sin(1.6), math.cos(1.6)], MATCH),  # past 90°
+    ([0.0, 0.0, -1.0], MATCH),  # a flipped (inward) normal
 ])
 def test_a_single_face_candidate_must_agree_with_the_probe_normal(normal, want):
     forge = run(_tagged_doc())
@@ -913,8 +917,9 @@ def test_a_single_body_candidate_must_agree_with_the_probe_normal():
     assert compare_reports(forge, run(_tagged_doc(), replay=copy.deepcopy(forge))).classification == MATCH
     m["probe"]["normal"] = [-x for x in m["probe"]["normal"]]
     oracle = run(_tagged_doc(), replay=copy.deepcopy(forge))
-    assert "ORACLE_PROBE_UNMATCHED" in [w["code"] for w in feat(oracle, "e2")["warnings"]]
-    assert compare_reports(forge, oracle).classification == ROBUSTNESS
+    # one body within r: the match whatever its normal (§8.1; W7b review 4)
+    assert "ORACLE_PROBE_UNMATCHED" not in [w["code"] for w in feat(oracle, "e2")["warnings"]]
+    assert compare_reports(forge, oracle).classification == MATCH
     # a probe without a normal is matched by position alone (§8.1)
     m["probe"].pop("normal")
     assert compare_reports(forge, run(_tagged_doc(), replay=copy.deepcopy(forge))).classification == MATCH

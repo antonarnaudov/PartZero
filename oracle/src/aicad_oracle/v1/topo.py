@@ -38,12 +38,15 @@ from OCP.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_Ind
 
 from .. import occt
 from . import geom
+from .consts import QUERY_ANGLE_TOLERANCE
 from .geom import Vec3
 
-#: SPEC-v1 §8.3 rule 3: intersection edges that OCCT returns as B-splines but that are lines or
-#: conics within `1e-7·s` are counted as such (OCCT's `ShapeAnalysis_CanonicalRecognition`; the
-#: SPEC names `GeomConvert_CurveToAnalyticalCurve`, which this OCP build does not expose — both
-#: fit the curve against the analytic candidates within the given tolerance).
+#: The canonical edge types of bodies **not** built with the §8.3 rule 1 normalization (sweep
+#: bodies, whose edges keep their construction type, v0): a free-form edge that is a line or conic
+#: within `1e-7·s` is counted as such (OCCT's `ShapeAnalysis_CanonicalRecognition`), as v0's report
+#: does. [W0-43]/[W0-52] withdrew this tolerance for section edges of body operations, which
+#: `normalize.section_type` types with *tol*; and new edges of fillets, chamfers and shells are
+#: typed at *tol* (`blends.name_history`).
 CURVE_RECOGNITION_REL = 1e-7
 
 _ST = GeomAbs_SurfaceType
@@ -99,14 +102,40 @@ class Entity:
     body: "Body"
     key: str = ""
     probe_point: Vec3 | None = None  # set by the naming step when a construction point is known
+    #: The OCCT sub-shapes of an entity the §8.3 rule 1 normalization merged (face pieces on one
+    #: carrier, edge pieces on one carrier curve); empty: the entity is `shape` alone.
+    pieces: list = field(default_factory=list)
+    #: The canonical type fixed by the normalization (§8.3 rule 3 for section edges, the
+    #: construction type otherwise); None: computed from `shape`.
+    ctype: str | None = None
     _cache: dict = field(default_factory=dict)
 
     def __repr__(self) -> str:
         return f"<{self.kind} {self.key}>"
 
+    def parts(self) -> list:
+        """The OCCT sub-shapes of this entity (one unless the normalization merged pieces)."""
+        return self.pieces or [self.shape]
+
+    def distance(self, p: Vec3) -> float:
+        """Distance from a point to the entity (its nearest piece)."""
+        return min(point_shape_distance(p, s) for s in self.parts())
+
+    def nearest_part(self, p: Vec3):
+        ps = self.parts()
+        if len(ps) == 1:
+            return ps[0]
+        return min(ps, key=lambda s: point_shape_distance(p, s))
+
+    def normal_at(self, p: Vec3) -> Vec3 | None:
+        """The outward unit normal of a face at (the projection of) `p` on its nearest piece."""
+        return outward_normal(self.nearest_part(p), p)
+
     # -- canonical type ------------------------------------------------------------------------
     @property
     def type(self) -> str:
+        if self.ctype is not None:
+            return self.ctype
         if "type" not in self._cache:
             if self.kind == "face":
                 self._cache["type"] = occt.face_type(self.shape)
@@ -121,15 +150,20 @@ class Entity:
     # -- size and centroid -----------------------------------------------------------------
     def _props(self):
         if "props" not in self._cache:
-            p = GProp_GProps()
-            if self.kind == "face":
-                BRepGProp.SurfaceProperties_s(self.shape, p, False, False)
-                self._cache["props"] = (p.Mass(), _v(p.CentreOfMass()))
-            elif self.kind == "edge":
-                BRepGProp.LinearProperties_s(self.shape, p, False, False)
-                self._cache["props"] = (p.Mass(), _v(p.CentreOfMass()))
-            else:
+            if self.kind == "vertex":
                 self._cache["props"] = (0.0, _v(BRep_Tool.Pnt_s(self.shape)))
+                return self._cache["props"]
+            mass, c = 0.0, (0.0, 0.0, 0.0)
+            for s in self.parts():
+                p = GProp_GProps()
+                if self.kind == "face":
+                    BRepGProp.SurfaceProperties_s(s, p, False, False)
+                else:
+                    BRepGProp.LinearProperties_s(s, p, False, False)
+                m = p.Mass()
+                c = geom.add(c, geom.mul(_v(p.CentreOfMass()), m))
+                mass += m
+            self._cache["props"] = (mass, geom.mul(c, 1.0 / mass) if mass > 0.0 else c)
         return self._cache["props"]
 
     @property
@@ -146,7 +180,7 @@ class Entity:
         if self.kind != "face" or self.type != "plane":
             return None
         if "pn" not in self._cache:
-            self._cache["pn"] = outward_normal(self.shape, self.point())
+            self._cache["pn"] = self.normal_at(self.point())
         return self._cache["pn"]
 
     def plane_origin_offset(self) -> float:
@@ -233,23 +267,63 @@ class Entity:
             if self.kind == "vertex":
                 self._cache["pt"] = _v(BRep_Tool.Pnt_s(self.shape))
             elif self.kind == "edge":
-                ad = BRepAdaptor_Curve(self.shape)
+                ad = BRepAdaptor_Curve(self._largest_part())
                 self._cache["pt"] = _v(ad.Value(0.5 * (ad.FirstParameter() + ad.LastParameter())))
             else:
-                self._cache["pt"] = face_interior_point(self.shape)
+                self._cache["pt"] = face_interior_point(self._largest_part())
         return self._cache["pt"]
+
+    def _largest_part(self):
+        """The longest edge piece / largest face piece (deterministic: first on ties)."""
+        ps = self.parts()
+        if len(ps) == 1:
+            return ps[0]
+        best, best_m = ps[0], -1.0
+        for s in ps:
+            p = GProp_GProps()
+            if self.kind == "face":
+                BRepGProp.SurfaceProperties_s(s, p, False, False)
+            else:
+                BRepGProp.LinearProperties_s(s, p, False, False)
+            if p.Mass() > best_m:
+                best, best_m = s, p.Mass()
+        return best
+
+    def edge_normal(self, p: Vec3 | None = None) -> Vec3 | None:
+        """§7.6 [W0-50] [W0-54]: the normalized sum of the outward normals of an edge's two faces
+        at its probe point (an edge with one face on both sides: that face's normal); None at a
+        cusp, where `|n_F + n_G| ≤ QUERY_ANGLE_TOLERANCE`."""
+        if self.kind != "edge":
+            return None
+        p = self.point() if p is None else p
+        fs = self.body.faces_of_edge(self)
+        ns = [f.normal_at(p) for f in fs]
+        if not ns or any(n is None for n in ns):
+            return None
+        if len(ns) == 1:
+            return ns[0]
+        s = (0.0, 0.0, 0.0)
+        for n in ns:
+            s = geom.add(s, n)
+        if geom.norm(s) <= QUERY_ANGLE_TOLERANCE:
+            return None
+        return geom.unit(s)
 
     def probe(self) -> dict:
         p = self.point()
         out: dict = {"kind": self.kind, "point": list(p)}
         if self.kind == "face":
-            n = outward_normal(self.shape, p)
+            n = self.normal_at(p)
+            if n is not None:
+                out["normal"] = list(n)
+        elif self.kind == "edge":
+            n = self.edge_normal(p)
             if n is not None:
                 out["normal"] = list(n)
         return out
 
     def edge_mid_tangent(self) -> tuple[Vec3, Vec3]:
-        ad = BRepAdaptor_Curve(self.shape)
+        ad = BRepAdaptor_Curve(self._largest_part())
         t = 0.5 * (ad.FirstParameter() + ad.LastParameter())
         p = gp_Pnt()
         from OCP.gp import gp_Vec
@@ -309,6 +383,13 @@ class Body:
     aliases: dict[str, str] = field(default_factory=dict)  # merged key → surviving key
     metrics: dict | None = None
     naming_error: str | None = None  # set when the oracle could not name the body's entities
+    #: Pattern instance of a body a pattern created (§5.2 rule 4: `F/body:m@i`); None otherwise.
+    instance: list[int] | None = None
+    #: Built with the §8.3 rule 1 normalized topology (results of body operations and later v1
+    #: features); its metrics then count that topology and integrate adaptively ([W0-44]).
+    normalized: bool = False
+    #: Engine-prefixed notes of the normalization (e.g. `ORACLE_SECTION_NOT_CONIC`).
+    notes: list[str] = field(default_factory=list)
     _cache: dict = field(default_factory=dict)
 
     def __repr__(self) -> str:
@@ -316,7 +397,10 @@ class Body:
 
     @property
     def origin(self) -> dict:
-        return {"feature": self.feature, "member": self.member}
+        o: dict = {"feature": self.feature, "member": self.member}
+        if self.instance is not None:
+            o["instance"] = list(self.instance)
+        return o
 
     @property
     def kind(self) -> str:
@@ -324,7 +408,10 @@ class Body:
 
     @property
     def key(self) -> str:
-        return f"{self.feature}/body@{self.member}"
+        k = f"{self.feature}/body:{self.member}"  # §5.2 rule 7 [W0-33]
+        if self.instance is not None:
+            k += "@" + ".".join(str(i) for i in self.instance)
+        return k
 
     @property
     def size(self) -> float:
@@ -340,9 +427,12 @@ class Body:
 
     def body_metrics(self) -> dict:
         if self.metrics is None:
-            m = occt.body_metrics(self.solid, edge_recognition_rel=CURVE_RECOGNITION_REL)
-            m["shells"] = count_shells(self.solid)
-            self.metrics = m
+            if self.normalized:
+                self.metrics = normalized_metrics(self)
+            else:
+                m = occt.body_metrics(self.solid, edge_recognition_rel=CURVE_RECOGNITION_REL)
+                m["shells"] = count_shells(self.solid)
+                self.metrics = m
         return self.metrics
 
     def point(self) -> Vec3:
@@ -357,6 +447,23 @@ class Body:
         # tells two touching bodies apart (the replay disambiguates such probes by it).
         p = fs[0].probe()
         return {"kind": "body", **{k: p[k] for k in ("point", "normal") if k in p}}
+
+    def build_normalized_topology(self, edge_type, face_merge_ok=None) -> None:
+        """The §8.3 rule 1 topology (`normalize.normalized_topology`): face groups on one carrier,
+        counted edges between two different faces, edges merged at vertices only they use.
+        `edge_type(edge, face_a, face_b)` types each counted OCCT edge (rule 3 / construction)."""
+        from .normalize import normalized_topology
+
+        nt = normalized_topology(self.solid, edge_type=edge_type, face_merge_ok=face_merge_ok)
+        self.faces = [Entity("face", g[0], self, pieces=list(g) if len(g) > 1 else []) for g in nt.faces]
+        self.edges = [Entity("edge", g[0], self, pieces=list(g) if len(g) > 1 else [], ctype=t)
+                      for g, t in zip(nt.edges, nt.edge_types)]
+        self._cache["edge_faces"] = [[i + 1 for i in fs] for fs in nt.edge_faces]
+        self.vertices = [Entity("vertex", v, self) for v in nt.vertices]
+        self._cache["vertex_edges"] = [list(x) for x in nt.vertex_edges]
+        self.notes.extend(nt.notes)
+        self.normalized = True
+        self.metrics = None
 
     def build_topology(self) -> None:
         """Faces, non-seam non-degenerate edges, and the vertices of the open ones."""
@@ -480,6 +587,40 @@ class Body:
         for i, (key, p) in chosen.items():
             self.faces[i].key = key
             self.faces[i].probe_point = p
+
+
+def normalized_metrics(b: "Body") -> dict:
+    """v0 §5 body metrics of a normalized body (§8.3): topology counts and types from its
+    normalized entities; volume, area and centroid integrated **adaptively** ([W0-44]:
+    `BRepGProp::VolumePropertiesGK` with `eps = 1e-10`, `SurfaceProperties` with `eps = 1e-12`);
+    the exact bounding box of v0."""
+    from OCP.BRepCheck import BRepCheck_Analyzer
+
+    vp = GProp_GProps()
+    # CGFlag = True: without it OCCT's GK integration returns a wrong centre of mass for faces with
+    # inner wires (a cut box's centroid off by 1 mm), although its volume is right.
+    BRepGProp.VolumePropertiesGK_s(b.solid, vp, 1e-10, False, False, True, False, False)
+    sp = GProp_GProps()
+    BRepGProp.SurfaceProperties_s(b.solid, sp, 1e-12)
+    com = vp.CentreOfMass()
+    lo, hi = occt.tight_bbox(b.solid)
+    hist: dict[str, dict[str, int]] = {"face_types": {}, "edge_types": {}}
+    for k, ents in (("face_types", b.faces), ("edge_types", b.edges)):
+        for t in sorted(e.type for e in ents):
+            hist[k][t] = hist[k].get(t, 0) + 1
+    return {
+        "volume": vp.Mass(),
+        "area": sp.Mass(),
+        "centroid": [com.X(), com.Y(), com.Z()],
+        "bbox_min": list(lo),
+        "bbox_max": list(hi),
+        "faces": len(b.faces),
+        "edges": len(b.edges),
+        "face_types": hist["face_types"],
+        "edge_types": hist["edge_types"],
+        "valid": bool(BRepCheck_Analyzer(b.solid).IsValid()),
+        "shells": count_shells(b.solid),
+    }
 
 
 def count_shells(solid) -> int:

@@ -1,0 +1,254 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "holes_kinds",
+    "description": "SPEC-v1 \u00a76.5 on a 60x40x10 plate: an M5 iso4762 counterbore and an M4 iso10642 countersink (close fit) through, a 118-degree blind hole, an M3 tapped blind hole with a thread depth, a flat blind hole deeper than the plate (HOLE_BREAKS_THROUGH), a bolt circle and a grid; closed-form tool volumes"
+  },
+  "params": [],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "s1",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "r",
+              "center": [
+                0,
+                0
+              ],
+              "w": 60,
+              "h": 40
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "e1",
+          "sketch": "s1",
+          "distance": 10
+        },
+        {
+          "type": "hole",
+          "id": "h1",
+          "name": "h1",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "end"
+              }
+            }
+          },
+          "at": {
+            "list": [
+              {
+                "id": "a",
+                "at": [
+                  -20,
+                  -10
+                ]
+              }
+            ]
+          },
+          "size": "M5",
+          "depth": "through",
+          "cbore": "iso4762"
+        },
+        {
+          "type": "hole",
+          "id": "h2",
+          "name": "h2",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "end"
+              }
+            }
+          },
+          "at": {
+            "list": [
+              {
+                "id": "b",
+                "at": [
+                  20,
+                  -10
+                ]
+              }
+            ]
+          },
+          "size": "M4",
+          "fit": "close",
+          "depth": "through",
+          "csink": "iso10642"
+        },
+        {
+          "type": "hole",
+          "id": "h3",
+          "name": "h3",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "end"
+              }
+            }
+          },
+          "at": {
+            "list": [
+              {
+                "id": "c",
+                "at": [
+                  -20,
+                  10
+                ]
+              }
+            ]
+          },
+          "d": 4,
+          "depth": {
+            "blind": 5
+          }
+        },
+        {
+          "type": "hole",
+          "id": "h4",
+          "name": "h4",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "end"
+              }
+            }
+          },
+          "at": {
+            "list": [
+              {
+                "id": "t",
+                "at": [
+                  0,
+                  10
+                ]
+              }
+            ]
+          },
+          "size": "M3",
+          "depth": {
+            "blind": 7
+          },
+          "thread": {
+            "depth": 5
+          }
+        },
+        {
+          "type": "hole",
+          "id": "h5",
+          "name": "h5",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "end"
+              }
+            }
+          },
+          "at": {
+            "list": [
+              {
+                "id": "x",
+                "at": [
+                  20,
+                  10
+                ]
+              }
+            ]
+          },
+          "d": 3,
+          "depth": {
+            "blind": 12
+          },
+          "tip": "flat"
+        },
+        {
+          "type": "hole",
+          "id": "h6",
+          "name": "h6",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "end"
+              }
+            }
+          },
+          "at": {
+            "circle": {
+              "n": 4,
+              "d": 10,
+              "center": [
+                0,
+                -8
+              ],
+              "start": 45
+            }
+          },
+          "d": 2,
+          "depth": "through"
+        },
+        {
+          "type": "hole",
+          "id": "h7",
+          "name": "h7",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "cap",
+                "feature": "e1",
+                "end": "start"
+              }
+            }
+          },
+          "at": {
+            "grid": {
+              "nx": 2,
+              "ny": 1,
+              "dx": 12,
+              "dy": 1,
+              "center": [
+                -8,
+                0
+              ]
+            }
+          },
+          "d": 2.5,
+          "depth": {
+            "blind": 4
+          },
+          "tip": "flat"
+        }
+      ]
+    }
+  ]
+}

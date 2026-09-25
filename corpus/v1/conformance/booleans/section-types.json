@@ -1,0 +1,1136 @@
+{
+ "description": "Section edge types (SPEC-v1 \u00a78.3 rule 3 as ruled by [W0-43], [W0-49], [W0-51] and [W0-52]). An edge a body operation creates where faces of two operands meet is a line, circle or ellipse iff (a) its two faces are a pair of the rule-3 list, classified with the named tests (the plane\u2013cone test of [W0-51] included), and (b) the engine's own curve lies within tol of a conic of that type; otherwise it is `bspline`. Each case is a valid `aicad.ir/1` document and, per feature id, the expected `status` and `edge_types`: the counts of the listed edge types summed over the feature entry's bodies (after \u00a78.3); a listed 0 means none, types not listed are not compared. `rule` and `note` are informative. Shared by Forge (forge-ir tests/v1_conformance_amendments.rs, through forge-regen) and the oracle (W7b).",
+ "cases": [
+  {
+   "id": "crossing-cylinders-of-equal-radius-meet-in-ellipses",
+   "rule": "[W0-43] [W0-52]",
+   "note": "two cylinders of radius 5 whose axes cross at right angles meet in two ellipses (in the planes x = z and x = -z), four arcs between the two crossing vertices; the caps give four circles",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "crossing-cylinders-of-equal-radius-meet-in-ellipses"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "circle",
+          "id": "c",
+          "center": [
+           0,
+           0
+          ],
+          "radius": 5
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 20,
+        "direction": "symmetric"
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "YZ",
+        "curves": [
+         {
+          "kind": "circle",
+          "id": "c",
+          "center": [
+           0,
+           0
+          ],
+          "radius": 5
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 20,
+        "direction": "symmetric",
+        "op": "join",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "edge_types": {
+      "ellipse": 4,
+      "bspline": 0,
+      "circle": 4
+     }
+    }
+   }
+  },
+  {
+   "id": "crossing-cylinders-8e-7-apart-in-radius-do-not-meet-in-ellipses",
+   "rule": "[W0-52]",
+   "note": "radii 5 and 5 + 8e-7 are within tol, so the pair passes (a), but the section is two disjoint quartic loops (z^2 = x^2 + 8e-6 in projection), 2.8e-3 mm from the ellipses and far from any ellipse (not planar): (b) fails and no section edge is an ellipse; the loops' count is not pinned (the surfaces are 8e-7 mm apart near y = \u00b15, where [R-3] coincidence of tangent faces is open, \u00a711.1 issue 6)",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "crossing-cylinders-8e-7-apart-in-radius-do-not-meet-in-ellipses"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "circle",
+          "id": "c",
+          "center": [
+           0,
+           0
+          ],
+          "radius": 5
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 20,
+        "direction": "symmetric"
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "YZ",
+        "curves": [
+         {
+          "kind": "circle",
+          "id": "c",
+          "center": [
+           0,
+           0
+          ],
+          "radius": 5.0000008
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 20,
+        "direction": "symmetric",
+        "op": "join",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "edge_types": {
+      "ellipse": 0,
+      "circle": 4
+     }
+    }
+   }
+  },
+  {
+   "id": "a-sphere-and-a-coaxial-cylinder-meet-in-circles",
+   "rule": "[W0-43] [W0-52]",
+   "note": "a sphere of radius 5 joined with a coaxial cylinder of radius 5 - 1e-5: two section circles at z = \u00b10.0100, and the two caps",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-sphere-and-a-coaxial-cylinder-meet-in-circles"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XZ",
+        "curves": [
+         {
+          "kind": "arc",
+          "id": "a",
+          "start": [
+           0,
+           -5
+          ],
+          "end": [
+           0,
+           5
+          ],
+          "center": [
+           0,
+           0
+          ],
+          "ccw": true
+         },
+         {
+          "kind": "line",
+          "id": "l",
+          "start": [
+           0,
+           5
+          ],
+          "end": [
+           0,
+           -5
+          ]
+         }
+        ]
+       },
+       {
+        "type": "revolve",
+        "id": "r1",
+        "name": "r1",
+        "sketch": "s1",
+        "axis": {
+         "origin": [
+          0,
+          0
+         ],
+         "direction": [
+          0,
+          1
+         ]
+        },
+        "angle": 360
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "circle",
+          "id": "c",
+          "center": [
+           0,
+           0
+          ],
+          "radius": 4.99999
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 20,
+        "direction": "symmetric",
+        "op": "join",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "edge_types": {
+      "circle": 4,
+      "bspline": 0
+     }
+    }
+   }
+  },
+  {
+   "id": "a-sphere-0.9e-6-off-the-axis-of-a-near-tangent-cylinder-meets-it-in-bsplines",
+   "rule": "[W0-52]",
+   "note": "the sphere's centre is 0.9e-6 mm off the axis of a cylinder of radius 5 - 1e-5, so the pair passes (a) as coaxial, but each section loop has z = sqrt(1e-4 - 9e-6 cos(phi)): \u00b14.5e-4 mm from the coaxial circle and at least 5e-6 mm from any plane, hence from any circle: (b) fails",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-sphere-0.9e-6-off-the-axis-of-a-near-tangent-cylinder-meets-it-in-bsplines"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XZ",
+        "curves": [
+         {
+          "kind": "arc",
+          "id": "a",
+          "start": [
+           0,
+           -5
+          ],
+          "end": [
+           0,
+           5
+          ],
+          "center": [
+           0,
+           0
+          ],
+          "ccw": true
+         },
+         {
+          "kind": "line",
+          "id": "l",
+          "start": [
+           0,
+           5
+          ],
+          "end": [
+           0,
+           -5
+          ]
+         }
+        ]
+       },
+       {
+        "type": "revolve",
+        "id": "r1",
+        "name": "r1",
+        "sketch": "s1",
+        "axis": {
+         "origin": [
+          0,
+          0
+         ],
+         "direction": [
+          0,
+          1
+         ]
+        },
+        "angle": 360
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "circle",
+          "id": "c",
+          "center": [
+           9e-07,
+           0
+          ],
+          "radius": 4.99999
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 20,
+        "direction": "symmetric",
+        "op": "join",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "edge_types": {
+      "circle": 2,
+      "bspline": 2
+     }
+    }
+   }
+  },
+  {
+   "id": "a-flat-cut-parallel-to-a-countersink-axis-meets-the-cone-in-hyperbolas",
+   "rule": "[W0-51] [W0-52]",
+   "note": "a 45-degree countersink (a cone of half-angle 45 degrees over a radius 2.25 hole) cut by the plane x = 1, parallel to its axis and off its apex: c = |n . a| = 0 < sin 45 degrees, so the two cone sections are hyperbola arcs (`bspline`) and the hole cylinder's are lines",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-flat-cut-parallel-to-a-countersink-axis-meets-the-cone-in-hyperbolas"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 5
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XZ",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "a",
+          "start": [
+           0,
+           -1
+          ],
+          "end": [
+           2.25,
+           -1
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "b",
+          "start": [
+           2.25,
+           -1
+          ],
+          "end": [
+           2.25,
+           2.75
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "c",
+          "start": [
+           2.25,
+           2.75
+          ],
+          "end": [
+           5.5,
+           6
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "d",
+          "start": [
+           5.5,
+           6
+          ],
+          "end": [
+           0,
+           6
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "e",
+          "start": [
+           0,
+           6
+          ],
+          "end": [
+           0,
+           -1
+          ]
+         }
+        ]
+       },
+       {
+        "type": "revolve",
+        "id": "r1",
+        "name": "r1",
+        "sketch": "s2",
+        "axis": {
+         "origin": [
+          0,
+          0
+         ],
+         "direction": [
+          0,
+          1
+         ]
+        },
+        "angle": 360,
+        "op": "cut",
+        "targets": "all"
+       },
+       {
+        "type": "sketch",
+        "id": "s3",
+        "name": "s3",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "k",
+          "center": [
+           10.5,
+           0
+          ],
+          "w": 19,
+          "h": 30
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s3",
+        "distance": 20,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "edge_types": {
+      "bspline": 2,
+      "ellipse": 0,
+      "circle": 3,
+      "line": 16
+     }
+    }
+   }
+  },
+  {
+   "id": "a-flat-cut-through-a-countersink-axis-meets-the-cone-in-lines",
+   "rule": "[W0-51]",
+   "note": "the same countersink cut by the plane x = 0, which contains the axis and the apex: c = 0 < sin 45 degrees with the apex on the plane, so the cone sections are two generator lines",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-flat-cut-through-a-countersink-axis-meets-the-cone-in-lines"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 5
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XZ",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "a",
+          "start": [
+           0,
+           -1
+          ],
+          "end": [
+           2.25,
+           -1
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "b",
+          "start": [
+           2.25,
+           -1
+          ],
+          "end": [
+           2.25,
+           2.75
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "c",
+          "start": [
+           2.25,
+           2.75
+          ],
+          "end": [
+           5.5,
+           6
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "d",
+          "start": [
+           5.5,
+           6
+          ],
+          "end": [
+           0,
+           6
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "e",
+          "start": [
+           0,
+           6
+          ],
+          "end": [
+           0,
+           -1
+          ]
+         }
+        ]
+       },
+       {
+        "type": "revolve",
+        "id": "r1",
+        "name": "r1",
+        "sketch": "s2",
+        "axis": {
+         "origin": [
+          0,
+          0
+         ],
+         "direction": [
+          0,
+          1
+         ]
+        },
+        "angle": 360,
+        "op": "cut",
+        "targets": "all"
+       },
+       {
+        "type": "sketch",
+        "id": "s3",
+        "name": "s3",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "k",
+          "center": [
+           10,
+           0
+          ],
+          "w": 20,
+          "h": 30
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s3",
+        "distance": 20,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "edge_types": {
+      "bspline": 0,
+      "ellipse": 0,
+      "circle": 3,
+      "line": 18
+     }
+    }
+   }
+  },
+  {
+   "id": "a-cut-plane-parallel-to-a-cone-generator-meets-it-in-parabolas-typed-bspline",
+   "rule": "[W0-51]",
+   "note": "the plane z = 4 + x is parallel to a generator of the 45-degree cone (c = sin 45 degrees, inside the ANGULAR_TOLERANCE band): the two cone sections are parabola arcs (`bspline`); the plane's section of the hole cylinder is an ellipse arc",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-cut-plane-parallel-to-a-cone-generator-meets-it-in-parabolas-typed-bspline"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 5
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XZ",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "a",
+          "start": [
+           0,
+           -1
+          ],
+          "end": [
+           2.25,
+           -1
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "b",
+          "start": [
+           2.25,
+           -1
+          ],
+          "end": [
+           2.25,
+           2.75
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "c",
+          "start": [
+           2.25,
+           2.75
+          ],
+          "end": [
+           5.5,
+           6
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "d",
+          "start": [
+           5.5,
+           6
+          ],
+          "end": [
+           0,
+           6
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "e",
+          "start": [
+           0,
+           6
+          ],
+          "end": [
+           0,
+           -1
+          ]
+         }
+        ]
+       },
+       {
+        "type": "revolve",
+        "id": "r1",
+        "name": "r1",
+        "sketch": "s2",
+        "axis": {
+         "origin": [
+          0,
+          0
+         ],
+         "direction": [
+          0,
+          1
+         ]
+        },
+        "angle": 360,
+        "op": "cut",
+        "targets": "all"
+       },
+       {
+        "type": "sketch",
+        "id": "s3",
+        "name": "s3",
+        "plane": "XZ",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "a",
+          "start": [
+           -12,
+           -8
+          ],
+          "end": [
+           12,
+           16
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "b",
+          "start": [
+           12,
+           16
+          ],
+          "end": [
+           12,
+           20
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "c",
+          "start": [
+           12,
+           20
+          ],
+          "end": [
+           -12,
+           20
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "d",
+          "start": [
+           -12,
+           20
+          ],
+          "end": [
+           -12,
+           -8
+          ]
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s3",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "edge_types": {
+      "bspline": 2,
+      "ellipse": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "a-cut-plane-tilted-20-degrees-meets-a-45-degree-cone-in-an-ellipse",
+   "rule": "[W0-51]",
+   "note": "the plane z = 4 + tan(20 degrees) x has c = cos 20 degrees > sin 45 degrees + ANGULAR_TOLERANCE: it cuts every generator, so the cone section is one ellipse arc (the plane does not reach the hole cylinder)",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-cut-plane-tilted-20-degrees-meets-a-45-degree-cone-in-an-ellipse"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 5
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XZ",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "a",
+          "start": [
+           0,
+           -1
+          ],
+          "end": [
+           2.25,
+           -1
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "b",
+          "start": [
+           2.25,
+           -1
+          ],
+          "end": [
+           2.25,
+           2.75
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "c",
+          "start": [
+           2.25,
+           2.75
+          ],
+          "end": [
+           5.5,
+           6
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "d",
+          "start": [
+           5.5,
+           6
+          ],
+          "end": [
+           0,
+           6
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "e",
+          "start": [
+           0,
+           6
+          ],
+          "end": [
+           0,
+           -1
+          ]
+         }
+        ]
+       },
+       {
+        "type": "revolve",
+        "id": "r1",
+        "name": "r1",
+        "sketch": "s2",
+        "axis": {
+         "origin": [
+          0,
+          0
+         ],
+         "direction": [
+          0,
+          1
+         ]
+        },
+        "angle": 360,
+        "op": "cut",
+        "targets": "all"
+       },
+       {
+        "type": "sketch",
+        "id": "s3",
+        "name": "s3",
+        "plane": "XZ",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "a",
+          "start": [
+           -12.0,
+           -0.3676428111944281
+          ],
+          "end": [
+           12.0,
+           8.367642811194429
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "b",
+          "start": [
+           12.0,
+           8.367642811194429
+          ],
+          "end": [
+           12.0,
+           20
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "c",
+          "start": [
+           12.0,
+           20
+          ],
+          "end": [
+           -12.0,
+           20
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "d",
+          "start": [
+           -12.0,
+           20
+          ],
+          "end": [
+           -12.0,
+           -0.3676428111944281
+          ]
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s3",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "edge_types": {
+      "ellipse": 1,
+      "bspline": 0
+     }
+    }
+   }
+  }
+ ]
+}

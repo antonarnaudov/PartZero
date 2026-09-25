@@ -122,8 +122,10 @@ fn op_volume(op: BodyOp, a: &Body, b: &Body, what: &str) -> Result<f64, BooleanE
                     );
                 }
             }
-            // Untouched targets keep their volume (a nested join tool, an intersect tool
-            // containing the target; a cut without effect is an error).
+            // Untouched targets keep their volume. With one target this no longer happens:
+            // a nested join tool acts on its target (SPEC [W0-39]: `modified`, listed in
+            // `bodies`), an intersect never leaves a target untouched, and a cut or join
+            // without effect is an error.
             if !r.untouched.is_empty() {
                 assert!(
                     r.bodies.is_empty(),

@@ -1616,10 +1616,15 @@ def _generic_expr_problem(site: Site) -> Problem | None:
     return None
 
 
-def param_cycles(scope: Scope, uses: dict[str, list[str]]) -> list[list[ParamDecl]]:
-    """Strongly connected parameter groups with a cycle, each in declaration order, the groups
-    ordered by their first parameter. `uses` maps a parameter's path to the parameter names its
-    value and bounds use (already resolved in its scope)."""
+def param_cycles(scope: Scope, uses: dict[str, list[str]],
+                 field_uses: dict[str, dict[str, list[str]]] | None = None) -> list[tuple[list[ParamDecl], str]]:
+    """§2.8 rule 3 [W0-26] [W0-47]: one `(cycle, field)` per strongly connected component that
+    contains a cycle, the components ordered by their first member in declaration order. `cycle`
+    is the shortest cycle through that first member, found breadth-first following each
+    parameter's dependencies in order of first appearance (`value`, then `min`, then `max`, each
+    left to right), closed (`[a, b, a]`); `field` is the first member's first field that uses the
+    cycle's second member. `uses` maps a parameter's path to the parameter names its value and
+    bounds use, in that order (resolved in its scope)."""
     decls = scope.decls
     index = {d.path: i for i, d in enumerate(decls)}
     adj: list[list[int]] = [[] for _ in decls]
@@ -1668,9 +1673,44 @@ def param_cycles(scope: Scope, uses: dict[str, list[str]]) -> list[list[ParamDec
                 comps.append(sorted(comp))
     out = []
     for comp in comps:
-        if len(comp) > 1 or comp[0] in adj[comp[0]]:
-            out.append([decls[i] for i in comp])
-    out.sort(key=lambda c: index[c[0].path])
+        if not (len(comp) > 1 or comp[0] in adj[comp[0]]):
+            continue
+        members = set(comp)
+        first = min(comp)
+        # breadth-first from `first`, neighbours in order of first appearance, back to `first`
+        prev: dict[int, int] = {}
+        queue = [first]
+        seen = {first}
+        end = None
+        while queue and end is None:
+            nxt = []
+            for v in queue:
+                for w in dict.fromkeys(adj[v]):
+                    if w == first:
+                        end = v
+                        break
+                    if w in members and w not in seen:
+                        seen.add(w)
+                        prev[w] = v
+                        nxt.append(w)
+                if end is not None:
+                    break
+            queue = nxt
+        path = [end]
+        while path[-1] != first:
+            path.append(prev[path[-1]])
+        cyc = [decls[i] for i in reversed(path)] + [decls[first]]
+        d0 = decls[first]
+        second = cyc[1]
+        fld = "value"
+        if field_uses is not None:
+            vis = scope.visible(d0.part)
+            for f in ("value", "min", "max"):
+                if any(n in vis and vis[n].path == second.path for n in field_uses.get(d0.path, {}).get(f, [])):
+                    fld = f
+                    break
+        out.append((cyc, fld))
+    out.sort(key=lambda c: index[c[0][0].path])
     return out
 
 
@@ -1678,23 +1718,32 @@ def expression_problems(doc: dict, all_sites: list[Site]) -> list[Problem]:
     scope = Scope(doc)
     errs: list[Problem] = []
     uses: dict[str, list[str]] = {}
+    field_uses: dict[str, dict[str, list[str]]] = {}  # param path → field → identifiers
     for site in all_sites:
         if not site.is_expr or _generic_expr_problem(site) is not None:
             continue
+        ast = None
         try:
             ch = scope.check(site)
+            ast = ch.ast
         except expr.ExprError as e:
             details = dict(e.details)
-            if e.code == "EXPR_SYNTAX" and "expr" in details:
-                details.pop("expr")  # [W0-12] never echo text that failed the grammar
+            # [W0-46]: EXPR_SYNTAX keeps the stored text when it lexes (the parser puts it in only
+            # then); [W0-12] never echoes text that fails the lexer or the id grammar
             errs.append(Problem(e.code, site.path, e.message, details))
-            continue
-        if site.owner[0] == "param":
-            ppath = site.path.rsplit("/", 1)[0]
-            uses.setdefault(ppath, []).extend(ch.uses)
-    for cyc in param_cycles(scope, uses):
+            if e.code != "EXPR_SYNTAX":
+                try:  # [W0-26]: every expression that parses contributes its edges
+                    ast = expr.parse(site.text)
+                except expr.ExprError:
+                    ast = None
+        if ast is not None and site.owner[0] == "param":
+            ppath, fld = site.path.rsplit("/", 1)
+            field_uses.setdefault(ppath, {})[fld] = expr.identifiers(ast)
+    for ppath, fu in field_uses.items():
+        uses[ppath] = [n for f in ("value", "min", "max") for n in fu.get(f, [])]
+    for cyc, fld in param_cycles(scope, uses, field_uses):
         first = cyc[0]
-        errs.append(Problem("PARAM_CYCLE", f"{first.path}/value",
+        errs.append(Problem("PARAM_CYCLE", f"{first.path}/{fld}",
                             f"parameter cycle: {' -> '.join(d.name for d in cyc)}",
                             {"cycle": [d.name for d in cyc]}))
     return errs

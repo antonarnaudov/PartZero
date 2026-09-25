@@ -1,0 +1,254 @@
+{
+ "description": "Reference member probes (SPEC-v1 \u00a77.6 as ruled by [W0-50] and [W0-54]). Each case is a valid `aicad.ir/1` document and, per feature id and Ref field (the report's `refs[].field`), the multiset of the members' probes: `kind`, `point` and `normal` (`null` = the probe has no `normal`; an engine may omit the key or write `null`, which the metrics schema allows). A probe matches a distinct member probe of the same kind whose `point` and `normal` components are within 1e-9 (mm, and unit-vector components). `rule` and `note` are informative. Shared by Forge (forge-ir tests/v1_conformance_amendments.rs, through forge-regen) and the oracle (W7b).",
+ "cases": [
+  {
+   "id": "a-cusp-edge-probe-has-no-normal",
+   "rule": "[W0-54]",
+   "note": "the arc (10,5) -> (0,0) about (0,12.5) is tangent to the line y = 0 at the origin with the material between them: the vertical edge there has interior angle 0, its faces' outward normals (0,-1,0) and (0,1,0) sum to zero, so its probe has no normal",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-cusp-edge-probe-has-no-normal"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "a",
+          "start": [
+           0,
+           0
+          ],
+          "end": [
+           10,
+           0
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "b",
+          "start": [
+           10,
+           0
+          ],
+          "end": [
+           10,
+           5
+          ]
+         },
+         {
+          "kind": "arc",
+          "id": "c",
+          "start": [
+           10,
+           5
+          ],
+          "end": [
+           0,
+           0
+          ],
+          "center": [
+           0,
+           12.5
+          ],
+          "ccw": false
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 4
+       },
+       {
+        "type": "tag",
+        "id": "t1",
+        "name": "t1",
+        "target": {
+         "kind": "edge",
+         "q": {
+          "op": "between",
+          "a": {
+           "op": "side",
+           "feature": "e1",
+           "curve": "a"
+          },
+          "b": {
+           "op": "side",
+           "feature": "e1",
+           "curve": "c"
+          }
+         },
+         "card": "one"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "t1": {
+     "/target": [
+      {
+       "kind": "edge",
+       "point": [
+        0,
+        0,
+        2
+       ],
+       "normal": null
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "edge-probes-carry-the-normalized-sum-of-their-face-normals",
+   "rule": "[W0-50] [W0-54]",
+   "note": "the three vertical edges of the cusp extrude: at (10,0) the faces' outward normals (0,-1,0) and (1,0,0) give (1,-1,0)/sqrt(2); at (10,5) the plane x = 10 and the cylinder (outward normal (-0.8,0.6,0), towards the arc's centre) give (0.2,0.6,0)/sqrt(0.4); the cusp at the origin has none",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "edge-probes-carry-the-normalized-sum-of-their-face-normals"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "a",
+          "start": [
+           0,
+           0
+          ],
+          "end": [
+           10,
+           0
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "b",
+          "start": [
+           10,
+           0
+          ],
+          "end": [
+           10,
+           5
+          ]
+         },
+         {
+          "kind": "arc",
+          "id": "c",
+          "start": [
+           10,
+           5
+          ],
+          "end": [
+           0,
+           0
+          ],
+          "center": [
+           0,
+           12.5
+          ],
+          "ccw": false
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 4
+       },
+       {
+        "type": "tag",
+        "id": "t1",
+        "name": "t1",
+        "target": {
+         "kind": "edge",
+         "q": {
+          "op": "filter",
+          "of": {
+           "op": "edges",
+           "of": {
+            "op": "body",
+            "feature": "e1"
+           }
+          },
+          "where": {
+           "parallel": "Z"
+          }
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "t1": {
+     "/target": [
+      {
+       "kind": "edge",
+       "point": [
+        0,
+        0,
+        2
+       ],
+       "normal": null
+      },
+      {
+       "kind": "edge",
+       "point": [
+        10,
+        0,
+        2
+       ],
+       "normal": [
+        0.7071067811865476,
+        -0.7071067811865476,
+        0
+       ]
+      },
+      {
+       "kind": "edge",
+       "point": [
+        10,
+        5,
+        2
+       ],
+       "normal": [
+        0.31622776601683794,
+        0.9486832980505138,
+        0
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

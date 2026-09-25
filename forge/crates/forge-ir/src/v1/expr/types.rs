@@ -12,6 +12,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use std::sync::OnceLock;
 
 use serde_json::{Value, json};
 
@@ -321,6 +322,9 @@ pub struct Env {
     /// Visible parameter names in declaration order (for `similar`).
     order: Vec<String>,
     features: BTreeSet<String>,
+    /// The suggestion index of `order`, built on the first unknown name (callers keep one
+    /// `Env` per scope, so every expression of a scope shares it).
+    index: OnceLock<SimilarIndex>,
 }
 
 impl Env {
@@ -338,6 +342,7 @@ impl Env {
         if !self.names.contains_key(name) {
             self.names.insert(name.to_string(), Binding::Param(unit));
             self.order.push(name.to_string());
+            self.index = OnceLock::new();
         }
     }
 
@@ -397,25 +402,50 @@ impl Env {
         }
     }
 
+    /// [`similar`] over the visible parameters, through the scope's [`SimilarIndex`]: the
+    /// same suggestions without scanning every parameter per unknown name.
     fn similar_params(&self, name: &str) -> Vec<String> {
-        similar(name, self.order.iter().map(String::as_str))
+        self.index
+            .get_or_init(|| SimilarIndex::new(&self.order))
+            .query(name, &self.order)
     }
 }
 
+/// The largest edit distance [`similar`] suggests.
+const SIMILAR_MAX_DISTANCE: usize = 2;
+
 /// Up to three candidates close to `name` (case-insensitive match or edit distance ≤ 2),
 /// closest first, then in the given order. Only valid ids are ever suggested.
+///
+/// Bounded work (BACKLOG P2 "Expression validation DoS"): an unknown identifier may be as long
+/// as the expression (`MAX_EXPR_BYTES`), and a full edit-distance table against every visible
+/// parameter cost `len(name) · len(candidate)` cells per candidate — 2.6e5 cells per parameter
+/// for a 4000-byte name, per expression. The result is unchanged by three exact prunings:
+/// - every suggestion is a valid id, at most [`ids::MAX_ID_LEN`] bytes, and the distance is at
+///   least the length difference, so a name longer than `MAX_ID_LEN + 2` has none and is
+///   skipped before it is even case-folded;
+/// - a candidate whose length differs from the name's by more than 2 is skipped before any
+///   other test (a case-insensitive match has equal length);
+/// - the distance is computed on the diagonal band `|i − j| ≤ 2` only, stopping at the first
+///   row whose band exceeds 2 ([`levenshtein_within`]): at most `5 · (MAX_ID_LEN + 3)` cells
+///   per candidate.
 fn similar<'a>(name: &str, candidates: impl Iterator<Item = &'a str>) -> Vec<String> {
+    if name.len() > ids::MAX_ID_LEN + SIMILAR_MAX_DISTANCE {
+        return Vec::new();
+    }
     let lower = name.to_ascii_lowercase();
+    let mut rows = BandRows::default();
     let mut scored: Vec<(usize, usize, &str)> = candidates
         .enumerate()
+        .filter(|(_, c)| c.len().abs_diff(name.len()) <= SIMILAR_MAX_DISTANCE)
         .filter(|(_, c)| *c != name && ids::is_id(c))
         .filter_map(|(i, c)| {
-            let d = if c.to_ascii_lowercase() == lower {
+            let d = if c.eq_ignore_ascii_case(&lower) {
                 0
             } else {
-                levenshtein(&lower, &c.to_ascii_lowercase())
+                rows.levenshtein_within(lower.as_bytes(), c.as_bytes(), SIMILAR_MAX_DISTANCE)?
             };
-            (d <= 2).then_some((d, i, c))
+            Some((d, i, c))
         })
         .collect();
     scored.sort();
@@ -426,18 +456,196 @@ fn similar<'a>(name: &str, candidates: impl Iterator<Item = &'a str>) -> Vec<Str
         .collect()
 }
 
-fn levenshtein(a: &str, b: &str) -> usize {
-    let (a, b) = (a.as_bytes(), b.as_bytes());
-    let mut prev: Vec<usize> = (0..=b.len()).collect();
-    for (i, ca) in a.iter().enumerate() {
-        let mut cur = vec![i + 1; b.len() + 1];
-        for (j, cb) in b.iter().enumerate() {
-            let sub = prev[j] + usize::from(ca != cb);
-            cur[j + 1] = sub.min(prev[j + 1] + 1).min(cur[j] + 1);
+/// An implicit trie of the case-folded valid candidate ids, for [`similar`] over many
+/// candidates (BACKLOG P2 "Expression validation DoS", review round 2: a document with
+/// thousands of unknown near-miss names and thousands of parameters of the same length cost
+/// one banded table per name **and parameter** — quadratic, 10 s for 4000 × 4000 in a release
+/// build).
+///
+/// The candidates are sorted by their case-folded bytes; a trie node is a run of them sharing
+/// a prefix (`depth` bytes), its children the sub-runs by the next byte (found by binary
+/// search), and the smallest declaration index of a run comes from a sparse table. Memory is
+/// the candidates themselves plus `n log n` indices, whatever their lengths (a materialized
+/// trie of `n` unshared 64-byte ids would hold `64·n` nodes).
+///
+/// A query walks the trie depth first, one banded edit-distance row per node (the row of the
+/// node's prefix: cells `|i − j| ≤ 2`, capped at 3), and prunes a subtree when no candidate in
+/// it can enter the three best: its row minimum (a lower bound on every distance below: row
+/// minima never decrease) exceeds 2, or `(row minimum, smallest index in the subtree)` is not
+/// smaller than the third best `(distance, index)` found so far. Children are walked by their
+/// smallest index, so low-index matches are found first. The result is exactly [`similar`]'s
+/// (property-tested against the full table).
+#[derive(Debug, Clone, Default)]
+struct SimilarIndex {
+    /// `(case-folded bytes, declaration index)` of the valid ids, sorted.
+    sorted: Vec<(Vec<u8>, u32)>,
+    /// `mins[l][k]`: the smallest index among `sorted[k .. k + 2^l]`.
+    mins: Vec<Vec<u32>>,
+}
+
+impl SimilarIndex {
+    fn new(order: &[String]) -> SimilarIndex {
+        let mut sorted: Vec<(Vec<u8>, u32)> = order
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| ids::is_id(c))
+            .map(|(i, c)| {
+                (
+                    c.bytes().map(|b| b.to_ascii_lowercase()).collect(),
+                    u32::try_from(i).unwrap_or(u32::MAX),
+                )
+            })
+            .collect();
+        sorted.sort_unstable();
+        let mut mins = vec![sorted.iter().map(|x| x.1).collect::<Vec<u32>>()];
+        let mut width = 1;
+        while 2 * width <= sorted.len() {
+            let prev = mins.last().expect("level");
+            let next: Vec<u32> = (0..=sorted.len() - 2 * width)
+                .map(|k| prev[k].min(prev[k + width]))
+                .collect();
+            mins.push(next);
+            width *= 2;
         }
-        prev = cur;
+        SimilarIndex { sorted, mins }
     }
-    prev[b.len()]
+
+    /// The smallest declaration index in `sorted[lo..hi]` (non-empty).
+    fn min_index(&self, lo: usize, hi: usize) -> u32 {
+        let l = (usize::BITS - 1 - (hi - lo).leading_zeros()) as usize;
+        self.mins[l][lo].min(self.mins[l][hi - (1 << l)])
+    }
+
+    /// [`similar`]`(name, order)`.
+    fn query(&self, name: &str, order: &[String]) -> Vec<String> {
+        const K: usize = SIMILAR_MAX_DISTANCE;
+        const OVER: u8 = K as u8 + 1;
+        if name.len() > ids::MAX_ID_LEN + K || self.sorted.is_empty() {
+            return Vec::new();
+        }
+        let q: Vec<u8> = name.bytes().map(|b| b.to_ascii_lowercase()).collect();
+        let m = q.len();
+        // Deeper nodes are more than K edits from every prefix of the name.
+        let max_depth = m + K;
+        // One row per depth: a node's row is computed from its parent's, which stays in place
+        // while the node's subtree is walked (depth first).
+        let mut rows: Vec<Vec<u8>> = vec![vec![OVER; m + 1]; max_depth + 1];
+        for (j, c) in rows[0].iter_mut().enumerate() {
+            *c = u8::try_from(j.min(OVER as usize)).unwrap_or(OVER);
+        }
+        // The three best `(distance, index)`, ascending.
+        let mut best: Vec<(u8, u32)> = Vec::with_capacity(4);
+        // Nodes `(depth, lo, hi)`: runs of `sorted` sharing their first `depth` bytes.
+        let mut stack: Vec<(usize, usize, usize)> = vec![(0, 0, self.sorted.len())];
+        let mut children: Vec<(u32, usize, usize)> = Vec::new();
+        while let Some((i, lo, hi)) = stack.pop() {
+            let row_min = if i == 0 {
+                0
+            } else {
+                let b = self.sorted[lo].0[i - 1];
+                let (done, rest) = rows.split_at_mut(i);
+                let (prev, cur) = (&done[i - 1], &mut rest[0]);
+                cur.fill(OVER);
+                let jlo = i.saturating_sub(K).max(1);
+                let jhi = (i + K).min(m);
+                cur[jlo - 1] = if jlo == 1 {
+                    u8::try_from(i.min(OVER as usize)).unwrap_or(OVER)
+                } else {
+                    OVER
+                };
+                let mut row_min = cur[jlo - 1];
+                for j in jlo..=jhi {
+                    let sub = prev[j - 1] + u8::from(q[j - 1] != b);
+                    let v = sub.min(prev[j] + 1).min(cur[j - 1] + 1).min(OVER);
+                    cur[j] = v;
+                    row_min = row_min.min(v);
+                }
+                row_min
+            };
+            if row_min > K as u8
+                || (best.len() == 3 && (row_min, self.min_index(lo, hi)) >= best[2])
+            {
+                continue;
+            }
+            // Candidates ending here sort first in the run.
+            let mut k = lo;
+            let d = rows[i][m];
+            while k < hi && self.sorted[k].0.len() == i {
+                let e = self.sorted[k].1;
+                if d <= K as u8 && order[e as usize] != name {
+                    best.push((d, e));
+                    best.sort_unstable();
+                    best.truncate(3);
+                }
+                k += 1;
+            }
+            if i == max_depth {
+                continue;
+            }
+            // Children: sub-runs by the byte at `i` (non-decreasing over the run).
+            children.clear();
+            while k < hi {
+                let b = self.sorted[k].0[i];
+                let e = k + self.sorted[k..hi].partition_point(|x| x.0[i] <= b);
+                children.push((self.min_index(k, e), k, e));
+                k = e;
+            }
+            // Walk the child with the smallest index first.
+            children.sort_unstable_by(|x, y| y.0.cmp(&x.0));
+            stack.extend(children.iter().map(|&(_, clo, chi)| (i + 1, clo, chi)));
+        }
+        best.into_iter()
+            .map(|(_, e)| order[e as usize].clone())
+            .collect()
+    }
+}
+
+/// Two reusable rows of the banded edit-distance table.
+#[derive(Default)]
+struct BandRows {
+    prev: Vec<usize>,
+    cur: Vec<usize>,
+}
+
+impl BandRows {
+    /// The byte edit distance between `a` and `b`, ASCII case folded, when it is at most `k`;
+    /// `None` when it is larger. Only the cells with `|i − j| ≤ k` are computed (the others are
+    /// at least `|i − j| > k`, stored as `k + 1`), values are capped at `k + 1`, and the scan
+    /// stops at the first row whose every cell exceeds `k` (row minima never decrease).
+    fn levenshtein_within(&mut self, a: &[u8], b: &[u8], k: usize) -> Option<usize> {
+        if a.len().abs_diff(b.len()) > k {
+            return None;
+        }
+        let over = k + 1;
+        let m = b.len();
+        self.prev.clear();
+        self.prev.extend((0..=m).map(|j| j.min(over)));
+        self.cur.clear();
+        self.cur.resize(m + 1, over);
+        for i in 1..=a.len() {
+            let lo = i.saturating_sub(k).max(1);
+            let hi = (i + k).min(m);
+            let (prev, cur) = (&self.prev, &mut self.cur);
+            cur[lo - 1] = if lo == 1 { i.min(over) } else { over };
+            let mut row_min = cur[lo - 1];
+            for j in lo..=hi {
+                let sub = prev[j - 1] + usize::from(!a[i - 1].eq_ignore_ascii_case(&b[j - 1]));
+                let v = sub.min(prev[j] + 1).min(cur[j - 1] + 1).min(over);
+                cur[j] = v;
+                row_min = row_min.min(v);
+            }
+            if hi < m {
+                // The next row reads this cell as its `prev[j]` at its band's right end.
+                cur[hi + 1] = over;
+            }
+            if row_min > k {
+                return None;
+            }
+            std::mem::swap(&mut self.prev, &mut self.cur);
+        }
+        let d = self.prev[m];
+        (d <= k).then_some(d)
+    }
 }
 
 // ---- checking ---------------------------------------------------------------------------------
@@ -800,5 +1008,241 @@ mod tests {
         assert_eq!(similar("dpth", names.into_iter()), vec!["depth"]);
         assert!(similar("zzzzzz", names.into_iter()).is_empty());
         assert_eq!(levenshtein("kitten", "sitting"), 3);
+    }
+
+    /// The full table: the reference the banded [`BandRows::levenshtein_within`] must match.
+    fn levenshtein(a: &str, b: &str) -> usize {
+        let (a, b) = (a.as_bytes(), b.as_bytes());
+        let mut prev: Vec<usize> = (0..=b.len()).collect();
+        for (i, ca) in a.iter().enumerate() {
+            let mut cur = vec![i + 1; b.len() + 1];
+            for (j, cb) in b.iter().enumerate() {
+                let sub = prev[j] + usize::from(ca != cb);
+                cur[j + 1] = sub.min(prev[j + 1] + 1).min(cur[j] + 1);
+            }
+            prev = cur;
+        }
+        prev[b.len()]
+    }
+
+    /// `similar` before the pruning (full table on every candidate), kept as the reference.
+    fn similar_reference<'a>(name: &str, candidates: impl Iterator<Item = &'a str>) -> Vec<String> {
+        let lower = name.to_ascii_lowercase();
+        let mut scored: Vec<(usize, usize, &str)> = candidates
+            .enumerate()
+            .filter(|(_, c)| *c != name && ids::is_id(c))
+            .filter_map(|(i, c)| {
+                let d = if c.to_ascii_lowercase() == lower {
+                    0
+                } else {
+                    levenshtein(&lower, &c.to_ascii_lowercase())
+                };
+                (d <= 2).then_some((d, i, c))
+            })
+            .collect();
+        scored.sort();
+        scored
+            .into_iter()
+            .take(3)
+            .map(|(_, _, c)| c.to_string())
+            .collect()
+    }
+
+    #[test]
+    fn banded_distance_matches_the_full_table_near_the_band_edges() {
+        let mut rows = BandRows::default();
+        let words = [
+            "", "a", "ab", "ba", "abc", "abcd", "abdc", "xbcd", "abcde", "abcdef", "bcdef", "Abc",
+            "kitten", "sitting", "sittin", "kitte", "width", "Width2", "wdith", "aaaa", "aaaaaa",
+        ];
+        for a in words {
+            for b in words {
+                let full = levenshtein(&a.to_ascii_lowercase(), &b.to_ascii_lowercase());
+                for k in 0..4 {
+                    let want = (full <= k).then_some(full);
+                    let got = rows.levenshtein_within(a.as_bytes(), b.as_bytes(), k);
+                    assert_eq!(got, want, "{a:?} vs {b:?}, k = {k}");
+                }
+            }
+        }
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn pruned_similar_equals_the_full_table(
+            name in "[A-Za-z_][A-Za-z0-9_]{0,9}",
+            cands in proptest::collection::vec("[A-Za-z_][A-Za-z0-9_]{0,9}|[ab]{0,6}|.{0,8}", 0..24),
+        ) {
+            let fast = similar(&name, cands.iter().map(String::as_str));
+            let slow = similar_reference(&name, cands.iter().map(String::as_str));
+            proptest::prop_assert_eq!(fast, slow);
+        }
+
+        #[test]
+        fn banded_distance_equals_the_capped_full_distance(
+            a in "[abAB]{0,12}",
+            b in "[abAB]{0,12}",
+            k in 0usize..5,
+        ) {
+            let full = levenshtein(&a.to_ascii_lowercase(), &b.to_ascii_lowercase());
+            let got = BandRows::default().levenshtein_within(a.as_bytes(), b.as_bytes(), k);
+            proptest::prop_assert_eq!(got, (full <= k).then_some(full));
+        }
+    }
+
+    /// BACKLOG P2 "Expression validation DoS": unknown names are checked against every visible
+    /// parameter. Before the pruning, one 4000-byte unknown name against 5,000 parameters of 64
+    /// bytes built 5,000 tables of 4000 × 64 cells (1.3e9 cells, tens of seconds in a debug
+    /// build) per expression. Now an overlong name is skipped outright and a near-length name
+    /// costs at most 5 · 67 cells per parameter. The bound is generous (debug build, a loaded
+    /// machine) and still three orders of magnitude under the old cost.
+    #[test]
+    fn unknown_name_suggestions_are_bounded_in_time() {
+        use std::time::{Duration, Instant};
+        let prefix = "p".repeat(60);
+        let mut env = Env::new();
+        for i in 0..5000 {
+            env.add_param(&format!("{prefix}{i:04}"), ParamUnit::Mm);
+        }
+        let long = super::super::parse(&"q".repeat(4000)).expect("one identifier");
+        // Same-length near misses keep every candidate inside the band for all 65 rows: the
+        // worst case of the banded table.
+        let near = super::super::parse(&format!("{prefix}0017x")).expect("one identifier");
+        let order: Vec<String> = (0..5000).map(|i| format!("{prefix}{i:04}")).collect();
+        let want = similar_reference(&format!("{prefix}0017x"), order.iter().map(String::as_str));
+        assert_eq!(want.len(), 3);
+        assert_eq!(want[0], format!("{prefix}0017"));
+        let start = Instant::now();
+        for _ in 0..50 {
+            let e = typecheck(&long, &env).expect_err("unknown");
+            assert_eq!(e.code, "EXPR_UNKNOWN_NAME");
+            assert_eq!(e.details["similar"], json!([]));
+        }
+        for _ in 0..2 {
+            let e = typecheck(&near, &env).expect_err("unknown");
+            assert_eq!(e.details["similar"], json!(want));
+        }
+        let spent = start.elapsed();
+        assert!(spent < Duration::from_secs(3), "suggestions took {spent:?}");
+    }
+
+    #[test]
+    fn overlong_and_length_mismatched_names_get_no_suggestion() {
+        let names = ["abc", "abcdef", "abcdefgh"];
+        // Two bytes longer than the longest id can still be within distance 2 of it.
+        let id64 = "a".repeat(ids::MAX_ID_LEN);
+        let two_more = "a".repeat(ids::MAX_ID_LEN + 2);
+        assert_eq!(
+            similar(&two_more, [id64.as_str()].into_iter()),
+            vec![id64.clone()]
+        );
+        let three_more = "a".repeat(ids::MAX_ID_LEN + 3);
+        assert!(similar(&three_more, [id64.as_str()].into_iter()).is_empty());
+        assert_eq!(similar("abcd", names.into_iter()), vec!["abc", "abcdef"]);
+        assert!(similar("abcdefghijk", names.into_iter()).is_empty());
+    }
+
+    proptest::proptest! {
+        /// The scope's trie index gives exactly the full scan's suggestions: case variants
+        /// (one trie leaf for several ids), invalid ids (never suggested), shared prefixes
+        /// and lengths around the band edges.
+        #[test]
+        fn index_suggestions_equal_the_full_table(
+            name in "[A-Za-z_][A-Za-z0-9_]{0,9}|[abAB]{0,7}",
+            cands in proptest::collection::vec(
+                "[A-Za-z_][A-Za-z0-9_]{0,9}|[abAB_]{0,7}|[aA][bB]{0,4}[0-9]?|.{0,6}",
+                0..40,
+            ),
+        ) {
+            let slow = similar_reference(&name, cands.iter().map(String::as_str));
+            let fast = SimilarIndex::new(&cands).query(&name, &cands);
+            proptest::prop_assert_eq!(fast, slow);
+        }
+    }
+
+    #[test]
+    fn index_suggestions_keep_declaration_order_among_equal_distances() {
+        let order: Vec<String> = ["width", "Width", "wdth", "widths", "WIDTH", "widt", "w1dth"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let idx = SimilarIndex::new(&order);
+        for name in [
+            "width", "WIDTH", "wIdth", "widh", "x", "", "widthss", "w1dth",
+        ] {
+            assert_eq!(
+                idx.query(name, &order),
+                similar_reference(name, order.iter().map(String::as_str)),
+                "{name:?}"
+            );
+        }
+        // A parameter added after a query rebuilds the scope's index.
+        let mut env = Env::new().param("alpha", ParamUnit::Mm);
+        assert!(env.similar_params("beta").is_empty());
+        env.add_param("beta2", ParamUnit::Mm);
+        assert_eq!(env.similar_params("beta"), vec!["beta2"]);
+    }
+
+    /// BACKLOG P2 "Expression validation DoS", document level (review round 2): `N` parameters
+    /// of 63 bytes and `N` extrude distances that each name a different unknown near miss of
+    /// the same length. Scanning every parameter per unknown name was quadratic (2.6 s for
+    /// `N = 2000`, 10 s for 4000, release build); the scope's trie index makes each name's
+    /// suggestions a walk of the few trie nodes within distance 2 that can still enter the
+    /// three best. The bound is generous for a debug build on a loaded machine; the old cost
+    /// at `N = 4000` was minutes in a debug build.
+    #[test]
+    fn a_document_of_thousands_of_unknown_names_and_parameters_validates_in_bounded_time() {
+        use std::time::{Duration, Instant};
+        const N: usize = 4000;
+        let prefix = "p".repeat(58);
+        let param = |i: usize| format!("{prefix}{i:05}");
+        // Distinct, of the same length, one substitution (the first digit) away from
+        // parameter `i` and from those with the same last four digits.
+        let unknown = |i: usize| format!("{prefix}x{:04}", i % 10000);
+        let params: Vec<serde_json::Value> = (0..N)
+            .map(|i| json!({ "name": param(i), "unit": "mm", "value": "1 mm" }))
+            .collect();
+        let mut features = vec![json!({
+            "type": "sketch", "id": "s1", "name": "base", "plane": "XY",
+            "curves": [{ "kind": "rect", "id": "outline", "center": [0, 0], "w": 10, "h": 10 }]
+        })];
+        for i in 0..N {
+            features.push(json!({
+                "type": "extrude", "id": format!("e{i}"), "name": format!("e{i}"),
+                "sketch": "s1", "distance": unknown(i)
+            }));
+        }
+        let doc = json!({
+            "schema": "aicad.ir/1",
+            "meta": { "name": "dos" },
+            "params": params,
+            "parts": [{ "id": "p1", "name": "part", "features": features }]
+        })
+        .to_string();
+        let start = Instant::now();
+        let err = crate::v1::from_json(&doc).expect_err("unknown names");
+        let spent = start.elapsed();
+        let errors: Vec<ValidationError> = match err {
+            crate::v1::LoadError::Invalid(v) => v,
+            other => panic!("{other:?}"),
+        };
+        let unknowns: Vec<&ValidationError> = errors
+            .iter()
+            .filter(|e| e.code == "EXPR_UNKNOWN_NAME")
+            .collect();
+        assert_eq!(unknowns.len(), N, "{:?}", errors.first());
+        // Spot checks against the full scan: the parameters one substitution away, in
+        // declaration order, the first three suggested.
+        let order: Vec<String> = (0..N).map(param).collect();
+        for i in [0, 17, 1234, N - 1] {
+            let want = similar_reference(&unknown(i), order.iter().map(String::as_str));
+            let site = unknowns
+                .iter()
+                .find(|e| e.details["name"] == json!(unknown(i)))
+                .expect("site");
+            assert_eq!(site.details["similar"], json!(want), "{i}");
+            assert!(!want.is_empty() && want.len() <= 3, "{i}: {want:?}");
+        }
+        assert!(spent < Duration::from_secs(20), "validation took {spent:?}");
     }
 }

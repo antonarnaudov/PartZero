@@ -12,6 +12,7 @@ import type { Billing, LLMGateway } from "@aicad/llm-gateway";
 import type { Engine, LoadedTask, PublicTask, Solver, SolverOutput } from "@aicad/evals";
 import { Agent, type AgentOptions, type AgentResult } from "./agent.js";
 import { resolveModels, type ModelOverrides } from "./models.js";
+import { BENCH_LIMITS } from "./run-context.js";
 
 export interface LLMSolverOptions {
   gateway: LLMGateway;
@@ -21,7 +22,10 @@ export interface LLMSolverOptions {
   budgetUsd?: number;
   /** Loaded tasks, used only for the recorded clarification defaults of T5 tasks. */
   tasks?: readonly LoadedTask[];
-  /** Extra agent options (limits, hooks, prompt version, …). */
+  /**
+   * Extra agent options (limits, hooks, prompt version, …). `limits` override the bench defaults
+   * ({@link BENCH_LIMITS}: a per-task wall-time cap and a tighter failed-apply stop).
+   */
   agent?: Partial<Omit<AgentOptions, "gateway" | "engine" | "models" | "budgetUsd">>;
   /** Solver name in results (default `agent:<designer model>`). */
   name?: string;
@@ -65,6 +69,7 @@ export class LLMSolver implements Solver {
     const o = this.#o;
     const agent = new Agent({
       ...o.agent,
+      limits: { ...BENCH_LIMITS, ...o.agent?.limits },
       gateway: o.gateway,
       engine: o.engine,
       ...(o.models ? { models: o.models } : {}),

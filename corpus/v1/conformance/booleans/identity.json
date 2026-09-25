@@ -1,0 +1,3690 @@
+{
+ "description": "Body-operation identity outcomes (SPEC-v1 \u00a76.0.3, \u00a76.0.5 as ruled by [W0-39] `modified`, [W0-40] `removed` and [W0-41] contacts, degenerate pieces and the smallest cut, with [R-3] coincidence first; and the per-tool failure row of the \u00a76.0.3 table for joins). Each case is a valid `aicad.ir/1` document and, per feature id, the expected `status` and either the error `code` or: `bodies` (the multiset of `{ origin, change }` of the feature entry), `removed` (origins, in any order) and `warnings` (the set of the oracle-computable semantic warning codes of \u00a78.2 the entry must carry; engine-prefixed notes are not compared). Features not listed are not checked; `rule` and `note` are informative. Shared by Forge (forge-ir tests/v1_conformance_amendments.rs, through forge-regen) and the oracle (W7b).",
+ "cases": [
+  {
+   "id": "join-identical-tool-modifies-its-target",
+   "rule": "[W0-39]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "join-identical-tool-modifies-its-target"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 10,
+        "op": "join",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "r.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "join-tool-inside-its-target-modifies-it",
+   "rule": "[W0-39]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "join-tool-inside-its-target-modifies-it"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 4,
+          "h": 4
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 4,
+        "op": "join",
+        "targets": "all"
+       },
+       {
+        "type": "sketch",
+        "id": "s3",
+        "name": "s3",
+        "plane": {
+         "origin": [
+          0,
+          0,
+          3
+         ],
+         "normal": [
+          0,
+          0,
+          1
+         ],
+         "x_dir": [
+          1,
+          0,
+          0
+         ]
+        },
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           5,
+           5
+          ],
+          "w": 4,
+          "h": 4
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e3",
+        "name": "e3",
+        "sketch": "s3",
+        "distance": 4,
+        "op": "join",
+        "targets": {
+         "kind": "body",
+         "q": {
+          "op": "body",
+          "feature": "e1"
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "r.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    },
+    "e3": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "r.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "join-target-no-tool-reaches-is-untouched",
+   "rule": "[W0-39]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "join-target-no-tool-reaches-is-untouched"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "b",
+          "center": [
+           30,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s3",
+        "name": "s3",
+        "plane": {
+         "origin": [
+          0,
+          0,
+          8
+         ],
+         "normal": [
+          0,
+          0,
+          1
+         ],
+         "x_dir": [
+          1,
+          0,
+          0
+         ]
+        },
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           0,
+           0
+          ],
+          "w": 4,
+          "h": 4
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e3",
+        "name": "e3",
+        "sketch": "s3",
+        "distance": 5,
+        "op": "join",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e3": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "join-tool-meeting-a-target-only-through-another-tool-is-detached",
+   "rule": "\u00a76.0.3 table (per tool), [W0-39]",
+   "note": "k1 overlaps the target e1; k2 overlaps only k1 (8 mm from e1): a tool that neither overlaps nor shares a face with any target is BOOLEAN_NO_INTERSECTION, whatever the other tools do",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "join-tool-meeting-a-target-only-through-another-tool-is-detached"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "k",
+          "center": [
+           9,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "k1",
+        "name": "k1",
+        "sketch": "s2",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s3",
+        "name": "s3",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "k",
+          "center": [
+           18,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "k2",
+        "name": "k2",
+        "sketch": "s3",
+        "distance": 10
+       },
+       {
+        "type": "boolean",
+        "id": "b1",
+        "name": "b1",
+        "op": "join",
+        "targets": {
+         "kind": "body",
+         "q": {
+          "op": "body",
+          "feature": "e1"
+         }
+        },
+        "tools": {
+         "kind": "body",
+         "q": {
+          "op": "union",
+          "of": [
+           {
+            "op": "body",
+            "feature": "k1"
+           },
+           {
+            "op": "body",
+            "feature": "k2"
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "b1": {
+     "status": "error",
+     "code": "BOOLEAN_NO_INTERSECTION"
+    }
+   }
+  },
+  {
+   "id": "intersect-target-inside-the-tools-is-modified",
+   "rule": "[W0-39]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "intersect-target-inside-the-tools-is-modified"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 4,
+          "h": 4
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 4
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": {
+         "origin": [
+          0,
+          0,
+          -3
+         ],
+         "normal": [
+          0,
+          0,
+          1
+         ],
+         "x_dir": [
+          1,
+          0,
+          0
+         ]
+        },
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "big",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 10,
+        "op": "intersect",
+        "targets": {
+         "kind": "body",
+         "q": {
+          "op": "body",
+          "feature": "e1"
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "cut-target-no-tool-meets-is-untouched",
+   "rule": "[W0-39]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "cut-target-no-tool-meets-is-untouched"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "b",
+          "center": [
+           100,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s3",
+        "name": "s3",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "h",
+          "center": [
+           0,
+           0
+          ],
+          "w": 2,
+          "h": 2
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e3",
+        "name": "e3",
+        "sketch": "s3",
+        "distance": 10,
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e3": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "join-merging-targets-removes-the-other-origin",
+   "rule": "[W0-40]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "join-merging-targets-removes-the-other-origin"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "sa",
+        "name": "sa",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           -10,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "ea",
+        "name": "ea",
+        "sketch": "sa",
+        "distance": 5
+       },
+       {
+        "type": "sketch",
+        "id": "sb",
+        "name": "sb",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           10,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "eb",
+        "name": "eb",
+        "sketch": "sb",
+        "distance": 5
+       },
+       {
+        "type": "sketch",
+        "id": "sc",
+        "name": "sc",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 14,
+          "h": 4
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "ec",
+        "name": "ec",
+        "sketch": "sc",
+        "distance": 5,
+        "op": "join",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "ec": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "ea",
+        "member": "r.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [
+      {
+       "feature": "eb",
+       "member": "r.bottom"
+      }
+     ],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "join-rejoining-split-pieces-removes-nothing",
+   "rule": "[W0-40]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "join-rejoining-split-pieces-removes-nothing"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 40,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 4,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 10,
+        "op": "cut",
+        "targets": "all"
+       },
+       {
+        "type": "sketch",
+        "id": "s3",
+        "name": "s3",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 4
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e3",
+        "name": "e3",
+        "sketch": "s3",
+        "distance": 10,
+        "op": "join",
+        "targets": {
+         "kind": "body",
+         "q": {
+          "op": "body",
+          "feature": "e1"
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "r.bottom"
+       },
+       "change": "modified"
+      },
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "r.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": [
+      "BOOLEAN_SPLIT"
+     ]
+    },
+    "e3": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "r.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "consumed-piece-with-a-surviving-sibling-removes-nothing",
+   "rule": "[W0-40]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "consumed-piece-with-a-surviving-sibling-removes-nothing"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 40,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 4,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 10,
+        "op": "cut",
+        "targets": "all"
+       },
+       {
+        "type": "sketch",
+        "id": "s3",
+        "name": "s3",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "x",
+          "center": [
+           -13,
+           0
+          ],
+          "w": 24,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e3",
+        "name": "e3",
+        "sketch": "s3",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e3": {
+     "status": "ok",
+     "bodies": [],
+     "removed": [],
+     "warnings": [
+      "BOOLEAN_BODY_CONSUMED"
+     ]
+    }
+   }
+  },
+  {
+   "id": "consumed-only-body-is-removed",
+   "rule": "[W0-40]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "consumed-only-body-is-removed"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "sa",
+        "name": "sa",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 4,
+          "h": 4
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "ea",
+        "name": "ea",
+        "sketch": "sa",
+        "distance": 4
+       },
+       {
+        "type": "sketch",
+        "id": "sb",
+        "name": "sb",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "eb",
+        "name": "eb",
+        "sketch": "sb",
+        "distance": 10,
+        "op": "cut",
+        "targets": {
+         "kind": "body",
+         "q": {
+          "op": "body",
+          "feature": "ea"
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "eb": {
+     "status": "ok",
+     "bodies": [],
+     "removed": [
+      {
+       "feature": "ea",
+       "member": "r.bottom"
+      }
+     ],
+     "warnings": [
+      "BOOLEAN_BODY_CONSUMED"
+     ]
+    }
+   }
+  },
+  {
+   "id": "consumed-tools-are-never-removed",
+   "rule": "[W0-40]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "consumed-tools-are-never-removed"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "k",
+          "center": [
+           4,
+           0
+          ],
+          "w": 4,
+          "h": 4
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "k1",
+        "name": "k1",
+        "sketch": "s2",
+        "distance": 10
+       },
+       {
+        "type": "boolean",
+        "id": "b1",
+        "name": "b1",
+        "op": "cut",
+        "targets": {
+         "kind": "body",
+         "q": {
+          "op": "body",
+          "feature": "e1"
+         }
+        },
+        "tools": {
+         "kind": "body",
+         "q": {
+          "op": "body",
+          "feature": "k1"
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "b1": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "a-tiny-notch-well-above-tolerance-cuts",
+   "rule": "[W0-41]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-tiny-notch-well-above-tolerance-cuts"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "r",
+          "center": [
+           0,
+           0
+          ],
+          "w": 40,
+          "h": 40
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "b",
+          "center": [
+           60,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s3",
+        "name": "s3",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "sliver",
+          "center": [
+           20.0995,
+           0
+          ],
+          "w": 0.2,
+          "h": 0.01
+         },
+         {
+          "kind": "rect",
+          "id": "pk",
+          "center": [
+           60,
+           0
+          ],
+          "w": 2,
+          "h": 2
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e3",
+        "name": "e3",
+        "sketch": "s3",
+        "distance": 0.01,
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e3": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "r.bottom"
+       },
+       "change": "modified"
+      },
+      {
+       "origin": {
+        "feature": "e2",
+        "member": "b.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "an-overlap-within-tolerance-is-a-contact-not-a-cut",
+   "rule": "[W0-41] [R-3]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "an-overlap-within-tolerance-is-a-contact-not-a-cut"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           9.9999998,
+           0
+          ],
+          "w": 10,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "error",
+     "code": "BOOLEAN_NO_INTERSECTION"
+    }
+   }
+  },
+  {
+   "id": "a-cut-overlap-8e-7-thick-is-a-contact",
+   "rule": "[W0-41] [R-3]",
+   "note": "the tool's face lies 8e-7 mm inside the target's x = 5 face: within tol, the faces coincide (coincidence first), so the overlap is no volume",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-cut-overlap-8e-7-thick-is-a-contact"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           9.9999992,
+           0
+          ],
+          "w": 10,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "error",
+     "code": "BOOLEAN_NO_INTERSECTION"
+    }
+   }
+  },
+  {
+   "id": "a-cut-overlap-9.5e-7-thick-is-a-contact",
+   "rule": "[W0-41] [R-3]",
+   "note": "as above at 9.5e-7 mm (an overlap of exactly tol is not pinned: 10 - 1e-6 is not exact in binary64)",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-cut-overlap-9.5e-7-thick-is-a-contact"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           9.99999905,
+           0
+          ],
+          "w": 10,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "error",
+     "code": "BOOLEAN_NO_INTERSECTION"
+    }
+   }
+  },
+  {
+   "id": "a-cut-overlap-2e-6-thick-cuts",
+   "rule": "[W0-41] [R-3]",
+   "note": "beyond tol the faces are distinct: the cut removes a 2e-6 mm layer",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-cut-overlap-2e-6-thick-cuts"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           9.999998,
+           0
+          ],
+          "w": 10,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "a-join-overlap-8e-7-thick-shares-a-face",
+   "rule": "[W0-41] [R-3]",
+   "note": "a join tool overlapping by 8e-7 mm shares a face with its target (coincident within tol): joined",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-join-overlap-8e-7-thick-shares-a-face"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           9.9999992,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 10,
+        "op": "join",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "a-remaining-layer-8e-7-thick-is-consumed",
+   "rule": "[W0-41] [R-3]",
+   "note": "the cut leaves an 8e-7 mm layer at x = -5: within tol of the tool's face, it is a contact, not a piece",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-remaining-layer-8e-7-thick-is-consumed"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           5.0000008,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [],
+     "removed": [
+      {
+       "feature": "e1",
+       "member": "a.bottom"
+      }
+     ],
+     "warnings": [
+      "BOOLEAN_BODY_CONSUMED"
+     ]
+    }
+   }
+  },
+  {
+   "id": "a-remaining-layer-8e-7-thick-beside-a-piece-is-no-piece",
+   "rule": "[W0-41] [R-3]",
+   "note": "the tool spans x in [-5 + 8e-7, 0]: the layer at x = -5 is no piece, so one piece remains and there is no split",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-remaining-layer-8e-7-thick-beside-a-piece-is-no-piece"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           -2.4999996,
+           0
+          ],
+          "w": 4.9999992,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "a-flush-contact-beside-a-pocket-cuts-two-tools",
+   "rule": "[W0-41] [R-3]",
+   "note": "tool k1 overlaps the target's top by 3e-7 mm (a contact) and tool k2, touching k1, is a 0.01 mm pocket: the pocket is cut; the contact is never averaged with it",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-flush-contact-beside-a-pocket-cuts-two-tools"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": {
+         "origin": [
+          0,
+          0,
+          9.9999997
+         ],
+         "normal": [
+          0,
+          0,
+          1
+         ],
+         "x_dir": [
+          1,
+          0,
+          0
+         ]
+        },
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "k",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "k1",
+        "name": "k1",
+        "sketch": "s2",
+        "distance": 1
+       },
+       {
+        "type": "sketch",
+        "id": "s3",
+        "name": "s3",
+        "plane": {
+         "origin": [
+          0,
+          0,
+          9.9899997
+         ],
+         "normal": [
+          0,
+          0,
+          1
+         ],
+         "x_dir": [
+          1,
+          0,
+          0
+         ]
+        },
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "k",
+          "center": [
+           0,
+           0
+          ],
+          "w": 0.01,
+          "h": 0.01
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "k2",
+        "name": "k2",
+        "sketch": "s3",
+        "distance": 0.01
+       },
+       {
+        "type": "boolean",
+        "id": "b1",
+        "name": "b1",
+        "op": "cut",
+        "targets": {
+         "kind": "body",
+         "q": {
+          "op": "body",
+          "feature": "e1"
+         }
+        },
+        "tools": {
+         "kind": "body",
+         "q": {
+          "op": "union",
+          "of": [
+           {
+            "op": "body",
+            "feature": "k1"
+           },
+           {
+            "op": "body",
+            "feature": "k2"
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "b1": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "a-flush-contact-beside-a-pocket-cuts-one-tool",
+   "rule": "[W0-41] [R-3]",
+   "note": "the same slab and pocket joined into one tool body first: the common part is one connected sliver-and-pocket, and the pocket is still cut",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-flush-contact-beside-a-pocket-cuts-one-tool"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": {
+         "origin": [
+          0,
+          0,
+          9.9999997
+         ],
+         "normal": [
+          0,
+          0,
+          1
+         ],
+         "x_dir": [
+          1,
+          0,
+          0
+         ]
+        },
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "k",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "k1",
+        "name": "k1",
+        "sketch": "s2",
+        "distance": 1
+       },
+       {
+        "type": "sketch",
+        "id": "s3",
+        "name": "s3",
+        "plane": {
+         "origin": [
+          0,
+          0,
+          9.9899997
+         ],
+         "normal": [
+          0,
+          0,
+          1
+         ],
+         "x_dir": [
+          1,
+          0,
+          0
+         ]
+        },
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "k",
+          "center": [
+           0,
+           0
+          ],
+          "w": 0.01,
+          "h": 0.01
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "k2",
+        "name": "k2",
+        "sketch": "s3",
+        "distance": 0.01,
+        "op": "join",
+        "targets": {
+         "kind": "body",
+         "q": {
+          "op": "body",
+          "feature": "k1"
+         }
+        }
+       },
+       {
+        "type": "boolean",
+        "id": "b1",
+        "name": "b1",
+        "op": "cut",
+        "targets": {
+         "kind": "body",
+         "q": {
+          "op": "body",
+          "feature": "e1"
+         }
+        },
+        "tools": {
+         "kind": "body",
+         "q": {
+          "op": "body",
+          "feature": "k1"
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "b1": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "a-target-vertex-2e-6-inside-a-tool-is-cut",
+   "rule": "[W0-41] [R-3]",
+   "note": "the target's corner (5, 5, 10) lies 2e-6 mm inside a tool bounded by a plane of normal (1, 1, 1): a cut, although the common part (a tetrahedron) has 2V/A = 4.9e-7 <= tol/2; degeneracy is judged on result pieces only",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-target-vertex-2e-6-inside-a-tool-is-cut"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": {
+         "origin": [
+          4.999998845299461,
+          4.999998845299461,
+          9.999998845299462
+         ],
+         "normal": [
+          1,
+          1,
+          1
+         ],
+         "x_dir": [
+          1,
+          -1,
+          0
+         ]
+        },
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 10,
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "a-remaining-wedge-thinner-than-half-tolerance-is-consumed",
+   "rule": "[W0-41] [R-3]",
+   "note": "the cut keeps only the prism x + y >= 10 - 1.56e-6 at the corner: its edge is 1.1e-6 mm from the cut face (a real piece), but its mean thickness 2V/A = 4.6e-7 <= tol/2: degenerate, so the target is consumed",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-remaining-wedge-thinner-than-half-tolerance-is-consumed"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "l1",
+          "start": [
+           -10.00000156,
+           20
+          ],
+          "end": [
+           20,
+           -10.00000156
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "l2",
+          "start": [
+           20,
+           -10.00000156
+          ],
+          "end": [
+           -20,
+           -20
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "l3",
+          "start": [
+           -20,
+           -20
+          ],
+          "end": [
+           -10.00000156,
+           20
+          ]
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [],
+     "removed": [
+      {
+       "feature": "e1",
+       "member": "a.bottom"
+      }
+     ],
+     "warnings": [
+      "BOOLEAN_BODY_CONSUMED"
+     ]
+    }
+   }
+  },
+  {
+   "id": "a-remaining-wedge-thicker-than-half-tolerance-is-kept",
+   "rule": "[W0-41] [R-3]",
+   "note": "the same with legs 3e-6 mm: 2V/A = 8.8e-7 > tol/2, a 4.5e-11 mm^3 body is produced (no threshold relative to s)",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-remaining-wedge-thicker-than-half-tolerance-is-kept"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "l1",
+          "start": [
+           -10.000003,
+           20
+          ],
+          "end": [
+           20,
+           -10.000003
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "l2",
+          "start": [
+           20,
+           -10.000003
+          ],
+          "end": [
+           -20,
+           -20
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "l3",
+          "start": [
+           -20,
+           -20
+          ],
+          "end": [
+           -10.000003,
+           20
+          ]
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "a-target-edge-within-tolerance-of-a-cut-face-is-a-contact",
+   "rule": "[W0-41] [R-3]",
+   "note": "the target's vertical edge at (5, 5) lies 8e-7 mm inside the tool's oblique face x + y = 10 - 1.13e-6: within tol it lies on that face, so no point of the target is inside the tool beyond tol",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-target-edge-within-tolerance-of-a-cut-face-is-a-contact"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "l1",
+          "start": [
+           -1.1313708498984761e-06,
+           10
+          ],
+          "end": [
+           10,
+           -1.1313708498984761e-06
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "l2",
+          "start": [
+           10,
+           -1.1313708498984761e-06
+          ],
+          "end": [
+           10,
+           10
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "l3",
+          "start": [
+           10,
+           10
+          ],
+          "end": [
+           -1.1313708498984761e-06,
+           10
+          ]
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "error",
+     "code": "BOOLEAN_NO_INTERSECTION"
+    }
+   }
+  },
+  {
+   "id": "a-through-slit-1.5e-6-wide-splits-the-target",
+   "rule": "[W0-48] [R-3]",
+   "note": "the slit's walls are 1.5e-6 mm apart, more than tol: distinct faces, so the target is cut in two, although no target point is farther than tol from the tool's boundary (the one-sided depth the withdrawn wording of [W0-41] step 2 measured)",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-through-slit-1.5e-6-wide-splits-the-target"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           0,
+           0
+          ],
+          "w": 1.5e-06,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      },
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": [
+      "BOOLEAN_SPLIT"
+     ]
+    }
+   }
+  },
+  {
+   "id": "a-through-slit-1.9e-6-wide-splits-the-target",
+   "rule": "[W0-48] [R-3]",
+   "note": "as above at the top of the band (tol, 2 tol]",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-through-slit-1.9e-6-wide-splits-the-target"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           0,
+           0
+          ],
+          "w": 1.9e-06,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      },
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": [
+      "BOOLEAN_SPLIT"
+     ]
+    }
+   }
+  },
+  {
+   "id": "an-embedded-join-tool-1.5e-6-thin-modifies-its-target",
+   "rule": "[W0-48] [W0-39]",
+   "note": "a join tool 1.5e-6 mm thin inside the target meets it (its mid-plane is farther than tol from the target's faces): the target is modified, not BOOLEAN_NO_INTERSECTION",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "an-embedded-join-tool-1.5e-6-thin-modifies-its-target"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": {
+         "origin": [
+          0,
+          0,
+          3
+         ],
+         "normal": [
+          0,
+          0,
+          1
+         ],
+         "x_dir": [
+          1,
+          0,
+          0
+         ]
+        },
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           0,
+           0
+          ],
+          "w": 1.5e-06,
+          "h": 4
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 4,
+        "op": "join",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "an-embedded-cut-tool-1.5e-6-thin-leaves-a-void",
+   "rule": "[W0-48] [R-3]",
+   "note": "a cut tool 1.5e-6 mm thin inside the target meets it: the target is modified (a closed void whose walls are distinct faces)",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "an-embedded-cut-tool-1.5e-6-thin-leaves-a-void"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": {
+         "origin": [
+          0,
+          0,
+          3
+         ],
+         "normal": [
+          0,
+          0,
+          1
+         ],
+         "x_dir": [
+          1,
+          0,
+          0
+         ]
+        },
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           0,
+           0
+          ],
+          "w": 1.5e-06,
+          "h": 4
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 4,
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "a-target-vertex-1.2e-6-inside-a-tool-face-is-cut",
+   "rule": "[W0-48] [R-3]",
+   "note": "the target's corner (5, 5, 10) lies 1.2e-6 mm inside a tool bounded by a plane of normal (1, 1, 1): farther than tol from the tool's face, so a cut, although the common tetrahedron's inscribed ball is only 8.8e-7 mm across (2V/A = 2.9e-7): thickness is the distance to the faces, not an inscribed-ball measure",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-target-vertex-1.2e-6-inside-a-tool-face-is-cut"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": {
+         "origin": [
+          4.999999307179677,
+          4.999999307179677,
+          9.999999307179676
+         ],
+         "normal": [
+          1,
+          1,
+          1
+         ],
+         "x_dir": [
+          1,
+          -1,
+          0
+         ]
+        },
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 10,
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "a-through-pin-1.5e-6-square-cuts-a-hole",
+   "rule": "[W0-48] [R-3]",
+   "note": "a 1.5e-6 mm square pin through the target cuts a through-hole whose opposite walls are distinct faces",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-through-pin-1.5e-6-square-cuts-a-hole"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "t",
+          "center": [
+           0,
+           0
+          ],
+          "w": 1.5e-06,
+          "h": 1.5e-06
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "a-cut-tool-covering-a-1.5e-6-fin-exactly-removes-it",
+   "rule": "[W0-53] [R-3]",
+   "note": "the fin's two walls are 1.5e-6 mm apart, more than tol, and each coincides with a tool face: every point of the fin is within tol of a target face and of a tool face, but the fin contains a ball 1.5e-6 mm across, so T \u2229 K is volume and the cut removes the fin (under [W0-48]'s face-distance test alone it was a contact: BOOLEAN_NO_INTERSECTION)",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-cut-tool-covering-a-1.5e-6-fin-exactly-removes-it"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "a",
+          "start": [
+           -5,
+           0
+          ],
+          "end": [
+           5,
+           0
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "b",
+          "start": [
+           5,
+           0
+          ],
+          "end": [
+           5,
+           10
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "c",
+          "start": [
+           5,
+           10
+          ],
+          "end": [
+           7.5e-07,
+           10
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "d",
+          "start": [
+           7.5e-07,
+           10
+          ],
+          "end": [
+           7.5e-07,
+           15
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "e",
+          "start": [
+           7.5e-07,
+           15
+          ],
+          "end": [
+           -7.5e-07,
+           15
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "f",
+          "start": [
+           -7.5e-07,
+           15
+          ],
+          "end": [
+           -7.5e-07,
+           10
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "g",
+          "start": [
+           -7.5e-07,
+           10
+          ],
+          "end": [
+           -5,
+           10
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "h",
+          "start": [
+           -5,
+           10
+          ],
+          "end": [
+           -5,
+           0
+          ]
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "a",
+          "start": [
+           7.5e-07,
+           10
+          ],
+          "end": [
+           7.5e-07,
+           15
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "b",
+          "start": [
+           7.5e-07,
+           15
+          ],
+          "end": [
+           -7.5e-07,
+           15
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "c",
+          "start": [
+           -7.5e-07,
+           15
+          ],
+          "end": [
+           -7.5e-07,
+           10
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "d",
+          "start": [
+           -7.5e-07,
+           10
+          ],
+          "end": [
+           7.5e-07,
+           10
+          ]
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 10,
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  },
+  {
+   "id": "a-remaining-wall-1.5e-6-thick-is-a-body",
+   "rule": "[W0-53] [R-3] [W0-41] (3)",
+   "note": "the cut leaves a 10 x 10 mm wall 1.5e-6 mm thick between the target's x = 5 face and the tool's x = 5 - 1.5e-6 face: its faces are distinct, it contains a ball 1.5e-6 mm across (not a layer), and its mean thickness 2V/A is about 1.5e-6 mm > tol/2 (not degenerate), so the target is modified, not consumed",
+   "document": {
+    "schema": "aicad.ir/1",
+    "meta": {
+     "name": "a-remaining-wall-1.5e-6-thick-is-a-body"
+    },
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "s1",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "a",
+          "center": [
+           0,
+           0
+          ],
+          "w": 10,
+          "h": 10
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "e1",
+        "sketch": "s1",
+        "distance": 10
+       },
+       {
+        "type": "sketch",
+        "id": "s2",
+        "name": "s2",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "line",
+          "id": "a",
+          "start": [
+           -6,
+           -6
+          ],
+          "end": [
+           4.9999985,
+           -6
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "b",
+          "start": [
+           4.9999985,
+           -6
+          ],
+          "end": [
+           4.9999985,
+           6
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "c",
+          "start": [
+           4.9999985,
+           6
+          ],
+          "end": [
+           -6,
+           6
+          ]
+         },
+         {
+          "kind": "line",
+          "id": "d",
+          "start": [
+           -6,
+           6
+          ],
+          "end": [
+           -6,
+           -6
+          ]
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e2",
+        "name": "e2",
+        "sketch": "s2",
+        "distance": 30,
+        "direction": "symmetric",
+        "op": "cut",
+        "targets": "all"
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "e2": {
+     "status": "ok",
+     "bodies": [
+      {
+       "origin": {
+        "feature": "e1",
+        "member": "a.bottom"
+       },
+       "change": "modified"
+      }
+     ],
+     "removed": [],
+     "warnings": []
+    }
+   }
+  }
+ ]
+}

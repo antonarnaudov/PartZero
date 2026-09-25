@@ -351,14 +351,21 @@ def test_knob_queries_resolve_to_spec_keys():
     assert keys(feat(rep, "q8")) == ["r1/side:rim", "r1/side:top"]
     assert keys(feat(rep, "q9")) == ["r1/edge:{r1/side:rim|r1/side:top}@rim.start"]
     assert keys(feat(rep, "q10")) == ["r1/side:bottom", "r1/side:rim"]
-    assert keys(feat(rep, "q12")) == ["r1/side:rim"]
+    # W7b: the pattern pt1 now copies r1, so the largest faces tie with the copy's
+    assert keys(feat(rep, "q12")) == ["pt1/copy:{r1/side:rim}@1", "r1/side:rim"]
     assert keys(feat(rep, "q14")) == ["r1/side:rim"]
-    assert keys(feat(rep, "q16")) == ["r1/edge:{r1/endcap:end@axis_seg|r1/endcap:start@axis_seg}"]
-    assert keys(feat(rep, "q23")) == ["r1/side:top"]
-    q15 = keys(feat(rep, "q15"))  # the 4 endcap lines ⟂ Z, and the 2 circles whose normal ∥ Z
-    assert len(q15) == 6 and sum("}@" in k for k in q15) == 2
-    # the named sources on the unsupported hole fail loudly, never silently
-    assert code(feat(rep, "q5")) == "DEPENDENCY_FAILED"
+    # W7b: the blind hole's wall/tip edge and the pattern copy's inner corner are concave too
+    assert keys(feat(rep, "q16")) == ["h1/edge:{h1/tip@c|h1/wall@c}",
+                                      "pt1/copy:{r1/edge:{r1/endcap:end@axis_seg|r1/endcap:start@axis_seg}}@1",
+                                      "r1/edge:{r1/endcap:end@axis_seg|r1/endcap:start@axis_seg}"]
+    assert keys(feat(rep, "q23")) == ["pt1/copy:{r1/side:top}@1"]  # the copy is farther along the pattern dir
+    q15 = keys(feat(rep, "q15"))  # r1's 4 endcap lines ⟂ Z, and its 2 circles whose normal ∥ Z
+    own = [k for k in q15 if k.startswith("r1/")]
+    assert len(own) == 6 and sum("}@" in k for k in own) == 2
+    # W7b: the rest are the hole's circles and the pattern copy's edges
+    assert all(k.startswith(("h1/", "pt1/copy:")) for k in q15 if not k.startswith("r1/"))
+    # W7b: the hole is evaluated, so its named source resolves to the wall of position c
+    assert keys(feat(rep, "q5")) == ["h1/wall@c"]
     for f in rep["features"]:
         for r in f.get("refs") or []:
             for m in r["members"]:
@@ -373,7 +380,10 @@ def test_sketch_on_a_tagged_face_and_join():
     plate = 80 * 50 - (4 - PI) * 16
     assert b["origin"]["feature"] == "e1" and b["change"] == "modified"
     assert rel(b["volume"], plate * 8 + PI * 121 * 12) < 1e-9
-    assert code(feat(rep, "h1")) == "ORACLE_UNSUPPORTED_FEATURE"
+    # W7b: the M5 counterbored through holes (cbore 10 x 5.4, bore 5.5) in the 8 mm plate
+    (h,) = feat(rep, "h1")["bodies"]
+    one = PI * 5 ** 2 * 5.4 + PI * 2.75 ** 2 * (8 - 5.4)
+    assert rel(h["volume"], plate * 8 + PI * 121 * 12 - 4 * one) < 1e-9
 
 
 def test_cardinality_violations():
@@ -664,10 +674,13 @@ def test_every_example_program_yields_a_schema_valid_deterministic_report():
         assert json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True), p.name
 
 
-def test_unsupported_features_fail_with_an_engine_prefixed_code_and_evaluation_continues():
+def test_shell_draft_and_pattern_features_evaluate_and_evaluation_continues():
+    """W7b: shell, draft and pattern are evaluated (no `ORACLE_UNSUPPORTED_FEATURE` any more); a
+    failing one fails with a catalogue code and later features still run."""
     rep = run(_program("shell_box.json"))
-    codes = {f["type"]: code(f) for f in rep["features"] if f["status"] == "error"}
-    assert codes["shell"] == "ORACLE_UNSUPPORTED_FEATURE" and codes["pattern"] == "ORACLE_UNSUPPORTED_FEATURE"
+    assert feat(rep, "sh1")["status"] == "ok" and feat(rep, "pt1")["status"] == "ok"
+    assert code(feat(rep, "dr1")) == "DRAFT_FACE_UNSUPPORTED"  # the rounded rect's corner cylinders
+    assert not any(str(code(f) or "").startswith("ORACLE_") for f in rep["features"])
     assert feat(rep, "dp2")["status"] == "ok" and feat(rep, "r1")["status"] == "ok"
 
 
@@ -747,20 +760,23 @@ def test_freeform_edges_that_are_conics_within_1e7_s_are_counted_as_conics():
     assert occt.edge_type(far, 1e-7 * 100.0) == "bspline"
 
 
-def test_boolean_results_recognise_curves_at_1e7_times_the_body_scale(monkeypatch):
-    """Body operations count edge types at `1e-7·s`; new_body sweeps keep the v0 metrics (their
-    line/arc/circle profiles give analytic edges only)."""
-    from aicad_oracle import occt
+def test_boolean_results_type_section_edges_by_the_rule_3_pair_test(monkeypatch):
+    """[W0-43]/[W0-52] (replacing the `1e-7·s` recognition W7a pinned here): a body operation's
+    section edges are typed by their face pair and OCCT's own curve within *tol*
+    (`normalize.section_type`); edges taken from a sweep keep their construction type."""
+    from aicad_oracle.v1 import booleans
 
     seen = []
-    real = occt.edge_type
-    monkeypatch.setattr(occt, "edge_type", lambda e, tol=occt.CANON_FREEFORM_TOL: seen.append(tol) or real(e, tol))
+    real = booleans.section_type
+    monkeypatch.setattr(booleans, "section_type", lambda *a, **k: seen.append(a) or real(*a, **k))
     d = doc(sk("s1", [rect("r", 60, 80)]), ex("e1", "s1", 0.5),
-            sk("s2", [circle("c", (0, 0), 3)], plane=cap("e1")), ex("e2", "s2", 1, op="join", targets=body_of("e1")))
+            sk("s2", [circle("c", (0, 0), 3)], plane=cap("e1")),
+            ex("e2", "s2", 1, direction="symmetric", op="join", targets=body_of("e1")))
     rep = run(d)
     (b,) = feat(rep, "e2")["bodies"]
-    diag = math.dist(b["bbox_min"], b["bbox_max"])
-    assert any(abs(t - 1e-7 * diag) <= 1e-18 for t in seen)
+    # the boss's rim (a sweep edge) and its new section with the plate's top (plane ⟂ axis: a circle)
+    assert b["edge_types"] == {"circle": 2, "line": 12}
+    assert seen  # the join's plane–cylinder section went through the pair test
 
 
 def test_oblique_plane_cut_of_a_cylinder_counts_an_ellipse():

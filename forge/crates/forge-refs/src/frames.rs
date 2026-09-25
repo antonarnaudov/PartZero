@@ -474,6 +474,13 @@ pub fn direction(d: &Dir, scope: &Scope<'_>, field: &str) -> Result<Vec3, RefErr
     run(scope, |c| c.dir(d, field)).result
 }
 
+/// [`direction`] with the reference resolutions it made (an edge or cylinder `Dir`, e.g. a
+/// linear pattern's `dir`, §6.10), for the feature's `refs` entries (§5.8). Integration
+/// wiring (forge-regen, Phase C): same value and errors as [`direction`].
+pub fn direction_eval(d: &Dir, scope: &Scope<'_>, field: &str) -> Evaluated<Vec3> {
+    run(scope, |c| c.dir(d, field))
+}
+
 fn degenerate(reason: &str, angle_deg: f64) -> RefError {
     RefError::DatumDegenerate {
         reason: reason.into(),

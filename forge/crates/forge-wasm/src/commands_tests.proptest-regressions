@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 52ef7c7236ddc740b7db9730f08371b892440617d5bea859c32d8a2c7b9fb695 # shrinks to spec = Spec { profile: Polygon { names: ["a", "s", "x"], c: [0.0, 0.0], rad: 6.0, rot: 0.0, constrained: false }, distance: 2.0, tool: None, boss: false, holes: Some(["a", "x"]), pattern: false, picks: [0, 0, 0, 0, 0, 0, 0, 0], end_start: false }

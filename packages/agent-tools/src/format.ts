@@ -24,6 +24,46 @@ export function num(x: number): string {
   return s === "-0" ? "0" : s;
 }
 
+/** A number whose shortest round-trip text has at most 6 decimals and no exponent: printed exactly. */
+const SHORT_EXACT = /^-?\d+(\.\d{1,6})?$/;
+
+function boundText(x: number, direction: 1 | -1): string {
+  if (!Number.isFinite(x)) return String(x);
+  if (x === 0) return "0";
+  const exact = String(x);
+  // Short text, or a magnitude where x·1000 overflows or passes 2^53 (the 0.001 grid is finer than
+  // the float spacing there): the exact round-trip text, which is x itself.
+  if (SHORT_EXACT.test(exact) || Math.abs(x) >= 1e12) return exact;
+  const milli = Math.round(x * 1000);
+  let v = milli / 1000;
+  // Step one unit of 0.001 towards the safe side when rounding went the wrong way.
+  if (direction < 0 ? v > x : v < x) v = (milli + direction) / 1000;
+  const s = String(Number(v.toFixed(3)));
+  return s === "-0" ? "0" : s;
+}
+
+/**
+ * An upper bound or a feasible maximum as text that is never above `x`: exact when it is short
+ * (≤ 6 decimals), else rounded **down** to 0.001. {@link num} rounds to nearest and can print a
+ * value just above an engine's maximum (123.456 → 123.46), which the agent would then apply.
+ */
+export function numDown(x: number): string {
+  return boundText(x, -1);
+}
+
+/** A lower bound or a minimum as text that is never below `x`: exact when short, else rounded **up** to 0.001. */
+export function numUp(x: number): string {
+  return boundText(x, 1);
+}
+
+/** A value shown for reference (the requested r, a parameter's value): exact when short, else {@link num}. */
+export function numExact(x: number): string {
+  if (!Number.isFinite(x)) return String(x);
+  if (Object.is(x, -0)) return "0";
+  const exact = String(x);
+  return SHORT_EXACT.test(exact) ? exact : num(x);
+}
+
 export function vec(v: readonly number[]): string {
   return `[${v.map(num).join(", ")}]`;
 }

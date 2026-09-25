@@ -1,101 +1,6 @@
 {
   "description": "Every tests/v1_programs program that `oracle diff` does not classify MATCH against Forge, and every known difference family of the generated corpora, with its diagnosis, the SPEC rule, the evidence and the owner of the fix. Tracked, not accepted: SPEC-v1 §8.4 and CLAUDE.md principle 2 require 0 POTENTIAL_SILENT_WRONG on the gate corpora, so W4/F1 is not signed off while any POTENTIAL_SILENT_WRONG entry is listed here. Checked against a live oracle by `cargo test -p forge-cli --test oracle_gate -- --ignored` (every other program must be MATCH, each listed one must have exactly its class, and every POTENTIAL_SILENT_WRONG difference of a family program must have the family's signature; with AICAD_ORACLE_GATE_DIRS it also checks generated corpora: every POTENTIAL_SILENT_WRONG difference must have a family signature or belong to a program listed under `generated`); remove an entry in the same change that makes it MATCH.",
-  "programs": [
-    {
-      "program": "errors_tag_dependencies",
-      "class": "CODE_MISMATCH",
-      "rule": "SPEC-v1 §7.1 step 2",
-      "forge": "e2 fails with DEPENDENCY_FAILED: its targets name the failed tag t1 through a `tagged` query, and features referenced by id (sketch, datum, tag, pattern seed) are checked before field expressions and range checks",
-      "oracle": "INVALID_DISTANCE: the oracle checks the tag only when it resolves the query, after the range check",
-      "diagnosis": "oracle order bug",
-      "owner": "W7 (oracle)"
-    },
-    {
-      "program": "join_identical_tool",
-      "class": "POTENTIAL_SILENT_WRONG",
-      "rule": "SPEC-v1 §6.0.5 (open W0 ruling)",
-      "forge": "the join target is geometrically unchanged (the tool equals it): not in `bodies`, info FORGE_BOOLEAN_NO_CHANGE names it",
-      "oracle": "lists the target in `bodies` as `modified` because the tool is in its component",
-      "diagnosis": "the SPEC does not say whether an unchanged join target is `modified`; both engines agree on geometry, topology and the part's final bodies",
-      "owner": "W0 ruling, then W4 (forge-ops/forge-regen) or W7 aligns"
-    },
-    {
-      "program": "join_nested_tool",
-      "class": "POTENTIAL_SILENT_WRONG",
-      "rule": "SPEC-v1 §6.0.5 (open W0 ruling)",
-      "forge": "tools strictly inside the target: not in `bodies`, info FORGE_BOOLEAN_NO_CHANGE",
-      "oracle": "lists the target in `bodies` as `modified`",
-      "diagnosis": "as join_identical_tool",
-      "owner": "W0 ruling, then W4 or W7 aligns"
-    },
-    {
-      "program": "join_rejoins_split_pieces",
-      "class": "POTENTIAL_SILENT_WRONG",
-      "rule": "SPEC-v1 §6.0.3 identity, §6.0.5 `removed` (open W0 ruling)",
-      "forge": "the two pieces of e1 re-joined into one body of origin e1: `removed` is empty (the origin survives in `bodies`)",
-      "oracle": "`removed` = [e1/r.bottom] (the second piece's origin, although it is also the result's origin)",
-      "diagnosis": "the SPEC does not say whether a join component's other targets that share the kept origin are `merged_into`/`removed`; Forge's reading keeps `removed` disjoint from the result origins",
-      "owner": "W0 ruling, then W4 or W7 aligns"
-    },
-    {
-      "program": "seam_boss_over_hole",
-      "class": "POTENTIAL_SILENT_WRONG",
-      "family": "oracle-seam-split-arcs",
-      "rule": "SPEC-v1 §8.3 rule 1 (and v0 seam normalization)",
-      "forge": "10 faces (8 plane, 2 cylinder), 18 edges (12 line, 6 circle), hand-counted and asserted in tests/v1.rs",
-      "oracle": "20 edges, 8 circles: two arcs cross OCCT's cylinder seams and stay split at the seam vertex",
-      "diagnosis": "oracle normalization gap",
-      "owner": "W7b (oracle)"
-    },
-    {
-      "program": "seam_notch_in_disk",
-      "class": "POTENTIAL_SILENT_WRONG",
-      "family": "oracle-seam-split-arcs",
-      "rule": "SPEC-v1 §8.3 rule 1 (and v0 seam normalization)",
-      "forge": "7 faces (6 plane, 1 cylinder), 13 edges (10 line, 3 circle), volume in closed form, asserted in tests/v1.rs (the closed-form twin of generated gen1_s41_00138)",
-      "oracle": "14 edges, 4 circles: the bottom rim arc passes OCCT's cylinder seam at +x and is split there",
-      "diagnosis": "oracle normalization gap",
-      "owner": "W7b (oracle)"
-    },
-    {
-      "program": "seam_split_hole_wall_face",
-      "class": "POTENTIAL_SILENT_WRONG",
-      "family": "oracle-seam-split-faces",
-      "rule": "SPEC-v1 §8.3 rule 1",
-      "forge": "the notched hole wall is one cylinder face (6 cylinders, 14 faces, 35 edges), asserted in tests/v1.rs (gen1_s23_01337 reduced)",
-      "oracle": "7 cylinders, 15 faces, 37 edges: the wall stays split at OCCT's seam, with its rim arcs",
-      "diagnosis": "oracle normalization gap (periodic faces split along seams are not re-merged)",
-      "owner": "W7b (oracle)"
-    },
-    {
-      "program": "seam_edge_on_hole_seam",
-      "class": "POTENTIAL_SILENT_WRONG",
-      "family": "oracle-seam-edge-dropped",
-      "rule": "SPEC-v1 §8.3 rule 1, v0 seam rule",
-      "forge": "24 edges (22 line, 2 circle), hand-counted and asserted in tests/v1.rs; the notch wall y = 0 meets the hole wall along x = 5, y = 0",
-      "oracle": "23 edges (21 line): that edge lies on OCCT's cylinder seam line and is dropped as a seam",
-      "diagnosis": "oracle normalization bug: an edge between two different faces is a real edge even where it coincides with a seam",
-      "owner": "W7b (oracle)"
-    },
-    {
-      "program": "tiny_sliver_cut",
-      "class": "POTENTIAL_SILENT_WRONG",
-      "rule": "SPEC-v1 §6.0.3 (cut), §1 LINEAR_TOLERANCE",
-      "forge": "the plate is cut by a 0.0005 x 0.01 x 0.01 mm notch (5e-8 mm3; every dimension >= 500 LINEAR_TOLERANCE): modified, 10 faces, 24 edges, asserted in tests/v1.rs",
-      "oracle": "leaves the plate untouched and unlisted: its `meets` test skips targets whose common volume is below 1e-12 s^3 (here 1.9e-7 mm3)",
-      "diagnosis": "oracle volume threshold below which real cuts are dropped (the twin of generated gen1_s23_00667)",
-      "owner": "W7b (oracle); W0 may want to state the smallest cut that counts"
-    },
-    {
-      "program": "torus_pocket_spiric_edges",
-      "class": "POTENTIAL_SILENT_WRONG",
-      "rule": "SPEC-v1 §8.3 rule 3",
-      "forge": "6 bspline edges: the pocket's side walls (vertical planes that miss the ring axis) cut the fillet torus in spiric sections, which are not conics; the horizontal planes' sections are circles (16); asserted in tests/v1.rs",
-      "oracle": "4 bspline, 19 circle: GeomConvert at 1e-7 s (s = 120 mm, 1.2e-5 mm) fits short spiric arcs by circles, plus one seam split",
-      "diagnosis": "oracle curve recognition too loose for short arcs; the SPEC's tolerance `1e-7·s` scales with the body, not with the curve (open W0 wording), and recognition should require an exact conic of the intersection, not a fit",
-      "owner": "W7b (oracle), W0 (tolerance wording)"
-    }
-  ],
+  "programs": [],
   "families": [
     {
       "family": "oracle-seam-split-arcs",
@@ -103,7 +8,8 @@
       "signature": "an `edges` row where the oracle has 1 or 2 more edges, or an `edge_types` row where only conic types (`circle`, `ellipse`) differ and the oracle has 1 or 2 more of each",
       "rule": "SPEC-v1 §8.3 rule 1: the same-domain merge re-merges what OCCT split along seams; a circular or elliptic arc that crosses a periodic face's seam must be one edge, as Forge reports it",
       "evidence": "seam_boss_over_hole and seam_notch_in_disk (hand-counted); 509 of the 517 POTENTIAL_SILENT_WRONG programs of the generated runs below have only rows of this family (1 of them with ellipses, gen1_s5_00051)",
-      "owner": "W7b (oracle)"
+      "owner": "W7b (oracle)",
+      "last_seen": "not seen on 2026-09-25 (integrator: v1 classic seed 61 x 1000, v1 ops seed 61 x 1000, the v1 error corpus, tests/v1_programs; kernel-fixes: v1 seed 47 x 1000 MATCH=1000): W7b's §8.3 rule 1 seam normalizations; remove the family once seeds 5, 11 and 23 are re-diffed without it"
     },
     {
       "family": "oracle-seam-split-faces",
@@ -111,7 +17,8 @@
       "signature": "a `faces` row where the oracle has 1 more face, or a `face_types` row where only periodic types (`cylinder`, `cone`, `sphere`, `torus`) differ and the oracle has 1 more (its rims are oracle-seam-split-arcs rows)",
       "rule": "SPEC-v1 §8.3 rule 1: periodic faces that OCCT split along seams are re-merged",
       "evidence": "seam_split_hole_wall_face (gen1_s23_01337 reduced, reproduced); generated gen1_s5_01905, gen1_s23_01337, gen1_s23_01883",
-      "owner": "W7b (oracle)"
+      "owner": "W7b (oracle)",
+      "last_seen": "not seen on 2026-09-25 (integrator: v1 classic seed 61 x 1000, v1 ops seed 61 x 1000, the v1 error corpus, tests/v1_programs; kernel-fixes: v1 seed 47 x 1000 MATCH=1000): W7b's §8.3 rule 1 seam normalizations; remove the family once seeds 5, 11 and 23 are re-diffed without it"
     },
     {
       "family": "oracle-seam-edge-dropped",
@@ -119,11 +26,12 @@
       "signature": "an `edges` row where Forge has exactly 1 more edge, or an `edge_types` row whose only difference is 1 more `line` in Forge",
       "rule": "SPEC-v1 §8.3 rule 1 and the v0 seam rule drop seam edges, not real edges between two faces that lie on a seam line",
       "evidence": "seam_edge_on_hole_seam (hand-counted, reproduced); generated gen1_s5_01279, gen1_s11_01378, gen1_s11_01890 (each has a Forge edge between a hole wall and a cut face on the hole's seam line)",
-      "owner": "W7b (oracle)"
+      "owner": "W7b (oracle)",
+      "last_seen": "not seen on 2026-09-25 (integrator: v1 classic seed 61 x 1000, v1 ops seed 61 x 1000, the v1 error corpus, tests/v1_programs; kernel-fixes: v1 seed 47 x 1000 MATCH=1000): W7b's §8.3 rule 1 seam normalizations; remove the family once seeds 5, 11 and 23 are re-diffed without it"
     }
   ],
   "generated": {
-    "description": "`oracle gen --ir v1 --count <n> --seed <s>` corpora diffed on 2026-09-24 against this build (debug aicad): seed 41 x 200 and seeds 5, 11, 23 x 2000. POTENTIAL_SILENT_WRONG outside the families: only the programs listed here, each hand-diagnosed as an oracle-side difference.",
+    "description": "`oracle gen --ir v1 --count <n> --seed <s>` corpora diffed on 2026-09-24 against this build (debug aicad): seed 41 x 200 and seeds 5, 11, 23 x 2000. POTENTIAL_SILENT_WRONG outside the families: only the programs listed here, each hand-diagnosed as an oracle-side difference. Phase C (2026-09-24, integrator): `--family ops --seed 61` against the release aicad. Phase C round 2 (2026-09-25, integrator, debug aicad): the tests/v1_programs entries (`patterns_mixed`, `fillet_then_chamfer_keys`) and the families `oracle-pattern-skipped-absent` and `oracle-blend-renames-untouched-edges` were removed: W7b's `compare.py` `_skipped` reads an absent `skipped` as [] and `blends.py` `_kept_edge_key` keeps the key of an edge a blend did not touch, so all 31 programs MATCH; fresh `--family ops --seed 61` (the generator gained `shell_notched` and `hole_edge_blend`), classic `--seed 61` and the ops run's v1 error corpus: 0 POTENTIAL_SILENT_WRONG, every other difference is listed under `code_mismatch` and `robustness` below.",
     "runs": [
       {
         "seed": 41,
@@ -156,6 +64,50 @@
         "ROBUSTNESS": 9,
         "CODE_MISMATCH": 0,
         "POTENTIAL_SILENT_WRONG": 159
+      },
+      {
+        "seed": 61,
+        "count": 1000,
+        "family": "ops (oracle gen --ir v1 --family ops)",
+        "forge": "release aicad, Phase C integration",
+        "MATCH": 815,
+        "ROBUSTNESS": 0,
+        "CODE_MISMATCH": 0,
+        "POTENTIAL_SILENT_WRONG": 185,
+        "note": "every POTENTIAL_SILENT_WRONG row is oracle-pattern-skipped-absent; with that normalization 1000/1000 MATCH"
+      },
+      {
+        "seed": 61,
+        "count": 1000,
+        "family": "ops (oracle gen --ir v1 --family ops), regenerated 2026-09-25",
+        "forge": "debug aicad, Phase C round 2",
+        "MATCH": 966,
+        "ROBUSTNESS": 13,
+        "CODE_MISMATCH": 21,
+        "POTENTIAL_SILENT_WRONG": 0,
+        "note": "CODE_MISMATCH: the 21 `hole_edge_blend(..., above)` programs (see `code_mismatch`); ROBUSTNESS: 12 OCCT_SHELL_FAILED on `shell_notched(end)` (Forge within 6.6e-13 of the closed form on all 37 notched shells of the run) and gen1x_s61_00209 (the pending §8.1 key tie-break)"
+      },
+      {
+        "seed": 61,
+        "count": 1000,
+        "family": "classic",
+        "forge": "debug aicad, Phase C round 2",
+        "MATCH": 999,
+        "ROBUSTNESS": 1,
+        "CODE_MISMATCH": 0,
+        "POTENTIAL_SILENT_WRONG": 0,
+        "note": "gen1_s61_00125: FORGE_BOOLEAN_UNSUPPORTED (see `robustness`); generator_rejected 1 (ambiguous probe)"
+      },
+      {
+        "seed": 61,
+        "count": 158,
+        "family": "v1 error corpus of the ops run (`<out>/invalid`)",
+        "forge": "debug aicad, Phase C round 2",
+        "MATCH": 153,
+        "ROBUSTNESS": 4,
+        "CODE_MISMATCH": 1,
+        "POTENTIAL_SILENT_WRONG": 0,
+        "note": "ROBUSTNESS: the 4 `draft` programs (Forge rejects the optional draft, UNSUPPORTED_FEATURE, §6.9); CODE_MISMATCH: err1_066_ref_cardinality_shell_open (see `code_mismatch`); every other case has the expected code in both engines"
       }
     ],
     "programs": [
@@ -172,6 +124,26 @@
         "diagnosis": "the oracle recognizes 2 of the 6 spiric pocket-wall/torus sections as circles (plus one seam-split arc)"
       }
     ],
-    "robustness": "not POTENTIAL_SILENT_WRONG, listed for the MATCH rate: Forge fails revolves of profiles with a rounded corner on the axis with INVALID_RESULT (FORGE_UNBOUNDED_DOMAIN on the degenerate torus face; 10 + 6 + 7 programs with their dependents), one boolean FORGE_BOOLEAN_INCONSISTENT (gen1_s5_01347), and 3 programs whose sketch-on-face probe matches 2 OCCT faces in the oracle's replay (gen1_s5_01098, gen1_s23_00745, gen1_s23_01729)"
+    "robustness": "not POTENTIAL_SILENT_WRONG, listed for the MATCH rate. 2026-09-24 runs: Forge failed revolves of profiles with a rounded corner on the axis with INVALID_RESULT (FORGE_UNBOUNDED_DOMAIN; fixed by the kernel fixes: a horn torus), one boolean FORGE_BOOLEAN_INCONSISTENT (gen1_s5_01347), and 3 programs whose sketch-on-face probe matches 2 OCCT faces in the oracle's replay (gen1_s5_01098, gen1_s23_00745, gen1_s23_01729). 2026-09-25 runs: gen1_s61_00125 (classic): a body with the new horn tori (r_in = 0) makes every later boolean on it FORGE_BOOLEAN_UNSUPPORTED (`boolean/geom.rs` rejects minor >= major), even for a tool that misses it — W4 capability gap; 12 ops programs: OCCT_SHELL_FAILED on a notched box shelled open on its notched top (a known OCCT limitation, W7b `engine_limits`), Forge verified against the generator's closed form; gen1x_s61_00209: the pending §8.1 key tie-break (two bodies' coplanar bottom caps), which the ops family does not filter (W7b open issue)",
+    "code_mismatch": [
+      {
+        "family": "blend-runs-into-another-feature",
+        "programs": 21,
+        "evidence": "v1 ops seed 61: gen1x_s61_00027, 00039, 00055, 00107, 00206, 00222, 00239, 00297, 00468, 00470, 00489, 00506, 00574, 00622, 00639, 00689, 00700, 00719, 00755, 00774, 00890 (`hole_edge_blend(fillet|chamfer, above)`)",
+        "forge": "FILLET_FAILED / CHAMFER_FAILED: the blend runs into the rim of a hole on the adjacent face (a Forge capability gap, W6 review finding 3), with the value that builds clear of it in `details.reason`",
+        "oracle": "FILLET_RADIUS_TOO_LARGE / CHAMFER_DISTANCE_TOO_LARGE with `limit: face-width` at that face and the same `max_feasible_*` (the W7b generator's closed form); the value is equal in all 21",
+        "diagnosis": "no geometry on either side; the code depends on W6 CONTRACT ISSUE 2 (is a hole or boss rim inside an adjacent face a §6.6 `face-width` limit?); after the ruling one engine changes (Forge's forge-blend, or W7b's `hole_edge_blend` expectation and W7c's `blends.py` `_evidence_limits`)",
+        "owner": "Contract stage, then W6 or W7b/W7c"
+      },
+      {
+        "family": "card-1-with-several-members",
+        "programs": 1,
+        "evidence": "error corpus err1_066_ref_cardinality_shell_open: shell `open` = sides of a box with `card: 1` (4 faces)",
+        "forge": "REF_AMBIGUOUS (forge-refs `resolve` reads `card: 1` as `one`)",
+        "oracle": "REF_CARDINALITY { expected: 1, found: 4 } (§5.5 table: an integer n gives REF_CARDINALITY)",
+        "diagnosis": "the §5.5 table favours the oracle; [W0-14] lists `1` as a spelling of `one` for single-entity fields; no conformance fixture decides it",
+        "owner": "Contract stage (ruling + fixture), then W3 (forge-refs) or W7"
+      }
+    ]
   }
 }

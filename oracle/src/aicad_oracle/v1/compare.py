@@ -41,7 +41,7 @@ difference; a failed constrained-sketch replay check is not (it does not depend 
 
 **Downstream of an engine divergence** (a policy of this tool, not of the SPEC; it needs owner
 sign-off, see the README): after a feature on which the engines disagree about **status** (one
-fails, the other not — including the oracle's `ORACLE_UNSUPPORTED_FEATURE` against a Forge `ok`,
+fails, the other not — including an engine-internal failure against an `ok`,
 and a failed replay check), the two part states differ by construction (a failed feature passes
 its input through, §7.1), so later differences *in the same part* (features and final bodies) are
 capped at ROBUSTNESS — never reported as a silent-wrong answer, never hidden as MATCH. Every capped
@@ -136,6 +136,18 @@ def _code(x: Any) -> str | None:
     return x.get("code")
 
 
+def _skipped(p) -> Any:
+    """A pattern summary's `skipped` in canonical form: the sorted index lists, a missing (or
+    `null`) array read as `[]` (metrics-v1 makes it optional; Forge omits it when empty, the oracle
+    writes `[]` — W7b review 4); a malformed one is a fresh object, equal to nothing."""
+    s = _d(p).get("skipped")
+    if s is None:
+        return []
+    if not isinstance(s, list) or not all(isinstance(x, list) and all(isinstance(i, int) for i in x) for x in s):
+        return object()
+    return sorted(s)
+
+
 def _d(x: Any) -> dict:
     return x if isinstance(x, dict) else {}
 
@@ -161,6 +173,27 @@ def _hist(h: Any) -> dict:
     return {k: v for k, v in sorted(h.items()) if v != 0}
 
 
+_ANALYTIC = ("plane", "cylinder", "cone", "sphere", "torus")
+
+
+def _rule4_match(ha: dict, hb: dict, allowed=_ANALYTIC) -> bool:
+    """§8.3 rule 4: the oracle (B) has k more `bspline` faces exactly where Forge (A) has k more of
+    the normative blend types (`allowed`: the oracle's `ORACLE_NORMALIZED` details `types`);
+    every other count agrees."""
+    k = hb.get("bspline", 0) - ha.get("bspline", 0)
+    if k <= 0:
+        return False
+    extra = 0
+    for t in set(ha) | set(hb):
+        if t == "bspline":
+            continue
+        d = ha.get(t, 0) - hb.get(t, 0)
+        if d < 0 or (d > 0 and t not in allowed):
+            return False
+        extra += d
+    return extra == k
+
+
 def _origin_key(b: Any) -> tuple:
     o = _d(_d(b).get("origin"))
     inst = o.get("instance")
@@ -177,6 +210,11 @@ class _Cmp:
         self.a, self.b, self.la, self.lb, self.cmp = a, b, la, lb, cmp
         self.cap: dict[str, str] = {}  # part name → reason downstream differences are capped
         self.capped: dict[str, int] = {}  # part name → number of capped differences
+        #: §8.3 rules 4 and 5 (`ORACLE_NORMALIZED` on the oracle's feature): part → body origin →
+        #: the rules that relax that body's comparison, from that feature on (the blend faces and
+        #: corner patches stay on the body)
+        self.relax: dict[Any, dict[tuple, set[str]]] = {}
+        self.blend_types: dict[Any, dict[tuple, set[str]]] = {}
 
     def add(self, part: str | None, path: str, detail: str, cls: str) -> None:
         if part is not None and part in self.cap and _SEVERITY[cls] > _SEVERITY[ROBUSTNESS]:
@@ -193,17 +231,33 @@ class _Cmp:
     def body(self, part, path: str, x: dict, y: dict) -> None:
         s = max(1.0, _diag(x), _diag(y))
         la, lb = self.la, self.lb
+        rules = self.relax.get(part, {}).get(_origin_key(y), set())
+        corner = "5" in rules  # §8.3 rule 5: counts and types not compared, volume/area at 1e-5
+        blend_types = self.blend_types.get(part, {}).get(_origin_key(y), set(_ANALYTIC))
         for k in ("faces", "edges", "shells"):
+            if corner and k != "shells":
+                continue
             if x.get(k) != y.get(k):
                 self.add(part, path, f"{k} {la}={x.get(k)} {lb}={y.get(k)}", SILENT_WRONG)
         for k in ("face_types", "edge_types"):
-            if _hist(x.get(k)) != _hist(y.get(k)):
-                self.add(part, path, f"{k} {la}={_hist(x.get(k))} {lb}={_hist(y.get(k))}", SILENT_WRONG)
+            if corner:
+                continue
+            ha, hb = _hist(x.get(k)), _hist(y.get(k))
+            if ha != hb and not (k == "face_types" and "4" in rules and _rule4_match(ha, hb, blend_types)):
+                self.add(part, path, f"{k} {la}={ha} {lb}={hb}", SILENT_WRONG)
+        if corner:
+            for k in ("volume", "area"):
+                u, v = x.get(k), y.get(k)
+                if not (_num(u) and _num(v) and abs(u - v) <= 1e-5 * max(abs(u), abs(v))):
+                    self.add(part, path, f"{k} {la}={u!r} {lb}={v!r} (§8.3 rule 5: allowed 1e-5 relative)",
+                             SILENT_WRONG)
         ok, allowed = close_rel(x.get("volume"), y.get("volume"), ABS_FLOOR * s ** 3)
-        if not ok:
+        if not ok and not corner:
             self.add(part, path, f"volume {la}={x.get('volume')!r} {lb}={y.get('volume')!r} (allowed ±{allowed:.3g})",
                      SILENT_WRONG)
         ok, allowed = close_rel(x.get("area"), y.get("area"), ABS_FLOOR * s ** 2)
+        if not ok and corner:
+            ok = True
         if not ok:
             self.add(part, path, f"area {la}={x.get('area')!r} {lb}={y.get('area')!r} (allowed ±{allowed:.3g})",
                      SILENT_WRONG)
@@ -295,6 +349,18 @@ class _Cmp:
         sa, sb = fa.get("status"), fb.get("status")
         ca, cb = _code(fa.get("error")), _code(fb.get("error"))
         self.oracle_findings(i, fb)
+        rules = {str(_d(w.get("details")).get("rule")) for w in _dicts(fb.get("warnings"))
+                 if w.get("code") == "ORACLE_NORMALIZED"} & {"4", "5"}
+        if rules:
+            types = set()
+            for w in _dicts(fb.get("warnings")):
+                if w.get("code") == "ORACLE_NORMALIZED" and str(_d(w.get("details")).get("rule")) == "4":
+                    t = _d(w.get("details")).get("types")
+                    types |= set(t) if isinstance(t, list) else set(_ANALYTIC)
+            for bd in _dicts(fb.get("bodies")):
+                self.relax.setdefault(part, {}).setdefault(_origin_key(bd), set()).update(rules)
+                if types:
+                    self.blend_types.setdefault(part, {}).setdefault(_origin_key(bd), set()).update(types)
         if ca == "ORACLE_REPLAY_CHECK_FAILED" or cb == "ORACLE_REPLAY_CHECK_FAILED":
             return
         if sa != sb:
@@ -392,7 +458,7 @@ class _Cmp:
         pa, pb = fa.get("pattern"), fb.get("pattern")
         if (pa or pb) and (not isinstance(pa or {}, dict) or not isinstance(pb or {}, dict)
                            or _d(pa).get("instances") != _d(pb).get("instances")
-                           or _d(pa).get("skipped") != _d(pb).get("skipped")):
+                           or _skipped(pa) != _skipped(pb)):
             self.add(part, f"{path}.pattern", f"{self.la}={pa} {self.lb}={pb}", SILENT_WRONG)
         for k in ("fillet", "chamfer"):
             xa, xb = fa.get(k), fb.get(k)

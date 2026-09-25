@@ -6,6 +6,7 @@ import type { Span } from "@aicad/cadscript";
 import type { AgentService } from "./agent/agent-service";
 import type { CadScriptService } from "./cadscript/service";
 import type { DocStore } from "./doc/doc-store";
+import type { IrDocStore } from "./doc/v1/ir-doc-store";
 import type { EngineManager } from "./engine/engine-manager";
 import type { Projection, ViewName } from "./engine/forge-web-contract";
 import type { AppHost } from "./host/host";
@@ -76,6 +77,11 @@ export interface AppServices {
   templates: readonly TemplateInfo[];
   /** The design agent: runs, proposal review, settings. */
   agent: AgentService;
+  /**
+   * The IR v1 document store and its command-layer ops (setParam, writeBackSolution, captureRef,
+   * reference repairs, renames, upgrades; SPEC-v1 §0.6, §5.9). Absent on hosts without it.
+   */
+  ir?: IrDocStore;
   /** Ask the user to confirm (e.g. discarding unsaved changes). Agents/tests inject a policy. */
   confirm(message: string): Promise<boolean>;
 }

@@ -33,8 +33,8 @@ def _bits(v: float) -> str:
 
 
 def test_the_suite_is_complete():
-    assert len(FIX["cases"]) == 376
-    assert len({c["id"] for c in FIX["cases"]}) == 376
+    assert len(FIX["cases"]) >= 376  # [W0-47] fixture counts are lower bounds (§9.4 append-only)
+    assert len({c["id"] for c in FIX["cases"]}) == len(FIX["cases"])
 
 
 @pytest.mark.parametrize("case", FIX["cases"], ids=lambda c: c["id"])

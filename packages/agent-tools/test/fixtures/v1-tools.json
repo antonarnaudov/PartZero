@@ -1,0 +1,5624 @@
+{
+ "schema": "aicad.agent-tools.v1-session/0",
+ "entries": [
+  {
+   "label": "design-probe",
+   "ir_sha256": "0296b0f0035e2effa631bcaba56e244df5097a1d8ea86fc27f6ca3e1f1dca16e",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design-probe",
+    "status": "ok",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 222.61725123519332,
+        "loops": 1,
+        "outer_curves": [
+         "o.bottom",
+         "o.c_bl",
+         "o.c_br",
+         "o.c_tl",
+         "o.c_tr",
+         "o.left",
+         "o.right",
+         "o.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "o.bottom",
+         "start": [
+          -1.5,
+          -10
+         ],
+         "end": [
+          1.5,
+          -10
+         ]
+        },
+        {
+         "kind": "arc",
+         "id": "o.c_br",
+         "start": [
+          1.5,
+          -10
+         ],
+         "end": [
+          6,
+          -5.5
+         ],
+         "center": [
+          1.5,
+          -5.5
+         ],
+         "ccw": true
+        },
+        {
+         "kind": "line",
+         "id": "o.right",
+         "start": [
+          6,
+          -5.5
+         ],
+         "end": [
+          6,
+          5.5
+         ]
+        },
+        {
+         "kind": "arc",
+         "id": "o.c_tr",
+         "start": [
+          6,
+          5.5
+         ],
+         "end": [
+          1.5,
+          10
+         ],
+         "center": [
+          1.5,
+          5.5
+         ],
+         "ccw": true
+        },
+        {
+         "kind": "line",
+         "id": "o.top",
+         "start": [
+          1.5,
+          10
+         ],
+         "end": [
+          -1.5,
+          10
+         ]
+        },
+        {
+         "kind": "arc",
+         "id": "o.c_tl",
+         "start": [
+          -1.5,
+          10
+         ],
+         "end": [
+          -6,
+          5.5
+         ],
+         "center": [
+          -1.5,
+          5.5
+         ],
+         "ccw": true
+        },
+        {
+         "kind": "line",
+         "id": "o.left",
+         "start": [
+          -6,
+          5.5
+         ],
+         "end": [
+          -6,
+          -5.5
+         ]
+        },
+        {
+         "kind": "arc",
+         "id": "o.c_bl",
+         "start": [
+          -6,
+          -5.5
+         ],
+         "end": [
+          -1.5,
+          -10
+         ],
+         "center": [
+          -1.5,
+          -5.5
+         ],
+         "ccw": true
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 445.23450247038676,
+        "area": 557.7831702350031,
+        "centroid": [
+         -1.2767074102616015e-16,
+         1.2767074102616015e-16,
+         1
+        ],
+        "bbox_min": [
+         -6,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         6,
+         10,
+         2
+        ],
+        "faces": 10,
+        "edges": 24,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 16
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "w",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 12
+     }
+    ],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 445.23450247038676,
+        "area": 557.7831702350031,
+        "centroid": [
+         -1.2767074102616015e-16,
+         1.2767074102616015e-16,
+         1
+        ],
+        "bbox_min": [
+         -6,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         6,
+         10,
+         2
+        ],
+        "faces": 10,
+        "edges": 24,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 16
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design-probe",
+   "ir_sha256": "0501f0612296e02efbf260d9a4f229f0f45564c3719ab3c5cf52041665140809",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design-probe",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3200,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -32,
+          -25
+         ],
+         "end": [
+          32,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          32,
+          -25
+         ],
+         "end": [
+          32,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          32,
+          25
+         ],
+         "end": [
+          -32,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -32,
+          25
+         ],
+         "end": [
+          -32,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 25600.000000000004,
+        "area": 8224.000000000002,
+        "centroid": [
+         0,
+         1.6875389974302377e-16,
+         4
+        ],
+        "bbox_min": [
+         -32,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         32,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 64
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 25600.000000000004,
+        "area": 8224.000000000002,
+        "centroid": [
+         0,
+         1.6875389974302377e-16,
+         4
+        ],
+        "bbox_min": [
+         -32,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         32,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design",
+   "ir_sha256": "05269bb0b2e979bb054c2f1953f3d3a264cc8619f2e471e478fb8b259b52e046",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design",
+    "status": "error",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4000,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -40,
+          -25
+         ],
+         "end": [
+          40,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          40,
+          -25
+         ],
+         "end": [
+          40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          40,
+          25
+         ],
+         "end": [
+          -40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -40,
+          25
+         ],
+         "end": [
+          -40,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "top",
+      "feature_id": "f_top",
+      "type": "tag",
+      "status": "error",
+      "error": {
+       "code": "REF_AMBIGUOUS",
+       "message": "reference /target is ambiguous (4 candidates)",
+       "details": {
+        "field": "/target",
+        "unresolved": [
+         {
+          "candidates": [
+           {
+            "confidence": 0,
+            "key": "f_slab/side:outline.bottom",
+            "name": "slab/side:outline.bottom",
+            "probe": {
+             "kind": "face",
+             "normal": [
+              0,
+              -1,
+              0
+             ],
+             "point": [
+              0,
+              -25,
+              4
+             ]
+            },
+            "query": {
+             "curve": "outline.bottom",
+             "feature": "f_slab",
+             "op": "side"
+            },
+            "reason": "tie"
+           },
+           {
+            "confidence": 0,
+            "key": "f_slab/side:outline.left",
+            "name": "slab/side:outline.left",
+            "probe": {
+             "kind": "face",
+             "normal": [
+              -1,
+              0,
+              0
+             ],
+             "point": [
+              -40,
+              0,
+              4
+             ]
+            },
+            "query": {
+             "curve": "outline.left",
+             "feature": "f_slab",
+             "op": "side"
+            },
+            "reason": "tie"
+           },
+           {
+            "confidence": 0,
+            "key": "f_slab/side:outline.right",
+            "name": "slab/side:outline.right",
+            "probe": {
+             "kind": "face",
+             "normal": [
+              1,
+              0,
+              0
+             ],
+             "point": [
+              40,
+              0,
+              4
+             ]
+            },
+            "query": {
+             "curve": "outline.right",
+             "feature": "f_slab",
+             "op": "side"
+            },
+            "reason": "tie"
+           },
+           {
+            "confidence": 0,
+            "key": "f_slab/side:outline.top",
+            "name": "slab/side:outline.top",
+            "probe": {
+             "kind": "face",
+             "normal": [
+              0,
+              1,
+              0
+             ],
+             "point": [
+              0,
+              25,
+              4
+             ]
+            },
+            "query": {
+             "curve": "outline.top",
+             "feature": "f_slab",
+             "op": "side"
+            },
+            "reason": "tie"
+           }
+          ],
+          "key": "",
+          "name": "",
+          "reason": "tie"
+         }
+        ]
+       }
+      },
+      "refs": [
+       {
+        "field": "/target",
+        "status": "failed",
+        "members": [
+         {
+          "key": "f_slab/side:outline.bottom",
+          "name": "slab/side:outline.bottom",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            0,
+            -25,
+            4
+           ],
+           "normal": [
+            0,
+            -1,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/side:outline.left",
+          "name": "slab/side:outline.left",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -40,
+            0,
+            4
+           ],
+           "normal": [
+            -1,
+            0,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/side:outline.right",
+          "name": "slab/side:outline.right",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            40,
+            0,
+            4
+           ],
+           "normal": [
+            1,
+            0,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/side:outline.top",
+          "name": "slab/side:outline.top",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            0,
+            25,
+            4
+           ],
+           "normal": [
+            0,
+            1,
+            0
+           ]
+          }
+         }
+        ],
+        "code": "REF_AMBIGUOUS",
+        "unresolved": [
+         {
+          "key": "",
+          "name": "",
+          "reason": "tie",
+          "candidates": [
+           {
+            "key": "f_slab/side:outline.bottom",
+            "name": "slab/side:outline.bottom",
+            "confidence": 0,
+            "reason": "tie",
+            "probe": {
+             "kind": "face",
+             "point": [
+              0,
+              -25,
+              4
+             ],
+             "normal": [
+              0,
+              -1,
+              0
+             ]
+            },
+            "query": {
+             "op": "side",
+             "feature": "f_slab",
+             "curve": "outline.bottom"
+            }
+           },
+           {
+            "key": "f_slab/side:outline.left",
+            "name": "slab/side:outline.left",
+            "confidence": 0,
+            "reason": "tie",
+            "probe": {
+             "kind": "face",
+             "point": [
+              -40,
+              0,
+              4
+             ],
+             "normal": [
+              -1,
+              0,
+              0
+             ]
+            },
+            "query": {
+             "op": "side",
+             "feature": "f_slab",
+             "curve": "outline.left"
+            }
+           },
+           {
+            "key": "f_slab/side:outline.right",
+            "name": "slab/side:outline.right",
+            "confidence": 0,
+            "reason": "tie",
+            "probe": {
+             "kind": "face",
+             "point": [
+              40,
+              0,
+              4
+             ],
+             "normal": [
+              1,
+              0,
+              0
+             ]
+            },
+            "query": {
+             "op": "side",
+             "feature": "f_slab",
+             "curve": "outline.right"
+            }
+           },
+           {
+            "key": "f_slab/side:outline.top",
+            "name": "slab/side:outline.top",
+            "confidence": 0,
+            "reason": "tie",
+            "probe": {
+             "kind": "face",
+             "point": [
+              0,
+              25,
+              4
+             ],
+             "normal": [
+              0,
+              1,
+              0
+             ]
+            },
+            "query": {
+             "op": "side",
+             "feature": "f_slab",
+             "curve": "outline.top"
+            }
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design-query",
+   "ir_sha256": "1ffb2f63bda96633be8eae962982b3b6e0ea1212a1b62af0a0744b3a4d3d64d3",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design-query",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4000,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -40,
+          -25
+         ],
+         "end": [
+          40,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          40,
+          -25
+         ],
+         "end": [
+          40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          40,
+          25
+         ],
+         "end": [
+          -40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -40,
+          25
+         ],
+         "end": [
+          -40,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "q__aicad_probe_f",
+      "feature_id": "f_q__aicad_probe_f",
+      "type": "tag",
+      "status": "ok",
+      "refs": [
+       {
+        "field": "/target",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_slab/cap:end@outline.bottom",
+          "name": "slab/cap:end",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -2.27373675443232e-16,
+            -4.2632564145606015e-16,
+            8
+           ],
+           "normal": [
+            0,
+            0,
+            1
+           ]
+          }
+         },
+         {
+          "key": "f_slab/cap:start@outline.bottom",
+          "name": "slab/cap:start",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -3.41060513164848e-16,
+            -4.2632564145606015e-16,
+            0
+           ],
+           "normal": [
+            0,
+            0,
+            -1
+           ]
+          }
+         },
+         {
+          "key": "f_slab/side:outline.bottom",
+          "name": "slab/side:outline.bottom",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            0,
+            -25,
+            4
+           ],
+           "normal": [
+            0,
+            -1,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/side:outline.left",
+          "name": "slab/side:outline.left",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -40,
+            0,
+            4
+           ],
+           "normal": [
+            -1,
+            0,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/side:outline.right",
+          "name": "slab/side:outline.right",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            40,
+            0,
+            4
+           ],
+           "normal": [
+            1,
+            0,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/side:outline.top",
+          "name": "slab/side:outline.top",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            0,
+            25,
+            4
+           ],
+           "normal": [
+            0,
+            1,
+            0
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "q__aicad_probe_e",
+      "feature_id": "f_q__aicad_probe_e",
+      "type": "tag",
+      "status": "ok",
+      "refs": [
+       {
+        "field": "/target",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_slab/edge:{f_slab/cap:end@outline.bottom|f_slab/side:outline.bottom}",
+          "name": "slab/edge:{slab/cap:end|slab/side:outline.bottom}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            0,
+            -25,
+            8
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/cap:end@outline.bottom|f_slab/side:outline.left}",
+          "name": "slab/edge:{slab/cap:end|slab/side:outline.left}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            -40,
+            0,
+            8
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/cap:end@outline.bottom|f_slab/side:outline.right}",
+          "name": "slab/edge:{slab/cap:end|slab/side:outline.right}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            40,
+            0,
+            8
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/cap:end@outline.bottom|f_slab/side:outline.top}",
+          "name": "slab/edge:{slab/cap:end|slab/side:outline.top}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            0,
+            25,
+            8
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/cap:start@outline.bottom|f_slab/side:outline.bottom}",
+          "name": "slab/edge:{slab/cap:start|slab/side:outline.bottom}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            0,
+            -25,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/cap:start@outline.bottom|f_slab/side:outline.left}",
+          "name": "slab/edge:{slab/cap:start|slab/side:outline.left}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            -40,
+            0,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/cap:start@outline.bottom|f_slab/side:outline.right}",
+          "name": "slab/edge:{slab/cap:start|slab/side:outline.right}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            40,
+            0,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/cap:start@outline.bottom|f_slab/side:outline.top}",
+          "name": "slab/edge:{slab/cap:start|slab/side:outline.top}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            0,
+            25,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/side:outline.bottom|f_slab/side:outline.left}@outline.bottom.start",
+          "name": "slab/edge:{slab/side:outline.bottom|slab/side:outline.left}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            -40,
+            -25,
+            4
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/side:outline.bottom|f_slab/side:outline.right}@outline.bottom.end",
+          "name": "slab/edge:{slab/side:outline.bottom|slab/side:outline.right}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            40,
+            -25,
+            4
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/side:outline.left|f_slab/side:outline.top}@outline.left.start",
+          "name": "slab/edge:{slab/side:outline.left|slab/side:outline.top}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            -40,
+            25,
+            4
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/side:outline.right|f_slab/side:outline.top}@outline.right.end",
+          "name": "slab/edge:{slab/side:outline.right|slab/side:outline.top}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            40,
+            25,
+            4
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "q__aicad_probe_v",
+      "feature_id": "f_q__aicad_probe_v",
+      "type": "tag",
+      "status": "ok",
+      "refs": [
+       {
+        "field": "/target",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_slab/vertex:{f_slab/cap:end@outline.bottom|f_slab/side:outline.bottom|f_slab/side:outline.left}@outline.bottom.start",
+          "name": "slab/vertex:{slab/cap:end|slab/side:outline.bottom|slab/side:outline.left}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "vertex",
+           "point": [
+            -40,
+            -25,
+            8
+           ]
+          }
+         },
+         {
+          "key": "f_slab/vertex:{f_slab/cap:end@outline.bottom|f_slab/side:outline.bottom|f_slab/side:outline.right}@outline.bottom.end",
+          "name": "slab/vertex:{slab/cap:end|slab/side:outline.bottom|slab/side:outline.right}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "vertex",
+           "point": [
+            40,
+            -25,
+            8
+           ]
+          }
+         },
+         {
+          "key": "f_slab/vertex:{f_slab/cap:end@outline.bottom|f_slab/side:outline.left|f_slab/side:outline.top}@outline.left.start",
+          "name": "slab/vertex:{slab/cap:end|slab/side:outline.left|slab/side:outline.top}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "vertex",
+           "point": [
+            -40,
+            25,
+            8
+           ]
+          }
+         },
+         {
+          "key": "f_slab/vertex:{f_slab/cap:end@outline.bottom|f_slab/side:outline.right|f_slab/side:outline.top}@outline.right.end",
+          "name": "slab/vertex:{slab/cap:end|slab/side:outline.right|slab/side:outline.top}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "vertex",
+           "point": [
+            40,
+            25,
+            8
+           ]
+          }
+         },
+         {
+          "key": "f_slab/vertex:{f_slab/cap:start@outline.bottom|f_slab/side:outline.bottom|f_slab/side:outline.left}@outline.bottom.start",
+          "name": "slab/vertex:{slab/cap:start|slab/side:outline.bottom|slab/side:outline.left}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "vertex",
+           "point": [
+            -40,
+            -25,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/vertex:{f_slab/cap:start@outline.bottom|f_slab/side:outline.bottom|f_slab/side:outline.right}@outline.bottom.end",
+          "name": "slab/vertex:{slab/cap:start|slab/side:outline.bottom|slab/side:outline.right}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "vertex",
+           "point": [
+            40,
+            -25,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/vertex:{f_slab/cap:start@outline.bottom|f_slab/side:outline.left|f_slab/side:outline.top}@outline.left.start",
+          "name": "slab/vertex:{slab/cap:start|slab/side:outline.left|slab/side:outline.top}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "vertex",
+           "point": [
+            -40,
+            25,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/vertex:{f_slab/cap:start@outline.bottom|f_slab/side:outline.right|f_slab/side:outline.top}@outline.right.end",
+          "name": "slab/vertex:{slab/cap:start|slab/side:outline.right|slab/side:outline.top}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "vertex",
+           "point": [
+            40,
+            25,
+            0
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design-probe",
+   "ir_sha256": "25d903418dd44254207066dcf3a3743dd15868cc53955d2b6025a5528b871035",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design-probe",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4800,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -40,
+          -30
+         ],
+         "end": [
+          40,
+          -30
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          40,
+          -30
+         ],
+         "end": [
+          40,
+          30
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          40,
+          30
+         ],
+         "end": [
+          -40,
+          30
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -40,
+          30
+         ],
+         "end": [
+          -40,
+          -30
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 38400.00000000001,
+        "area": 11840.000000000007,
+        "centroid": [
+         -7.5791225147744005e-16,
+         5.3290705182007506e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -30,
+         0
+        ],
+        "bbox_max": [
+         40,
+         30,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 60
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 38400.00000000001,
+        "area": 11840.000000000007,
+        "centroid": [
+         -7.5791225147744005e-16,
+         5.3290705182007506e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -30,
+         0
+        ],
+        "bbox_max": [
+         40,
+         30,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design-query",
+   "ir_sha256": "2e4d6c1263d2dad5e5c52e185ce0e5a97e753abfe7df1a15f368a4c5dc41055e",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design-query",
+    "status": "error",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4000,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -40,
+          -25
+         ],
+         "end": [
+          40,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          40,
+          -25
+         ],
+         "end": [
+          40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          40,
+          25
+         ],
+         "end": [
+          -40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -40,
+          25
+         ],
+         "end": [
+          -40,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "q__aicad_probe",
+      "feature_id": "f_q__aicad_probe",
+      "type": "tag",
+      "status": "error",
+      "error": {
+       "code": "REF_AMBIGUOUS",
+       "message": "reference /target is ambiguous (4 candidates)",
+       "details": {
+        "field": "/target",
+        "unresolved": [
+         {
+          "candidates": [
+           {
+            "confidence": 0,
+            "key": "f_slab/side:outline.bottom",
+            "name": "slab/side:outline.bottom",
+            "probe": {
+             "kind": "face",
+             "normal": [
+              0,
+              -1,
+              0
+             ],
+             "point": [
+              0,
+              -25,
+              4
+             ]
+            },
+            "query": {
+             "curve": "outline.bottom",
+             "feature": "f_slab",
+             "op": "side"
+            },
+            "reason": "tie"
+           },
+           {
+            "confidence": 0,
+            "key": "f_slab/side:outline.left",
+            "name": "slab/side:outline.left",
+            "probe": {
+             "kind": "face",
+             "normal": [
+              -1,
+              0,
+              0
+             ],
+             "point": [
+              -40,
+              0,
+              4
+             ]
+            },
+            "query": {
+             "curve": "outline.left",
+             "feature": "f_slab",
+             "op": "side"
+            },
+            "reason": "tie"
+           },
+           {
+            "confidence": 0,
+            "key": "f_slab/side:outline.right",
+            "name": "slab/side:outline.right",
+            "probe": {
+             "kind": "face",
+             "normal": [
+              1,
+              0,
+              0
+             ],
+             "point": [
+              40,
+              0,
+              4
+             ]
+            },
+            "query": {
+             "curve": "outline.right",
+             "feature": "f_slab",
+             "op": "side"
+            },
+            "reason": "tie"
+           },
+           {
+            "confidence": 0,
+            "key": "f_slab/side:outline.top",
+            "name": "slab/side:outline.top",
+            "probe": {
+             "kind": "face",
+             "normal": [
+              0,
+              1,
+              0
+             ],
+             "point": [
+              0,
+              25,
+              4
+             ]
+            },
+            "query": {
+             "curve": "outline.top",
+             "feature": "f_slab",
+             "op": "side"
+            },
+            "reason": "tie"
+           }
+          ],
+          "key": "",
+          "name": "",
+          "reason": "tie"
+         }
+        ]
+       }
+      },
+      "refs": [
+       {
+        "field": "/target",
+        "status": "failed",
+        "members": [
+         {
+          "key": "f_slab/side:outline.bottom",
+          "name": "slab/side:outline.bottom",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            0,
+            -25,
+            4
+           ],
+           "normal": [
+            0,
+            -1,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/side:outline.left",
+          "name": "slab/side:outline.left",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -40,
+            0,
+            4
+           ],
+           "normal": [
+            -1,
+            0,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/side:outline.right",
+          "name": "slab/side:outline.right",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            40,
+            0,
+            4
+           ],
+           "normal": [
+            1,
+            0,
+            0
+           ]
+          }
+         },
+         {
+          "key": "f_slab/side:outline.top",
+          "name": "slab/side:outline.top",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            0,
+            25,
+            4
+           ],
+           "normal": [
+            0,
+            1,
+            0
+           ]
+          }
+         }
+        ],
+        "code": "REF_AMBIGUOUS",
+        "unresolved": [
+         {
+          "key": "",
+          "name": "",
+          "reason": "tie",
+          "candidates": [
+           {
+            "key": "f_slab/side:outline.bottom",
+            "name": "slab/side:outline.bottom",
+            "confidence": 0,
+            "reason": "tie",
+            "probe": {
+             "kind": "face",
+             "point": [
+              0,
+              -25,
+              4
+             ],
+             "normal": [
+              0,
+              -1,
+              0
+             ]
+            },
+            "query": {
+             "op": "side",
+             "feature": "f_slab",
+             "curve": "outline.bottom"
+            }
+           },
+           {
+            "key": "f_slab/side:outline.left",
+            "name": "slab/side:outline.left",
+            "confidence": 0,
+            "reason": "tie",
+            "probe": {
+             "kind": "face",
+             "point": [
+              -40,
+              0,
+              4
+             ],
+             "normal": [
+              -1,
+              0,
+              0
+             ]
+            },
+            "query": {
+             "op": "side",
+             "feature": "f_slab",
+             "curve": "outline.left"
+            }
+           },
+           {
+            "key": "f_slab/side:outline.right",
+            "name": "slab/side:outline.right",
+            "confidence": 0,
+            "reason": "tie",
+            "probe": {
+             "kind": "face",
+             "point": [
+              40,
+              0,
+              4
+             ],
+             "normal": [
+              1,
+              0,
+              0
+             ]
+            },
+            "query": {
+             "op": "side",
+             "feature": "f_slab",
+             "curve": "outline.right"
+            }
+           },
+           {
+            "key": "f_slab/side:outline.top",
+            "name": "slab/side:outline.top",
+            "confidence": 0,
+            "reason": "tie",
+            "probe": {
+             "kind": "face",
+             "point": [
+              0,
+              25,
+              4
+             ],
+             "normal": [
+              0,
+              1,
+              0
+             ]
+            },
+            "query": {
+             "op": "side",
+             "feature": "f_slab",
+             "curve": "outline.top"
+            }
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design-query",
+   "ir_sha256": "348ce81737d0613545f8e8f5660066fdc99e9430c8091a0a331926bf47a7c4e3",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design-query",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4000,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -40,
+          -25
+         ],
+         "end": [
+          40,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          40,
+          -25
+         ],
+         "end": [
+          40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          40,
+          25
+         ],
+         "end": [
+          -40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -40,
+          25
+         ],
+         "end": [
+          -40,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "q__aicad_probe",
+      "feature_id": "f_q__aicad_probe",
+      "type": "tag",
+      "status": "ok",
+      "refs": [
+       {
+        "field": "/target",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_slab/edge:{f_slab/side:outline.bottom|f_slab/side:outline.left}@outline.bottom.start",
+          "name": "slab/edge:{slab/side:outline.bottom|slab/side:outline.left}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            -40,
+            -25,
+            4
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/side:outline.bottom|f_slab/side:outline.right}@outline.bottom.end",
+          "name": "slab/edge:{slab/side:outline.bottom|slab/side:outline.right}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            40,
+            -25,
+            4
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/side:outline.left|f_slab/side:outline.top}@outline.left.start",
+          "name": "slab/edge:{slab/side:outline.left|slab/side:outline.top}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            -40,
+            25,
+            4
+           ]
+          }
+         },
+         {
+          "key": "f_slab/edge:{f_slab/side:outline.right|f_slab/side:outline.top}@outline.right.end",
+          "name": "slab/edge:{slab/side:outline.right|slab/side:outline.top}",
+          "via": "broad",
+          "status": "exact",
+          "probe": {
+           "kind": "edge",
+           "point": [
+            40,
+            25,
+            4
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design-probe",
+   "ir_sha256": "3f8396c29365b736cc5ccca2a7f8c5fef627a94f4136eb977789194add469286",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design-probe",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 3200,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -40,
+          -20
+         ],
+         "end": [
+          40,
+          -20
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          40,
+          -20
+         ],
+         "end": [
+          40,
+          20
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          40,
+          20
+         ],
+         "end": [
+          -40,
+          20
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -40,
+          20
+         ],
+         "end": [
+          -40,
+          -20
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 25600.000000000004,
+        "area": 8320.000000000002,
+        "centroid": [
+         -5.684341886080801e-16,
+         -5.3290705182007506e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -20,
+         0
+        ],
+        "bbox_max": [
+         40,
+         20,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 40
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 25600.000000000004,
+        "area": 8320.000000000002,
+        "centroid": [
+         -5.684341886080801e-16,
+         -5.3290705182007506e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -20,
+         0
+        ],
+        "bbox_max": [
+         40,
+         20,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design-probe",
+   "ir_sha256": "402d7fe186afbc7f85fa987d8dbd052b39c3d1423cb05915e2a5eb010f09d4e8",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design-probe",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4000,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -40,
+          -25
+         ],
+         "end": [
+          40,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          40,
+          -25
+         ],
+         "end": [
+          40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          40,
+          25
+         ],
+         "end": [
+          -40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -40,
+          25
+         ],
+         "end": [
+          -40,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 25600.000000000004,
+        "area": 9664.000000000002,
+        "centroid": [
+         -5.684341886080801e-16,
+         1.8651746813702627e-16,
+         3.2
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         6.4
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 6.4
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 25600.000000000004,
+        "area": 9664.000000000002,
+        "centroid": [
+         -5.684341886080801e-16,
+         1.8651746813702627e-16,
+         3.2
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         6.4
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design",
+   "ir_sha256": "46cf184df414df7daf6970d6030c8bd1d5f61954692536423cb738518628e93e",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design",
+    "status": "ok",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 182.61725123519332,
+        "loops": 1,
+        "outer_curves": [
+         "o.bottom",
+         "o.c_bl",
+         "o.c_br",
+         "o.c_tl",
+         "o.c_tr",
+         "o.left",
+         "o.right",
+         "o.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "o.bottom",
+         "start": [
+          -0.5,
+          -10
+         ],
+         "end": [
+          0.5,
+          -10
+         ]
+        },
+        {
+         "kind": "arc",
+         "id": "o.c_br",
+         "start": [
+          0.5,
+          -10
+         ],
+         "end": [
+          5,
+          -5.5
+         ],
+         "center": [
+          0.5,
+          -5.5
+         ],
+         "ccw": true
+        },
+        {
+         "kind": "line",
+         "id": "o.right",
+         "start": [
+          5,
+          -5.5
+         ],
+         "end": [
+          5,
+          5.5
+         ]
+        },
+        {
+         "kind": "arc",
+         "id": "o.c_tr",
+         "start": [
+          5,
+          5.5
+         ],
+         "end": [
+          0.5,
+          10
+         ],
+         "center": [
+          0.5,
+          5.5
+         ],
+         "ccw": true
+        },
+        {
+         "kind": "line",
+         "id": "o.top",
+         "start": [
+          0.5,
+          10
+         ],
+         "end": [
+          -0.5,
+          10
+         ]
+        },
+        {
+         "kind": "arc",
+         "id": "o.c_tl",
+         "start": [
+          -0.5,
+          10
+         ],
+         "end": [
+          -5,
+          5.5
+         ],
+         "center": [
+          -0.5,
+          5.5
+         ],
+         "ccw": true
+        },
+        {
+         "kind": "line",
+         "id": "o.left",
+         "start": [
+          -5,
+          5.5
+         ],
+         "end": [
+          -5,
+          -5.5
+         ]
+        },
+        {
+         "kind": "arc",
+         "id": "o.c_bl",
+         "start": [
+          -5,
+          -5.5
+         ],
+         "end": [
+          -0.5,
+          -10
+         ],
+         "center": [
+          -0.5,
+          -5.5
+         ],
+         "ccw": true
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 365.23450247038676,
+        "area": 469.7831702350031,
+        "centroid": [
+         -3.8908850667398874e-17,
+         0,
+         1
+        ],
+        "bbox_min": [
+         -5,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         5,
+         10,
+         2
+        ],
+        "faces": 10,
+        "edges": 24,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 16
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "w",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 10
+     }
+    ],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 365.23450247038676,
+        "area": 469.7831702350031,
+        "centroid": [
+         -3.8908850667398874e-17,
+         0,
+         1
+        ],
+        "bbox_min": [
+         -5,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         5,
+         10,
+         2
+        ],
+        "faces": 10,
+        "edges": 24,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 4,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 8,
+         "line": 16
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design",
+   "ir_sha256": "5ac0bec02ae57508dd4f3574ea000be1e22ed216587d7898d9438c9b11f51ff8",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4000,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -40,
+          -25
+         ],
+         "end": [
+          40,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          40,
+          -25
+         ],
+         "end": [
+          40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          40,
+          25
+         ],
+         "end": [
+          -40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -40,
+          25
+         ],
+         "end": [
+          -40,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design-probe",
+   "ir_sha256": "7360a9031333d1ce570dc0f2f05cfbcace6656592d6e037811d7f789d8e1d120",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design-probe",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4800,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -48,
+          -25
+         ],
+         "end": [
+          48,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          48,
+          -25
+         ],
+         "end": [
+          48,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          48,
+          25
+         ],
+         "end": [
+          -48,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -48,
+          25
+         ],
+         "end": [
+          -48,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 38400.00000000001,
+        "area": 11936.000000000004,
+        "centroid": [
+         0,
+         6.51330841113425e-17,
+         4
+        ],
+        "bbox_min": [
+         -48,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         48,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 96
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 38400.00000000001,
+        "area": 11936.000000000004,
+        "centroid": [
+         0,
+         6.51330841113425e-17,
+         4
+        ],
+        "bbox_min": [
+         -48,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         48,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design",
+   "ir_sha256": "7429a2f856961bd4efde878fe0af40aeeb6073252c589a089696ef78a2ae1d3f",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4000,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -40,
+          -25
+         ],
+         "end": [
+          40,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          40,
+          -25
+         ],
+         "end": [
+          40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          40,
+          25
+         ],
+         "end": [
+          -40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -40,
+          25
+         ],
+         "end": [
+          -40,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "bolt",
+      "feature_id": "f_bolt",
+      "type": "hole",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31899.469035085123,
+        "area": 10155.398223686158,
+        "centroid": [
+         -1.2007314073923955e-19,
+         -3.60945586356696e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true,
+        "change": "modified"
+       }
+      ],
+      "holes": [
+       {
+        "at": "a",
+        "center": [
+         0,
+         0,
+         8
+        ],
+        "axis": [
+         0,
+         0,
+         -1
+        ],
+        "d": 4,
+        "depth": null,
+        "kind": "simple"
+       }
+      ],
+      "refs": [
+       {
+        "field": "/on/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_slab/cap:end@outline.bottom",
+          "name": "slab/cap:end",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -2.27373675443232e-16,
+            -4.2632564145606015e-16,
+            8
+           ],
+           "normal": [
+            0,
+            0,
+            1
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31899.469035085123,
+        "area": 10155.398223686158,
+        "centroid": [
+         -1.2007314073923955e-19,
+         -3.60945586356696e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design",
+   "ir_sha256": "787c5b8635afbc38c96eca98d24e8aa2457094b28b1921006cacc6f6cec155f3",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design",
+    "status": "error",
+    "features": [],
+    "error": {
+     "code": "UNSUPPORTED_FEATURE",
+     "message": "UNSUPPORTED_FEATURE at /parts/0/features/2/type: this engine does not implement \"draft\"",
+     "details": {
+      "errors": [
+       {
+        "code": "UNSUPPORTED_FEATURE",
+        "details": {
+         "type": "draft"
+        },
+        "message": "this engine does not implement \"draft\"",
+        "path": "/parts/0/features/2/type"
+       }
+      ]
+     }
+    },
+    "params": [],
+    "parts": []
+   }
+  },
+  {
+   "label": "design-probe",
+   "ir_sha256": "7983b881735deee790795ac4142164d84b0847cf1b80f2c2a69a308ac10481b3",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design-probe",
+    "status": "error",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "error",
+      "error": {
+       "code": "INVALID_VALUE",
+       "message": "compound curve \"o\": INVALID_VALUE: r = 4.5: expected in [0, 4] (min(w, h)/2)",
+       "details": {
+        "expected": "in [0, 4] (min(w, h)/2)",
+        "field": "r",
+        "value": 4.5
+       }
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "error",
+      "error": {
+       "code": "DEPENDENCY_FAILED",
+       "message": "sketch \"s\" failed with INVALID_VALUE: compound curve \"o\": INVALID_VALUE: r = 4.5: expected in [0, 4] (min(w, h)/2)",
+       "details": {
+        "code": "INVALID_VALUE",
+        "feature": "f_s",
+        "message": "compound curve \"o\": INVALID_VALUE: r = 4.5: expected in [0, 4] (min(w, h)/2)"
+       }
+      },
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "w",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": []
+     }
+    ]
+   }
+  },
+  {
+   "label": "design",
+   "ir_sha256": "88bcf9df3f43293a000978fae329491785906ad9f277c9e74ecf12d39b2e78a4",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4000,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -40,
+          -25
+         ],
+         "end": [
+          40,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          40,
+          -25
+         ],
+         "end": [
+          40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          40,
+          25
+         ],
+         "end": [
+          -40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -40,
+          25
+         ],
+         "end": [
+          -40,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "top",
+      "feature_id": "f_top",
+      "type": "tag",
+      "status": "ok",
+      "refs": [
+       {
+        "field": "/target",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_slab/side:outline.right",
+          "name": "slab/side:outline.right",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            40,
+            0,
+            4
+           ],
+           "normal": [
+            1,
+            0,
+            0
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design-query",
+   "ir_sha256": "939523c088d8fe8632bef5512053dd16fa7ccf3dc30433dc973a08bb05012b54",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design-query",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4000,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -40,
+          -25
+         ],
+         "end": [
+          40,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          40,
+          -25
+         ],
+         "end": [
+          40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          40,
+          25
+         ],
+         "end": [
+          -40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -40,
+          25
+         ],
+         "end": [
+          -40,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "q__aicad_probe",
+      "feature_id": "f_q__aicad_probe",
+      "type": "tag",
+      "status": "ok",
+      "refs": [
+       {
+        "field": "/target",
+        "status": "exact",
+        "members": []
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design",
+   "ir_sha256": "ab616273e3f907596aeb5105d74a1332e99c7381b758fc18970d5bf497e93210",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design",
+    "status": "ok",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 100,
+        "loops": 1,
+        "outer_curves": [
+         "a",
+         "b",
+         "c",
+         "d"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "constrained",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "a",
+         "start": [
+          0,
+          0
+         ],
+         "end": [
+          10,
+          0
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "b",
+         "start": [
+          10,
+          0
+         ],
+         "end": [
+          10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "c",
+         "start": [
+          10,
+          10
+         ],
+         "end": [
+          0,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "d",
+         "start": [
+          0,
+          10
+         ],
+         "end": [
+          0,
+          0
+         ]
+        }
+       ],
+       "dimensions": [
+        {
+         "id": "w1",
+         "driving": true,
+         "measured": 10,
+         "value": 10
+        },
+        {
+         "id": "w2",
+         "driving": true,
+         "measured": 10,
+         "value": 10
+        }
+       ],
+       "dof": 0,
+       "status": "over_constrained_redundant"
+      },
+      "warnings": [
+       {
+        "code": "SKETCH_REDUNDANT_CONSTRAINTS",
+        "severity": "warning",
+        "message": "redundant constraints: p1 (implied by h1, h2)",
+        "details": {
+         "redundant": [
+          {
+           "constraint": "p1",
+           "implied_by": [
+            "h1",
+            "h2"
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "a"
+        },
+        "volume": 499.99999999999994,
+        "area": 400.00000000000006,
+        "centroid": [
+         5,
+         5,
+         2.5
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "a"
+        },
+        "volume": 499.99999999999994,
+        "area": 400.00000000000006,
+        "centroid": [
+         5,
+         5,
+         2.5
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design-query",
+   "ir_sha256": "c40e4f70b1d71d304ccdd35e9833ffe9edab5043e9240175f9fabd31fea908ec",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design-query",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4000,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -40,
+          -25
+         ],
+         "end": [
+          40,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          40,
+          -25
+         ],
+         "end": [
+          40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          40,
+          25
+         ],
+         "end": [
+          -40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -40,
+          25
+         ],
+         "end": [
+          -40,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "q__aicad_probe",
+      "feature_id": "f_q__aicad_probe",
+      "type": "tag",
+      "status": "ok",
+      "refs": [
+       {
+        "field": "/target",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_slab/cap:end@outline.bottom",
+          "name": "slab/cap:end",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -2.27373675443232e-16,
+            -4.2632564145606015e-16,
+            8
+           ],
+           "normal": [
+            0,
+            0,
+            1
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 31999.999999999996,
+        "area": 10080.000000000002,
+        "centroid": [
+         0,
+         -3.5527136788005016e-17,
+         4
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design-probe",
+   "ir_sha256": "d69219b5ee9c09221c2c63e025486d861c07d437e241c79a186beabedb5c15f4",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design-probe",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 4000,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -40,
+          -25
+         ],
+         "end": [
+          40,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          40,
+          -25
+         ],
+         "end": [
+          40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          40,
+          25
+         ],
+         "end": [
+          -40,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -40,
+          25
+         ],
+         "end": [
+          -40,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 38400,
+        "area": 10496.000000000002,
+        "centroid": [
+         0,
+         4.204044519913926e-16,
+         4.8
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         9.6
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 80
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 9.6
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 38400,
+        "area": 10496.000000000002,
+        "centroid": [
+         0,
+         4.204044519913926e-16,
+         4.8
+        ],
+        "bbox_min": [
+         -40,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         40,
+         25,
+         9.6
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design",
+   "ir_sha256": "d8d0fbb20fbc874cb14a6d26e35fa34fcee13b415f4a674dcec66ef79d018751",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 5000,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -50,
+          -25
+         ],
+         "end": [
+          50,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          50,
+          -25
+         ],
+         "end": [
+          50,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          50,
+          25
+         ],
+         "end": [
+          -50,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -50,
+          25
+         ],
+         "end": [
+          -50,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 40000.000000000015,
+        "area": 12400.000000000002,
+        "centroid": [
+         7.275957614183423e-16,
+         -3.4106051316484794e-17,
+         4
+        ],
+        "bbox_min": [
+         -50,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         50,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 100
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 40000.000000000015,
+        "area": 12400.000000000002,
+        "centroid": [
+         7.275957614183423e-16,
+         -3.4106051316484794e-17,
+         4
+        ],
+        "bbox_min": [
+         -50,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         50,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design",
+   "ir_sha256": "ef2778e2a4ae8bd35d703b81a9574308333133b38a96af205271810fc22b7e8f",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design",
+    "status": "error",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "error",
+      "error": {
+       "code": "SKETCH_CONSTRAINT_CONFLICT",
+       "message": "conflicting constraints: {v1, v2, w1, w2} (suggested removal: w2)",
+       "details": {
+        "conflicts": [
+         {
+          "constraints": [
+           "v1",
+           "v2",
+           "w1",
+           "w2"
+          ],
+          "suggested_removal": "w2",
+          "verified_minimal": true
+         }
+        ]
+       }
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "error",
+      "error": {
+       "code": "DEPENDENCY_FAILED",
+       "message": "sketch \"s\" failed with SKETCH_CONSTRAINT_CONFLICT: conflicting constraints: {v1, v2, w1, w2} (suggested removal: w2)",
+       "details": {
+        "code": "SKETCH_CONSTRAINT_CONFLICT",
+        "feature": "f_s",
+        "message": "conflicting constraints: {v1, v2, w1, w2} (suggested removal: w2)"
+       }
+      },
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": []
+     }
+    ]
+   }
+  },
+  {
+   "label": "design",
+   "ir_sha256": "f10aadfc09a123a0274bce6e4e439715abf1559ee65572ce3dd6cfde49f40cbe",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design",
+    "status": "ok",
+    "features": [
+     {
+      "part": "plate",
+      "feature": "base",
+      "feature_id": "f_base",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 6000,
+        "loops": 1,
+        "outer_curves": [
+         "outline.bottom",
+         "outline.left",
+         "outline.right",
+         "outline.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "outline.bottom",
+         "start": [
+          -60,
+          -25
+         ],
+         "end": [
+          60,
+          -25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.right",
+         "start": [
+          60,
+          -25
+         ],
+         "end": [
+          60,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.top",
+         "start": [
+          60,
+          25
+         ],
+         "end": [
+          -60,
+          25
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "outline.left",
+         "start": [
+          -60,
+          25
+         ],
+         "end": [
+          -60,
+          -25
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "plate",
+      "feature": "slab",
+      "feature_id": "f_slab",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 48000.00000000001,
+        "area": 14720,
+        "centroid": [
+         0,
+         9.000207986294601e-17,
+         4
+        ],
+        "bbox_min": [
+         -60,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         60,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [
+     {
+      "name": "width",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 120
+     },
+     {
+      "name": "depth",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 50
+     },
+     {
+      "name": "thick",
+      "scope": "doc",
+      "unit": "mm",
+      "value": 8
+     }
+    ],
+    "parts": [
+     {
+      "part": "plate",
+      "part_id": "p_plate",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_slab",
+         "member": "outline.bottom"
+        },
+        "volume": 48000.00000000001,
+        "area": 14720,
+        "centroid": [
+         0,
+         9.000207986294601e-17,
+         4
+        ],
+        "bbox_min": [
+         -60,
+         -25,
+         0
+        ],
+        "bbox_max": [
+         60,
+         25,
+         8
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "design",
+   "ir_sha256": "f93e686d7a2264b0c0faaefe0192552570be02587ce6042345b681ac40e1e0ed",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "design",
+    "status": "ok",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 100,
+        "loops": 1,
+        "outer_curves": [
+         "a",
+         "b",
+         "c",
+         "d"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "constrained",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "a",
+         "start": [
+          0,
+          0
+         ],
+         "end": [
+          10,
+          0
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "b",
+         "start": [
+          10,
+          0
+         ],
+         "end": [
+          10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "c",
+         "start": [
+          10,
+          10
+         ],
+         "end": [
+          0,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "d",
+         "start": [
+          0,
+          10
+         ],
+         "end": [
+          0,
+          0
+         ]
+        }
+       ],
+       "dimensions": [
+        {
+         "id": "w1",
+         "driving": true,
+         "measured": 10,
+         "value": 10
+        }
+       ],
+       "dof": 1,
+       "status": "under_constrained"
+      },
+      "warnings": [
+       {
+        "code": "SKETCH_UNDER_CONSTRAINED",
+        "severity": "info",
+        "message": "the sketch has 1 remaining degree(s) of freedom over 5 entities",
+        "details": {
+         "dof": 1,
+         "entities": [
+          {
+           "dof": 1,
+           "id": "b.end"
+          },
+          {
+           "dof": 1,
+           "id": "b"
+          },
+          {
+           "dof": 1,
+           "id": "c.end"
+          },
+          {
+           "dof": 1,
+           "id": "c"
+          },
+          {
+           "dof": 1,
+           "id": "d"
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "a"
+        },
+        "volume": 499.99999999999994,
+        "area": 400.00000000000006,
+        "centroid": [
+         5,
+         5,
+         2.5
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "a"
+        },
+        "volume": 499.99999999999994,
+        "area": 400.00000000000006,
+        "centroid": [
+         5,
+         5,
+         2.5
+        ],
+        "bbox_min": [
+         0,
+         0,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

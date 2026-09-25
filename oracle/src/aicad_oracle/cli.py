@@ -134,6 +134,7 @@ def _cmd_diff(args) -> int:
         NO_REFERENCE,
         default_golden_dir,
         diff_one,
+        generator_rejections,
         golden_path,
         list_programs,
         render_markdown,
@@ -199,6 +200,9 @@ def _cmd_diff(args) -> int:
     else:
         notes.append(f"forge = `{forge}`")
 
+    from .v1 import normalize as _norm
+
+    merges0 = dict(_norm.merge_stats)
     rows = []
     for prog in programs:
         if forge is not None:
@@ -230,13 +234,36 @@ def _cmd_diff(args) -> int:
 
     print(render_table(rows))
     counts = summary_counts(rows)
-    print("\n" + "  ".join(f"{k}={v}" for k, v in counts.items()))
+    # attempts `oracle gen --ir v1` discarded (W7b review 3): reported next to the class counts so
+    # that the exclusion stays visible in every gate summary (never counted as a class)
+    rejections = generator_rejections(target)
+    rej_text = ""
+    if rejections is not None:
+        kinds = ", ".join(f"{k} {v}" for k, v in sorted(rejections["by_kind"].items())) or "none"
+        rej_text = (f"generator_rejected={rejections['count']} ({100 * rejections['rate']:.1f}% of "
+                    f"{rejections['generated'] + rejections['count']} kept or rejected draws; attempts `oracle gen` "
+                    f"discarded, not diffed: {kinds}; the corpus excludes them while the §8.1 key tie-break "
+                    "is pending)")
+        notes.append(rej_text)
+    print("\n" + "  ".join(f"{k}={v}" for k, v in counts.items()) + (f"  {rej_text}" if rej_text else ""))
     capped = sum(getattr(r.comparison, "capped", 0) for r in rows if r.comparison is not None)
     if capped:
         print(f"{capped} difference(s) capped at ROBUSTNESS (downstream of an engine divergence; see the notes)")
+    # SPEC-v1 §8.3 rule 1.3: the oracle's edge merges over this run (W7b reports the (b) residue)
+    merges = {k: _norm.merge_stats[k] - merges0.get(k, 0) for k in _norm.merge_stats}
+    merge_line = (f"§8.3 rule 1.3 edge merges: (a) {merges['a']}, (b) {merges['b']}, "
+                  f"of which at nearly tangent vertices {merges['b_near_tangent']}")
+    print(merge_line)
+    notes.append(merge_line)
     if args.report:
         _write(Path(args.report), render_markdown(rows, "Forge vs OCCT oracle diff", notes))
         print(f"report written to {args.report}")
+    if getattr(args, "stats", None):
+        st = {"programs": len(rows), "classes": counts, "capped": capped, "normalize_merges": merges}
+        if rejections is not None:
+            st["generator_rejected"] = rejections
+        _write(Path(args.stats), json.dumps(st, indent=2) + "\n")
+        print(f"stats written to {args.stats}")
     failed = (counts.get(SILENT_WRONG, 0) + counts.get(CODE_MISMATCH, 0) + counts.get("REF_MISMATCH", 0) > 0
               or (args.fail_on_robustness and counts.get(ROBUSTNESS, 0) > 0)
               or (args.fail_on_no_reference and counts.get(NO_REFERENCE, 0) > 0))
@@ -494,6 +521,8 @@ def build_parser() -> argparse.ArgumentParser:
                     "oracle is compared against the golden reports; if it is given but missing, exit 2")
     pd.add_argument("--golden-dir", help="golden reports directory (default: <programs>/../golden)")
     pd.add_argument("--report", help="write a Markdown report here")
+    pd.add_argument("--stats", help="write the run's statistics here as JSON: classes, and the oracle's §8.3 "
+                    "rule 1.3 edge merges (`normalize_merges`: (a), (b), (b) at nearly tangent vertices)")
     pd.add_argument("--timeout", type=float, default=300.0, help="per-program Forge timeout, seconds")
     pd.add_argument("--fail-on-robustness", action="store_true", help="also exit 1 on ROBUSTNESS differences")
     pd.add_argument("--fail-on-no-reference", action="store_true",
@@ -521,8 +550,16 @@ def build_parser() -> argparse.ArgumentParser:
     pn.add_argument("--with-reports", action="store_true", help="also write <name>.metrics.json oracle reports")
     pn.add_argument("--invalid-per-kind", type=int, default=4,
                     help="error-corpus programs per error kind (0 disables; some kinds use more to "
-                         "cover every variant)")
+                         "cover every variant). --ir v1: any value > 0 writes the fixed v1 error corpus "
+                         "(at least 3 programs per E code the oracle computes, with expected.json)")
     pn.add_argument("--invalid-out", help="error-corpus directory (default: <out>/invalid)")
+    pn.add_argument("--family", choices=["classic", "booleans", "holes", "patterns", "blends", "ops"],
+                    default="classic",
+                    help="--ir v1 only: `classic` (the W7a groups, default) or a W7b family of body "
+                         "operations, holes, patterns and blends with closed-form self-checks")
+    pn.add_argument("--allow-self-check-failures", action="store_true",
+                    help="--ir v1: report closed-form self-check failures without failing (by default any "
+                         "self-check failure exits 1, although the failing attempt is retried)")
     pn.add_argument("--ir", choices=["v0", "v1"], default="v0",
                     help="v1: generate aicad.ir/1 programs (parameters, expressions, compound curves, datums, "
                          "sketches on faces, regions by member, booleans) and check each with the v1 oracle")

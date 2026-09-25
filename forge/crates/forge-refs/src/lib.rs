@@ -187,7 +187,8 @@ pub mod typing;
 pub use error::RefError;
 pub use forge_ir::v1::metrics::Origin;
 pub use frames::{
-    AxisLine, Evaluated, PlaneFrame, axis, datum_axis, datum_plane, direction, plane_frame, point,
+    AxisLine, Evaluated, PlaneFrame, axis, datum_axis, datum_plane, direction, direction_eval,
+    plane_frame, point,
 };
 pub use keys::{EntityId, KeyProblem, body_key, display_key};
 pub use query::{Member, QuerySet, eval_query};

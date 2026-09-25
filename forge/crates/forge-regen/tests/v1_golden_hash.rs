@@ -4,12 +4,12 @@
 //! Hashes the `aicad.metrics/1` report JSON of every v1 program in `corpus/v1/programs` and of
 //! the integration's oracle cases (`tests/v1_programs`: parameters, constrained sketches,
 //! sketches on faces, datums, tags, references with probes, joins, cuts, intersects, splits,
-//! consumed and merged targets, joins that change nothing or only some targets, an intersect
-//! inside its tool, re-joined split pieces, seam cases, a sliver cut, spiric torus sections,
-//! and the evaluation-time error
-//! codes; `knob_queries`, `plate_features` and `shell_box` are hashed as rejected reports:
-//! they use types Forge does not implement yet, SPEC-v1 §0.2 rule 3, and `shell_box` the
-//! optional `draft`) and compares it with a constant recorded on the
+//! consumed and merged targets, joins whose tools lie inside a target, joins that leave some
+//! targets, an intersect inside its tool, re-joined split pieces, seam cases, a sliver cut,
+//! spiric torus sections, the evaluation-time error codes, and since Phase C every hole kind
+//! and placement, linear / circular / mirror / body-seed patterns, fillets, chamfers and
+//! shells; `shell_box` is hashed as a rejected report: it uses the optional `draft`, SPEC-v1
+//! §0.2 rule 3, §6.9) and compares it with a constant recorded on the
 //! reference platform (aarch64-apple-darwin). Reports print every `f64` in shortest round-trip form, so
 //! a one-ulp difference in any metric, probe, frame or parameter changes the hash. The
 //! documents are compiled in, so the test also runs on wasm32-wasip1 without a filesystem:
@@ -29,7 +29,7 @@ macro_rules! programs {
     };
 }
 
-const PROGRAMS: [(&str, &str); 32] = programs![
+const PROGRAMS: [(&str, &str); 36] = programs![
     "../../../../corpus/v1/programs/" / "constrained_plate",
     "../../../../corpus/v1/programs/" / "knob_queries",
     "../../../../corpus/v1/programs/" / "params_plate",
@@ -41,6 +41,7 @@ const PROGRAMS: [(&str, &str); 32] = programs![
     "v1_programs/" / "boxes_cut",
     "v1_programs/" / "boxes_intersect",
     "v1_programs/" / "boxes_join",
+    "v1_programs/" / "blends_box",
     "v1_programs/" / "consumed_target",
     "v1_programs/" / "datum_sketch_revolve_cut",
     "v1_programs/" / "errors_dependencies",
@@ -48,12 +49,15 @@ const PROGRAMS: [(&str, &str); 32] = programs![
     "v1_programs/" / "errors_geometry",
     "v1_programs/" / "errors_tag_dependencies",
     "v1_programs/" / "failures_pass_through",
+    "v1_programs/" / "fillet_then_chamfer_keys",
+    "v1_programs/" / "holes_kinds",
     "v1_programs/" / "intersect_target_inside_tool",
     "v1_programs/" / "join_identical_tool",
     "v1_programs/" / "join_merges_targets",
     "v1_programs/" / "join_nested_tool",
     "v1_programs/" / "join_partial_targets",
     "v1_programs/" / "join_rejoins_split_pieces",
+    "v1_programs/" / "patterns_mixed",
     "v1_programs/" / "seam_boss_over_hole",
     "v1_programs/" / "seam_edge_on_hole_seam",
     "v1_programs/" / "seam_notch_in_disk",
@@ -64,11 +68,11 @@ const PROGRAMS: [(&str, &str); 32] = programs![
     "v1_programs/" / "torus_pocket_spiric_edges",
 ];
 
-/// Programs this engine rejects (their rejected report is hashed): they use `hole`, `fillet`,
-/// `chamfer`, `shell` or `pattern`, which Forge does not implement yet (SPEC-v1 §0.2 rule 3,
-/// `UNSUPPORTED_FEATURE_VERSION`), and `shell_box` also the optional `draft` (§6.9,
-/// `UNSUPPORTED_FEATURE`).
-const REJECTED: [&str; 3] = ["knob_queries", "plate_features", "shell_box"];
+/// Programs this engine rejects (their rejected report is hashed): `shell_box` uses the
+/// optional `draft` (§6.9, `UNSUPPORTED_FEATURE`). Until Phase C, `knob_queries` and
+/// `plate_features` were rejected too (`hole`, `fillet`, `chamfer`, `shell`, `pattern`:
+/// `UNSUPPORTED_FEATURE_VERSION`).
+const REJECTED: [&str; 1] = ["shell_box"];
 
 /// FNV-1a over bytes.
 fn fnv(h: &mut u64, b: &[u8]) {
@@ -79,7 +83,20 @@ fn fnv(h: &mut u64, b: &[u8]) {
 }
 
 /// Recorded on aarch64-apple-darwin.
-const PINNED: u64 = 0xb73a_7e16_b736_65da;
+///
+/// History (per-program hashes printed by `--nocapture`):
+/// - `0xb73a_7e16_b736_65da` → `0xda8f_b68c_1363_96f9`: W4's [W0-39] alignment — a join whose
+///   tools lie inside or equal its target now lists the target as `modified`
+///   (`join_nested_tool` 0x12fa835dec9d998b, `join_identical_tool` 0x219ce5e4607071e1; no
+///   other program moved).
+/// - → `0xaf34_a471_1876_8a6f` (Phase C integration, 2026-09-24): holes, patterns, fillets,
+///   chamfers and shells evaluate — `knob_queries` (0xef604b78a23398f8) and `plate_features`
+///   (0x744b511a86be14af) are evaluated instead of rejected, `shell_box`'s rejected report
+///   lists only its `draft` (0x1bd5ead80d8fca3e), and four oracle cases were added
+///   (`blends_box`, `fillet_then_chamfer_keys`, `holes_kinds`, `patterns_mixed`). Every other
+///   program's hash is unchanged (the [W0-40] `removed` fix of forge-regen changes none of
+///   them).
+const PINNED: u64 = 0xaf34_a471_1876_8a6f;
 
 #[test]
 fn v1_reports_are_bit_identical_to_the_recorded_hash() {

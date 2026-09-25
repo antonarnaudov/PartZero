@@ -50,8 +50,8 @@ constants used in arithmetic are asserted against the constants file at load tim
 | Datum planes and axes, face frames (§3) | computes (every mode; the §3.1 face-frame table) |
 | References (§5) | standalone: computes them itself — provenance keys for its own bodies (§5.2 rule 3; history through booleans), the query evaluator (every op and predicate), cardinality, capture validation by key. With a Forge report, **default mode** (the §8.1 PR/nightly gate): **replays** Forge's members — an `ok` feature must report a `refs` entry per Ref field (else `ORACLE_REF_UNREPORTED` → ROBUSTNESS); every probe must match exactly one OCCT entity and no two probes the same one (a probe with an outward `normal` — face and body probes, §7.6 — also needs a face there whose outward normal agrees within 1e-3 rad, for a single candidate too, which also tells coincident faces of touching bodies apart; else `ORACLE_PROBE_UNMATCHED` → ROBUSTNESS, and the oracle falls back to its own resolution); the query's geometric predicates and picks are re-applied to them **recursively over the whole query** (union: some operand; intersect: every operand; minus: `a`, and not clearly in a key-free `b`; navigation and `between` through adjacency; `tagged` through the tag's query; key-based sources are left to the set comparison) and the member count is checked against the cardinality (`ORACLE_PREDICATE_FAILED` → POTENTIAL_SILENT_WRONG; a predicate or pick it cannot evaluate there — an empty or failing pool, a non-evaluable normal, radius or material angle — or one the member misses by less than the cross-engine tolerance — radius bounds and `eq` at rel 1e-6 / 1e-9·s, angle tests at 1e-9, extreme at 1e-6·s, size picks at the v0 §6 size tolerance — is `ORACLE_PREDICATE_UNCHECKED` → ROBUSTNESS); the oracle then **builds from Forge's members** (also when its own naming is unavailable), and a set difference from its own resolution, or its own resolution failing, is `ORACLE_REF_DIFFERS` → **ROBUSTNESS** (never MATCH, never REF_MISMATCH). **Independent-refs mode** (`--independent-refs`, nightly, W7c): builds from its own resolution; a set difference is `ORACLE_REF_MISMATCH` → REF_MISMATCH. A Ref **nested in a query's Dir** (an AxisRef such as `{parallel: {edge: Ref}}`) is always the oracle's own resolution in every mode — a wrong nested member of Forge's must steer neither the enclosing query nor the re-check of Forge's members; Forge's entry for it at its JSON pointer (e.g. `/target/q/where/parallel/edge`), when reported, goes through the same probe / predicate / set checks but is never adopted, and a missing one is not `ORACLE_REF_UNREPORTED` (forge-refs does not report them). Convexity orients each face's in-face direction in the face's parametric frame (2D classifier), not with a fixed 3D step. |
 | extrude / revolve (§6.2, §6.3) | computes: the v0 construction and body gate, `regions` by member, `new_body` |
-| `join` / `cut` / `intersect`, `boolean` (§6.0.3, §6.4) | computes with `BRepAlgoAPI_*` (no fuzzy, not parallel, non-destructive) + `ShapeUpgrade_UnifySameDomain` (§8.3 rules 1–2); identity, split, consumed; gated by set-volume identities. §8.3 rule 3: `edge_types` of body-operation results recognise free-form edges as lines/circles/ellipses within `1e-7·s` (`ShapeAnalysis_CanonicalRecognition`; the SPEC names `GeomConvert_CurveToAnalyticalCurve`, which this OCP build does not expose). `new_body` sweeps keep the v0 construction and v0 metrics (no same-domain merge; see the contract issues). |
-| hole, fillet, chamfer, shell, draft, pattern | not yet (W7b/W7c): the feature fails with the engine-internal `ORACLE_UNSUPPORTED_FEATURE`, evaluation continues |
+| `join` / `cut` / `intersect`, `boolean` (§6.0.3, §6.4) | computes with `BRepAlgoAPI_*` (no fuzzy, not parallel, non-destructive) + `ShapeUpgrade_UnifySameDomain`, then the §8.3 rule 1 count normalization and the rule 3 section types on OCCT's own topology (W7b, below); identity, split, consumed, `removed` ([W0-39] … [W0-41], [W0-53]); gated by set-volume identities. `new_body` sweeps keep v0's topology and metrics. |
+| hole, pattern, fillet, chamfer, shell, draft (§6.5–§6.10) | computes (W7b, below): hole tools as revolved §6.5 profiles and one cut; patterns of feature and body seeds; `BRepFilletAPI_*`, `BRepOffsetAPI_MakeThickSolid` (intersection joins) and `BRepOffsetAPI_DraftAngle`, with analytic feasibility limits and closed-form self-checks |
 
 Engine-internal codes (`OCCT_*`, `ORACLE_*`) are never a silent-wrong answer: `kernel-diff` classifies
 them as ROBUSTNESS, and caps later differences in the same part at ROBUSTNESS (see "Downstream capping" below). A polygon `n` up to 2^31 never hangs the oracle: all-omitted members are computed without the loop, more than 100,000 sides are `ORACLE_RESOURCE_LIMIT`.
@@ -61,9 +61,9 @@ them as ROBUSTNESS, and caps later differences in the same part at ROBUSTNESS (s
 | Command | What it does |
 |---|---|
 | `oracle eval FILE` | `aicad.ir/1` input → `aicad.metrics/1`; `aicad.ir/0` input keeps the v0 report unless `--report-version v1` (migrate, then the v1 pipeline). `--replay FORGE.json` replays and checks a Forge v1 report (default mode); add `--independent-refs` for the independent-refs mode. Exit codes as v0. |
-| `oracle diff DIR --forge-bin BIN` | runs Forge first; when it prints `aicad.metrics/1`, the oracle evaluates with that report as replay input and compares with `kernel-diff` v1. Exit 1 on POTENTIAL_SILENT_WRONG, REF_MISMATCH or CODE_MISMATCH. `--independent-refs`: the independent-refs mode (oracle builds from its own references, `REF_MISMATCH` and `REF_*` warning codes compared). `--a/--b` compares two reports. The number of differences capped at ROBUSTNESS is printed. |
+| `oracle diff DIR --forge-bin BIN` | runs Forge first; when it prints `aicad.metrics/1`, the oracle evaluates with that report as replay input and compares with `kernel-diff` v1. Exit 1 on POTENTIAL_SILENT_WRONG, REF_MISMATCH or CODE_MISMATCH. `--independent-refs`: the independent-refs mode (oracle builds from its own references, `REF_MISMATCH` and `REF_*` warning codes compared). `--a/--b` compares two reports. The number of differences capped at ROBUSTNESS is printed. Over a directory written by `oracle gen --ir v1`, the attempts the generator discarded (its `*.stats.json` `rejected`: probes that do not replay while §8.1 has no key tie-break) are printed next to the class counts as `generator_rejected=N`, and go to the `--report` notes and the `--stats` JSON. |
 | `oracle golden DIR` | v1 programs get `aicad.metrics/1` goldens. |
-| `oracle gen --ir v1` | random valid v1 programs (parameters, derived parameters, bounds, expressions, `rect`/`slot`/`polygon`, datum planes and axes, sketches on faces and on tags, regions by member, `join`/`cut`/`intersect` extrudes, `boolean` features, `tag`s, fixed-point **constrained** sketches, suppression by expression, lifted v0 programs with exact parameters), each accepted by the pipeline and evaluated `ok`. Programs are checked against the Python port of W0's validation; checking them with Forge's v1 CLI too is for when W9 lands. |
+| `oracle gen --ir v1` | random valid v1 programs (parameters, derived parameters, bounds, expressions, `rect`/`slot`/`polygon`, datum planes and axes, sketches on faces and on tags, regions by member, `join`/`cut`/`intersect` extrudes, `boolean` features, `tag`s, fixed-point **constrained** sketches, suppression by expression, lifted v0 programs with exact parameters), each accepted by the pipeline and evaluated `ok`. Programs are checked against the Python port of W0's validation; checking them with Forge's v1 CLI too is for when W9 lands. W7b: `--family` (`booleans`, `holes`, `patterns`, `blends`, `ops`) generates F1/F2 programs with closed-form self-checks (see "IR v1 operations (W7b)"); the default `classic` keeps W7a's groups, RNG streams and names (an index can still land on another attempt where the oracle's verdict on a draw changed with W7b). |
 | `oracle exprs --count 10000 --out F` / `--check THEIRS.json` | the W1 ↔ oracle expression agreement gate: random cases in the I9 format with the oracle's answers; `--check` compares another implementation's answers (reals 1e-12 relative, counts/bools/codes exact). |
 
 ### kernel-diff v1 (SPEC-v1 §8.2–§8.4)
@@ -79,18 +79,19 @@ engine-internal code is involved (ROBUSTNESS); `unit` is compared exactly; a `bo
 is POTENTIAL_SILENT_WRONG either way round.
 
 **Downstream capping (a policy of this tool, not of the SPEC — needs owner sign-off).** After a
-feature on which the engines disagree about **status** (one fails, the other not — including the
-oracle's `ORACLE_UNSUPPORTED_FEATURE` for hole/fillet/chamfer/shell/draft/pattern against a Forge
-`ok`, until W7b/W7c, and a failed replay check), the part states differ by construction (§7.1: a
+feature on which the engines disagree about **status** (one fails, the other not — including an
+engine-internal failure (`OCCT_*`, `ORACLE_*`, `FORGE_*`) against an `ok`, and a failed replay
+check), the part states differ by construction (§7.1: a
 failed feature passes its input through), so later differences in that part would all be spurious
 POTENTIAL_SILENT_WRONG. They are capped at ROBUSTNESS instead — never hidden: each is still listed
 (suffixed "downstream of …; would be <class>"), counted in `Comparison.capped`, printed by
 `oracle diff`, and noted per part. When **both** engines fail a feature (whatever the codes,
-engine-internal or not — e.g. Forge `HOLE_MISSES_BODY` against the oracle's
-`ORACLE_UNSUPPORTED_FEATURE`), both pass their input through, the states stay identical, and later
-features are classified normally. Not capping after a status divergence on `ORACLE_UNSUPPORTED_FEATURE`
-was considered and rejected: it would turn every program with a W7b/W7c feature Forge evaluates
-`ok` into a false POTENTIAL_SILENT_WRONG. The cap also applies to the oracle's reference replay
+engine-internal or not — e.g. Forge `HOLE_MISSES_BODY` against an engine-internal oracle
+failure), both pass their input through, the states stay identical, and later features are
+classified normally. Not capping after a status divergence on an engine-internal failure was
+considered and rejected: it would turn every program past a feature one engine cannot build into a
+false POTENTIAL_SILENT_WRONG. (Since W7b the oracle evaluates every v1 feature type, draft
+included; `ORACLE_UNSUPPORTED_FEATURE` remains only for a type the pipeline would reject.) The cap also applies to the oracle's reference replay
 findings (`ORACLE_PREDICATE_FAILED`, `ORACLE_REF_MISMATCH`): downstream, Forge's probes are replayed
 onto a different B-rep. It deliberately does **not** apply to `ORACLE_REPLAY_CHECK_FAILED`: the
 constrained-sketch check is 2D and depends only on the document, the parameters (measured
@@ -127,6 +128,42 @@ fixture's rejections (its tool dimensions are W7b, skipped); §8.3 rule 3; conve
 faces; generator validity and group coverage (every generated program also replays its own report
 as MATCH); the CLI.
 
+## IR v1 operations (W7b)
+
+Workstream W7b of the plan: body operations, holes, patterns, fillet, chamfer, shell and draft, the
+amended §8.3 normalizations, and generators whose programs make the F1/F2 differentials meaningful.
+
+| Module | What it does |
+|---|---|
+| `v1/normalize.py` | §8.3 rule 1 on OCCT's own topology ([W0-42], [W0-49]): faces on one carrier (the named `same_carrier` tests; free-form carriers only as one OCCT handle) with the same orientation that share an edge are one face (seam-split periodic faces); an edge counts iff it has two different faces (an edge on a seam line between two faces counts); counted edges meeting at a vertex no other counted edge uses merge when (a) on one line / circle / ellipse, or (b) between the same transversal faces with `t0 · t1 < 0` (merges at nearly tangent vertices are counted in `merge_stats`, the SPEC's known limitation). Rule 3 ([W0-43], [W0-51], [W0-52]): a section edge is a conic iff its face pair is in the list (`pair_conic`, the plane–cone test included) **and** OCCT's curve is within *tol* of a witness conic at its ends and 33 interior points; else `bspline` (note `ORACLE_SECTION_NOT_CONIC`). The type is the one the pair names: a nearly round ellipse stays `ellipse`, a circle being only its witness (W7b review 5); new blend edges keep OCCT's native conic type (`own_curve_type`). Result bodies are built with this topology (entities with several OCCT pieces), so queries, probes and metrics agree. |
+| `v1/booleans.py` | the per-tool join failure ([W0-39]), the meet test (common part somewhere thicker than *tol*, or deeper than *tol*/2 inside itself, [W0-41] [W0-48] [W0-53]), degenerate pieces and layers, `removed` ([W0-40]), adaptive mass properties ([W0-44]: `VolumePropertiesGK` 1e-10 — with `CGFlag`, without which OCCT's centroid is wrong for faces with holes — and `SurfaceProperties` 1e-12). The volume gates check a small volume that is the difference of two large ones (a cut's removed part, an intersection — the latter from both operands' sides) within 1e-8 of itself plus 1e-9 of the operand (`_close_diff`), not 1e-8 of the operand. When `UnifySameDomain` turns a valid result invalid (OCP 7.9.3 does for a bore along a 270° revolve's axis) the raw result is kept and rule 1 does the merging. |
+| `v1/holes.py` | §6.5 / §8.3 rule 7: `HOLE_SIZES` from the constants file, the four placements (grid ids `i` outer), exact bolt-circle trigonometry, `HOLE_DUPLICATE_POSITION`, `HOLE_POINT_OFF_FACE`, `HOLE_UP_TO_MISSED` (ray–face), `HOLE_MISSES_BODY` (per position), one cut, `HOLE_BREAKS_THROUGH` (read as: the tool's bottom is not entirely inside the targets); tool volumes checked against their closed form. |
+| `v1/patterns.py` | §6.10: linear (1 or 2 directions), circular (exact rotation matrices) and mirror layouts; feature seeds re-apply their tools with targets re-resolved in the pattern's scope; body seeds; `PATTERN_INSTANCE_SKIPPED` / `PATTERN_ALL_INSTANCES_FAILED`; copies keep the seed's normalized structure with keys `P/copy:{K}@q`. |
+| `v1/blends.py` | §6.6–§6.9: supported-edge checks, tangent-chain expansion (checked against OCCT's own propagation), analytic width limits — the **narrowest** width across the edge (a hole near the edge counts) — for plane–plane line edges and plane–cylinder/cone circles, two blends sharing a face (`face-width`, as §6.6's example) and a ball on a curved face's concave side (`curvature`) (`…_TOO_LARGE` with `max_r` / `max_d`, rounded down, also where OCCT would build an overlapping result), bisection otherwise, `*_TOO_LARGE` there only with evidence (a face consumed, a blend that ran into another face), else OCCT's own failure, engine-internal `OCCT_FILLET_FAILED` / `OCCT_CHAMFER_FAILED` (never the catalogue `*_FAILED`, which a Forge failure would MATCH); on a normative pair a split or free-form blend is infeasible, never `ok`; keys `F/blend:{E}`, `F/bevel:{E}`, `F/corner:{V}`, `S/offset:{X}`, `S/rim:{X}`; closed shells assembled as a void (both directions, shells oriented by signed volume); analytic shell limits (curvature, colliding walls), bisected otherwise from the body's diameter in both directions, `SHELL_THICKNESS_TOO_LARGE` there only where a collision is shown (walls whose offset vanishes at the maximum: reason `gap`), else `OCCT_SHELL_FAILED` (a notched box opened on its notched top is one: OCCT returns it unchanged); `OCCT_DRAFT_FAILED`; an edge between kept faces without history takes the key of the one input edge it overlaps on its carrier (several keys: `OCCT_NAMING_FAILED`); draft normals checked against `cos a·n + sin a·p`; §8.3 rules 4 and 5 flagged `ORACLE_NORMALIZED` (details `rule`, and `types` for rule 4), which `kernel-diff` honours. |
+| `v1/genops.py` | `oracle gen --ir v1 --family` `booleans` / `holes` / `patterns` / `blends` / `ops`: F1/F2 programs with closed-form self-checks (volumes, body counts, warning codes, skipped instances, face and edge types, error codes with their closed-form `max_feasible_*`) from the SPEC's formulas; a violated check is a `self_check` failure (never kept), except a known OCCT limitation a check names (`engine_limits`: kept, listed as `occt_limited`, diffed as ROBUSTNESS). `blends` also draws sizes just above and just below the analytic limits (`blend_limits`: vertical fillets, top chamfers, open and closed shells in both directions; `cap_blends`: torus and cone rims; `concave_fillet`; `hole_edge_blend`) and shells a notched, non-convex box (`shell_notched`). |
+
+Replay ([W0-35], [W0-50], [W0-54]): probes match within `clamp(1e-6·s, 2·tol, 5·tol)`; when
+several faces or bodies lie there, those without a positive dot product with the probe's normal
+are dropped (one candidate is the match whatever its normal, as §8.1 says — the stricter
+single-candidate test is a proposal waiting for a Contract-stage ruling, `replay.PENDING_DEVIATIONS`);
+coincident edges go to the largest positive dot product with the edge probe's normal; a probe
+without a normal matches by position alone (one edge within the radius). When several faces or
+bodies with agreeing normals remain (the coplanar overlapping caps of two bodies: v1 seeds 5, 23,
+47) the probe is **not** matched (§8.1: `ORACLE_PROBE_UNMATCHED`, ROBUSTNESS); no key tie-break is
+applied (a Contract-stage question). The classic generator rejects programs whose own probes do not
+replay, so its corpora exclude that configuration; `oracle gen` and `oracle diff` report the
+rejected attempts and their rate next to the class counts. `oracle gen --ir v1` exits 1 on any
+closed-form self-check failure (`--allow-self-check-failures` only reports them).
+
+Tests: `tests/test_v1_ops_*.py` — normalization (the hand-counted seam programs, the section-type
+fixtures, the pair list), booleans (the `identity` fixtures, meets, layers, `removed`, intersects
+with several overlapping or touching tools as `t ∩ ∪K`, tool faces in the [R-3] band of a target
+face), holes (the
+`holes/tools.json` dimensions, closed forms, placements, the `HOLE_*` corpus), patterns, blends
+(closed forms, the feasible-range property, rules 4 and 5 in the diff), replay (the `probes`
+fixtures), the runners for `parameters.json` and the `details` of `invalid/documents.json`, the
+error corpus (≥ 3 cases per E code computed) and the generator families.
+
 ### Where the oracle had to read the contract (reported to W0)
 
 - Canonical key order is the Rust struct order (serde), not derivable from the schema
@@ -145,7 +182,7 @@ as MATCH); the CLI.
   for bit, §9.1). Two collinear adjacent profile lines therefore give two coplanar faces on a new body
   (pinned by `test_new_body_sweeps_are_not_same_domain_merged`). Needs a SPEC decision.
 - §8.3 rule 3 names `GeomConvert_CurveToAnalyticalCurve`, which the pinned OCP build does not expose;
-  the oracle uses `ShapeAnalysis_CanonicalRecognition` (line / circle / ellipse) at `1e-7·s`.
+  the oracle's witness conics come from `ShapeAnalysis_CanonicalRecognition` at *tol* (W7b, [W0-52]).
 - §7.2 [W0-16] says the constrained `sketch` block has `status` and `dof`; the oracle cannot compute
   them (it does not solve, §8.1). With a reference they are copied (marked `ORACLE_REPLAYED`); in the
   standalone fixed-point mode they are omitted. The frozen report type omits an empty `dimensions`

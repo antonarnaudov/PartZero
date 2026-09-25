@@ -91,40 +91,55 @@ fn a_v1_report_with_failed_features_exits_one_and_still_prints_the_report() {
     assert_eq!(r.parts[0].bodies.len(), 2);
 }
 
-/// SPEC-v1 §0.2 rule 3: a document using a type Forge does not implement yet (`plate_features`:
-/// holes, fillets, a chamfer, patterns) is rejected — exit 2, one `UNSUPPORTED_FEATURE_VERSION`
-/// per such feature at its `/v`, on stderr and in the report — and nothing is evaluated.
+/// Since Phase C Forge implements every mandatory type (SPEC-v1 §0.2 rule 3): `plate_features`
+/// (holes of every kind and placement, fillets, a chamfer, linear / mirror / circular
+/// patterns) evaluates. Exit 1: four of its features fail by the program's own content, as in
+/// the OCCT oracle — `h3`'s position `a` lies in `h1`'s counterbore (`HOLE_POINT_OFF_FACE`),
+/// `h4` drills out of the part (`flip` on the bottom cap: `HOLE_MISSES_BODY`), `f1` selects the
+/// smooth edges of the rounded outline (`FILLET_EDGE_UNSUPPORTED`), and `pt2` mirrors `h3`
+/// (`DEPENDENCY_FAILED`). Nothing is rejected, and no engine-internal code appears.
 #[test]
-fn a_document_with_unimplemented_types_is_rejected_with_unsupported_feature_version() {
+fn plate_features_evaluates_its_holes_blends_and_patterns() {
     let out = aicad()
         .arg("eval")
         .arg(v1_program("plate_features"))
         .output()
         .expect("run aicad");
-    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     let r = report(&out);
-    let e = r.error.as_ref().expect("document error");
-    assert_eq!(e.code, "UNSUPPORTED_FEATURE_VERSION");
-    let errors = e.details["errors"].as_array().unwrap();
-    let paths: Vec<&str> = errors.iter().map(|x| x["path"].as_str().unwrap()).collect();
-    let want: Vec<String> = [5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 17]
+    assert!(r.error.is_none());
+    let failed: Vec<(&str, &str)> = r
+        .features
         .iter()
-        .map(|i| format!("/parts/0/features/{i}/v"))
+        .filter_map(|f| {
+            f.error
+                .as_ref()
+                .map(|e| (f.feature_id.as_str(), e.code.as_str()))
+        })
         .collect();
-    assert_eq!(paths, want);
-    assert!(
-        errors
-            .iter()
-            .all(|x| x["code"] == "UNSUPPORTED_FEATURE_VERSION"
-                && x["details"]["supported"] == serde_json::json!([]))
+    assert_eq!(
+        failed,
+        [
+            ("h3", "HOLE_POINT_OFF_FACE"),
+            ("h4", "HOLE_MISSES_BODY"),
+            ("f1", "FILLET_EDGE_UNSUPPORTED"),
+            ("pt2", "DEPENDENCY_FAILED"),
+        ]
     );
-    assert!(r.features.is_empty() && r.parts.is_empty());
+    let f = |id: &str| r.features.iter().find(|f| f.feature_id == id).unwrap();
+    let ats: Vec<&str> = f("h1").holes.iter().map(|h| h.at.as_str()).collect();
+    assert_eq!(ats, ["g0_0", "g0_1", "g1_0", "g1_1"]);
+    assert_eq!(f("pt1").pattern.as_ref().unwrap().skipped, vec![vec![3]]);
+    assert_eq!(f("pt3").pattern.as_ref().unwrap().instances, 4);
+    assert_eq!(f("c1").chamfer.as_ref().unwrap().edges.len(), 3);
+    assert_eq!(r.parts[0].bodies.len(), 1);
     let stderr = String::from_utf8_lossy(&out.stderr);
-    assert!(
-        stderr.contains("UNSUPPORTED_FEATURE_VERSION at /parts/0/features/5/v"),
-        "{stderr}"
-    );
-    assert!(!stderr.contains("FORGE_UNSUPPORTED_FEATURE"), "{stderr}");
+    assert!(!stderr.contains("UNSUPPORTED"), "{stderr}");
 }
 
 #[test]
@@ -247,17 +262,18 @@ fn export_of_a_v1_document_writes_the_final_bodies() {
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
-    // A document Forge rejects (§0.2 rule 3) is never exported, even partially.
+    // A document Forge rejects (§0.2 rule 3: `shell_box`'s optional `draft`) is never
+    // exported, even partially.
     let out = aicad()
         .arg("export")
-        .arg(v1_program("plate_features"))
+        .arg(v1_program("shell_box"))
         .arg("--out")
         .arg(scratch("rejected.stl"))
         .arg("--allow-partial")
         .output()
         .expect("run");
     assert_eq!(out.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&out.stderr).contains("UNSUPPORTED_FEATURE_VERSION"));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("UNSUPPORTED_FEATURE"));
 }
 
 // ---- the rejection pipeline through `aicad eval` (SPEC-v1 §0.5 rule 4, I9) ----------------------
@@ -394,8 +410,14 @@ fn every_invalid_document_fixture_is_rejected_by_aicad_eval_with_its_codes_and_p
             assert!(report["features"].as_array().unwrap().is_empty(), "{id}");
         }
     }
+    // Since Phase C no mandatory type is unimplemented, so no fixture expects
+    // `UNSUPPORTED_FEATURE_VERSION` for its type (the fixtures that did now evaluate or keep
+    // their own rejections).
     assert!(
-        rejected >= 180 && valid >= 1 && drafts >= 1 && unimplemented >= 10,
+        rejected >= 200
+            && valid >= 1
+            && drafts >= 1
+            && (unimplemented >= 10 || forge_regen::v1::UNIMPLEMENTED_FEATURE_TYPES.is_empty()),
         "{rejected} {valid} {drafts} {unimplemented}"
     );
 }
@@ -465,20 +487,14 @@ fn a_document_with_a_draft_is_rejected_by_eval_and_export() {
         "{stderr}"
     );
     let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
-    // The draft, and (§0.2 rule 3) the shell, fillet, chamfer and patterns Forge does not
-    // implement yet.
-    let mut want = vec![(
-        "UNSUPPORTED_FEATURE".to_string(),
-        "/parts/0/features/3/type".to_string(),
-    )];
-    for i in [2, 6, 20, 21, 22, 23] {
-        want.push((
-            "UNSUPPORTED_FEATURE_VERSION".to_string(),
-            format!("/parts/0/features/{i}/v"),
-        ));
-    }
-    want.sort();
-    assert_eq!(rejected_pairs(&v), want);
+    // The draft only: the shell, fillet, chamfer and patterns are implemented since Phase C.
+    assert_eq!(
+        rejected_pairs(&v),
+        vec![(
+            "UNSUPPORTED_FEATURE".to_string(),
+            "/parts/0/features/3/type".to_string(),
+        )]
+    );
     let r = report(&out);
     assert!(r.features.is_empty() && r.parts.is_empty());
     let out = aicad()

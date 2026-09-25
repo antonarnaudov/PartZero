@@ -21,6 +21,28 @@
 > **Revision log.** 2026-09-23 W0 freeze: ADR 0013 decisions 1–7 applied (§6.5 table verified,
 > §0.6 capture refresh, measured parameters deferred to v1.1, §10 closed); ambiguities resolved
 > while encoding the types are tagged **[W0-n]** and listed in §11.
+> 2026-09-24 **Phase B contract amendments [W0-19] … [W0-45]**: rulings on the contract issues
+> the Phase B workstreams reported (W1 expressions, W2 sketches, W3 references, W4 booleans, W7a
+> oracle, W8a CadScript, integration), each marked in place and listed with its rationale and its
+> fixtures in §11.1. No type, schema or constant changed; the fixtures grew append-only
+> (`expressions/cases.json` 376 → 700 cases, `invalid/documents.json` 196 → 209, new
+> `expressions/parameters.json`, `booleans/identity.json` and `migration/literals/`, §9.4).
+> Revised in review (same day, before acceptance): [W0-41] decides contacts after [R-3]
+> coincidence and degeneracy per result piece; [W0-39] no longer joins a tool that meets a
+> target only through another tool (the §6.0.3 failure row stands, per tool); [W0-33], [W0-35],
+> [W0-40], [W0-42], [W0-43] made precise; superseded sentences are struck through, not deleted.
+> Second review (same day): **[W0-46] … [W0-50]** — one `expr`/`subexpr` convention for every
+> expression code (canonical text; [W0-45]'s "stored text" withdrawn); `details` pinned by
+> `invalid/documents.json` (`PARAM_CYCLE`'s `cycle`), fixture counts are lower bounds; one
+> measure for [W0-41]'s contacts and meets, and Forge's snap claim qualified; §8.3's carrier,
+> transversality and conic-typing tests named and scaled; edge probes carry `normal`. Fixtures
+> again append-only (`invalid/documents.json` 209 → 222, `parameters` 6 → 7, `identity` 25 → 31).
+> Third review (same day): **[W0-51] … [W0-54]** — a named plane–cone test; a section edge is a
+> conic only when its pair qualifies **and** the engine's own curve lies within *tol* of that
+> conic ([W0-49]'s "pair list alone" withdrawn: unsound near singular pairs); a region wider than
+> *tol* between coincident target and tool faces is volume; a cusp edge's probe has no `normal`,
+> and probes without one match by position alone; [W0-46]'s rationale corrected. New fixture
+> files `booleans/section-types.json` (8) and `references/probes.json` (2); `identity` 31 → 33.
 
 IR v1 keeps every rule of IR v0 ([SPEC.md](SPEC.md)) unless a rule below overrides it. Rules new in
 this draft carry a **[D-n]** tag so reviewers and implementers can cite them. The words MUST, MUST
@@ -78,7 +100,11 @@ expressions over bodies (e.g. `plate.volume`), `expect` clauses.
    `UNSUPPORTED_FEATURE_VERSION`. This revision defines `v: 1` for every feature type
    (`FEATURE_VERSIONS` in the constants file).
 4. v1 engines MUST also accept `aicad.ir/0` documents. They migrate them with §9.1 before
-   evaluating; the report is then a v1 report. Engines never write `aicad.ir/0`.
+   evaluating. Engines never write `aicad.ir/0`. [W0-38] **Report version** (replaces "the report
+   is then a v1 report"): for an `aicad.ir/0` input an engine reports `aicad.metrics/0` (v0's
+   report, bit for bit) **by default**, and the `aicad.metrics/1` report of the migrated document
+   when asked (CLI `--report-version v1`, WASM `reportVersion: "v1"`); an `aicad.ir/1` input always
+   gets `aicad.metrics/1`.
 5. Additive revisions of v1 (a new feature type, a new optional field whose default preserves
    meaning) keep `aicad.ir/1`; they are listed in the revision log at the top of this file.
 
@@ -136,10 +162,16 @@ expressions over bodies (e.g. `plate.volume`), `expect` clauses.
   in eight 17-digit decimals, and enabling its `float_roundtrip` feature would change how every
   crate in a build parses v0 documents; so the v1 loader reads JSON text with its own strict
   RFC 8259 reader (`forge_ir::v1::json`, correctly rounded, duplicate keys rejected). v0 documents
-  keep serde_json's parser (bit-for-bit v0 behavior).
+  keep serde_json's parser (bit-for-bit v0 behavior). [W0-37] Migration therefore copies
+  serde_json's numbers into the v1 document; the ports read v0 text with an emulation of that
+  parser (the oracle's `jsonio.serde_number`, CadScript's `v0json.ts`), so `migrate(v0 text)` is
+  byte-identical in all three.
 - [W0-11] **Canonical text** is exactly `forge_ir::v1::to_json`: serde_json's pretty printer
   (2-space indent, `": "` separators), object keys in schema declaration order (the order of the
-  JSON Schema's `properties`, required ones first as declared), JSON numbers printed by Ryū:
+  JSON Schema's `properties`, required ones first as declared) — [W0-37] corrected: in the
+  **field declaration order of the `forge_ir::v1` Rust types** (serde's order), which the canonical
+  fixtures (`corpus/v1/programs/`, `conformance/migration/`) pin; the generated
+  `ir-v1.schema.json` lists `properties` alphabetically and is not an order source — JSON numbers printed by Ryū:
   decimal notation for `1e-5 ≤ |x| < 1e16` with integral values ending in `.0` (`8.0`, `0.00001`),
   otherwise `<digits>e<sign><exp>` with an explicit `+` (`1e-7`, `1.5e+16`). Numbers **inside
   expression strings** use the ECMAScript `Number::toString` form instead (§2.4). The TypeScript
@@ -161,7 +193,10 @@ expressions over bodies (e.g. `plate.volume`), `expect` clauses.
    a computed value or on geometry. **Range checks on expression-valued fields** use the **same code
    and path** as the literal check would, but are raised at evaluation time, as a feature error.
    Example: `"distance": "t - 10"` with `t = 8` fails the extrude with `INVALID_DISTANCE`, detail
-   `{"value": -2, "expected": "> 1e-6"}`.
+   `{"value": -2, "expected": "> 1e-6"}`. [W0-20] The stage follows the **stored JSON type**: a
+   JSON string is an expression even when it is a plain literal (`"distance": "-5"` or `"1e-400"`
+   loads and fails the extrude at evaluation with `INVALID_DISTANCE`, although the canonical form
+   `-5` / `0` would be rejected); a writer that canonicalizes it refuses the edit instead (§2.4).
 3. Validation returns every problem, not just the first (as in v0). [W0-1] The set of
    `{ code, path }` is normative; its order is not (fixtures compare multisets).
 4. [W0-1] **Rejection pipeline** (every implementation runs the same steps, so the same document
@@ -261,6 +296,15 @@ declaration order and matters only for printing and tie-breaking (§2.8).
 A parameter whose `value` is an expression is **derived**; UIs show it read-only unless the user
 replaces the expression. Driving parameters are the literal ones.
 
+[W0-25] **Bounds.** A bound's use-site type (§2.5) is its parameter's `unit`: a `count` bound is an
+exact integer with `|v| ≤ 2^31` (§2.7 rule 9; a literal one is `EXPR_NOT_INTEGER` at the bound's
+path, rejected; an expression one fails when evaluated). A parameter is evaluated in this order,
+the first failure deciding: (1) `PARAM_FAILED` if a parameter it uses in `value`, `min` or `max`
+failed (§2.8 rule 5, [W0-27]); (2) `value`; (3) `min`, then `max` — a bound that fails fails the
+parameter with the bound's own code and details (`EXPR_DOMAIN`, `EXPR_NOT_INTEGER`); (4) the
+range check (`PARAM_OUT_OF_RANGE`, details `{ "name", "value", "min", "max" }`, an absent bound
+`null`).
+
 ### 2.2 Scalar fields [D-7]
 
 Every numeric field of the IR (distances, angles, coordinates, radii, counts, pattern spacings,
@@ -303,6 +347,16 @@ ident     = ( letter | "_" ) , { letter | digit | "_" } ;
   identifier named `mm` or `in` elsewhere is an identifier.
 - Identifiers are parameter names, the constant `PI`, or function names followed by `(`.
 - Maximum nesting depth 64 and maximum length 4096 bytes (`EXPR_SYNTAX` beyond).
+  - [W0-19] The **nesting depth** of a text is the largest number of these constructs enclosing
+    any of its tokens: a parenthesised group; a call's argument list (one level for the whole
+    list, **empty or not**: `min()` nests one level); the `then` or the `else` expression of `?:`
+    (not its condition); the operand of a unary `-` or `!`; the exponent of `^`. Left-associative
+    chains (`a + b + c`, `p && q || r`) are not nesting. A text nested deeper than 64 is
+    `EXPR_SYNTAX` (`expected: "at most 64 nesting levels"`) — decided by the parser, before any
+    name or type check.
+  - [W0-20] The limits apply to the text **as stored**. A canonical text (§2.4) can be longer
+    (spaces) or deeper (the parentheses of `-(a ^ 2)`) than an accepted text; engines never
+    canonicalize before checking. See §2.4 for writers.
 - [W0-15] Whitespace is exactly space and tab: a newline is `EXPR_SYNTAX`. A call is an identifier
   followed by `(` after optional whitespace (`sin (30)` is a call). A number literal that rounds
   to ±∞ (`1e400`) is `EXPR_SYNTAX`; one that underflows is its rounded value. An empty or
@@ -325,7 +379,12 @@ The canonical text of an expression is produced by printing its AST:
    `+ -`, `* / %`, unary, `^` (base must be an atom; exponent at least unary), atoms.
 
 An engine MUST accept any expression the grammar accepts; the CadScript compiler and the DocStore
-MUST store the canonical form. `parse(canonical(ast)) == ast` for every AST.
+MUST store the canonical form. `parse(canonical(ast)) == ast` for every AST. [W0-20] …whose
+canonical text is within the limits of §2.3. A writer whose canonical text of an accepted
+expression exceeds a limit (`1+1+…+1` of 4095 bytes prints as 8189; 32 nested `-2^` print 96
+levels deep), or whose canonical document would be rejected (a string literal `"-5"` becoming the
+literal `-5`, §0.5 rule 2), MUST refuse the edit with that rejection at the site's path; it never
+stores a non-canonical text instead (`forge_ir::v1::expr::canonicalize_expressions_with`).
 
 ### 2.5 Types and dimensional analysis [D-10]
 
@@ -362,6 +421,19 @@ fractional zero (`width ^ 2.0`).
 result must equal it (`EXPR_UNIT_MISMATCH`, with `expected` and `found` in the details); `count`
 fields take Real(0,0) or Flex; `bool` fields take Bool. A parameter's `unit` is the use-site type of
 its own expression.
+
+[W0-21] **One rejection per expression.** An expression site yields at most one rejection: the
+first met by (1) the parser (`EXPR_SYNTAX`, including [W0-19]), then (2) **one post-order,
+left-to-right pass** over the tree — children before their node, operands and arguments left to
+right — in which an identifier is resolved when it is visited (`EXPR_UNKNOWN_NAME`,
+`EXPR_SCOPE`), a call checks its name and arity (`EXPR_UNKNOWN_FUNCTION`, `EXPR_ARITY`) before
+visiting its arguments, `?:` checks that its condition is Bool (`EXPR_TYPE_MISMATCH`) before
+visiting its branches, and every other rule of the table (unification, dimensions, Bool
+operands) is applied once all children of its node are typed; then (3) the use-site check. So
+`sin(width) + nosuch(1)` is `EXPR_UNIT_MISMATCH`, `lid + nosuch` and `min(width, tilt, nosuch)`
+are `EXPR_UNKNOWN_NAME`, `width ? nosuch : 1` is `EXPR_TYPE_MISMATCH` (fixtures `e389`–`e400`).
+`PARAM_CYCLE` is not one of an expression's rejections but the dependency graph's (§2.8 rule 3),
+reported in addition to it ([W0-26]).
 
 The rule "a literal coefficient is dimensionless, a literal term adopts its neighbour's unit" makes
 the everyday forms legal and still catches the classic mistakes:
@@ -410,7 +482,11 @@ Forge, natively or through WASM).
 3. `a ^ b`: if `b` is an integer with `|b| ≤ 64`, compute `r = a^|b|` by binary exponentiation
    (`r = 1; p = a; n = |b|; loop { if n odd: r = r·p; n = n >> 1; if n == 0: break; p = p·p }`)
    and return `1 / r` for negative `b`. Otherwise use `forge_core::math::pow`; a negative base with
-   a non-integer exponent, or `0 ^ b` with `b < 0`, is `EXPR_DOMAIN`.
+   a non-integer exponent, or `0 ^ b` with `b < 0`, is `EXPR_DOMAIN`. [W0-23] Rule 7 applies to the
+   operation's result, not to the loop's intermediates: an `r` that overflows to ±∞ under a
+   negative exponent gives `1 / r = ±0 → 0` (`1e300 ^ -2 = 0`, and `65536 ^ -64 = 0` although
+   2^−1024 is a subnormal), while an `r` that is ±0 gives ±∞, `EXPR_DOMAIN` (`0 ^ -1`,
+   `1e-300 ^ -2`); under a non-negative exponent an overflowed `r` is the result, `EXPR_DOMAIN`.
 4. **Degree trigonometry.** `sin`/`cos`/`tan` of `x`:
    1. `r = x rem_euclid 360` (exact); [W0-5] except that for a tiny negative `x` the addition
       inside `rem_euclid` rounds up to exactly `360`, which is replaced by `0` (the same angle).
@@ -429,14 +505,38 @@ Forge, natively or through WASM).
    except these exact results: `asin(0) = 0`, `asin(±0.5) = ±30`, `asin(±1) = ±90`,
    `acos(1) = 0`, `acos(0.5) = 60`, `acos(0) = 90`, `acos(-0.5) = 120`, `acos(-1) = 180`,
    `atan(0) = 0`, `atan(±1) = ±45`, and `atan2(y, x)` is exact when `y = 0`, `x = 0` or `|y| = |x|`.
+   [W0-22] `atan2` keeps the range (−180, 180] of §2.6: a converted result of −180 (it arises only
+   by rounding, for a tiny negative `y` and `x < 0`, since `atan2` in radians lies within ±π of
+   binary64) is returned as **180** (`atan2(-3, -1e21) = 180`), as `atan2(±0, x < 0) = 180`
+   already is.
 6. `?:` evaluates the condition and then **only** the chosen branch; `&&` and `||` short-circuit.
    (Both branches are still type-checked.)
 7. Any operation producing NaN or ±∞, a division or `%` by zero, and the domain errors above fail
    with `EXPR_DOMAIN`, details `{ "expr", "subexpr", "operands" }`.
-8. Every result `−0` is replaced by `+0` before it is used or reported.
+8. Every result `−0` is replaced by `+0` before it is used or reported. [W0-24] This covers the
+   results of evaluation and literal **parameter** values (they are reported and enter
+   expressions as values); a literal **feature field** is passed to its feature exactly as stored,
+   `−0` included (v0 behaviour, so migrated documents keep their metrics bit for bit, §9.1).
 9. **Integrality.** A `count` parameter or field requires an exact integer with `|v| ≤ 2^31`
-   (`EXPR_NOT_INTEGER`, details `{ "value" }`). Field-specific ranges (e.g. pattern count ≥ 1) are
-   checked afterwards (§0.5 rule 2).
+   (`EXPR_NOT_INTEGER`, details ~~`{ "value" }`~~ [W0-45] `{ "expr", "value" }` as in the §7.5
+   catalogue: ~~`expr` is the failing site's stored text — the parameter's `value` or bound, or
+   the feature field — or the number itself for a literal~~ [W0-46] `expr` as in rule 10).
+   Field-specific ranges (e.g. pattern count ≥ 1) are checked afterwards (§0.5 rule 2).
+10. [W0-46] **The `expr` and `subexpr` details** of every expression code (`EXPR_SYNTAX`,
+    `EXPR_UNIT_MISMATCH`, `EXPR_TYPE_MISMATCH`, `EXPR_DOMAIN`, `EXPR_NOT_INTEGER`). `expr` is the
+    **canonical text** (§2.4) of the failing site's whole expression — the parameter's `value` or
+    bound, or the feature field — whatever its stored spelling (`"width/30mm"` gives
+    `"width / 30 mm"`); `subexpr` is the canonical text of the node at which the rejection or
+    failure was met in [W0-21]'s pass: the operator or call whose rule failed (`b + 1 deg` for a
+    `mm` + `deg` sum, not the operand `1 deg`; `sqrt(2 - 3)` for its domain error), the root
+    for the use-site check. At a **literal** site both are the literal itself as a JSON value —
+    a number (`2.5`) or `true`/`false`, never a string. `EXPR_SYNTAX` is the exception: its `expr`
+    is the **stored** text (a text that does not parse has no canonical form, and `offset`
+    indexes the stored bytes), present iff the text lexes ([W0-12]; absent otherwise).
+    Rationale: ~~the canonical text is what the evaluator of record and CadScript emit and is one
+    string per meaning~~ (corrected in the third review: CadScript's `subexpr` differs today) the
+    canonical text is what the evaluator of record emits, and one string per meaning; CadScript
+    aligns (W8, §11.1); the stored text stays available at `path`.
 
 ### 2.8 Scope and dependency order [D-13]
 
@@ -449,14 +549,35 @@ Forge, natively or through WASM).
    its sketch feature) and orders it topologically; ties are broken by declaration order, document
    parameters first. A cycle is `PARAM_CYCLE` (rejected), details `{ "cycle": [names…] }`. A cycle
    through a measured parameter (a sketch whose driving dimension uses a parameter that measures the
-   same sketch) is also `PARAM_CYCLE`.
+   same sketch) is also `PARAM_CYCLE`. [W0-26] **Edges:** `p → q` for every identifier (used as a
+   value) of p's `value`, `min` **or `max`** that resolves under rules 1–2 to a visible parameter
+   `q` — bounds are edges, so a bound that uses its own parameter is a cycle; every expression that
+   **parses** contributes its edges, whether or not it type-checks; names that resolve to nothing,
+   to another part's parameter (`EXPR_SCOPE`) or to `PI` contribute none. **Reporting:** one
+   `PARAM_CYCLE` per strongly connected component that contains a cycle (a parameter using itself
+   included); `cycle` is the shortest cycle through the component's first member in declaration
+   order, found breadth-first following each parameter's dependencies in order of first
+   appearance (`value`, then `min`, then `max`, each left to right), closed (`["a", "b", "a"]`); the
+   path is that member's first field (`value`, `min`, `max`) that uses the cycle's second member.
+   [W0-47] The `cycle` detail is compared (fixtures `w0-47-cycle-detail-…`: breadth-first, not
+   depth-first; first appearance, not declaration order; closed; one name per step).
+   `PARAM_CYCLE` is a rejection of the graph, reported **in addition to** an expression's own
+   (at most one, [W0-21]) rejection: an ill-typed `value` in a cycle yields its type error, and
+   its component its `PARAM_CYCLE` (in `w0-26-cycle-edge-from-ill-typed-expression` both at
+   `/params/0/value`).
 4. Non-measured parameters are evaluated before the first feature. A measured parameter is
    evaluated right after its sketch; any feature or parameter that uses it must come later in the
    timeline (`MEASURE_FORWARD`, rejected).
 5. A parameter that fails (`EXPR_DOMAIN`, `EXPR_NOT_INTEGER`, `PARAM_OUT_OF_RANGE`, or its measured
    sketch failed or is suppressed) is reported in `params` with its error; every parameter and
    feature that uses it, directly or transitively, fails with `PARAM_FAILED`, details
-   `{ "param", "code" }`. `PARAM_FAILED` is decided before the feature runs.
+   `{ "param", "code" }`. `PARAM_FAILED` is decided before the feature runs. [W0-27] The details
+   name the **root cause**: `param` is the parameter that failed on its own and `code` its own code
+   (`EXPR_DOMAIN`, `EXPR_NOT_INTEGER`, `PARAM_OUT_OF_RANGE`; never `PARAM_FAILED`): with
+   `b = a * 2`, `c = b + 1` and a failed `a`, both `b` and `c` report `{ "param": "a", … }`. When a
+   parameter or a feature uses several failed parameters, the first in order of first use decides
+   (a parameter: its `value`, `min`, `max`; a feature: its first expression site in field order,
+   then that text left to right).
 
 ### 2.9 CadScript v1 surface [D-14]
 
@@ -559,7 +680,9 @@ recommendation 4).
    none is given.
 3. `x` = the projection of the given `x_dir` onto the plane, normalised; when none is given, the
    world axis among X, Y, Z with the smallest `|n · axis|` (ties: X before Y before Z), projected and
-   normalised. A projection of length ≤ 1e-9 is `PLANE_DEGENERATE`.
+   normalised. A projection of length ≤ 1e-9 is `PLANE_DEGENERATE`. [W0-32] Values of `|n · axis|`
+   within `ANGULAR_TOLERANCE` of the smallest are ties (so a normal that is ±Z up to rounding
+   still picks X).
 4. `y = n × x`.
 
 So a sketch on the top cap of an XY plate has the same (u, v) coordinates as the plate's XY sketch,
@@ -610,7 +733,7 @@ Produces no body. Its frame can be used wherever a PlaneRef is accepted.
 | `offset` | `from: PlaneRef`, `distance: length` (any sign) | `from` translated by `distance · n` |
 | `angle` | `from: PlaneRef`, `axis: AxisRef`, `angle: angle` | `from` rotated by `angle` about the axis line (right-hand rule about its direction). The axis must be parallel to the plane: `\|a · n\| ≤ sin(QUERY_ANGLE_TOLERANCE)`, else `DATUM_DEGENERATE` |
 | `midplane` | `a: PlaneRef`, `b: PlaneRef` | normal and axes of `a`; origin `o_a + ((o_b − o_a) · n_a / 2) · n_a`. The normals must be parallel or anti-parallel within `QUERY_ANGLE_TOLERANCE`, else `DATUM_DEGENERATE` |
-| `through` | `points`: three PointRefs `p0, p1, p2` | origin `p0`, `x = normalize(p1 − p0)`, normal `normalize((p1 − p0) × (p2 − p0))` (orientation follows the point order), `y = n × x`; collinear points (`\|cross\| ≤ tol·\|p1 − p0\|`) → `DATUM_DEGENERATE` |
+| `through` | `points`: three PointRefs `p0, p1, p2` | origin `p0`, `x = normalize(p1 − p0)`, normal `normalize((p1 − p0) × (p2 − p0))` (orientation follows the point order), `y = n × x`; collinear points (`\|cross\| ≤ tol·\|p1 − p0\|`) → `DATUM_DEGENERATE`; [W0-32] so is `\|p1 − p0\| ≤ tol` or `\|p2 − p0\| ≤ tol` (as `datum_axis` `points`) |
 | `frame` | `origin`, `normal`, `x_dir` | v0 §2 |
 
 ```json
@@ -640,7 +763,12 @@ The report lists the evaluated frame (`datum: { origin, x, y, normal }`), compar
 [W0-8] Both datum features are one JSON object with a `mode` and the fields of that mode; a missing
 or extra field is `DATUM_OPTIONS_CONFLICT` (rejected, details `{ "mode", "fields", "missing",
 "unexpected" }`). A literal `frame` whose normal and `x_dir` are not perpendicular is
-`INVALID_PLANE`. `flip` is allowed as for AxisRef. CadScript: `datumAxis({ cylinder: boss.side("ring") })`,
+`INVALID_PLANE`. [W0-32] An expression-valued frame (`datum_plane` `frame`, an explicit PlaneRef)
+whose evaluated unit normal and x direction have `|n̂ · x̂| > ANGULAR_TOLERANCE` (1e-9, the
+perpendicularity test of v0 §2 for literal frames) fails the feature with the same
+`INVALID_PLANE` (§0.5 rule 2). The reported axis origin (§3.4): `planes` — the point of the
+intersection line closest to the world origin; `points` — the first point `a`; `edge`,
+`cylinder` — as the AxisRef forms of §3.2. `flip` is allowed as for AxisRef. CadScript: `datumAxis({ cylinder: boss.side("ring") })`,
 `datumAxis({ planes: [XZ, mid] })`. Report: `datum: { origin, direction }`.
 
 ## 4. Sketches
@@ -777,6 +905,17 @@ are entity reference strings resolved **exactly** against the solver entity ids 
 - [W0-9] The IR constraint types, `type` tags and argument names equal forge-solve's JSON model; a
   constraint with literal values deserializes as a `forge_solve::Constraint` (tested). The only
   difference: an IR reference dimension has no `value`.
+- [W0-28] What forge-solve (pinned by §4.4 rule 3) makes of two rows, stated for the replay
+  check: `fix` pins its entity at the **welded stored guess** — a point at the given `x`/`y`, else
+  its stored coordinates; a line both ends; a circle or arc its centre and radius. A curve–curve
+  `tangent` away from a joint without `internal` takes the configuration of the welded stored
+  guess (internal iff the distance of the centres is below the larger radius). At a **joint** (an
+  end of one curve welded to, or joined by `coincident` constraints with, an end of the other)
+  the tangency constrains, at the joint point, the two radii to be collinear (arc–arc; the line
+  to be perpendicular to the radius, line–arc) and forge-solve ignores `internal`: an explicit
+  `internal` on an arc–arc joint must then hold in the
+  solution (internal iff both centres lie on the same side of the joint point) or the sketch fails
+  with `SKETCH_SOLVE_FAILED`; without `internal` either configuration is accepted.
 
 ### 4.4 Solving [D-22]
 
@@ -790,7 +929,16 @@ are entity reference strings resolved **exactly** against the solver entity ids 
    change to forge-solve that can change a v1 result (including where an under-constrained sketch
    ends up) requires sketch `v: 2`.
 4. **Fixed point.** If the stored guess already satisfies every driving constraint to
-   `SOLVE_TOLERANCE`, the solution MUST be bit-identical to the guess.
+   `SOLVE_TOLERANCE`, the solution MUST be bit-identical to the guess. [W0-29] "Stored guess" is the
+   **welded** stored guess (every welded end at its representative's stored coordinates, §4.3), the
+   solver's starting point. **Angular conditions** are lengths in forge-solve's convention, a
+   constant scale taken from that guess: `parallel`/`perpendicular` the `|sin|`/`|cos|` of the
+   angle between the lines, `angle` the wrapped angle error in radians, each times
+   `sqrt(|u₀|·|w₀|)` floored at 1 µm (`u₀`, `w₀` the two lines' direction vectors in the guess);
+   a `tangent` at a joint is also held to first order at the joint point `p` (line–arc: `|cos|` of
+   the angle between the line and the radius `p − c`, times `sqrt(|line₀|·|p₀ − c₀|)`; arc–arc:
+   `|sin|` of the angle between the two radii, times `sqrt(|p₀ − c_a₀|·|p₀ − c_b₀|)`; both floored at
+   1 µm). `SOLVE_TOLERANCE` (here) and `SOLVE_CHECK_TOLERANCE` (§8.1) are in these units.
 5. Map the status:
 
 | forge-solve status | Feature | Report |
@@ -811,7 +959,18 @@ are entity reference strings resolved **exactly** against the solver entity ids 
    guess and the solution, the sketch reports warning `SKETCH_LOOP_FLIPPED`, details
    `{ "curves" }`: the solver jumped to a mirrored configuration. The sketch still succeeds.
 9. **Write-back** (§0.6): after a committed edit, `writeBackSolution` replaces the literal
-   coordinates with the solved ones. By rule 4 this is idempotent.
+   coordinates with the solved ones. By rule 4 this is idempotent. [W0-31] …once the welding is
+   stable. A solution that brings ends the stored geometry did not weld within *tol* (a
+   `coincident` between separate ends, solved to ~1e-10) makes the next evaluation weld them
+   (§4.3): its status can change (that `coincident` becomes redundant; a driving `distance` ≤ *tol*
+   between them becomes a conflict) and the geometry can move by up to *tol*; the second
+   write-back is the fixed point. Write-back stays literal (it does not snap ends).
+10. [W0-30] **Size cap.** A solution that passes rule 4 and the §8.1 check still fails the sketch
+   with `SKETCH_SOLVE_FAILED` (details: the solver cluster of the violated constraint) when an
+   angular condition measured at the **solved** size — its dimensionless deviation times the
+   longer of the two solved lengths involved — exceeds
+   `max(tol, SOLVE_CHECK_TOLERANCE × (longer guess length) / (guess scale of [W0-29]))`. The oracle's
+   replay check applies the same bound.
 
 The report entry of a sketch (§7.2) carries `sketch: { "mode", "status", "dof", "solved": [curves
 with literal geometry], "dimensions": [{ "id", "driving", "value", "measured" }] }`. The oracle
@@ -963,6 +1122,33 @@ serialization, the **provenance key**, is what captures store and what the resol
 6. **Index families are display-only.** When several entities share a key (split pieces), they get
    display indices `#0, #1, …` in the canonical order of §5.4. Indices are never persisted
    (naming recommendation 1).
+7. [W0-33] **Key details** (as Forge and forge-refs implement them):
+   - **Bodies** are keyed `F/body:m` (origin feature `F` and member `m`, rule 4), `F/body:m@i` /
+     `@i.j` for pattern-instance bodies (captures of body members, §5.6).
+   - A **vertex** of a sweep `F` incident to junction edges of `F` takes the byte-wise smallest
+     qualifier of those edges (`F/vertex:{…}@c.end`): the two ends of a "D"'s junction edges
+     would otherwise share a key.
+   - Keys of **new** body-operation entities (`G/edge:{A|B}`, `G/vertex:{…}`) may repeat — two
+     section curves between the same two faces, a tool crossing an edge twice: like split pieces
+     they are told apart by display index and probe~~, and a reference to such a key resolves to
+     all of them (its cardinality decides)~~. A reference **without a capture** takes every
+     entity its query returns under such a key (its cardinality decides). When several entities
+     carry the key of a **captured** member, the `M` of §5.7 step 3 is those lying on its
+     captured carrier inside its captured box (step 4's split test): pieces of the entity it
+     designated, to which the split row applies. When none does (its geometry changed), or for a
+     vertex (vertices have no pieces), the captured members of the key are matched to its
+     entities one-to-one by fingerprint (as re-captured split pieces are), each match validated
+     as `|M| = 1`, and a fingerprint tie is `REF_AMBIGUOUS`. A same-key entity that is neither a
+     piece nor a match of a captured member — another section branch — is not used: a key shared
+     by coincidence never widens a captured selection (a fillet edge set would otherwise pick up
+     a second branch with only an info). Key checkers accept repeated `G/` keys on
+     different carriers.
+   - A surviving edge or vertex **keeps** its key when a face its key names is merged away
+     (§6.0.4; that face's key is then an alias, which checkers resolve first) or dropped by the
+     operation (an operand vertex).
+   - Edges merged by §6.0.4 keep a key by the face rule of rule 3: the byte-wise smallest key among
+     the merged edges **of the target bodies** (among all if none is a target's); the others
+     become aliases.
 
 ### 5.3 Query AST [D-26]
 
@@ -983,7 +1169,9 @@ any feature that creates geometry (not `sketch`, datums or `tag`). `curve` and `
 profile curves of the consumed sketch (§4.5; `QUERY_UNKNOWN_CURVE`); `edge_at` of a circle is
 `QUERY_INVALID` (a circle has no ends). `union`/`intersect` need at least one operand;
 `convex`/`concave`/`smooth` take only `true`; `radius` is `{ "eq" }` or `{ "min"?, "max"? }` with
-at least one bound, bounds ≥ 0 (`INVALID_VALUE`); `instance.index` has one or two entries;
+at least one bound, bounds ≥ 0 (`INVALID_VALUE`); `instance.index` has one or two entries
+([W0-37] a coded `QUERY_INVALID`: the schema's `minItems`/`maxItems` on it are informative, and a
+schema-driven typed parse MUST NOT turn them into an uncoded parse error);
 `largest`/`smallest` of vertices is `QUERY_INVALID` (vertices have no size); a literal zero `Dir`
 vector is `INVALID_VALUE`. `hole_face.at` and `created.role` follow the id grammar. The golden
 cases are `corpus/v1/conformance/queries/typing.json`.
@@ -1190,6 +1378,20 @@ Every feature report has `refs`: one entry per Ref-valued field, in field order.
   capture) the command layer can apply with one op.
 - Warnings and infos of §5.7 are also listed in the feature's `warnings` (§7.3), so tools that only
   read warnings see them.
+- [W0-34] A Ref nested in a query's `Dir` (an AxisRef, §3.2) has **no** `refs` entry of its own: it
+  is part of its predicate, which the oracle re-evaluates itself. A `tagged` source passes the
+  tag's resolution in the current scope through: its infos and warnings, or — when that
+  resolution fails — its code and candidates (a failed or suppressed **tag feature** is
+  `DEPENDENCY_FAILED` / `DEPENDENCY_SUPPRESSED` by §7.1 step 2 instead). Every feature-id source
+  (`sides`, `created`, `instance` included, not only named ones) of a failed feature fails the
+  reference with `DEPENDENCY_FAILED`, and yields nothing (reason `feature-suppressed`) for a
+  suppressed one. The further refinements of §5.7 documented in forge-refs ("Deviations and
+  contract notes", 2026-09-24: fallback pool, keys the query dropped, split proxy, splits under
+  choosing queries, integer cards and splits, comparison scale, junction swaps, multi-piece
+  captures, merged neighbourhoods, rejected queries keep candidates, new named members, unresolved
+  entries without a member, probes never made up, the last query-synthesis strategy) are adopted as
+  written there; the oracle's independent-refs mode (W7c) implements them, and they move into this
+  section when it does.
 
 ### 5.9 Repairs and renames (command layer) [D-32]
 
@@ -1315,12 +1517,89 @@ are not targets are untouched. All results are regularized closed solids.
   `BOOLEAN_NON_MANIFOLD`, details `{ "probe" }`.
 - **Identity.** Each result body inherits the **origin** (§5.2 rule 4) of the target it comes from.
   A join component containing several targets takes the origin that sorts first (timeline index,
-  then member); the others are reported as `merged_into`. Tools never give their origin to a result
-  unless the operation creates new bodies.
+  then member); the others are reported as `merged_into` ([W0-40]: every other target **origin**
+  of the component, once, mapped to the kept origin — never the kept origin itself, which a
+  second piece of it re-joined into the component also carries). Tools never give their origin
+  to a result unless the operation creates new bodies.
 - **Split.** A target cut into several pieces yields several bodies with the same origin (info
   `BOOLEAN_SPLIT`, `{ "origin", "pieces" }`). References to the body see every piece (§5.5).
 - **Consumed.** A target removed entirely (cut, or an empty intersect) is not an error: warning
   `BOOLEAN_BODY_CONSUMED`, `{ "origin" }`.
+- [W0-41] **Contacts, degenerate pieces and the smallest cut** (revised in review; it replaces a
+  test on the mean thickness of the common part, which contradicted [R-3] for overlaps between
+  *tol*/2 and *tol* and could average a real pocket away with a large contact). In this order:
+  1. **Coincidence first** ([R-3]): a point within *tol* of a face lies on it, so faces of a tool
+     and a target within *tol* of each other coincide, and a target edge or vertex within *tol*
+     of a tool face lies on that face. Every test below is applied to the operands after this: an
+     overlap, or a layer left by a cut, that is nowhere thicker than *tol* is a **contact**, not
+     volume. [W0-48] **Thickness** is a distance to faces, the measure of [R-3]: a region (part of
+     T ∩ K, or a layer of T − K) is *nowhere thicker than tol* when each of its points lies within
+     *tol* of a face of the target **and** within *tol* of a face of the tool (the two faces that
+     coincide there) ~~— not an inscribed-ball or mean (`2V/A`) thickness~~, [W0-53] **and** it
+     contains no ball of diameter greater than *tol* (no point of it is farther than *tol*/2 from
+     the region's own boundary) — not a mean (`2V/A`) thickness, nor an inscribed ball alone.
+     (Third review: the face-distance test alone let a region up to 2·*tol* wide pass as a
+     contact whenever both of its sides lie on target and tool faces — a target fin 1.5e-6 mm
+     thick that a tool covers on both sides (each side a coincident pair), or a wall that thick
+     that a cut leaves (a target face and a tool face) — although [R-3] makes its two sides
+     distinct faces: the mirror of the through-slit in the band (*tol*, 2·*tol*].
+     Rationale: width between the sides is what [R-3] compares, and the face-distance test still
+     decides the corner below.) A slit whose walls are
+     1.5e-6 mm apart is thicker than *tol* (the middle of its mid-plane is millimetres from the
+     target's faces),
+     and so is a target corner 1.2e-6 mm inside a tool face, although the common tetrahedron's
+     inscribed ball is only 8.8e-7 mm across. (Forge realizes this for aligned faces by
+     translating the tool by at most √3·*tol*, one *tol* along each of up to three face normals —
+     ~~the result may differ from the unsnapped geometry by that much, within the tolerances of
+     §8.1 [W0-35] and §8.2~~ [W0-48] every point of the result may move by that much: within
+     §8.1's probe radius (≥ 2·*tol*, [W0-35]) and, once `s ≥ √3` mm, §8.2's `bbox_*` tolerance
+     (`1e-6·s` per component), but **not** in general within §8.2's `volume`, `area` and
+     `centroid` tolerances: moving tool faces of area `A` inside the target by δ changes the
+     volume by up to `A·δ`, beyond `max(1e-6·V, 1e-9·s³)` on small or thin parts — the open
+     issue 6 of §11.1 "Not ruled here"; a configuration it cannot resolve fails with the
+     engine-prefixed
+     `FORGE_BOOLEAN_NEAR_COINCIDENT`, never a result that treats such faces as distinct; a target
+     edge or vertex within *tol* of an oblique tool face is not yet handled — Forge alignment,
+     §11.1.)
+  2. A tool **meets** a target — `cut`: iff ~~some point of the target lies inside the tool
+     farther than *tol* from the tool's boundary (the cut moves some point of the target by more
+     than *tol*)~~ [W0-48] the common part T ∩ K is somewhere thicker than *tol* in the sense of
+     1: some point of the target inside the tool is farther than *tol* from the target's faces
+     **or** farther than *tol* from the tool's faces (revised in the second review: the struck
+     wording measured the tool's faces only, a one-sided depth that is half the width for a tool
+     passing through or embedded in the target, so a through-slit of width in (*tol*, 2·*tol*],
+     whose walls are distinct faces by [R-3], would not have met); [W0-53] **or** some point of
+     T ∩ K is farther than *tol*/2 from its boundary (a tool covering a 1.5e-6 mm fin of the
+     target on both sides meets it); `join`: the same, or they
+     share a face of positive area (faces coinciding by 1 included); `intersect` acts on every
+     target. The common part is never tested for degeneracy: a target vertex 2e-6 mm inside a
+     tool is cut although the tetrahedron removed has `2V/A` ≈ 4.9e-7 mm.
+  3. A **degenerate piece** is not produced: a result piece — a connected component of a
+     result body, judged one at a time, never together with other pieces — is degenerate when
+     its mean thickness `2V/A` (volume over area) is at most *tol*/2 (for the wedges, caps and
+     segments that remain after 1 this is about their inradius). A cut or intersect left with
+     degenerate pieces only consumes that target; a cut that leaves a real piece and a layer of
+     1 gives one piece, not a split.
+
+  There is **no** threshold relative to the scale `s`: a 0.0005 × 0.01 × 0.01 mm notch (5e-8
+  mm³, mean thickness 4.5e-4 mm) is a cut, and a 4.5e-11 mm³ remaining wedge of mean thickness
+  8.8e-7 mm is a body; overlaps of 2e-7, 8e-7 and 9.5e-7 mm are contacts
+  (`BOOLEAN_NO_INTERSECTION` when that is all a cut has), 2e-6 mm cuts (fixtures `identity`);
+  [W0-48] a through-slit 1.5e-6 or 1.9e-6 mm wide splits the target (`BOOLEAN_SPLIT`), a
+  1.5e-6 mm square through-pin cuts a hole, a 1.5e-6 mm thin tool inside the target meets it
+  (join: `modified`; cut: a void), and a corner 1.2e-6 mm inside a tool face is cut; [W0-53] a
+  cut tool covering a 1.5e-6 mm fin of the target on both sides removes the fin (under the
+  face-distance test alone it was `BOOLEAN_NO_INTERSECTION`, or, beside a tool that meets, a
+  kept fin), and a cut that leaves a 1.5e-6 mm wall leaves a body (no layer; `2V/A` ≈ 1.5e-6 mm
+  is not degenerate).
+- [W0-39] The failure row of the table applies **per tool**: a join tool that neither overlaps
+  nor shares a face of positive area with a target is `BOOLEAN_NO_INTERSECTION` even when it
+  meets a target through another tool (a detached boss is almost always a direction mistake,
+  and a second tool is no evidence against that). ~~**Join components.** The result bodies of
+  a join are the connected components of T ∪ K, connections through tools included: a tool is
+  detached (`BOOLEAN_NO_INTERSECTION`) only when its component contains no target, so a tool
+  that meets a target only through another tool is joined.~~ (Withdrawn in review: it reversed
+  the row without cause; §10 decision 3.)
 
 #### 6.0.4 Same-domain merging [D-37]
 
@@ -1329,13 +1608,33 @@ with the same orientation** are merged into one face, and edges that then lie on
 and meet at a vertex shared by no other edge are merged into one edge. Keys follow §5.2 rule 3.
 Faces on different carriers are never merged, even when tangent (v0 §4.4). This makes a boss flush
 with a plate side one face, as users expect, and matches OCCT's `ShapeUpgrade_UnifySameDomain`,
-which the oracle applies (§8.3).
+which the oracle applies (§8.3). [W0-42] "Body operation" means `join`, `cut`, `intersect`,
+`boolean` (and later a `hole` or `pattern` with an op): a `new_body` extrude or revolve is not
+merged and keeps one side face per profile curve (v0's topology, so migrated documents keep their
+metrics, §9.1). A vertex at a **singular point** of a face that uses both edges (a sphere pole, a
+cone apex) counts as shared: edges are not merged across it (no merged edge could have a
+continuous pcurve there, ADR 0012; OCCT keeps the vertex too, on its degenerate edge).
 
 #### 6.0.5 Reporting bodies [D-38]
 
 A feature's `bodies` lists the result bodies it **created or modified**, each with `origin` and
 `change` (`created`/`modified`), in canonical order (§5.4); `removed` lists the origins it consumed.
 The document-level `parts[].bodies` lists every body at the end of each part's timeline (§7.2).
+
+- [W0-39] **Modified** means *acted on*, not *geometrically changed*: a target is `modified` iff
+  the operation acted on it — join: its component contains a tool; cut: some tool meets it
+  ([W0-41]); intersect: always (unless consumed). This holds when its geometry is unchanged (a
+  join tool equal to, or inside, its target). Any other target is **untouched**: it stays in the
+  part and is in neither `bodies` nor `removed` (engine notes such as `FORGE_BOOLEAN_NO_CHANGE`
+  may name it; they are not compared).
+- [W0-40] **Removed** lists, once each, the origins of targets that **no body in the part carries
+  after the operation** — consumed, or merged into a join component that took another origin
+  (I4's `merged_into`, which has no report field of its own: it maps each other target origin
+  of a component to the kept origin and never contains the kept origin itself, §6.0.3). It is
+  disjoint from the origins in `bodies` and of untouched bodies: two pieces of one origin
+  re-joined remove nothing, and a consumed piece whose sibling piece survives removes nothing
+  (its `BOOLEAN_BODY_CONSUMED` is still raised, per consumed target body). Consumed **tools** are
+  never listed (the operation consumes them by definition, §6.4).
 
 ### 6.1 `sketch`
 
@@ -1780,7 +2079,9 @@ const inserts   = hole(mountFace, { at: { a: [10, 10], b: [-10, 10] }, size: "M3
   "bodies" }`; a body is `{ "origin": { "feature", "member", "instance"? }, "change"?, …v0 metrics,
   "shells" }` (`change` only in feature entries). The `sketch` block has `mode`, `solved` (always:
   the literal geometry the regions came from, compound members expanded) and `dimensions`;
-  `status` (forge-solve's spelling) and `dof` in constrained mode only. Reference members carry a
+  `status` (forge-solve's spelling) and `dof` in constrained mode only. [W0-37] An omitted
+  `dimensions` means `[]`; the oracle, which replays instead of solving (§8.1), copies Forge's
+  `status` and `dof`, which are therefore not compared (§8.2). Reference members carry a
   `status` (`exact`, `merged`, `neighborhood_changed`, `kind_changed`, `split`, `repaired`);
   unresolved `reason`s are the kebab-case list of §5.8; candidate `reason`s are `identical`,
   `split-piece`, `plausible` or `tie`. Hole instances: `depth` is `null` for through holes;
@@ -1884,6 +2185,10 @@ and `since` (`v0`, `v1`, `v1.1`) — is `ERROR_CODES` in `schema/ir-v1.constants
 | `PATTERN_INSTANCE_SKIPPED` | W | §6.10 | `index`, `code` |
 | `SHELL_CLOSED_VOID` | I | §6.8 | — |
 
+[W0-46] The `expr` and `subexpr` keys mean the same for every code that has them: §2.7 rule 10
+(canonical text; a literal site's literal as a JSON value; `EXPR_SYNTAX`'s `expr` the stored text,
+present iff it lexes).
+
 Engine-internal failures keep the engine prefix (`FORGE_*`, `OCCT_*`, v0 [R-12]).
 
 ### 7.6 Probes [D-54]
@@ -1892,9 +2197,21 @@ A probe `{ "kind", "point": P3, "normal"? }` locates an entity without persistin
 - **face**: a point on the face (within tol) at distance ≥ `10·tol` from its boundary (faces
   smaller than that: any interior point), with the outward normal there;
 - **edge**: the point at the middle of the edge's parameter range (ring edges: half a turn from the
-  deterministic start of ADR 0012), at distance ≥ `10·tol` from its vertices;
+  deterministic start of ADR 0012), at distance ≥ `10·tol` from its vertices; [W0-50] with
+  `normal`: the normalized sum of the outward normals of the edge's two faces at `point` (an
+  edge with one face on both sides: that face's normal), which points away from the solid's
+  wedge at the edge and so tells apart the coincident edges of touching bodies; [W0-54] where
+  `|n_F + n_G| ≤ QUERY_ANGLE_TOLERANCE` for the two faces' unit outward normals at `point` — a
+  **cusp** (interior angle 0, the normals opposite, e.g. an arc ending tangent to a line with
+  the material between them) or within about that angle (radians) of one — the probe has **no**
+  `normal` (key omitted; `null` is read the same) and is matched by position alone (§8.1).
+  Rationale: the sum is zero at a cusp, and near one its direction is evaluation noise (normals
+  evaluated a few *tol* apart differ by about that distance over the curvature radius), so no
+  direction would match reproducibly; `QUERY_ANGLE_TOLERANCE` is the constant queries already
+  compare directions with;
 - **vertex**: its position;
-- **body**: the probe of its face with the smallest key.
+- **body**: the probe of its face with the smallest key ([W0-35] `normal` included, which tells
+  two touching bodies apart).
 
 Probes are deterministic in Forge. They are used by UIs (highlight), renders, the agent (`describe`)
 and the oracle's replay (§8.1); they are never stored in the IR.
@@ -1912,6 +2229,34 @@ and the oracle's replay (§8.1); they are never stored in the IR.
 | References | **replays** (PR and nightly gate) the members' probes: each probe must match exactly one OCCT entity of the right kind within `1e-6·s` (else `ORACLE_PROBE_UNMATCHED`, engine-prefixed, hence `ROBUSTNESS`) | the oracle independently re-applies the **geometric** predicates and picks of the query (type, normal, parallel, perpendicular, convexity, radius, extreme, largest/smallest) to the replayed members; a member that fails its predicate is `POTENTIAL_SILENT_WRONG` |
 | References, independent mode (nightly, from F2) | **computes**: provenance keys from OCCT's shape history (`BRepPrimAPI_MakePrism`/`MakeRevol` generated, first and last shapes; `BRepAlgoAPI_*` `Modified`/`Generated`/`IsDeleted`; `BRepFilletAPI_MakeFillet`/`MakeChamfer` `Generated`; `BRepOffsetAPI_MakeThickSolid`; its own bookkeeping for holes and patterns), then evaluates the queries itself | resolved sets are compared by key and probe; a difference is `REF_MISMATCH` |
 | Body operations, holes, patterns, fillets, chamfers, shells, drafts | **computes** from the resolved references | §8.2, with the normalizations of §8.3 |
+
+- [W0-35] **Probe matching.** A probe matches the entities of its kind within
+  ~~`r = min(1e-6·s, 5·tol)`~~ `r = clamp(1e-6·s, 2·tol, 5·tol)` of its point (not `1e-6·s`
+  alone: probes are only `10·tol` from their entity's boundary, §7.6, so for `s > 10` mm a larger
+  radius reaches the neighbours; and at least `2·tol`, above the √3·*tol* by which [R-3]
+  coincidence may move tool geometry in Forge ([W0-41]) and not in the oracle, which a smaller
+  radius would miss on parts with `s` below √3 mm); when several faces or bodies are within `r`, a
+  face or body probe keeps those whose outward normal ~~is within 1e-3 rad of its `normal`~~
+  has a positive dot product with its `normal` (no tolerance needed: what it separates are the
+  faces of touching bodies, whose normals are opposite). More than one left is not a match
+  (`ORACLE_PROBE_UNMATCHED`). [W0-50] When several edges are within `r`, an edge probe keeps the
+  edge whose `normal` (as §7.6 defines it) has the **largest** dot product with its `normal`,
+  which must be positive; two equal largest are not a match. (Coincident edges of touching
+  bodies bound disjoint wedges, so their normals differ, but two sharp wedges side by side can
+  have normals less than 90° apart: a sign test alone would not separate them.) [W0-54] One
+  edge within `r` is the match, with or without normals (as before [W0-50]). With several, a
+  candidate that has no normal of its own (a cusp, §7.6) is never kept by the dot-product test,
+  and a probe **without** `normal` — a cusp edge's, or, until W3 lands, every edge probe of an
+  engine that does not emit edge normals yet (Forge's `probe::edge_probe` today) — cannot
+  choose: `ORACLE_PROBE_UNMATCHED`, the rule before [W0-50]. Rationale: position is then the only
+  evidence, and a replay that cannot choose fails explicitly (`ROBUSTNESS`) rather than guessing;
+  the transition needs no flag. Adding `normal` to edge probes changes every report that
+  serializes one (reference members and candidates): W3 lands it with an explained golden
+  update (forge-regen `tests/v1_golden_hash.rs`, which hashes reports with probes).
+- [W0-36] **Default mode.** Besides the replay, the oracle resolves each reference with its own
+  evaluator wherever it can (keyed and geometric queries on its own provenance) and compares the
+  set with Forge's replayed members: a difference is `ROBUSTNESS` (finding `ORACLE_REF_DIFFERS`),
+  never `MATCH` and never `REF_MISMATCH`, which stays reserved to the independent-refs mode.
 
 ### 8.2 Compared fields [D-56]
 
@@ -1940,26 +2285,158 @@ and the oracle's replay (§8.1); they are never stored in the IR.
 nearest centroid, greedily in canonical order. An unmatched body is a body-count mismatch.
 
 **Not compared:** `message`, `details` (including feasible values), probes, captures, `valid`,
-vertex counts, `chain_added` (compared only in independent-refs mode).
+vertex counts, `chain_added` (compared only in independent-refs mode), [W0-37] a constrained
+sketch's `status` and `dof` (replayed), and engine-prefixed warnings and infos.
 
 ### 8.3 OCCT normalizations [D-57]
 
 The oracle MUST apply, in addition to v0's (seams, degenerate edges, canonical types, exact bbox,
-fixed-order Gauss mass properties):
+fixed-order Gauss mass properties — [W0-44] for bodies produced by body operations and later v1
+features, volume and area are integrated **adaptively** instead: `BRepGProp::VolumePropertiesGK`
+with `eps = 1e-10` and `BRepGProp::SurfaceProperties` with `eps = 1e-12`; migrated v0 programs keep
+v0's). The numbers in this section are settings of the oracle's OCCT calls, not tolerances of
+the IR semantics (§1): where a normalization decides topology, a type or a match, it uses the
+named constants (*tol*, `ANGULAR_TOLERANCE`) [W0-42] [W0-43].
 
 1. **Same-domain merge** (§6.0.4): `ShapeUpgrade_UnifySameDomain(UnifyFaces = true,
-   UnifyEdges = true, ConcatBSplines = false)` after every body operation, with linear tolerance
-   *tol* and angular tolerance `ANGULAR_TOLERANCE`. This also re-merges periodic faces that OCCT
-   split along seams.
+   UnifyEdges = true, ConcatBSplines = false)` after every body operation ([W0-42]: not after a
+   `new_body` sweep), with linear tolerance *tol* and angular tolerance `ANGULAR_TOLERANCE`.
+   ~~This also re-merges periodic faces that OCCT split along seams.~~ [W0-42] It does not
+   (OCP 7.9.3), so the oracle then normalizes the **counts** itself, which is what §6.0.4 asks of
+   the topology (vertices and edges are OCCT's topological ones, shared `TopoDS` entities, never
+   positions rounded to a grid):
+   1. faces on one carrier surface (the same surface, the same orientation) that share an edge are
+      one face — in particular the pieces of a periodic face split along its seam; the face has
+      their surface type; [W0-49] "the same surface" is decided with named tests, as 3(a) below does
+      for curves,
+      whatever `Geom_Surface` handles OCCT holds: the same analytic type and — planes: normals
+      parallel (`|n₁ × n₂| ≤ ANGULAR_TOLERANCE`) and a point of one within *tol* of the other;
+      cylinders: axes parallel, radii within *tol*, a point of one axis within *tol* of the
+      other axis; cones: axes parallel with the same sense, half-angles within
+      `ANGULAR_TOLERANCE`, apexes within *tol*; spheres: centres and radii within *tol*; tori:
+      axes parallel, centres, major and minor radii within *tol* (Forge's §6.0.4 tests,
+      `forge-ops` `boolean::geom::same_carrier`); "the same orientation": outward normals with a
+      positive dot product at a shared edge. Free-form carriers (B-spline, Bézier, extrusion,
+      revolution, offset) are one surface only when their definitions are equal bit for bit
+      (type, degrees, knots, poles, weights, or basis curve and direction/axis; one OCCT handle
+      in particular) — only a shared construction produces them, so no tolerance applies;
+   2. an edge is counted iff it has two **different** faces on its sides: an edge with the same
+      face on both sides (a seam, or an internal edge OCCT keeps at a tangent contact) is not
+      counted, and an edge between two different faces **is** counted even where it lies on a
+      periodic face's seam line (v0's seam rule drops only the former);
+   3. counted edges that meet at a vertex no other counted edge uses — seam edges do not count
+      there, a degenerate edge (a singular point) does — are **one edge** when they lie on one
+      carrier curve (§6.0.4's criterion), decided by either test: **(a)** both are lines, both
+      circles or both ellipses (after rule 3) on the same carrier — directions within
+      `ANGULAR_TOLERANCE`, centres, points and radii within *tol* (the arcs of one circle split
+      at a seam vertex, collinear lines); or **(b)** both lie between the same two different faces
+      F and G, and F and G are **transversal** at the vertex: their unit normals satisfy
+      `|n_F × n_G| > ANGULAR_TOLERANCE`. Then F ∩ G is one smooth curve through the vertex
+      (implicit function theorem) and the two edges are its two sides — pieces of one section
+      curve, never a cusp or a crossing of two branches, which occur only where F and G are
+      tangent (there only (a) merges). ~~…or when they lie between the same two faces and their
+      unit tangents there satisfy `|t₀ · t₁| ≥ 0.999` (pieces of one intersection curve)~~
+      (withdrawn in review: an unnamed 2.6° heuristic that the absolute value also let merge
+      across cusps). [W0-49] (b) also requires the two pieces' unit tangents leaving the vertex
+      to satisfy `t₀ · t₁ < 0` — a sign test that evaluation noise cannot flip at a cusp, where
+      `t₀ · t₁ = +1` — because the transversality threshold is below the noise of the normals
+      OCCT evaluates there: a vertex of tolerance τ (up to about 1e-7 mm after a boolean) moves
+      them by about τ times the faces' curvature, above `ANGULAR_TOLERANCE`, so a true tangency
+      can pass as transversal. **Known limitation:** at a tangency where two branches cross with
+      `t₀ · t₁ < 0`, the oracle can still merge two pieces that §6.0.4 keeps apart — an
+      edge-count difference (counts are compared exactly, §8.2) for review, not a silent one;
+      W7b reports its frequency. The merged edge has the type of its longest piece.
 2. **Booleans**: no fuzzy value, `SetRunParallel(false)`, `SetNonDestructive(true)`; tolerance growth
-   of the result is ignored because bboxes are computed exactly (v0).
-3. **Curve types**: intersection edges that OCCT returns as B-splines but that are conics within
+   of the result is ignored because bboxes are computed exactly (v0). [W0-41] step 1 (coincidence
+   first, [R-3]) is nevertheless normative: how the oracle realizes it — a fuzzy value of *tol*,
+   its own snapping, or a `ROBUSTNESS` class for configurations within *tol* — is still open
+   (issue 6 below, W4/W7b); until then the `identity` fixtures in the band (overlaps and layers
+   of 8e-7 and 9.5e-7 mm, a target edge 8e-7 mm inside a tool face) are oracle alignment items.
+3. **Curve types**: ~~intersection edges that OCCT returns as B-splines but that are conics within
    `1e-7·s` (e.g. an oblique plane–cylinder ellipse) are recognised with
    `GeomConvert_CurveToAnalyticalCurve` before `edge_types` is counted; Forge reports conics as
-   conics.
+   conics.~~ [W0-43] Replaced by: an edge OCCT returns as a B-spline (or offset) curve is typed a
+   line, circle or ellipse only when **(a)** its two faces are a pair whose intersection is exactly
+   that conic — plane–plane (line); a plane parallel to a cylinder's axis, or two cylinders with
+   parallel axes (lines); two surfaces of revolution (cylinder, cone, sphere, torus) sharing an
+   axis, a plane perpendicular to it counting as one, which covers every plane–sphere and
+   sphere–sphere pair (circles); an oblique plane and a cylinder (ellipse); a plane and a cone
+   (ellipse, or lines through the apex; [W0-51] decided by the plane–cone test below); a plane
+   through a torus's axis (meridian circles); a
+   bitangent plane of a ring torus (Villarceau circles); two cylinders of equal radius whose axes
+   intersect (ellipses); the pair is classified with the v0 classification tolerances —
+   directions parallel, perpendicular or coaxial when `|a × b| ≤ ANGULAR_TOLERANCE` or
+   `|a · b| ≤ ANGULAR_TOLERANCE` (unit vectors), positions and radii (a point on an axis, axes
+   that meet, equal radii, a bitangent plane) within ~~`ANGULAR_TOLERANCE · d`, `d` as in (b)~~
+   [W0-49] *tol*, as in rule 1 (a property of the two surfaces, never of one edge: the edge's own
+   `d` made the threshold fall below coordinate noise, 1e-14 mm for `d` = 1e-5 mm, and could
+   classify one pair differently for two edges of one section) — ~~and~~ [W0-49: a check, not
+   a condition, below] [W0-52: a condition again, below] **and (b)** ~~the conic an OCCT
+   recognizer returns (`GeomConvert_CurveToAnalyticalCurve` or
+   `ShapeAnalysis_CanonicalRecognition`) is within `max(tol, 1e-7·d)` of the curve, `d` the
+   diagonal of the **edge's own** bounding box, not the body's `s`~~ [W0-52] the engine's own
+   curve lies within *tol* of a conic of that type (defined below). Every other free-form edge
+   stays `bspline`. **Parabola and hyperbola** arcs count
+   as `bspline` in both engines (the canonical types have neither; Forge represents them as exact
+   rational B-splines, OCCT's `other` is mapped to `bspline` for them). Forge reports the lines,
+   circles and ellipses of these pairs as such and every other section as `bspline`, classifying
+   the pair with the **same** tests and tolerances (not with its SSI's internal `0.1·fit`
+   decisions, which may be tighter: a pair the tests above classify reports the conic even when
+   Forge computed the section by marching; alignment W4), [W0-52] and only when its curve passes (b).
+   [W0-49] (revised in the second review) ~~**(a) alone decides the type, in both engines.**~~
+   [W0-52] **(a) and (b) decide the type, in both engines, each on its own curve.** A
+   **section edge** — one a body operation creates where faces of two different operands meet,
+   its curve computed by intersecting them — is a line, circle or ellipse iff its two faces are
+   a pair of (a) [W0-52] **and** its curve passes (b), and `bspline` otherwise, whatever curve
+   class OCCT (or Forge's SSI) returned:
+   an analytic curve OCCT returns natively for a pair outside the list is compared as
+   `bspline` too (the lines where two cones sharing an apex meet are `bspline` in both engines
+   until an amendment lists that pair). Edges taken from a sketch or a sweep keep their
+   construction type (v0). ~~**(b)** is a check of OCCT's section, not a condition of the type:
+   when no recognizer returns a conic within `max(tol, 1e-7·d)` of OCCT's curve for a pair of
+   (a), the edge is still typed by (a) and the oracle reports the engine-prefixed finding
+   `ORACLE_SECTION_NOT_CONIC` (`ROBUSTNESS`), since the exact section is a conic and OCCT's
+   approximation of it is what is in doubt.~~
+   [W0-52] (third review) **(b)**: the distance from the engine's own section curve — OCCT's in
+   the oracle, Forge's in Forge — to a line, circle or ellipse of the type (a) names is at most
+   *tol* at the curve's end points and at no fewer than 31 interior points evenly spaced in its
+   parameter. An engine shows (b) with a witness: the oracle with the conic
+   `GeomConvert_CurveToAnalyticalCurve` or `ShapeAnalysis_CanonicalRecognition` returns at
+   tolerance *tol* (or OCCT's curve itself when it is that conic), Forge with the conic of its
+   analytic section or one it fits; an engine without a witness types the edge `bspline`. The
+   curve checked is the engine's computed intersection of the two faces, which must lie within
+   *tol* of both: a conic substituted for the section of a pair that only passes (a) within its
+   tolerances (the pair treated as exact) is wrong geometry, not a witness. A
+   disagreement is an ordinary exact `edge_types` mismatch (§8.2), classed like any other; the
+   oracle names the edge with the engine-prefixed note `ORACLE_SECTION_NOT_CONIC` when its own
+   curve failed (b) for a pair of (a), which changes no class ([W0-49]'s `ROBUSTNESS` class for
+   it is withdrawn). Rationale: within *tol* of a **singular** pair the section is not the conic
+   — cylinders of radii 5 and 5 + 8e-7 crossing at right angles meet in two disjoint quartic
+   loops 2.8e-3 mm from the ellipses, and a sphere whose centre is 0.9e-6 mm off the axis of a
+   cylinder of radius 1e-5 mm below its own meets it in loops at least 5e-6 mm from any circle
+   (`sections`) —
+   so (a) alone let both engines agree on a type the geometry does not have, invisibly to the
+   diff; pair tests on bit-equal parameters instead would type an exact pair differently in two
+   engines that round a transformed axis differently. *tol* replaces `max(tol, 1e-7·d)`: a named
+   constant decides the type, and an OCCT section farther than *tol* from the exact conic is a
+   difference to review, not to hide.
+   [W0-51] (third review) **Plane and cone.** With `n` the plane's unit normal, `a` the cone's
+   unit axis, `α` its half-angle (between the axis and a generator, OCCT's `SemiAngle`) and
+   `c = |n · a|`, the pair gives circles when `|n × a| ≤ ANGULAR_TOLERANCE` (the coaxial pair
+   above); an **ellipse** iff `c > sin α + ANGULAR_TOLERANCE` (the plane cuts every generator;
+   through the apex it meets the cone only there, so no edge arises); **lines** iff the apex is
+   within *tol* of the plane and `c < sin α − ANGULAR_TOLERANCE` (two generators); otherwise it
+   is not a pair of (a), and the section is `bspline`: a parabola (`|c − sin α| ≤
+   ANGULAR_TOLERANCE`) or a hyperbola (`c < sin α − ANGULAR_TOLERANCE` with the apex farther than
+   *tol* from the plane — a flat cut parallel to a countersink's axis). Forge applies the same
+   test. Rationale: these are the conic-section conditions; the named direction tolerance is a
+   guard band around the parabola, where no conic type is stable (`sections`: a hyperbola,
+   lines, a parabola and an ellipse on one 45° countersink cone).
 4. **Blend surface types**: fillet and chamfer faces that OCCT returns as B-spline, offset or
-   revolution surfaces go through `ShapeAnalysis_CanonicalRecognition` (tolerance `1e-7·s`). If a
-   face is still `bspline` where Forge reports the normative analytic type of §6.6, the program is
+   revolution surfaces go through `ShapeAnalysis_CanonicalRecognition` (tolerance `1e-7·s`; open:
+   body-scaled like the rule-3 tolerance [W0-43] replaced, it should become relative to the face
+   and follow from the face's own pair of blended faces — W6/W7b, not ruled here). If a face is
+   still `bspline` where Forge reports the normative analytic type of §6.6, the program is
    `NORMALIZED`, provided every tolerance field matches.
 5. **Corner patches**: for bodies with a vertex where three or more blended edges meet, other than
    the normative spherical corner, face/edge counts and types are not compared, volume and area are
@@ -1983,6 +2460,13 @@ Severity order, most severe first: `POTENTIAL_SILENT_WRONG`, `REF_MISMATCH`, `CO
 `ROBUSTNESS`, `NORMALIZED`, `MATCH`. A release requires zero `POTENTIAL_SILENT_WRONG` and zero
 `REF_MISMATCH` on the gate corpora, and every `NORMALIZED` rule must stay below a budget set per
 milestone.
+
+[W0-36] **Downstream capping.** After a feature whose `status` differs between the engines, the
+part states differ by construction (a failed feature passes its input through, §7.1), so later
+differences **in the same part** are capped at `ROBUSTNESS`; each is still listed (marked as
+downstream of that feature, with the class it would have had) and counted, and the status
+difference itself keeps its own class. When **both** engines fail a feature, the states stay
+equal and later features are classified normally.
 
 ## 9. Versioning and migration
 
@@ -2055,16 +2539,22 @@ v1) against the full `RESERVED_NAMES`; the constants file has both lists and
 
 `corpus/v1/conformance/` is shared by the Rust, TypeScript and Python suites and is **append-only**:
 a new rule or a fix adds cases, never edits old ones. JSON numbers are read correctly rounded
-(`JSON.parse`, Python `json`, `forge_ir::v1::json`). Every file has a `description`.
+(`JSON.parse`, Python `json`, `forge_ir::v1::json`). Every file has a `description`. [W0-47] A
+suite counts cases with **lower bounds** (`≥`), never equality: appending a case is not a
+breaking change, and a count pinned with `==` fails on every amendment.
 
 | Path | Content | Checked by W0 |
 |---|---|---|
-| `expressions/cases.json` | `params` (the environment) and ≥ 150 `cases`: `text`, `field`, then `canonical`, `type`, `value` with `bits` (big-endian hex of the binary64) or `tolerance_rel` (libm-dependent), or `error: { code, stage }` | well-formedness only; `TODO(W1)` test ignored until W1 lands |
-| `migration/programs/`, `migration/makerbench/`, `migration/renames/` | `<name>.v0.json` → `<name>.v1.json` (canonical text) and, for rewrites, `<name>.renames.json` | byte-for-byte |
-| `invalid/documents.json` | `cases`: `document`, `expected` (multiset of `{ code, path }`; `[]` = valid edge case) or `parse_error: true`; `requires: ["expr"]` marks cases that need W1's checker | exact, except `requires` cases (accepted structurally) |
+| `expressions/cases.json` | `params` (the environment) and ≥ 150 `cases`: `text`, `field`, then `canonical`, `type`, `value` with `bits` (big-endian hex of the binary64) or `tolerance_rel` (libm-dependent), or `error: { code, stage }`; [W0-45] a libm result that is exactly representable (`2 ^ 65`, `hypot(3, 4)`) is pinned by `bits` — a faithfully rounded libm must return it (e697–e699, twins of e433, e590, e592) | ~~well-formedness only; `TODO(W1)` test ignored until W1 lands~~ steps 1–3 (parse, canonical, type, use site) exact in `forge-ir/tests/v1_conformance.rs`; values bit for bit (or within `tolerance_rel`) in `forge-params/tests/conformance.rs` (W1 landed) |
+| `migration/programs/`, `migration/makerbench/`, `migration/renames/`, [W0-24] `migration/literals/` | `<name>.v0.json` → `<name>.v1.json` (canonical text) and, for rewrites, `<name>.renames.json`; `literals/` holds literal feature fields that migrate as stored (`-0.0`) | byte-for-byte |
+| `invalid/documents.json` | `cases`: `document`, `expected` (multiset of `{ code, path }`; `[]` = valid edge case) or `parse_error: true`; `requires: ["expr"]` marks cases that need W1's checker; [W0-47] an `expected` entry may carry `details`: a returned error with its code and path must equal it on every listed key (numbers bit for bit; `null` = the key is absent, so an emitted `null` does not match), and only keys the §7.5 catalogue defines for the code are listed (`w0-46-…` `expr`/`subexpr`, `w0-47-…` `cycle`); `expected` is a multiset, so its entries are matched to **distinct** returned errors (one error never satisfies two entries with the same code and path) | exact, `details` included; ~~except `requires` cases (accepted structurally)~~ [W0-47] `requires` cases are exact with W1's checker and accepted structurally without it (`v1_conformance.rs`) |
 | `queries/typing.json` | a `context` document and `cases` appended as a `tag`: `kind` + `q`, then `expect` (the static kind) or `errors` (paths relative to the Ref) | exact |
 | `compound/expansions.json` | `curve` → `members` (bit-exact, or `tolerance` when non-table trigonometry is involved) or `error: { code, field }` | exact |
 | `holes/tools.json` | size-related hole fields → the resolved `d`, preset dimensions and thread pitch, or the rejection code | exact |
+| `expressions/parameters.json` ([W0-20] … [W0-27], [W0-46]) | `cases`: a valid `document`, then `params` (name → `value` + `bits`, or `error` with `code` and the listed `details` keys — [W0-45] only keys the §7.5 catalogue defines for the code; numbers bit for bit, `null` = absent) and `features` (id → `status`, `error`) | exact, by evaluation (`tests/v1_conformance_amendments.rs`, through forge-regen) |
+| `booleans/identity.json` ([W0-39] … [W0-41], [W0-48], [W0-53], §6.0.3) | `cases`: a valid `document`, then `expect` per feature id: `status` and error `code`, or `bodies` (multiset of `{ origin, change }`), `removed` (set) and `warnings` (the set of §8.2's semantic warning codes); `rule` and `note` are informative | exact, by evaluation; cases Forge does not follow yet are listed in the test (`FORGE_PENDING_BOOLEANS`) **with the outcome Forge gives today**, which the test also asserts (a pending case that fails differently is a regression) |
+| [W0-52] `booleans/section-types.json` ([W0-43], [W0-49], [W0-51], [W0-52], §8.3 rule 3) | `cases`: a valid `document`, then `expect` per feature id: `status` (and error `code`) and `edge_types`, the counts of the listed edge types summed over the feature entry's bodies (after §8.3; a listed `0` means none, types not listed are not compared); `rule` and `note` are informative | exact, by evaluation, with a `FORGE_PENDING_SECTIONS` list like the one above (empty today) |
+| [W0-54] `references/probes.json` ([W0-50], [W0-54], §7.6) | `cases`: a valid `document`, then `expect` per feature id and Ref field (`refs[].field`): the multiset of the members' probes, `kind`, `point` and `normal` (`null` = no `normal`, the key omitted or `null`, as the metrics schema allows for probes), each component within 1e-9 | by evaluation, matched to distinct members; `FORGE_PENDING_PROBES` (edge normals: W3) |
 
 `corpus/v1/programs/` holds canonical v1 example programs (the SPEC examples, every feature type and
 query op); their CadScript twins are W8's.
@@ -2134,3 +2624,170 @@ Ambiguities resolved while encoding the types, by tag (each is also marked in pl
   eval` on v1 input can use the compatibility path until W1–W3 land.
 - **W10** reads `ERROR_CODES` for playbook coverage and treats free-text metadata and
   `migration.renames[].from` as untrusted.
+
+### 11.1 Phase B contract amendments (2026-09-24)
+
+Rulings on the contract issues reported by the Phase B workstreams (W1 report and pinned tests,
+W2/W3 crate docs, the W4 report `docs/spikes/03-ssi.md` and ledger
+`forge-regen/tests/v1_oracle_known_differences.json`, the W7a "reported to W0" list in
+`oracle/README.md`, W8a, the integration notes of forge-cli/forge-wasm). Each is marked in place.
+No type, schema or constant changed. "Fixtures" name the append-only cases of §9.4 that pin the
+ruling (`e…`: `expressions/cases.json`; `w0-…`: `invalid/documents.json`; `parameters`:
+`expressions/parameters.json`; `identity`: `booleans/identity.json`; `sections`:
+`booleans/section-types.json`; `probes`: `references/probes.json`).
+
+| Tag | Where | Ruling | Rationale | Fixtures |
+|---|---|---|---|---|
+| [W0-19] | §2.3 | Nesting depth defined: groups, argument lists (empty or not), `?:` branches, unary operands, `^` exponents; chains do not nest | The limit must mean the same in three parsers; an empty list counted differently changed the code (`EXPR_SYNTAX` vs `EXPR_ARITY`) | e376–e388, `w0-19-…` |
+| [W0-20] | §2.3, §2.4, §0.5 | Limits apply to the stored text; the stage follows the stored JSON type; a writer whose canonical form would exceed a limit or be rejected refuses the edit | Validation stays a function of the stored text (no printer needed), nothing accepted before changes verdict, writers never store what they cannot re-read | `w0-20-…` ×4, `parameters` |
+| [W0-21] | §2.5 | One rejection per expression: parser, then one post-order left-to-right pass (identifiers when visited, a call's name/arity before its arguments, `?:` condition first, other rules after the children), then the use site | `{code, path}` is normative (§0.5 rule 3), so which of several problems is reported must be fixed; the evaluator of record's order; it never changes whether an expression is rejected | e389–e400 |
+| [W0-22] | §2.6, §2.7 r5 | `atan2` stays in (−180, 180]: a converted −180 is 180 | Same direction; one value per direction, as `atan2(±0, x<0) = 180` | e401–e415 |
+| [W0-23] | §2.7 r3, r7 | Overflowed `r` under a negative exponent gives 0; `r = 0` gives `EXPR_DOMAIN` | Rule 7 is about the operation's result; underflow to 0 is accepted everywhere else; both engines already agree | e416–e454, `parameters` |
+| [W0-24] | §2.7 r8 | `−0 → +0` for results and literal parameter values; literal feature fields as stored | Bit-for-bit v0 metrics of migrated documents | `parameters`, `migration/literals/negative_zero_fields` |
+| [W0-25] | §2.1 | Bounds have the parameter's type (count bounds integral); order: `PARAM_FAILED` → value → min → max → range; a failing bound fails the parameter with its own code | "Of the same type" (§2.1); the only order in which each step's inputs exist | `w0-25-…` ×2, `parameters` |
+| [W0-26] | §2.8 r3 | Edges from `value`, `min`, `max`; ill-typed expressions contribute edges; one `PARAM_CYCLE` per strongly connected component, shortest cycle from its first member, at the field that uses the next member; `PARAM_CYCLE` is the graph's rejection, reported in addition to an expression's own (one, [W0-21]) | A bound's status needs its value (a self-bound is circular); the graph must not depend on which type error is reported; one error per component, at the text to edit; the one-rejection rule bounds an expression's checks, not the graph's | `w0-26-…` ×6 |
+| [W0-27] | §2.8 r5 | `PARAM_FAILED` names the root cause and its code; first failed use decides | "Uses it, directly or transitively" names the failed parameter itself; the root is what the user or agent must fix | `parameters` |
+| [W0-28] | §4.3 | `fix` pins at the welded guess; curve–curve tangency mode from the guess; at a joint an explicit `internal` must hold (else `SKETCH_SOLVE_FAILED`) | These are forge-solve's pinned semantics, stated so the replay checks the same; a mode the solver cannot enforce fails loudly | — (forge-sketch tests) |
+| [W0-29] | §4.4 r4 | The fixed point is on the welded guess; angular conditions are lengths by forge-solve's guess-scaled convention | A length tolerance on an angle needs a length; the solver's own (pinned) convention, already used by Forge's check and the oracle | — |
+| [W0-30] | §4.4 r10 | Size cap: an angular deviation at the solved size above `max(tol, …)` fails the sketch | A dimension that grows a line far beyond its guess can leave it off by more than *tol*: silently wrong; the cap never rejects a rule-4 fixed point | — |
+| [W0-31] | §4.4 r9 | Write-back is idempotent once the welding is stable; a second write-back is the fixed point when a solve joins ends | Welding is decided on stored geometry by design; snapping in write-back would hide the status change, not remove it | — |
+| [W0-32] | §3.1, §3.3, §3.4 | Face-frame ties within `ANGULAR_TOLERANCE`; `through` with `\|p1−p0\|` or `\|p2−p0\|` ≤ *tol* is `DATUM_DEGENERATE`; evaluated non-perpendicular frames are `INVALID_PLANE`; datum-axis origins | An axis set by sub-tolerance noise cannot be compared at 1e-9 (§8.2); the rest is what both engines do | — |
+| [W0-33] | §5.2 r7 | Body keys; junction-vertex qualifiers; repeated `G/` keys allowed; keys survive a merged-away face; merged edges' key by the face rule; a captured member's `M` holds only pieces of the entity it designated (captured carrier and box), other same-key entities are matched by fingerprint, never used by key alone, a tie is `REF_AMBIGUOUS` | Makes Forge's keys (and forge-refs' checker) the contract; a key two distinct entities share by coincidence must not widen a captured selection (a fillet edge set picking up a second section branch) | — (forge-refs tests) |
+| [W0-34] | §5.8 | No `refs` entry for Refs nested in a `Dir`; `tagged` passes its resolution through; every feature-id source is gated; forge-refs' §5.7 refinements adopted | Each closes an undefined or silent-wrong case found by the naming harness v1 (0 silent-wrong on 38,073 references) | — |
+| [W0-35] | §7.6, §8.1 | Body probes carry `normal`; probes match within `clamp(1e-6·s, 2·tol, 5·tol)`; among several, those whose normal has a positive dot product with the probe's | Above `10·tol` the radius matched neighbours for `s > 10` mm; below `2·tol` it missed geometry Forge's [R-3] coincidence moved by up to √3·*tol*; opposite normals separate touching bodies without a tolerance | — |
+| [W0-36] | §8.1, §8.4 | Default-mode reference differences are `ROBUSTNESS` (`ORACLE_REF_DIFFERS`); downstream capping after a status divergence | A key query resolved to the wrong entity replays into the same wrong geometry; later differences in a part after a status divergence are consequences, and stay listed | — |
+| [W0-37] | §0.4, §5.3, §7.2, §8.2 | Canonical key order is the Rust field order; v0 text read as serde_json does; `instance.index` length is a coded rejection; replayed sketch `status`/`dof` not compared; omitted `dimensions` is `[]` | What the three ports already had to do; the schema's alphabetical `properties` are no order source | migration pairs, `queries/typing.json` |
+| [W0-38] | §0.2 r4 | v0 input → `aicad.metrics/0` by default, v1 report on request | Every current v0 consumer (oracle diff, app, evals) parses `aicad.metrics/0`; flipping the default is a coordinated change (BACKLOG) | — |
+| [W0-39] | §6.0.3, §6.0.5 | `modified` = acted on (join component with a tool, cut met, intersect), even if unchanged; the §6.0.3 failure row applies per tool (a join tool that meets a target only through another tool is `BOOLEAN_NO_INTERSECTION`; the review withdrew the opposite ruling) | Decided by the meet test both engines already need; no shape-equality test; a second tool is no evidence against a direction mistake, and §10 decision 3 already chose the per-tool reading W4 implemented | `identity` ×6 |
+| [W0-40] | §6.0.3, §6.0.5 | `removed` = target origins no body carries afterwards; never tools; `merged_into` maps each other target origin of a join component to the kept origin, never the kept origin itself | Consumers need the identities that vanished; an origin still carried did not vanish (Forge's reading of `merged_into`) | `identity` ×5 |
+| [W0-41] | §6.0.3 | (1) [R-3] coincidence first: faces, edges and vertices within *tol* of a tool face lie on it, so overlaps and layers nowhere thicker than *tol* are contacts; (2) a cut meets iff ~~some target point is inside a tool farther than *tol* from its boundary~~ [W0-48] T ∩ K is somewhere thicker than *tol* (join: or a shared face; intersect: always), with no degeneracy test on the common part; (3) result pieces, one connected component at a time, are degenerate when `2V/A ≤ tol/2`; no threshold relative to `s` | Coincidence is decided by *tol* ([R-3]), never by an average: the first version (`2V/A` of the common part) made 0.5–1 *tol* overlaps cuts, against [R-3] and Forge, and could average a real pocket away with a large contact; `2V/A` stays for result pieces, where after (1) it is about the inradius and the oracle can compute it; the oracle's `1e-12·s³` dropped real cuts | `identity` ×14 |
+| [W0-42] | §6.0.4, §8.3 r1 | No merge after `new_body`; singular vertices are shared; the oracle's three count normalizations (seam faces, real/seam edges, edge merges) on OCCT's topological vertices; edges merge on one analytic carrier (named tolerances) or, between the same two faces, where those faces are transversal (`\|n_F × n_G\| > ANGULAR_TOLERANCE`) | These are §6.0.4's merges that OCCT's USD does not perform; transversality is the exact condition for two section edges at a vertex to be one curve (the withdrawn `\|t₀·t₁\| ≥ 0.999` was an unnamed heuristic that also merged across cusps) | — (W7b) |
+| [W0-43] | §8.3 r3 | Conic recognition only for surface pairs with an exact conic section, classified with `ANGULAR_TOLERANCE` (directions) and ~~`ANGULAR_TOLERANCE·d`~~ [W0-49] *tol* (positions), the recognizer within ~~`max(tol, 1e-7·d)` of the edge's own size~~ [W0-52] *tol* of the engine's own curve; parabola/hyperbola are `bspline`; Forge types sections by the same pair tests | A body-scaled fit typed short spiric torus arcs as circles; recognition can only choose which conic an exact section is; one classification for both engines, so near-degenerate pairs cannot be typed differently | — (W7b) |
+| [W0-44] | §8.3 | Adaptive mass properties for v1 body-operation results | Fixed-order Gauss is off by > 1e-6 on ~3 % of W4's differential (Forge right); adaptive integration settles all 85 | — (W7b) |
+| [W0-45] | §2.7 r9, §9.4 | `EXPR_NOT_INTEGER` details are the catalogue's `{ expr, value }`; fixtures compare only catalogue detail keys; exactly representable libm results are pinned by `bits` | The frozen catalogue (§7.5, `ERROR_CODES`) and rule 9 disagreed; a fixture must not force one engine to copy another's extra details; a faithfully rounded libm has one answer for them | e697–e699, `parameters` |
+| [W0-46] | §2.7 r9–r10, §7.5 | `expr` is the canonical text of the failing site's expression and `subexpr` that of the node where the rejection or failure was met, for every expression code; a literal site gives the literal as a JSON value (number or bool); `EXPR_SYNTAX`'s `expr` is the stored text, present iff it lexes; [W0-45]'s "stored text" withdrawn | One meaning per detail key across codes; canonical text is what the evaluator of record ~~and CadScript emit~~ emits (third review: CadScript's `subexpr` differs today and aligns, W8) and one string per meaning; an unparsable text has no canonical form | `w0-46-…` ×5, `w0-47-cycle-detail-with-an-ill-typed-member`, `parameters` (`w0-46-expr-details-are-the-canonical-text`) |
+| [W0-47] | §2.8 r3, §9.4 | `invalid/documents.json` entries may carry `details` (catalogue keys, compared exactly, `null` = absent), pinning `PARAM_CYCLE`'s `cycle`; `requires` cases are exact with W1's checker; suites count cases with lower bounds | A rule no fixture checks lets engines diverge and all pass (the three engines report three different `cycle` lists today); an `==` count breaks on every append | `w0-47-cycle-detail-…` ×8 |
+| [W0-48] | §6.0.3 | One measure for contacts and meets: a region is nowhere thicker than *tol* when each point is within *tol* of a target face and of a tool face; a cut meets iff T ∩ K is somewhere thicker; Forge's √3·*tol* snap claim limited to §8.1 and `bbox_*` | [W0-41] step 2's one-sided depth missed through-slits and embedded tools of width (*tol*, 2·*tol*], whose walls [R-3] makes distinct faces (Forge splits them); an inscribed-ball measure would keep a vertex farther than *tol* inside a tool; a volume change `A·δ` is not bounded by §8.2 on small parts | `identity` ×6 |
+| [W0-49] | §8.3 r1, r3 | Carrier surfaces by named tests (Forge's `same_carrier`), free-form ones by equal definitions; rule 1.3(b) also needs `t₀ · t₁ < 0`, the near-tangency residue a known limitation; section types decided by the pair list ~~alone~~ in both engines (positions and radii within *tol*) [W0-52] and each engine's own curve within *tol* of the conic, ~~a recognizer miss is `ORACLE_SECTION_NOT_CONIC` (`ROBUSTNESS`)~~, native OCCT conics outside the list are `bspline` | No unnamed tolerance decides topology or a type; `ANGULAR_TOLERANCE·d` fell below coordinate noise for small edges; ~~OCCT's approximation quality must not change the type both engines compare~~ (withdrawn by [W0-52]: near a singular pair it let both engines agree on a wrong type) | — (W7b); `sections` |
+| [W0-50] | §7.6, §8.1 | Edge probes carry `normal` (the normalized sum of the two faces' outward normals); among coincident edges the largest positive dot product wins | W7a: coincident edges of touching bodies were `ORACLE_PROBE_UNMATCHED`; two sharp wedges side by side can have normals less than 90° apart, so a sign test alone does not separate them | — (W3, W7b) |
+| [W0-51] | §8.3 r3 | Plane–cone pairs by a named test (`c = \|n · a\|`, half-angle α): ellipse iff `c > sin α + ANGULAR_TOLERANCE`, lines iff the apex is within *tol* of the plane and `c < sin α − ANGULAR_TOLERANCE`, circles when coaxial, else `bspline` (parabola, hyperbola, the band) | Once (a) decides a type, the ellipse/parabola/hyperbola/lines boundary needs a named test in both engines; the tolerance is a guard band around the parabola | `sections` ×4 (a hyperbola, lines, a parabola, an ellipse on one countersink cone) |
+| [W0-52] | §8.3 r3 | (b) is a condition again, evaluated by each engine on its **own** section curve: within *tol* of a conic of the type (a) names, at the end points and ≥ 31 interior points; no witness → `bspline`; a disagreement is an ordinary exact `edge_types` mismatch; [W0-49]'s `ROBUSTNESS` class for `ORACLE_SECTION_NOT_CONIC` withdrawn; *tol* replaces `max(tol, 1e-7·d)` | Within *tol* of a singular pair the section is not the conic (crossing cylinders of radii 5 and 5 + 8e-7: quartic loops 2.8e-3 mm off; a sphere 0.9e-6 mm off a near-tangent cylinder's axis: 5e-6 mm from any circle), so (a) alone made both engines agree on a wrong type; bit-equal pair tests would split exact pairs across engines | `sections` ×4 (two exact pairs, two near-miss pairs) |
+| [W0-53] | §6.0.3 | A region is nowhere thicker than *tol* only if, besides [W0-48]'s face-distance test, it contains no ball of diameter > *tol*; a cut meets also when a point of T ∩ K is farther than *tol*/2 from its boundary | [W0-48]'s test alone let a fin or wall 1.5e-6 mm thick between coincident target/tool faces pass as a contact (a covered fin: `BOOLEAN_NO_INTERSECTION`, or kept beside another tool), the mirror of the through-slit; [R-3] makes its sides distinct | `identity` ×2 |
+| [W0-54] | §7.6, §8.1 | An edge probe with `\|n_F + n_G\| ≤ QUERY_ANGLE_TOLERANCE` (a cusp) has no `normal`; a probe without `normal` (a cusp, or any edge probe until W3 emits them) is matched by position alone: one edge within `r`, else `ORACLE_PROBE_UNMATCHED`; normal-less candidates never win the dot product; W3's `normal` is an explained golden update | The normalized sum is 0/0 at a cusp (a valid body Forge builds) and noise near one; JSON cannot carry NaN; the transition needs a defined rule | `probes` ×2 |
+
+**Alignment required** (each engine that deviates; the fixtures show it):
+- **Oracle (W7a/W7b):** [W0-21] single pass instead of names-first (e391, e394); [W0-22]
+  `_atan2_deg` −180 → 180 (e401, e402); [W0-26] edges from ill-typed expressions and the cycle
+  path at the bound (`w0-26-cycle-edge-from-ill-typed-expression`, `…-bound-uses-own-parameter`,
+  `…-through-a-bound`; codes and paths also of `w0-47-cycle-detail-follows-value-then-min-then-max`
+  and `…-with-an-ill-typed-member`); [W0-27] root cause (`parameters`: `param-failed-names-the-root-cause`);
+  [W0-30] the size bound becomes a failed replay check (not `ORACLE_REPLAY_SIZE_BOUND`);
+  [W0-32] the `through` point separation; [W0-33] vertex qualifiers and merged-edge keys;
+  [W0-35] match radius and normal test; [W0-39] the failure row per tool — `booleans.py` joins
+  a tool that ends up in a component with a target through another tool
+  (`identity`: `join-tool-meeting-a-target-only-through-another-tool-is-detached`); [W0-40]
+  `removed` (`identity`: `join-rejoining-split-pieces-…`,
+  `consumed-piece-with-a-surviving-sibling-…`); [W0-41] steps 2–3 instead of `1e-12·s³`
+  (`a-tiny-notch-…`, `a-remaining-wedge-…`, `a-target-vertex-2e-6-…`), and step 1 once issue 6
+  is settled (the band cases of `identity`, §8.3 rule 2); [W0-42]–[W0-44]; [W0-24] read the
+  `migration/literals/` pair. The oracle's tests pin the old fixture counts (`== 376`,
+  `== 196`, and `== 81` migration pairs, which the new `literals/` pair breaks): they must become
+  lower bounds (§9.4 is append-only; [W0-47] makes it a rule) — `tests/test_v1_conformance.py`
+  lines 52 and 89, `tests/test_v1_expressions.py` lines 36–37, **in the same merge** as these
+  fixtures. [W0-46] `expr` as canonical text for the evaluation and type codes (the oracle
+  passes the stored text: `v1/evaluate.py` `text=v`, `v1/expr.py` `self.text`) and `EXPR_SYNTAX`'s
+  `expr` kept when the text lexes (`v1/validate.py` drops it) (`w0-46-…`, `parameters`:
+  `w0-46-expr-details-are-the-canonical-text`); [W0-47] `cycle` is the closed shortest cycle,
+  not the component's members (~~all eight `w0-47-cycle-detail-…` differ today~~ the oracle
+  differs on all eight `w0-47-cycle-detail-…` today — six by the `cycle` list, two
+  (`…-follows-value-then-min-then-max`, `…-with-an-ill-typed-member`) by reporting no
+  `PARAM_CYCLE` at that path ([W0-26]) — but its suite shows only those two, because
+  `tests/test_v1_conformance.py::test_invalid_document` compares `(code, path)` only); [W0-48]
+  the through-slit, embedded-tool, pin and 1.2e-6 corner cases of `identity`; [W0-49] rules
+  1.1, 1.3(b) and 3 as amended; [W0-50] edge-probe normals and matching; [W0-51] the plane–cone
+  test and [W0-52] (b) as a condition on OCCT's own curve at *tol*, with no `ROBUSTNESS` class
+  (`sections`); [W0-53] the fin and wall cases of `identity`; [W0-54] probes without `normal`
+  matched by position alone, candidates without one never kept by the dot product. **Runners**
+  (third review): `tests/test_v1_conformance.py::test_invalid_document` compares `details`
+  where an entry carries them (§9.4, [W0-47]: `null` = absent, entries matched to distinct
+  problems); and a runner for `expressions/parameters.json`, `booleans/identity.json`,
+  `booleans/section-types.json` and `references/probes.json` (W7b), each with a pending list
+  of the oracle's current outcome as `FORGE_PENDING_*` has — until then those rulings are
+  checked on the Forge side only.
+- **Forge:** [W0-39] (`identity`: `join-identical-tool-…`, `join-tool-inside-…`: W4/forge-regen),
+  [W0-40] (`consumed-piece-with-a-surviving-sibling-…`), [W0-41] step 1 beyond aligned faces:
+  a target edge or vertex within *tol* of an oblique tool face is a contact, where Forge today
+  cuts a sub-tolerance chamfer (`a-target-edge-within-tolerance-of-a-cut-face-is-a-contact`,
+  8e-7 mm) or fails with `FORGE_BOOLEAN_INCONSISTENT` (7.1e-7 mm; a vertex 9e-7 mm inside a
+  tool face of normal (1, 1, 1)) (W4); [W0-32] `through` separation (W3); [W0-33] forge-refs'
+  key checker accepts repeated `G/` keys and alias sources, and `resolve::validate_key` must stop
+  treating every same-key entity as a split piece of a captured member (W3); [W0-43] section
+  types by the pair tests (W4, forge-ssi); [W0-42] W4's differential script
+  `forge-ops/oracle/occt_boolean_diff.py` still merges edges by `|t₀ · t₁| ≥ 0.999` on vertices
+  rounded to 5 decimals: it must count as §8.3 rule 1 does. The boolean cases are listed in
+  `FORGE_PENDING_BOOLEANS` of `forge-ir/tests/v1_conformance_amendments.rs`, with the outcome
+  Forge gives today, until done. Not a contract issue, found while building the [W0-41]
+  fixtures: forge-check rejects microscopic but non-degenerate pieces (a corner tetrahedron of
+  legs 6e-6 mm, mean thickness 8.5e-7 mm, is `FORGE_BOOLEAN_INVALID_RESULT`,
+  `SHELL_ZERO_VOLUME`): an explicit failure, never a wrong body (W4). [W0-48]: Forge already
+  splits through-slits of 1.5e-6 and 1.9e-6 mm and voids an embedded thin cut tool; pending
+  (`FORGE_PENDING_BOOLEANS`): `an-embedded-join-tool-1.5e-6-…` ([W0-39]'s unchanged-join gap),
+  and `a-target-vertex-1.2e-6-…` and `a-through-pin-1.5e-6-…`, which fail today with
+  `FORGE_BOOLEAN_INCONSISTENT` — explicit failures, never wrong bodies (W4). [W0-49]
+  `boolean::geom::same_carrier` returns false for every free-form pair; it must accept equal
+  definitions (W4; rare: two adjacent faces of one free-form surface). [W0-50] forge-refs
+  `probe::edge_probe` emits `normal` (W3), [W0-54] none where `|n_F + n_G| ≤
+  QUERY_ANGLE_TOLERANCE` (`probes`: `a-cusp-edge-probe-has-no-normal` passes today,
+  `edge-probes-carry-…` is pending in `FORGE_PENDING_PROBES` until W3), with an explained golden
+  update of what serializes edge probes (`forge-regen/tests/v1_golden_hash.rs` hashes reports
+  with reference probes). [W0-51]/[W0-52]: Forge already types all eight `sections` cases as
+  ruled (forge-ssi returns `bspline` for the near-miss pairs, the parabola and the hyperbola);
+  when W4 implements [W0-43]'s typing by pair tests it must keep (b) — the pair list alone
+  would break `crossing-cylinders-8e-7-…` and `a-sphere-0.9e-6-…`. [W0-53]: Forge keeps the
+  1.5e-6 mm wall; it fails the covered fin with `FORGE_BOOLEAN_NEAR_COINCIDENT` (pending in
+  `FORGE_PENDING_BOOLEANS`; an explicit failure, never a wrong body; W4).
+- **CadScript (W8):** [W0-19] count an empty argument list as a level (e377,
+  `w0-19-…`); [W0-21] apply operator and call rules after all operands (e390, e399, e400);
+  [W0-24] read the `migration/literals/` pair. Not a contract issue but found by the new
+  fixtures: the TypeScript type checker recurses along left spines and overflows the stack on a
+  valid 2048-operand chain (`w0-20-limits-apply-to-the-stored-text-length`); Rust iterates there.
+  [W0-46] `subexpr` is the node whose rule failed, not the offending operand (CadScript gives
+  `1 deg` for `width + 1 deg`: `w0-46-unit-mismatch-…`, `w0-47-cycle-detail-with-an-ill-typed-member`);
+  [W0-47] `cycle` is the closed shortest cycle found breadth-first (CadScript gives an open
+  depth-first path: all eight `w0-47-cycle-detail-…` differ today); `validate.test.ts` compares
+  `details` where an entry carries them.
+
+**Integrator sequencing** (the contract changed before the engines; keep CI green in between):
+until W4, W7 and W8 land their alignments, the oracle suite (`test_v1_expressions`,
+`test_v1_conformance`, `test_v1_migration`: fixture counts and the oracle rows above) and the
+CadScript suite (the W8 rows above) fail on the new fixtures; each should get a pending list with
+the recorded current outcome, as `FORGE_PENDING_BOOLEANS` has, rather than an edit to the
+fixtures. The one exception is the oracle's `==` fixture counts ([W0-47]): three one-line
+changes to lower bounds that must land in the same merge as the fixtures, since no pending list
+can absorb them (the `literals/` pair alone turns `len(MIGRATIONS) == 81` red). W4 updates what
+pins the pre-[W0-39] outcome, with an explained golden update:
+`forge-regen/tests/v1_programs/join_identical_tool.json` and `join_nested_tool.json` (their
+descriptions and golden hashes: bodies empty → the target `modified`) and the test
+`a_join_that_changes_no_target_is_ok_with_a_no_change_note` in `forge-regen/tests/v1.rs`;
+`join_rejoins_split_pieces.json` keeps its outcome (removed empty, as [W0-40] rules) and only
+its "contract issue" note is stale; the [W0-40] fix for a consumed piece with a surviving
+sibling (`forge-ops` boolean cut: drop from `removed` an origin a result still carries) has no
+golden. W4 then closes the matching rows of
+`forge-regen/tests/v1_oracle_known_differences.json` and empties `FORGE_PENDING_BOOLEANS`.
+(Third review.) W3 lands edge-probe `normal` ([W0-50], [W0-54]) with an explained update of
+the golden hashes that cover reports with probes (`forge-regen/tests/v1_golden_hash.rs`) and
+empties `FORGE_PENDING_PROBES`; the oracle matches probes without `normal` by position alone
+meanwhile ([W0-54]), so the order of W3 and W7b does not matter. The oracle's missing runners
+(`details` in `test_invalid_document`; `parameters`, `identity`, `sections`, `probes`) are W7b
+work with pending lists, not blockers for this merge.
+
+**Not ruled here** (still open; owners named): W4's [R-3] snapping vs the oracle's
+no-fuzzy booleans (W4 report round 4, issue 6: how the oracle realizes [W0-41] step 1 — a fuzzy
+value, its own snapping, or a ROBUSTNESS class; needs data; W4/W7b); pre-existing edge contacts
+between two targets that a join merges (issue 8; W4/W7b); junction qualifiers stamped by the
+sweep (issue 4: an implementation matter, no contract change); the body-scaled `1e-7·s`
+tolerance of §8.3 rule 4 (blend surface recognition), the flaw [W0-43] removed from rule 3
+(W6/W7b); [W0-49] surface pairs whose section is exactly a conic but that §8.3 rule 3's list
+lacks (two cones sharing an apex; two extrusions with parallel directions: lines) — `bspline`
+in both engines until an amendment lists them, with data (W4/W7b); the residue of §8.3 rule
+1.3(b) at tangencies where two branches cross (W7b measures it).

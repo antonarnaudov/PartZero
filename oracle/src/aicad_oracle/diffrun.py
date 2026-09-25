@@ -141,6 +141,41 @@ def render_table(rows: list[Row]) -> str:
     return "\n".join(out)
 
 
+def generator_rejections(target: Path) -> dict | None:
+    """The attempts `oracle gen --ir v1` discarded for the programs in `target` (its `*.stats.json`
+    beside them, `rejected`): configurations the classic generator leaves out while the SPEC has no
+    key tie-break for coincident faces (`v1.replay.PENDING_DEVIATIONS["key-tie-break"]`). A gate
+    summary reports their count next to the class counts, so that the MATCH rate does not hide
+    them. None: no generator stats in `target`."""
+    if not target.is_dir():
+        return None
+    found = False
+    out: dict = {"count": 0, "by_kind": {}, "programs": [], "generated": 0}
+    for p in sorted(target.glob("*.stats.json")):
+        try:
+            st = json.loads(p.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(st, dict) or st.get("ir") != "v1" or not isinstance(st.get("rejected"), list):
+            continue
+        found = True
+        if isinstance(st.get("generated"), int):
+            out["generated"] += st["generated"]
+        for r in st["rejected"]:
+            out["count"] += 1
+            k = r.get("kind", "?") if isinstance(r, dict) else "?"
+            out["by_kind"][k] = out["by_kind"].get(k, 0) + 1
+            if isinstance(r, dict) and r.get("program") and r["program"] not in out["programs"]:
+                out["programs"].append(r["program"])
+    if not found:
+        return None
+    # the share of the draws that produced a program or were rejected for their probes (other
+    # failed attempts — self-checks, oracle errors — are neither)
+    tot = out["generated"] + out["count"]
+    out["rate"] = out["count"] / tot if tot else 0.0
+    return out
+
+
 def summary_counts(rows: list[Row]) -> dict[str, int]:
     out = {MATCH: 0, NORMALIZED: 0, ROBUSTNESS: 0, CODE_MISMATCH: 0, REF_MISMATCH: 0, SILENT_WRONG: 0,
            NO_REFERENCE: 0}

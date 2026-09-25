@@ -24,6 +24,12 @@ pub enum Role {
     Imported,
     /// Any other role; the label becomes the role part of the name.
     Other(String),
+    /// An operation role whose `sources` are the **keys** of the entities the new entity was
+    /// derived from (SPEC-v1 §5.2 rule 3: `blend:{E}`, `bevel:{E}`, `corner:{V}`,
+    /// `offset:{X}`, `rim:{X}`, `copy:{K}`). Rendered `label:{k|…}` (sources verbatim,
+    /// sorted) in both [`Provenance::name`] and [`Provenance::key`]; the label is escaped in
+    /// the key like any id.
+    Derived(String),
 }
 
 /// Characters that may not appear in feature names, `Role::Other` labels and leaf
@@ -52,6 +58,7 @@ pub const KEY_ESCAPED_CHARS: &[char] = &['/', ':', '{', '}', '|', '+', '#', '@',
 ///         | "vertex:{" names "}"                  ; VertexAt
 ///         | "imported" [ ":" leaves ]             ; Imported
 ///         | label [ ":" leaves ]                  ; Other(label)
+///         | label ":{" names "}"                  ; Derived(label): sources are keys
 /// leaves := leaf ( "+" leaf )*                    ; sources, sorted
 /// names  := name ( "|" name )*                    ; sources (entity names), sorted
 /// ```
@@ -172,6 +179,7 @@ impl Provenance {
             Role::VertexAt => format!("vertex:{{{}}}", leaves("|")),
             Role::Imported => with_leaves("imported"),
             Role::Other(label) => with_leaves(label),
+            Role::Derived(label) => format!("{label}:{{{}}}", leaves("|")),
         };
         if self.index > 0 {
             format!("{}/{}#{}", self.feature, role, self.index)
@@ -194,7 +202,7 @@ impl Provenance {
             ));
         }
         match &self.role {
-            Role::Other(label) if label.is_empty() || reserved(label) => {
+            Role::Other(label) | Role::Derived(label) if label.is_empty() || reserved(label) => {
                 out.push(format!(
                     "role label {label:?} is empty or contains a reserved character"
                 ));
@@ -224,6 +232,9 @@ impl Provenance {
             Role::VertexAt if self.sources.is_empty() => {
                 out.push("vertex role needs at least one source".into())
             }
+            Role::Derived(_) if self.sources.is_empty() => {
+                out.push("derived role needs at least one source key".into())
+            }
             _ => {}
         }
         out
@@ -239,7 +250,7 @@ impl Provenance {
             Role::EdgeBetween => "edge",
             Role::VertexAt => "vertex",
             Role::Imported => "imported",
-            Role::Other(label) => label,
+            Role::Other(label) | Role::Derived(label) => label,
         }
     }
 
@@ -288,6 +299,7 @@ impl Provenance {
             Role::VertexAt => format!("vertex:{{{}}}", keys()),
             Role::Imported => with_leaves("imported"),
             Role::Other(label) => with_leaves(&escape_key_id(label)),
+            Role::Derived(label) => format!("{}:{{{}}}", escape_key_id(label), keys()),
         };
         let mut out = format!("{}/{role}", escape_key_id(&self.feature));
         if let Some(q) = &self.qualifier {
@@ -590,6 +602,38 @@ mod tests {
         assert_eq!(
             by_name.key_with_sources(&[cap.key(), side.key()]),
             "e1/edge:{e1/cap:end@bottom|e1/side:outline.bottom}"
+        );
+    }
+
+    #[test]
+    fn derived_roles_render_nested_keys_in_names_and_keys() {
+        // SPEC-v1 §5.2 rule 3: `F/blend:{E}`, `S/offset:{X}`, … with the source key verbatim.
+        let e = "e1/edge:{e1/cap:end@m|e1/side:a}";
+        let blend = Provenance::new("f1", Role::Derived("blend".into())).with_sources([e]);
+        assert_eq!(blend.key(), format!("f1/blend:{{{e}}}"));
+        assert_eq!(blend.name(), format!("f1/blend:{{{e}}}"));
+        assert_eq!(blend.role_label(), "blend");
+        assert!(blend.problems().is_empty(), "{:?}", blend.problems());
+        let p = parse_key(&blend.key()).expect("derived key parses");
+        assert_eq!(p.label, "blend");
+        assert_eq!(p.arg, KeyRoleArg::Keys(vec![e.to_string()]));
+        assert_eq!(p.render(), blend.key());
+        // Several sources are sorted; a qualifier follows the braces.
+        let corner = Provenance::new("f1", Role::Derived("corner".into()))
+            .with_sources(["b/x", "a/y"])
+            .with_qualifier("1");
+        assert_eq!(corner.key(), "f1/corner:{a/y|b/x}@1");
+        // Malformed: no source, or a reserved character in the label.
+        assert!(
+            !Provenance::new("f1", Role::Derived("blend".into()))
+                .problems()
+                .is_empty()
+        );
+        assert!(
+            !Provenance::new("f1", Role::Derived("a:b".into()))
+                .with_sources(["x/y"])
+                .problems()
+                .is_empty()
         );
     }
 

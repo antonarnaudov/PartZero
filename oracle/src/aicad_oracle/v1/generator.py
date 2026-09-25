@@ -483,20 +483,67 @@ def parametrize(features: list[dict], b: Builder, rng: random.Random) -> None:
                     c["start"] = [s, c["start"][1]]
 
 
-def generate_program_v1(rng: random.Random, name: str) -> dict:
-    return Builder(rng).build(name)
+def generate_program_v1(rng: random.Random, name: str, family: str = "classic") -> dict:
+    return generate_with_checks(rng, name, family)[0]
 
 
-def gen_one(task: tuple[int, int, int]) -> dict:
+def generate_with_checks(rng: random.Random, name: str, family: str = "classic") -> tuple[dict, list]:
+    """(document, self-checks). `classic` is the W7a generator (no self-checks); the W7b families
+    (`genops.FAMILIES`) add body operations, holes, patterns and blends with closed-form checks."""
+    if family == "classic":
+        return Builder(rng).build(name), []
+    from .genops import build
+
+    return build(Builder(rng), family, name)
+
+
+def program_name(seed: int, index: int, family: str = "classic") -> str:
+    """`gen1_s<seed>_<index>` (classic) or `gen1<f>_s<seed>_<index>` (`f` the family's initial, `x` for
+    `ops`)."""
+    tag = "" if family == "classic" else ("x" if family == "ops" else family[0])
+    return f"gen1{tag}_s{seed}_{index:05d}"
+
+
+def ambiguous_probes(text: str, name: str, rep: dict) -> list[dict]:
+    """The references of the oracle's own report whose probes do not replay (§8.1 [W0-35]): the
+    report replayed through itself, each `ORACLE_PROBE_UNMATCHED` as `{feature, reason}`. Two
+    coplanar overlapping caps of separate bodies (two plates sketched on one plane) put a
+    sketch-on-face probe on 2 OCCT faces with agreeing normals, which §8.1 does not match — the
+    3 ROBUSTNESS programs of W7b's first ledger. Until the Contract stage rules on a key
+    tie-break (`replay.PENDING_DEVIATIONS["key-tie-break"]`; W7b report, CONTRACT ISSUES 2) the
+    classic family does not emit such programs: a flagged attempt is rejected, the next attempt is
+    generated. The exclusion stays visible: the count is in the stats (`rejected`), printed by
+    `oracle gen`, and `oracle diff` over the generated directory reports it next to the class
+    counts (`generator_rejected`), since these configurations would otherwise be ROBUSTNESS rows
+    the MATCH rate does not show."""
+    from .evaluate import evaluate_text
+
+    if not any(m.get("probe", {}).get("kind") in ("face", "body")
+               for f in rep["features"] for r in f.get("refs", []) for m in r.get("members", [])):
+        return []
+    again = evaluate_text(text, name, replay=rep)
+    return [{"feature": f["feature_id"], "reason": w.get("details", {}).get("reason", w.get("message", ""))}
+            for f in again["features"] for w in f["warnings"] if w["code"] == "ORACLE_PROBE_UNMATCHED"]
+
+
+def gen_one(task: tuple) -> dict:
+    from . import normalize
     from .evaluate import check_report, evaluate_text
+    from .genops import _Retry
     from .load import Rejected, load_text
 
-    seed, index, max_attempts = task
-    name = f"gen1_s{seed}_{index:05d}"
+    seed, index, max_attempts = task[:3]
+    family = task[3] if len(task) > 3 else "classic"
+    name = program_name(seed, index, family)
     failures = []
+    rejected = []
     for attempt in range(max_attempts):
-        rng = random.Random(f"aicad-gen-v1/{seed}/{index}/{attempt}")
-        doc = generate_program_v1(rng, name)
+        rng = random.Random(f"aicad-gen-v1/{seed}/{index}/{attempt}" if family == "classic"
+                            else f"aicad-gen-v1/{family}/{seed}/{index}/{attempt}")
+        try:
+            doc, checks = generate_with_checks(rng, name, family)
+        except _Retry:
+            continue
         text = dumps_canonical(doc) + "\n"
         try:
             loaded = load_text(text)
@@ -504,23 +551,45 @@ def gen_one(task: tuple[int, int, int]) -> dict:
             failures.append({"attempt": attempt, "kind": "invalid_ir", "code": r.code, "message": r.message, "text": text})
             continue
         t0 = time.perf_counter()
+        merges0 = dict(normalize.merge_stats)
         rep = evaluate_text(text, name)
+        merges = {k: normalize.merge_stats[k] - merges0.get(k, 0) for k in normalize.merge_stats}
         dt = time.perf_counter() - t0
         bad = check_report(rep)
         if bad:
             failures.append({"attempt": attempt, "kind": "bad_report", "code": "REPORT_SCHEMA",
                              "message": "; ".join(bad[:3]), "text": text})
             continue
-        if rep["status"] != "ok":
-            errs = [f["error"] for f in rep["features"] if f.get("error")] + \
-                   [p["error"] for p in rep["params"] if p.get("error")]
+        # a feature a group expects to fail (`Check.code`: the SPEC's error for a configuration,
+        # e.g. a line contact) may fail with that code, and one with a known OCCT limitation
+        # (`Check.engine_limits`) with its engine-internal code — kept and listed as `occt_limited`;
+        # any other failure is the oracle's
+        expected = {c.fid for c in checks if getattr(c, "code", None)}
+        occt_limited = [{"feature": c.fid, "code": c.occt_limited(rep)} for c in checks
+                        if getattr(c, "engine_limits", None) and c.occt_limited(rep)]
+        tolerated = expected | {x["feature"] for x in occt_limited}
+        errs = [f["error"] for f in rep["features"] if f.get("error") and f["feature_id"] not in tolerated] + \
+               [p["error"] for p in rep["params"] if p.get("error")]
+        if rep["status"] != "ok" and (errs or not tolerated):
             e = errs[0] if errs else {"code": "?", "message": ""}
             failures.append({"attempt": attempt, "kind": "oracle_error", "code": e["code"],
                              "message": e["message"], "text": text})
             continue
+        bad = [m for m in (c.verify(rep) for c in checks) if m]
+        if bad:
+            # the oracle disagrees with a closed form: an oracle bug to investigate, never kept
+            failures.append({"attempt": attempt, "kind": "self_check", "code": "ORACLE_SELF_CHECK",
+                             "message": "; ".join(bad), "text": text})
+            continue
+        if family == "classic":
+            amb = ambiguous_probes(text, name, rep)
+            if amb:
+                rejected.append({"attempt": attempt, "kind": "ambiguous_probe", "features": amb})
+                continue
         return {"index": index, "name": name, "text": text, "report": rep, "failures": failures, "seconds": dt,
-                "doc": loaded.doc}
-    return {"index": index, "name": name, "text": None, "report": None, "failures": failures, "seconds": 0.0}
+                "doc": loaded.doc, "merges": merges, "rejected": rejected, "occt_limited": occt_limited}
+    return {"index": index, "name": name, "text": None, "report": None, "failures": failures, "seconds": 0.0,
+            "merges": {}, "rejected": rejected, "occt_limited": []}
 
 
 def cmd_gen_v1(args) -> int:
@@ -528,7 +597,8 @@ def cmd_gen_v1(args) -> int:
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    tasks = [(args.seed, i, args.max_attempts) for i in range(args.count)]
+    family = getattr(args, "family", "classic") or "classic"
+    tasks = [(args.seed, i, args.max_attempts, family) for i in range(args.count)]
     t0 = time.perf_counter()
     jobs = max(1, args.jobs)
     if jobs == 1:
@@ -541,7 +611,14 @@ def cmd_gen_v1(args) -> int:
     failure_list = []
     gave_up = []
     generated = 0
+    merges = {"a": 0, "b": 0, "b_near_tangent": 0}
+    rejected = []
+    occt_limited = []
     for r in sorted(results, key=lambda r: r["index"]):
+        for k, v in r.get("merges", {}).items():
+            merges[k] = merges.get(k, 0) + v
+        rejected += [{"program": r["name"], **x} for x in r.get("rejected", [])]
+        occt_limited += [{"program": r["name"], **x} for x in r.get("occt_limited", [])]
         for f in r["failures"]:
             fname = f"{r['name']}_a{f['attempt']}.json"
             (out / "failed").mkdir(exist_ok=True)
@@ -561,9 +638,49 @@ def cmd_gen_v1(args) -> int:
     stats = {"seed": args.seed, "ir": "v1", "requested": args.count, "generated": generated, "gave_up": gave_up,
              "failures": len(failure_list), "features": dict(sorted(features.items())),
              "seconds": round(elapsed, 2), "failure_details": failure_list}
-    (out / f"gen1_s{args.seed}.stats.json").write_text(json.dumps(stats, indent=2) + "\n")
+    stats["family"] = family
+    stats["self_check_failures"] = sum(1 for f in failure_list if f["kind"] == "self_check")
+    # SPEC-v1 §8.3 rule 1.3: the oracle's edge merges in the kept programs' evaluations — (a) same
+    # carrier, (b) the tangency rule, and (b) at nearly tangent vertices (the known residue W7b
+    # reports; `normalize.NEAR_TANGENT`)
+    stats["normalize_merges"] = merges
+    # attempts the generator itself discarded (not oracle failures): programs whose own reference
+    # probes do not replay (`ambiguous_probes`)
+    stats["rejected"] = rejected
+    # kept programs where the oracle hit a known OCCT limitation on a configuration the SPEC defines
+    # (`Check.engine_limits`, an engine-internal code): the diff lists Forge's result there as
+    # ROBUSTNESS (W7b review 5)
+    stats["occt_limited"] = occt_limited
+    (out / f"{program_name(args.seed, 0, family).rsplit('_', 1)[0]}.stats.json").write_text(
+        json.dumps(stats, indent=2) + "\n")
     print(f"generated {generated}/{args.count} IR v1 programs in {elapsed:.1f}s ({jobs} jobs) -> {out}")
-    print(f"oracle failures {len(failure_list)}; features {stats['features']}")
+    print(f"oracle failures {len(failure_list)} ({stats['self_check_failures']} self-check); "
+          f"features {stats['features']}")
+    print(f"§8.3 rule 1.3 edge merges: (a) {merges['a']}, (b) {merges['b']}, of which at nearly tangent "
+          f"vertices {merges['b_near_tangent']}; attempts rejected for ambiguous probes: {len(rejected)}")
+    if occt_limited:
+        print(f"kept programs with a known OCCT limitation (engine-internal; diffed as ROBUSTNESS): {len(occt_limited)} "
+              f"({', '.join(sorted({x['code'] for x in occt_limited}))})")
     for f in failure_list[:20]:
         print(f"  {f['file']}: {f['kind']} {f['code']}: {f['message'][:200]}")
-    return 0 if not gave_up else 1
+    inv_ok = True
+    if getattr(args, "invalid_per_kind", 4) > 0:
+        # the v1 error corpus (fixed documents, independent of the seed): `<out>/invalid` or
+        # `--invalid-out`, with its manifest (`errcorpus.MANIFEST`); `oracle diff <dir> --forge-bin …`
+        # runs Forge against it
+        from .errcorpus import write_corpus
+
+        inv_dir = Path(args.invalid_out) if getattr(args, "invalid_out", None) else out / "invalid"
+        res = write_corpus(inv_dir)
+        inv_ok = not res["mismatches"]
+        print(f"error corpus v1: {res['cases']} programs -> {inv_dir}; "
+              f"oracle vs expectation mismatches: {len(res['mismatches'])}")
+        for m in res["mismatches"][:20]:
+            print(f"  {m['file']}: expected {m['expected']}, got {m['got']} {m['schema'] or ''}")
+    # a closed-form self-check the oracle failed is an oracle bug (W7b review 4): the attempt was
+    # retried, so the corpus is complete, but the command fails so that CI and nightly jobs see it
+    # (`--allow-self-check-failures` to only report them)
+    sc_ok = stats["self_check_failures"] == 0 or getattr(args, "allow_self_check_failures", False)
+    if not sc_ok:
+        print(f"oracle gen: {stats['self_check_failures']} closed-form self-check failure(s) (see failed/): exit 1")
+    return 0 if not gave_up and inv_ok and sc_ok else 1

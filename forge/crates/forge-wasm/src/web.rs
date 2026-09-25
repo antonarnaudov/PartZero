@@ -176,20 +176,164 @@ pub fn evaluate(
     Ok(o.into())
 }
 
+/// The metrics report of [`evaluate`] without tessellation (same `report_version` rules).
+#[wasm_bindgen(js_name = report)]
+pub fn report(ir_json: &str, report_version: Option<String>) -> Result<JsValue, JsValue> {
+    let version = engine::ReportVersion::parse(report_version.as_deref()).map_err(core_error)?;
+    report_js(&engine::report(ir_json, version))
+}
+
 /// A JSON value as a JS value.
 fn json_js(v: &serde_json::Value) -> Result<JsValue, JsValue> {
     let s = serde_json::to_string(v).map_err(|e| js_error("FORGE_JSON", &e.to_string()))?;
     js_sys::JSON::parse(&s)
 }
 
-/// A rejected command-layer input as a JS error: `code`, `message`, and `errors` (every problem,
-/// `{ code, path, message, details }`).
+/// A rejected command-layer input as a JS error: `code`, `message`, `errors` (every problem,
+/// `{ code, path, message, details }`) and `details` (a command refusal's context).
 fn rejection_js(r: engine::Rejection) -> JsValue {
     let e = js_error(&r.code, &r.message);
     if let Ok(errors) = json_js(&serde_json::Value::Array(r.errors)) {
         let _ = Reflect::set(&e, &"errors".into(), &errors);
     }
+    if let Ok(details) = json_js(&r.details) {
+        let _ = Reflect::set(&e, &"details".into(), &details);
+    }
     e
+}
+
+/// A command-layer edit as `{ document, changed, result }`.
+fn edited_js(e: crate::commands::Edited) -> Result<JsValue, JsValue> {
+    let o = Object::new();
+    set(&o, "document", e.document.as_str());
+    set(&o, "changed", e.changed);
+    set(&o, "result", json_js(&e.result)?);
+    Ok(o.into())
+}
+
+/// `setParam` (SPEC-v1 §2.1, §2.4): `valueJson` is the JSON text of a number, a boolean or an
+/// expression string. Returns `{ document, changed, result: { param, previous, value, params } }`.
+#[wasm_bindgen(js_name = setParam)]
+pub fn set_param(ir_json: &str, name: &str, value_json: &str) -> Result<JsValue, JsValue> {
+    // The v1 reader (correctly rounded, SPEC-v1 §0.4 [W0-11]): serde_json's default parser is
+    // off by one ulp for some 17-digit decimals, which would store another value than was set.
+    let value: serde_json::Value = forge_ir::v1::json::parse(value_json).map_err(|_| {
+        rejection_js(crate::commands::invalid_argument(
+            "value",
+            "the JSON text of a number, a boolean or an expression string (a finite number)",
+        ))
+    })?;
+    edited_js(crate::commands::set_param(ir_json, name, &value).map_err(rejection_js)?)
+}
+
+/// An optional integer argument from JS: `undefined`/`null` is `None`; anything else must be a
+/// safe integer in `[min, u32::MAX]`, else `COMMAND_INVALID_ARGUMENT` (`{ argument, reason }`).
+/// (A `u32` parameter would take `1.5` as 1 and `2^32 + 1` as 1: ToUint32.)
+fn int_arg(v: &JsValue, argument: &str, min: u32) -> Result<Option<u32>, JsValue> {
+    if v.is_undefined() || v.is_null() {
+        return Ok(None);
+    }
+    match v.as_f64() {
+        Some(x) if x.fract() == 0.0 && x >= f64::from(min) && x <= f64::from(u32::MAX) => {
+            Ok(Some(x as u32))
+        }
+        _ => Err(rejection_js(crate::commands::invalid_argument(
+            argument,
+            &format!("an integer from {min} to {}", u32::MAX),
+        ))),
+    }
+}
+
+/// `renameFeature` (SPEC-v1 §5.9): `{ document, changed, result: { feature, previous, name } }`.
+#[wasm_bindgen(js_name = renameFeature)]
+pub fn rename_feature(ir_json: &str, feature_id: &str, name: &str) -> Result<JsValue, JsValue> {
+    edited_js(crate::commands::rename_feature(ir_json, feature_id, name).map_err(rejection_js)?)
+}
+
+/// `upgradeFeature` (SPEC-v1 §9.2): `to` defaults to the newest defined version. Returns
+/// `{ document, changed, result: { feature, type, from, to, diff } }`.
+#[wasm_bindgen(js_name = upgradeFeature)]
+pub fn upgrade_feature(ir_json: &str, feature_id: &str, to: JsValue) -> Result<JsValue, JsValue> {
+    let to = int_arg(&to, "to", 1)?;
+    edited_js(crate::commands::upgrade_feature(ir_json, feature_id, to).map_err(rejection_js)?)
+}
+
+/// `captureRef` (SPEC-v1 §0.6, §5.6): `field` is the Ref's pointer relative to the feature (the
+/// report's `refs[].field`). Returns `{ document, changed, result: { feature, field, capture,
+/// previous, members } }`. Throws `COMMAND_REF_FAILED` (the reference's own report entry in
+/// `details`), `COMMAND_REF_REPAIRED` (accept the proposal) or `COMMAND_NOT_EXACT`.
+#[wasm_bindgen(js_name = captureRef)]
+pub fn capture_ref(ir_json: &str, feature_id: &str, field: &str) -> Result<JsValue, JsValue> {
+    edited_js(crate::commands::capture_ref(ir_json, feature_id, field).map_err(rejection_js)?)
+}
+
+/// `acceptRefProposal` (SPEC-v1 §5.8–§5.9). Returns `{ document, changed, result: { feature,
+/// field, ref, previous, code } }`.
+#[wasm_bindgen(js_name = acceptRefProposal)]
+pub fn accept_ref_proposal(
+    ir_json: &str,
+    feature_id: &str,
+    field: &str,
+) -> Result<JsValue, JsValue> {
+    edited_js(
+        crate::commands::accept_ref_proposal(ir_json, feature_id, field).map_err(rejection_js)?,
+    )
+}
+
+/// `acceptRefCandidate` (SPEC-v1 §5.9). `candidateIndex` picks one of several candidates that
+/// share a key (split pieces); `probeJson` (the JSON text of the candidate's probe as the
+/// caller read it, or `undefined`) must still locate the chosen candidate, else
+/// `COMMAND_CANDIDATE_CHANGED`. Returns `{ document, changed, result: { feature, field, ref,
+/// previous, candidate } }`.
+#[wasm_bindgen(js_name = acceptRefCandidate)]
+pub fn accept_ref_candidate(
+    ir_json: &str,
+    feature_id: &str,
+    field: &str,
+    member_key: &str,
+    candidate_key: &str,
+    candidate_index: JsValue,
+    probe_json: Option<String>,
+) -> Result<JsValue, JsValue> {
+    let index = int_arg(&candidate_index, "candidateIndex", 0)?;
+    let probe: Option<forge_ir::v1::metrics::Probe> = match probe_json {
+        None => None,
+        Some(t) => Some(
+            forge_ir::v1::json::parse(&t)
+                .ok()
+                .and_then(|v| serde_json::from_value(v).ok())
+                .ok_or_else(|| {
+                    rejection_js(crate::commands::invalid_argument(
+                        "probe",
+                        "a probe of the report: { kind, point: [x, y, z], normal? }",
+                    ))
+                })?,
+        ),
+    };
+    edited_js(
+        crate::commands::accept_ref_candidate(
+            ir_json,
+            feature_id,
+            field,
+            member_key,
+            candidate_key,
+            index.map(|i| i as usize),
+            probe.as_ref(),
+        )
+        .map_err(rejection_js)?,
+    )
+}
+
+/// `renameCurve` (SPEC-v1 §5.9). Returns `{ document, changed, result: { sketch, old, new,
+/// rewritten, unverified } }`.
+#[wasm_bindgen(js_name = renameCurve)]
+pub fn rename_curve(
+    ir_json: &str,
+    sketch_id: &str,
+    old: &str,
+    new: &str,
+) -> Result<JsValue, JsValue> {
+    edited_js(crate::commands::rename_curve(ir_json, sketch_id, old, new).map_err(rejection_js)?)
 }
 
 /// `migrate_v0_to_v1` (SPEC-v1 §9.1): `{ document, renames }` — the canonical `aicad.ir/1` text
@@ -197,6 +341,20 @@ fn rejection_js(r: engine::Rejection) -> JsValue {
 #[wasm_bindgen(js_name = migrate)]
 pub fn migrate(ir_json: &str) -> Result<JsValue, JsValue> {
     let m = engine::migrate(ir_json).map_err(rejection_js)?;
+    let o = Object::new();
+    set(&o, "document", m.document.as_str());
+    let report =
+        serde_json::to_value(&m.report).map_err(|e| js_error("FORGE_JSON", &e.to_string()))?;
+    set(&o, "renames", json_js(&report["renames"])?);
+    Ok(o.into())
+}
+
+/// The document of record a DocStore stores (SPEC-v1 §2.4): `migrate`, then every expression in
+/// canonical form. `{ document, renames }`. Throws (code, `errors`) for a rejected document,
+/// including one whose canonical form would be rejected ([W0-20], the problems at their sites).
+#[wasm_bindgen(js_name = canonicalize)]
+pub fn canonicalize(ir_json: &str) -> Result<JsValue, JsValue> {
+    let m = engine::canonicalize(ir_json).map_err(rejection_js)?;
     let o = Object::new();
     set(&o, "document", m.document.as_str());
     let report =
@@ -214,9 +372,12 @@ pub fn params(ir_json: &str) -> Result<JsValue, JsValue> {
     json_js(&v)
 }
 
-/// `writeBackSolution` (SPEC-v1 §0.6): `{ document, written, skipped }`. `sketches`: an array of
-/// sketch ids, or `undefined` / `null` for every constrained sketch. Throws (code, `errors`)
-/// for a rejected document and `WRITE_BACK_UNKNOWN_SKETCH` for an unknown id.
+/// `writeBackSolution` (SPEC-v1 §0.6, §4.4 rule 9), to its fixed point: `{ document, changed,
+/// written, skipped, passes }`. `sketches`: an array of sketch ids, or `undefined` / `null` for
+/// every constrained sketch. A sketch whose written-back solution would fail it ([W0-31]) is
+/// withheld (`skipped` reason `would-fail`, with its `code`). Throws (code, `errors`) for a
+/// rejected document, `WRITE_BACK_UNKNOWN_SKETCH` for an unknown id and `COMMAND_NOT_EXACT`
+/// (`details`) when no fixed point is reached or a feature would fail.
 #[wasm_bindgen(js_name = writeBack)]
 pub fn write_back(ir_json: &str, sketches: JsValue) -> Result<JsValue, JsValue> {
     let ids: Option<Vec<String>> = if sketches.is_undefined() || sketches.is_null() {
@@ -242,6 +403,8 @@ pub fn write_back(ir_json: &str, sketches: JsValue) -> Result<JsValue, JsValue> 
     let wb = engine::write_back(ir_json, ids.as_deref()).map_err(rejection_js)?;
     let o = Object::new();
     set(&o, "document", wb.document.as_str());
+    set(&o, "changed", wb.changed);
+    set(&o, "passes", wb.passes as f64);
     set(&o, "written", json_js(&serde_json::json!(wb.written))?);
     set(
         &o,

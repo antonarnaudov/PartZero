@@ -8,7 +8,8 @@ rejection pipeline (§0.5 rule 4), migration (§9.1) and compound expansion (§4
 * `compound/expansions.json`: member curves bit-exact (or within `tolerance`), error codes/fields;
 * `queries/typing.json`: static kinds and query errors (paths relative to the Ref);
 * `holes/tools.json`: every case through the rejection pipeline (the `error` code, or acceptance);
-  the resolved tool dimensions (`expected`) are W7b's (hole tools) and skipped until then.
+  the resolved tool dimensions (`expected`) are checked through evaluation in
+  `test_v1_ops_holes.py` (W7b).
 """
 
 from __future__ import annotations
@@ -49,8 +50,8 @@ INVALID = _load("invalid/documents.json")["cases"]
 
 
 def test_invalid_suite_covers_the_expression_cases():
-    assert len(INVALID) == 196
-    assert sum(1 for c in INVALID if c.get("requires")) == 12
+    assert len(INVALID) >= 196  # [W0-47] fixture counts are lower bounds (§9.4 append-only)
+    assert sum(1 for c in INVALID if c.get("requires")) >= 12  # [W0-47] lower bound
 
 
 @pytest.mark.parametrize("case", INVALID, ids=lambda c: c["id"])
@@ -86,7 +87,7 @@ MIGRATIONS = sorted((CONF / "migration").glob("*/*.v0.json"))
 
 
 def test_migration_fixture_set():
-    assert len(MIGRATIONS) == 81
+    assert len(MIGRATIONS) >= 81  # [W0-47] lower bound
 
 
 @pytest.mark.parametrize("v0", MIGRATIONS, ids=lambda p: f"{p.parent.name}/{p.stem}")
@@ -278,4 +279,4 @@ def test_hole_tool_rejections(case):
 
 @pytest.mark.parametrize("case", [c for c in HOLES if "expected" in c], ids=lambda c: c["id"])
 def test_hole_tool_dimensions(case):
-    pytest.skip("W7b: the oracle does not build hole tools yet (resolved `d`, preset dimensions, pitch)")
+    pytest.skip("checked through evaluation by tests/test_v1_ops_holes.py::test_hole_tool_dimensions_fixture (W7b)")

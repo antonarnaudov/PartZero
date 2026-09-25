@@ -15,13 +15,22 @@
  * See README.md for the full contract.
  */
 export {
+  acceptRefCandidate,
+  acceptRefProposal,
+  canonicalize,
+  captureRef,
   engineVersion,
   evaluate,
   exportMesh,
   init,
   migrate,
   params,
+  renameCurve,
+  renameFeature,
+  report,
+  setParam,
   transferables,
+  upgradeFeature,
   wasmModule,
   writeBack,
 } from "./engine.js";

@@ -17,6 +17,8 @@ forge-check.workspace = true
 forge-params = { path = "../forge-params" }
 forge-sketch = { path = "../forge-sketch" }
 forge-refs = { path = "../forge-refs" }
+# IR v1 fillet, chamfer and shell (W6).
+forge-blend = { path = "../forge-blend" }
 serde_json.workspace = true
 
 [dev-dependencies]
