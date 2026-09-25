@@ -1,0 +1,21 @@
+docs/fm/print-and-design.md
+  s_59c0dd2af30db2::t_e9a4e073411374 1-69
+docs/SLICER-HANDOFF.md
+  s_59c0dd2af30db2::t_b0fa563f3edd3c 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "152a6858ede55e603f8b252122cbb944072d84f0",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
