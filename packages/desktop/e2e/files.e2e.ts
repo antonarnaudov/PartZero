@@ -28,6 +28,7 @@ interface Result {
 
 interface Automation {
   execute(cmd: unknown): Promise<Result>;
+  describe(): Array<{ id: string }>;
   idle(): Promise<{ name: string; path: string | null; dirty: boolean }>;
   summary(): { name: string; path: string | null; dirty: boolean };
 }
@@ -65,7 +66,16 @@ async function launch(userData: string, extra: Record<string, string> = {}): Pro
 }
 
 async function ready(page: Page): Promise<void> {
-  await page.waitForFunction(() => !!(window as unknown as Partial<AW>).__aicad, undefined, { timeout: 60_000 });
+  // `__aicad` appears before bootstrap has picked the engine and loaded the starter document, and the starter would
+  // replace whatever a test sets meanwhile. The document layer (with its `file.status`) is installed after both.
+  await page.waitForFunction(
+    () => {
+      const a = (window as unknown as Partial<AW>).__aicad;
+      return !!a && a.describe().some((c) => c.id === "file.status");
+    },
+    undefined,
+    { timeout: 60_000 },
+  );
   await page.evaluate(() => (window as unknown as AW).__aicad.idle());
 }
 
