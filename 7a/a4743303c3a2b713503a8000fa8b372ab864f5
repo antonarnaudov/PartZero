@@ -1,0 +1,55 @@
+packages/app/src/tools/framework/types.ts
+  s_59c0dd2af30db2::t_58f7e87e0bfde2 233-235,238-244,249,251-254,258-259,261-262
+  s_59c0dd2af30db2::t_65de25c25d7176 453-454,465-466
+  s_59c0dd2af30db2::t_09146e404c8463 2-5,10-14,18-31,43,49-50
+  s_59c0dd2af30db2::t_9e20b4d4384b0c 116-190
+  s_59c0dd2af30db2::t_28265b76c03086 432-443
+  s_59c0dd2af30db2::t_bb6dd0b571659a 387-398,404,406-407
+  s_59c0dd2af30db2::t_68d2a73a7bee05 417-421
+  s_59c0dd2af30db2::t_b65b3029072787 66
+packages/app/src/tools/framework/session.ts
+  s_59c0dd2af30db2::t_7eea433a819343 3-13,15-16,21,26,32,75-78,88-91,94-98,102-103,109-135,184-186,192,195-202,205,209-211,216-236,239,259-260,266-267,269,271,273,338,367,372-385,444,447-450,454-458,475-482,488-489,491,498-502,504,510-531,551-552,556-557,560-565,569-582,591,593-594,597,603-610,615-616,643-651,656-657
+packages/app/src/tools/commands.ts
+  s_59c0dd2af30db2::t_6c9101fdd415c4 2-3,21-22,24-25,31-44,71-72
+packages/app/src/tools/framework/ports.ts
+  s_59c0dd2af30db2::t_6020c0293a0fa6 3-6,8,10,83-137
+  s_59c0dd2af30db2::t_16c3bc7d54481a 138
+packages/app/src/ui/shell/tool-preview.ts
+  s_59c0dd2af30db2::t_b1727017125508 2-3,10,17-21
+  s_59c0dd2af30db2::t_de0220c04599cd 22
+packages/app/src/ui/Viewport.tsx
+  s_59c0dd2af30db2::t_b1727017125508 13,72,231
+packages/app/src/ui/styles/shell.css
+  s_59c0dd2af30db2::t_c95419be5cd928 606-612,614-630
+  s_59c0dd2af30db2::t_543a0a53913a49 613
+packages/app/src/tools/framework/v0-ops.ts
+  s_59c0dd2af30db2::t_778ad80663a30b 38-42,189
+  s_59c0dd2af30db2::t_810ae92b838dd3 1-37,43-188,190-193
+packages/app/src/tools/shell.ts
+  s_59c0dd2af30db2::t_78678fc547dff7 15,17-18,43-46,48-49,55-65,129,138-139,149,184-187,200-203,206,212,214-215,239-240,242,244-262,269-271,287,292-296,299,302,307-308,310-311,313,321-322,327,334,337
+  s_59c0dd2af30db2::t_caeebdfa1f58f0 300-301,312,315
+packages/app/test/shell-session.test.ts
+  s_59c0dd2af30db2::t_21cf3afb02d5d7 2-5,24,26-65,239-248,255-449
+packages/app/test/shell-ops.test.ts
+  s_59c0dd2af30db2::t_693db02a0180f7 1-121
+packages/app/src/ui/shell/PropertyPanel.tsx
+  s_59c0dd2af30db2::t_3895fc81260931 296-299,307,358-362,376
+packages/app/test/shell.test.ts
+  s_59c0dd2af30db2::t_2c34b1992c0db9 4-5,147,150,152-155,157,159,164-197,269-376
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7aa4743303c3a2b713503a8000fa8b372ab864f5",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
