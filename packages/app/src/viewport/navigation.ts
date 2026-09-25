@@ -53,30 +53,40 @@ export function newWheelMemory(): WheelMemory {
   return { device: null, lastAt: -Infinity };
 }
 
-/** Which device most likely produced this event, ignoring gesture memory. */
-export function wheelDevice(e: WheelLike): WheelDevice {
-  if (e.ctrlKey) return "pinch";
-  if (e.deltaMode !== 0) return "mouse";
+/**
+ * Which device most likely produced this event, ignoring gesture memory. `strong` when the event
+ * itself proves it (ctrl = pinch, a line/page mode or 120-step legacy delta = notched wheel,
+ * Chromium's −3× trackpad signature, a horizontal component); `weak` when inferred from the
+ * delta values alone (then an ongoing gesture's device wins).
+ */
+export function wheelSignal(e: WheelLike): { device: WheelDevice; strong: boolean } {
+  if (e.ctrlKey) return { device: "pinch", strong: true };
+  if (e.deltaMode !== 0) return { device: "mouse", strong: true };
   const wy = e.wheelDeltaY;
   const wx = e.wheelDeltaX;
   // Chromium trackpads: wheelDelta = −3 × delta exactly (both axes).
-  if (wy !== undefined && wy !== 0 && Math.abs(Math.abs(wy) - Math.abs(e.deltaY) * 3) < 1e-6) return "trackpad";
-  if (wx !== undefined && wx !== 0 && Math.abs(Math.abs(wx) - Math.abs(e.deltaX) * 3) < 1e-6) return "trackpad";
+  if (wy !== undefined && wy !== 0 && Math.abs(Math.abs(wy) - Math.abs(e.deltaY) * 3) < 1e-6) return { device: "trackpad", strong: true };
+  if (wx !== undefined && wx !== 0 && Math.abs(Math.abs(wx) - Math.abs(e.deltaX) * 3) < 1e-6) return { device: "trackpad", strong: true };
   // Notched wheels: legacy deltas in steps of 120.
-  if (wy !== undefined && wy !== 0 && wy % 120 === 0) return "mouse";
+  if (wy !== undefined && wy !== 0 && wy % 120 === 0) return { device: "mouse", strong: true };
   // A horizontal component (without Shift, which the OS may map a vertical wheel to) → trackpad.
-  if (e.deltaX !== 0 && !e.shiftKey) return "trackpad";
+  if (e.deltaX !== 0 && !e.shiftKey) return { device: "trackpad", strong: true };
   // Fractional pixel deltas come from trackpads; mice step in whole pixels.
-  if (!Number.isInteger(e.deltaY) || !Number.isInteger(e.deltaX)) return "trackpad";
-  return "mouse";
+  if (!Number.isInteger(e.deltaY) || !Number.isInteger(e.deltaX)) return { device: "trackpad", strong: false };
+  return { device: "mouse", strong: false };
+}
+
+export function wheelDevice(e: WheelLike): WheelDevice {
+  return wheelSignal(e).device;
 }
 
 /** Classify a wheel event into a camera action, updating the gesture memory. */
 export function classifyWheel(e: WheelLike, mem: WheelMemory): NavAction | null {
-  let device = wheelDevice(e);
+  const sig = wheelSignal(e);
+  let device = sig.device;
   const continuing = mem.device !== null && e.timeStamp - mem.lastAt <= GESTURE_GAP_MS;
-  // A pinch always wins (ctrl is explicit); otherwise keep the gesture's device.
-  if (continuing && device !== "pinch" && mem.device !== "pinch") device = mem.device!;
+  // Evidence in the event itself wins; an ambiguous event continues the ongoing gesture.
+  if (continuing && !sig.strong) device = mem.device!;
   mem.device = device;
   mem.lastAt = e.timeStamp;
   const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;

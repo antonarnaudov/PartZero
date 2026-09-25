@@ -1,34 +1,42 @@
 /**
- * The placeholder viewport: a small software renderer on a Canvas 2D, used until
- * `@aicad/forge-web` is available.
+ * The placeholder viewport: a small software renderer on a Canvas 2D, used when
+ * `@aicad/forge-web` cannot start (no WebGPU/WebGL2, or not bundled).
  *
  * - Faces are rasterized into a depth buffer and a triangle-id buffer (flat shading, headlight),
  *   so occlusion is correct and picking is pixel-exact: the id under the cursor names the face.
  * - B-rep edge polylines are depth-tested against that buffer and drawn as anti-aliased lines;
  *   the visible runs are kept for edge picking.
- * - Hover/selection only recolor the existing id buffer (no re-rasterization).
- * - Orbit (drag), pan (right/middle/shift-drag), zoom (wheel, toward the cursor), double-click to
- *   fit. While the camera moves the buffer renders at 1× device pixels, then refines.
+ * - It uses the shared camera (`view-camera.ts`, forge-render's convention) and draws every
+ *   display mode itself (wireframe, hidden line and X-ray included), per-body colours, and a
+ *   section plane (triangles and edge segments on the removed side are skipped; no caps).
+ * - Input is handled by the host (navigation, picking): this class only draws and picks.
  */
-import type { Projection, ViewName } from "../engine/forge-web-contract";
-import type { PickResult, RenderBody } from "../engine/types";
-import type { ViewportAdapter, ViewportColors } from "./adapter";
+import type { RenderBody } from "../engine/types";
+import type { RawHit } from "../selection/picking";
+import type { AdapterCapabilities, DisplaySettings, HighlightRef, SectionPlane, ViewportAdapter, ViewportColors } from "./adapter";
+import { DISPLAY_MODES, type DisplayMode } from "./display";
+import { rasterTriangle } from "./raster";
 import {
   add,
-  cross,
+  cameraFrame,
   defaultCamera,
   dot,
-  fitDistance,
-  MAX_PITCH,
+  fitSphere,
   normalize,
-  projector,
+  orbit as orbitCamera,
+  pan as panCamera,
   scale,
-  STANDARD_VIEWS,
-  sub,
-  type OrbitCamera,
-  type Projector,
+  sphereFromBox,
+  viewAngles,
+  zoomAt as zoomCamera,
+  type CameraFrame,
+  type CameraState,
+  type Projection,
+  type StandardView,
   type Vec3,
-} from "./camera";
+} from "./view-camera";
+
+export { rasterTriangle };
 
 export const DEFAULT_VIEWPORT_COLORS: ViewportColors = {
   background: "#272b32",
@@ -51,6 +59,7 @@ interface PreparedBody {
   /** Unit world normal per triangle (oriented outward). */
   triNormal: Float32Array;
   edges: Array<{ name: string; points: Float32Array }>;
+  color: [number, number, number] | null;
 }
 
 interface Rgb {
@@ -83,7 +92,7 @@ interface Frame {
   /** Shading level (0..63) per global triangle for this camera. */
   level: Uint8Array;
   edgeRuns: EdgeRun[];
-  projector: Projector;
+  cam: CameraFrame;
 }
 
 const LEVELS = 64;
@@ -127,24 +136,24 @@ export class PlaceholderViewport implements ViewportAdapter {
   private triCount = 0;
   /** Global face index per global triangle. */
   private triFaceGlobal = new Int32Array(0);
-  private camera: OrbitCamera = defaultCamera();
+  private cam: CameraState = defaultCamera();
   private width = 1;
   private height = 1;
   private dpr = 1;
   private colors: ViewportColors = DEFAULT_VIEWPORT_COLORS;
-  /** 4 variants (normal, hover, selected, selected+hover) × LEVELS packed colors. */
-  private palette = new Uint32Array(4 * LEVELS);
-  private hover: PickResult | null = null;
+  /** Per body colour: 4 variants (normal, hover, selected, selected+hover) × LEVELS packed colours. */
+  private palettes = new Map<string, Uint32Array>();
+  private hover: HighlightRef | null = null;
   private selFaces = new Set<string>();
   private selEdges = new Set<string>();
   private bounds: { center: Vec3; radius: number } | null = null;
+  private display: DisplaySettings = { mode: "shadedEdges", grid: true, axes: true };
+  private section: SectionPlane | null = null;
   private frame: Frame | null = null;
   private rasterValid = false;
   private raf = 0;
-  private interactiveUntil = 0;
-  private refineTimer: ReturnType<typeof setTimeout> | undefined;
   private disposed = false;
-  private readonly cleanups: Array<() => void> = [];
+  private readonly frameListeners = new Set<() => void>();
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -155,12 +164,17 @@ export class PlaceholderViewport implements ViewportAdapter {
     const bg = this.buffer.getContext("2d");
     if (!bg) throw new Error("Canvas 2D is not available");
     this.bg = bg;
-    this.buildPalette();
-    this.attachControls();
+    const r = canvas.getBoundingClientRect();
+    this.width = Math.max(1, r.width);
+    this.height = Math.max(1, r.height);
   }
 
   backend(): string {
     return "Canvas 2D";
+  }
+
+  capabilities(): AdapterCapabilities {
+    return { nativeModes: DISPLAY_MODES, transparency: true };
   }
 
   // ─── Scene ─────────────────────────────────────────────────────────────────────────────────
@@ -182,12 +196,12 @@ export class PlaceholderViewport implements ViewportAdapter {
     this.invalidate(true);
   }
 
-  setHover(p: PickResult | null): void {
+  setHover(p: HighlightRef | null): void {
     this.hover = p;
     this.invalidate(false);
   }
 
-  setSelection(picks: PickResult[]): void {
+  setSelection(picks: readonly HighlightRef[]): void {
     this.selFaces = new Set(picks.filter((p) => p.face).map((p) => `${p.body}\u0000${p.face}`));
     this.selEdges = new Set(picks.filter((p) => p.edge && !p.face).map((p) => `${p.body}\u0000${p.edge}`));
     this.invalidate(false);
@@ -195,31 +209,66 @@ export class PlaceholderViewport implements ViewportAdapter {
 
   setColors(colors: ViewportColors): void {
     this.colors = colors;
-    this.buildPalette();
+    this.palettes.clear();
     this.invalidate(false);
+  }
+
+  setDisplay(settings: DisplaySettings): void {
+    this.display = { ...settings };
+    this.invalidate(true);
+  }
+
+  setSection(plane: SectionPlane | null): void {
+    this.section = plane ? { origin: [...plane.origin], normal: normalize(plane.normal) } : null;
+    this.invalidate(true);
   }
 
   // ─── Camera ────────────────────────────────────────────────────────────────────────────────
 
-  fitView(): void {
-    if (!this.bounds) return;
-    this.camera = {
-      ...this.camera,
-      target: this.bounds.center,
-      distance: fitDistance(this.bounds.radius, this.camera.fov, this.width / this.height),
-    };
+  camera(): CameraState {
+    return { ...this.cam, target: [...this.cam.target] };
+  }
+
+  setCamera(state: Partial<CameraState>): void {
+    this.cam = { ...this.cam, ...state, ...(state.target ? { target: [...state.target] as Vec3 } : {}) };
     this.invalidate(true);
   }
 
-  setView(v: ViewName): void {
-    this.camera = { ...this.camera, ...STANDARD_VIEWS[v] };
+  fitView(): void {
+    if (!this.bounds) return;
+    this.cam = fitSphere(this.cam, this.bounds, this.width / this.height);
+    this.invalidate(true);
+  }
+
+  setView(v: StandardView): void {
+    const [yaw, pitch] = viewAngles(v);
+    this.cam = { ...this.cam, yaw, pitch };
     this.fitView();
     this.invalidate(true);
   }
 
   setProjection(p: Projection): void {
-    this.camera = { ...this.camera, projection: p };
+    this.cam = { ...this.cam, projection: p };
     this.invalidate(true);
+  }
+
+  orbit(dx: number, dy: number): void {
+    this.cam = orbitCamera(this.cam, dx, dy);
+    this.invalidate(true);
+  }
+
+  pan(dx: number, dy: number): void {
+    this.cam = panCamera(this.cam, dx, dy, this.height);
+    this.invalidate(true);
+  }
+
+  zoomAt(x: number, y: number, factor: number): void {
+    this.cam = zoomCamera(this.cam, x, y, this.width, this.height, factor);
+    this.invalidate(true);
+  }
+
+  size(): { width: number; height: number } {
+    return { width: this.width, height: this.height };
   }
 
   resize(width: number, height: number, dpr: number): void {
@@ -232,9 +281,14 @@ export class PlaceholderViewport implements ViewportAdapter {
     this.render();
   }
 
+  onFrame(listener: () => void): () => void {
+    this.frameListeners.add(listener);
+    return () => this.frameListeners.delete(listener);
+  }
+
   // ─── Picking ───────────────────────────────────────────────────────────────────────────────
 
-  pick(x: number, y: number): Promise<PickResult | null> {
+  pick(x: number, y: number): Promise<RawHit | null> {
     if (!this.frame || !this.rasterValid) this.render();
     const f = this.frame;
     if (!f) return Promise.resolve(null);
@@ -248,24 +302,40 @@ export class PlaceholderViewport implements ViewportAdapter {
         best = r;
       }
     }
-    if (best) {
-      const body = this.bodies[best.body]!;
-      return Promise.resolve({ body: body.name, edge: body.edges[best.edge]!.name });
-    }
     const bx = Math.floor(x * f.scale);
     const by = Math.floor(y * f.scale);
-    if (bx < 0 || by < 0 || bx >= f.w || by >= f.h) return Promise.resolve(null);
+    const inside = bx >= 0 && by >= 0 && bx < f.w && by < f.h;
+    const point = inside ? this.pointAt(f, x, y, f.depth[by * f.w + bx]!) : null;
+    if (best) {
+      const body = this.bodies[best.body]!;
+      const t = segmentParam(x, y, best.x0, best.y0, best.x1, best.y1);
+      const ex = best.x0 + (best.x1 - best.x0) * t;
+      const ey = best.y0 + (best.y1 - best.y0) * t;
+      const ebx = Math.floor(ex * f.scale);
+      const eby = Math.floor(ey * f.scale);
+      const k = ebx >= 0 && eby >= 0 && ebx < f.w && eby < f.h ? f.depth[eby * f.w + ebx]! : -Infinity;
+      return Promise.resolve({ kind: "edge", body: body.name, edge: body.edges[best.edge]!.name, point: this.pointAt(f, ex, ey, k) });
+    }
+    if (!inside || this.display.mode === "wireframe") return Promise.resolve(null);
     const id = f.ids[by * f.w + bx]!;
     if (id < 0) return Promise.resolve(null);
     const face = this.faces[this.triFaceGlobal[id]!]!;
-    return Promise.resolve({ body: this.bodies[face.body]!.name, face: face.name });
+    return Promise.resolve({ kind: "face", body: this.bodies[face.body]!.name, face: face.name, point });
+  }
+
+  /** World point at a pixel from the depth key (null for the background). */
+  private pointAt(f: Frame, x: number, y: number, key: number): Vec3 | null {
+    if (!Number.isFinite(key)) return null;
+    const { origin, dir } = f.cam.ray(x, y);
+    const depth = this.cam.projection === "perspective" ? 1 / key : -key;
+    const along = depth / Math.max(1e-12, dot(dir, f.cam.forward));
+    return add(origin, scale(dir, along));
   }
 
   dispose(): void {
     this.disposed = true;
     cancelAnimationFrame(this.raf);
-    clearTimeout(this.refineTimer);
-    for (const c of this.cleanups) c();
+    this.frameListeners.clear();
     this.canvas.remove();
   }
 
@@ -280,37 +350,48 @@ export class PlaceholderViewport implements ViewportAdapter {
     });
   }
 
-  /** Keep rendering at reduced resolution while the camera moves; refine when it stops. */
-  private interacting(): void {
-    this.interactiveUntil = performance.now() + 160;
-    clearTimeout(this.refineTimer);
-    this.refineTimer = setTimeout(() => this.invalidate(true), 180);
-  }
-
-  private buildPalette(): void {
-    const body = parseColor(this.colors.body);
+  private palette(color: [number, number, number] | null): Uint32Array {
+    const key = color ? color.join(",") : "";
+    let p = this.palettes.get(key);
+    if (p) return p;
+    const hiddenLine = this.display.mode === "hiddenLine";
+    const base = hiddenLine ? parseColor(this.colors.background) : color ? { r: color[0] * 255, g: color[1] * 255, b: color[2] * 255 } : parseColor(this.colors.body);
     const accent = parseColor(this.colors.accent);
     const hover = parseColor(this.colors.hover);
-    const variants = [body, mix(body, hover, 0.45), mix(body, accent, 0.6), mix(mix(body, accent, 0.6), hover, 0.3)];
+    const variants = [base, mix(base, hover, 0.45), mix(base, accent, 0.6), mix(mix(base, accent, 0.6), hover, 0.3)];
+    p = new Uint32Array(4 * LEVELS);
     variants.forEach((c, v) => {
-      for (let l = 0; l < LEVELS; l++) this.palette[v * LEVELS + l] = pack(c, l / (LEVELS - 1));
+      for (let l = 0; l < LEVELS; l++) p![v * LEVELS + l] = pack(c, hiddenLine ? 1 : l / (LEVELS - 1));
     });
+    this.palettes.set(key, p);
+    return p;
   }
 
   private render(): void {
     if (this.disposed) return;
     const t0 = performance.now();
-    const targetScale = performance.now() < this.interactiveUntil ? Math.min(this.dpr, 1) : this.dpr;
-    if (!this.rasterValid || !this.frame || this.frame.scale !== targetScale) this.raster(targetScale);
+    const targetScale = this.dpr;
+    if (!this.rasterValid || !this.frame || this.frame.scale !== targetScale) {
+      this.palettes.clear();
+      this.raster(targetScale);
+    }
     this.colorize();
     this.composite();
     this.canvas.dataset["frameMs"] = (performance.now() - t0).toFixed(1);
+    for (const l of [...this.frameListeners]) l();
+  }
+
+  private clipped(p: Vec3): boolean {
+    const s = this.section;
+    if (!s) return false;
+    return dot(s.normal, p) - dot(s.normal, s.origin) > 0;
   }
 
   /** Rasterize faces into depth + id buffers, and compute visible edge runs. */
   private raster(bufferScale: number): void {
     const w = Math.max(1, Math.round(this.width * bufferScale));
     const h = Math.max(1, Math.round(this.height * bufferScale));
+    const cam = cameraFrame(this.cam, this.width, this.height);
     let f = this.frame;
     if (!f || f.w !== w || f.h !== h) {
       const image = new ImageData(w, h);
@@ -324,27 +405,27 @@ export class PlaceholderViewport implements ViewportAdapter {
         pixels: new Uint32Array(image.data.buffer),
         level: new Uint8Array(this.triCount),
         edgeRuns: [],
-        projector: projector(this.camera, this.width, this.height),
+        cam,
       };
       this.buffer.width = w;
       this.buffer.height = h;
     }
     f.scale = bufferScale;
+    f.cam = cam;
     if (f.level.length !== this.triCount) f.level = new Uint8Array(this.triCount);
     f.depth.fill(-Infinity);
     f.ids.fill(-1);
     f.edgeRuns = [];
-    const proj = projector(this.camera, this.width, this.height);
-    f.projector = proj;
     this.frame = f;
 
-    const b = proj.basis;
-    const light = normalize(add(add(scale(b.forward, -0.75), scale(b.up, 0.55)), scale(b.right, -0.3)));
-    const perspective = this.camera.projection === "perspective";
-    const near = this.camera.distance * 1e-3;
-    const out = { x: 0, y: 0, z: 0 };
+    const b = cam.basis;
+    const light = normalize(add(add(scale(cam.forward, -0.75), scale(b.up, 0.55)), scale(b.right, -0.3)));
+    const perspective = this.cam.projection === "perspective";
+    const near = this.cam.distance * 1e-3;
     const key = (z: number): number => (perspective ? 1 / z : -z);
     const { depth, ids } = f;
+    const mode = this.display.mode;
+    const drawFaces = mode !== "wireframe";
 
     let triBase = 0;
     for (const body of this.bodies) {
@@ -354,47 +435,63 @@ export class PlaceholderViewport implements ViewportAdapter {
       const sy = new Float32Array(n);
       const sk = new Float32Array(n);
       const behind = new Uint8Array(n);
+      const cut = new Uint8Array(n);
       for (let i = 0; i < n; i++) {
-        proj.project([p[i * 3]!, p[i * 3 + 1]!, p[i * 3 + 2]!], out);
-        sx[i] = out.x * bufferScale;
-        sy[i] = out.y * bufferScale;
-        sk[i] = key(out.z);
-        behind[i] = perspective && out.z < near ? 1 : 0;
+        const q: Vec3 = [p[i * 3]!, p[i * 3 + 1]!, p[i * 3 + 2]!];
+        const s = cam.project(q);
+        cut[i] = this.clipped(q) ? 1 : 0;
+        if (!s || (perspective && s.depth < near)) {
+          behind[i] = 1;
+          continue;
+        }
+        sx[i] = s.x * bufferScale;
+        sy[i] = s.y * bufferScale;
+        sk[i] = key(s.depth);
       }
       const tris = body.triFace.length;
       for (let t = 0; t < tris; t++) {
         const a = body.indices[t * 3]!, c1 = body.indices[t * 3 + 1]!, c2 = body.indices[t * 3 + 2]!;
         const nx = body.triNormal[t * 3]!, ny = body.triNormal[t * 3 + 1]!, nz = body.triNormal[t * 3 + 2]!;
         f.level[triBase + t] = Math.round((0.36 + 0.64 * Math.max(0, nx * light[0] + ny * light[1] + nz * light[2])) * (LEVELS - 1));
-        if (behind[a] || behind[c1] || behind[c2]) continue;
+        if (!drawFaces || behind[a] || behind[c1] || behind[c2]) continue;
+        if (cut[a] && cut[c1] && cut[c2]) continue;
         const facing = perspective
-          ? nx * (b.eye[0] - p[a * 3]!) + ny * (b.eye[1] - p[a * 3 + 1]!) + nz * (b.eye[2] - p[a * 3 + 2]!)
-          : -(nx * b.forward[0] + ny * b.forward[1] + nz * b.forward[2]);
-        if (facing <= 0) continue;
+          ? nx * (cam.eye[0] - p[a * 3]!) + ny * (cam.eye[1] - p[a * 3 + 1]!) + nz * (cam.eye[2] - p[a * 3 + 2]!)
+          : -(nx * cam.forward[0] + ny * cam.forward[1] + nz * cam.forward[2]);
+        // With a section, back faces show through the cut (as caps would).
+        if (facing <= 0 && !this.section) continue;
         rasterTriangle(depth, ids, w, h, sx[a]!, sy[a]!, sk[a]!, sx[c1]!, sy[c1]!, sk[c1]!, sx[c2]!, sy[c2]!, sk[c2]!, triBase + t);
       }
       triBase += tris;
     }
 
-    // Edges: sample each segment per buffer pixel against the depth buffer.
+    // Edges: sample each segment per buffer pixel against the depth buffer (X-ray and wireframe
+    // show every edge).
+    const allVisible = mode === "wireframe" || mode === "xray";
     const tolRel = 0.003;
-    const tolAbs = this.camera.distance * 0.003;
+    const tolAbs = this.cam.distance * 0.003;
     this.bodies.forEach((body, bi) => {
       body.edges.forEach((e, ei) => {
         const pts = e.points;
-        let px = 0, py = 0, pk = 0, pBehind = true;
+        let px = 0, py = 0, pk = 0, pBehind = true, pCut = false;
         for (let k = 0; k * 3 < pts.length; k++) {
-          proj.project([pts[k * 3]!, pts[k * 3 + 1]!, pts[k * 3 + 2]!], out);
-          const cx = out.x, cy = out.y, ck = key(out.z), cBehind = perspective && out.z < near;
-          if (k > 0 && !pBehind && !cBehind) {
-            visibleRuns(f, px, py, pk, cx, cy, ck, perspective ? tolRel : 0, perspective ? 0 : tolAbs, (x0, y0, x1, y1) =>
-              f.edgeRuns.push({ body: bi, edge: ei, x0, y0, x1, y1 }),
-            );
+          const q: Vec3 = [pts[k * 3]!, pts[k * 3 + 1]!, pts[k * 3 + 2]!];
+          const s = cam.project(q);
+          const cCut = this.clipped(q);
+          const cBehind = !s || (perspective && s.depth < near);
+          const cx = s?.x ?? 0, cy = s?.y ?? 0, ck = s ? key(s.depth) : 0;
+          if (k > 0 && !pBehind && !cBehind && !(pCut && cCut)) {
+            const emit = (x0: number, y0: number, x1: number, y1: number): void => {
+              f!.edgeRuns.push({ body: bi, edge: ei, x0, y0, x1, y1 });
+            };
+            if (allVisible) emit(px, py, cx, cy);
+            else visibleRuns(f!, px, py, pk, cx, cy, ck, perspective ? tolRel : 0, perspective ? 0 : tolAbs, emit);
           }
           px = cx;
           py = cy;
           pk = ck;
           pBehind = cBehind;
+          pCut = cCut;
         }
       });
     });
@@ -407,14 +504,20 @@ export class PlaceholderViewport implements ViewportAdapter {
     if (!f) return;
     const faceState = new Uint8Array(this.faces.length);
     const hoverBody = this.hover?.body;
+    const hoverWholeBody = !!this.hover && !this.hover.face && !this.hover.edge;
     this.faces.forEach((face, i) => {
       const bodyName = this.bodies[face.body]!.name;
       let s = this.selFaces.has(`${bodyName}\u0000${face.name}`) ? 2 : 0;
-      if (hoverBody === bodyName && this.hover?.face === face.name) s += 1;
+      if (hoverBody === bodyName && (hoverWholeBody || this.hover?.face === face.name)) s += 1;
       faceState[i] = s;
     });
+    const palettes = this.bodies.map((b) => this.palette(b.color));
     const triColor = new Uint32Array(this.triCount);
-    for (let t = 0; t < this.triCount; t++) triColor[t] = this.palette[faceState[this.triFaceGlobal[t]!]! * LEVELS + f.level[t]!]!;
+    for (let t = 0; t < this.triCount; t++) {
+      const fi = this.triFaceGlobal[t]!;
+      const pal = palettes[this.faces[fi]!.body]!;
+      triColor[t] = pal[faceState[fi]! * LEVELS + f.level[t]!]!;
+    }
     const { ids, pixels } = f;
     for (let i = 0; i < ids.length; i++) {
       const id = ids[i]!;
@@ -428,16 +531,21 @@ export class PlaceholderViewport implements ViewportAdapter {
     const g = this.g;
     const { width: w, height: h } = this;
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    g.globalAlpha = 1;
     const grad = g.createLinearGradient(0, 0, 0, h);
     grad.addColorStop(0, this.colors.background);
     grad.addColorStop(1, this.colors.backgroundBottom);
     g.fillStyle = grad;
     g.fillRect(0, 0, w, h);
-    const proj = f?.projector ?? projector(this.camera, w, h);
-    this.drawGrid(proj);
+    const cam = f?.cam ?? cameraFrame(this.cam, w, h);
+    if (this.display.grid) this.drawGrid(cam);
     if (!f) return;
-    g.imageSmoothingEnabled = true;
-    g.drawImage(this.buffer, 0, 0, f.w, f.h, 0, 0, w, h);
+    if (this.display.mode !== "wireframe") {
+      g.imageSmoothingEnabled = true;
+      g.globalAlpha = this.display.mode === "xray" ? 0.35 : 1;
+      g.drawImage(this.buffer, 0, 0, f.w, f.h, 0, 0, w, h);
+      g.globalAlpha = 1;
+    }
 
     // Edges (visible runs), then highlighted ones on top.
     const hoverEdge = this.hover?.edge;
@@ -464,26 +572,26 @@ export class PlaceholderViewport implements ViewportAdapter {
       else if (this.selEdges.has(`${body.name}\u0000${name}`)) selected.push(r);
       else plain.push(r);
     }
-    stroke(plain, this.colors.edge, 1.1);
+    const showPlain = this.display.mode !== "shaded";
+    const edgeColor = this.display.mode === "wireframe" || this.display.mode === "xray" ? this.colors.text : this.colors.edge;
+    if (showPlain) stroke(plain, edgeColor, 1.1);
     stroke(selected, this.colors.accent, 2.4);
     stroke(hovered, this.colors.hover, 2.4);
-    this.drawTriad(proj);
+    if (this.display.axes) this.drawTriad(cam);
   }
 
-  private drawGrid(proj: Projector): void {
+  private drawGrid(cam: CameraFrame): void {
     const g = this.g;
     const radius = this.bounds ? Math.max(this.bounds.radius, 5) : 50;
     const step = niceStep(radius / 4);
     const half = Math.ceil((radius * 2.2) / step) * step;
     const cx = this.bounds ? Math.round(this.bounds.center[0] / step) * step : 0;
     const cy = this.bounds ? Math.round(this.bounds.center[1] / step) * step : 0;
-    const a = { x: 0, y: 0, z: 0 };
-    const b = { x: 0, y: 0, z: 0 };
-    const near = this.camera.distance * 1e-3;
+    const near = this.cam.distance * 1e-3;
     const line = (p: Vec3, q: Vec3, color: string, width: number): void => {
-      proj.project(p, a);
-      proj.project(q, b);
-      if (this.camera.projection === "perspective" && (a.z < near || b.z < near)) return;
+      const a = cam.project(p);
+      const b = cam.project(q);
+      if (!a || !b || (this.cam.projection === "perspective" && (a.depth < near || b.depth < near))) return;
       g.beginPath();
       g.moveTo(a.x, a.y);
       g.lineTo(b.x, b.y);
@@ -503,9 +611,9 @@ export class PlaceholderViewport implements ViewportAdapter {
     line([0, cy - half, 0], [0, cy + half, 0], "rgba(87,171,90,0.45)", 1.2);
   }
 
-  private drawTriad(proj: Projector): void {
+  private drawTriad(cam: CameraFrame): void {
     const g = this.g;
-    const { right, up } = proj.basis;
+    const { right, up } = cam.basis;
     const ox = 40, oy = this.height - 40, len = 24;
     const axes: Array<[Vec3, string, string]> = [
       [[1, 0, 0], "#e5534b", "X"],
@@ -528,143 +636,9 @@ export class PlaceholderViewport implements ViewportAdapter {
       g.fillText(label, ox + dx * 1.35, oy + dy * 1.35);
     }
   }
-
-  // ─── Controls ──────────────────────────────────────────────────────────────────────────────
-
-  private attachControls(): void {
-    const c = this.canvas;
-    let drag: { id: number; x: number; y: number; mode: "orbit" | "pan" } | null = null;
-    const down = (e: PointerEvent): void => {
-      if (drag) return;
-      const pan = e.button === 1 || e.button === 2 || (e.button === 0 && e.shiftKey);
-      if (e.button !== 0 && !pan) return;
-      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, mode: pan ? "pan" : "orbit" };
-      c.setPointerCapture(e.pointerId);
-    };
-    const move = (e: PointerEvent): void => {
-      if (!drag || e.pointerId !== drag.id) return;
-      const dx = e.clientX - drag.x;
-      const dy = e.clientY - drag.y;
-      if (dx === 0 && dy === 0) return;
-      drag.x = e.clientX;
-      drag.y = e.clientY;
-      const cam = this.camera;
-      if (drag.mode === "orbit") {
-        this.camera = {
-          ...cam,
-          yaw: cam.yaw - dx * 0.008,
-          pitch: Math.max(-MAX_PITCH, Math.min(MAX_PITCH, cam.pitch + dy * 0.008)),
-        };
-      } else {
-        const { right, up } = projector(cam, this.width, this.height).basis;
-        const wpp = (2 * cam.distance * Math.tan(cam.fov / 2)) / this.height;
-        this.camera = { ...cam, target: add(cam.target, add(scale(right, -dx * wpp), scale(up, dy * wpp))) };
-      }
-      this.interacting();
-      this.invalidate(true);
-    };
-    const up = (e: PointerEvent): void => {
-      if (drag && e.pointerId === drag.id) {
-        drag = null;
-        if (c.hasPointerCapture(e.pointerId)) c.releasePointerCapture(e.pointerId);
-      }
-    };
-    const wheel = (e: WheelEvent): void => {
-      e.preventDefault();
-      const cam = this.camera;
-      const f = Math.exp(Math.max(-100, Math.min(100, e.deltaY)) * 0.0022);
-      const rect = c.getBoundingClientRect();
-      const mx = e.clientX - rect.left - this.width / 2;
-      const my = e.clientY - rect.top - this.height / 2;
-      const { right, up } = projector(cam, this.width, this.height).basis;
-      const wpp = (2 * cam.distance * Math.tan(cam.fov / 2)) / this.height;
-      // Keep the point under the cursor (on the target plane) fixed while zooming.
-      const offset = add(scale(right, mx * wpp), scale(up, -my * wpp));
-      const r = this.bounds?.radius ?? 100;
-      const distance = Math.max(r * 0.02, Math.min(r * 200, cam.distance * f));
-      const k = 1 - distance / cam.distance;
-      this.camera = { ...cam, distance, target: add(cam.target, scale(offset, k)) };
-      this.interacting();
-      this.invalidate(true);
-    };
-    const dbl = (): void => this.fitView();
-    const ctxMenu = (e: Event): void => e.preventDefault();
-    c.addEventListener("pointerdown", down);
-    c.addEventListener("pointermove", move);
-    c.addEventListener("pointerup", up);
-    c.addEventListener("pointercancel", up);
-    c.addEventListener("wheel", wheel, { passive: false });
-    c.addEventListener("dblclick", dbl);
-    c.addEventListener("contextmenu", ctxMenu);
-    this.cleanups.push(() => {
-      c.removeEventListener("pointerdown", down);
-      c.removeEventListener("pointermove", move);
-      c.removeEventListener("pointerup", up);
-      c.removeEventListener("pointercancel", up);
-      c.removeEventListener("wheel", wheel);
-      c.removeEventListener("dblclick", dbl);
-      c.removeEventListener("contextmenu", ctxMenu);
-    });
-  }
 }
 
-// ─── Rasterization ───────────────────────────────────────────────────────────────────────────
-
-/**
- * Fill one triangle into the depth/id buffers (pixel centers, edge functions). `k` is the depth
- * key (1/z for perspective, −z for orthographic): linear in screen space, larger = nearer.
- */
-export function rasterTriangle(
-  depth: Float32Array,
-  ids: Int32Array,
-  w: number,
-  h: number,
-  x0: number,
-  y0: number,
-  k0: number,
-  x1: number,
-  y1: number,
-  k1: number,
-  x2: number,
-  y2: number,
-  k2: number,
-  id: number,
-): void {
-  let area = (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0);
-  if (area === 0 || !Number.isFinite(area)) return;
-  if (area < 0) {
-    // Make the winding consistent so all three edge functions are positive inside.
-    [x1, x2] = [x2, x1];
-    [y1, y2] = [y2, y1];
-    [k1, k2] = [k2, k1];
-    area = -area;
-  }
-  const minX = Math.max(0, Math.floor(Math.min(x0, x1, x2)));
-  const maxX = Math.min(w - 1, Math.ceil(Math.max(x0, x1, x2)));
-  const minY = Math.max(0, Math.floor(Math.min(y0, y1, y2)));
-  const maxY = Math.min(h - 1, Math.ceil(Math.max(y0, y1, y2)));
-  if (minX > maxX || minY > maxY) return;
-  const inv = 1 / area;
-  // Edge function coefficients: w_i(x, y) = A_i·x + B_i·y + C_i.
-  const a0 = -(y2 - y1), b0 = x2 - x1, c0 = -(a0 * x1 + b0 * y1);
-  const a1 = -(y0 - y2), b1 = x0 - x2, c1 = -(a1 * x2 + b1 * y2);
-  const a2 = -(y1 - y0), b2 = x1 - x0, c2 = -(a2 * x0 + b2 * y0);
-  for (let py = minY; py <= maxY; py++) {
-    const cy = py + 0.5;
-    let e0 = a0 * (minX + 0.5) + b0 * cy + c0;
-    let e1 = a1 * (minX + 0.5) + b1 * cy + c1;
-    let e2 = a2 * (minX + 0.5) + b2 * cy + c2;
-    let i = py * w + minX;
-    for (let px = minX; px <= maxX; px++, i++, e0 += a0, e1 += a1, e2 += a2) {
-      if (e0 < 0 || e1 < 0 || e2 < 0) continue;
-      const k = (e0 * k0 + e1 * k1 + e2 * k2) * inv;
-      if (k > depth[i]!) {
-        depth[i] = k;
-        ids[i] = id;
-      }
-    }
-  }
-}
+// ─── Edge visibility ─────────────────────────────────────────────────────────────────────────
 
 /**
  * Split a screen-space segment (CSS px, depth keys at the ends) into runs not hidden by nearer
@@ -738,7 +712,7 @@ function prepare(b: RenderBody, bodyIndex: number, faces: Array<{ body: number; 
     }
     return fi;
   };
-  const fallback = b.faceRanges.length === 0 ? faceOf(b.name) : -1;
+  const fallback = b.faceRanges.length === 0 && triCount > 0 ? faceOf(b.name) : -1;
   triFace.fill(fallback);
   for (const r of b.faceRanges) {
     const fi = faceOf(r.face);
@@ -751,11 +725,15 @@ function prepare(b: RenderBody, bodyIndex: number, faces: Array<{ body: number; 
   let signedVolume = 0;
   for (let t = 0; t < triCount; t++) {
     const i0 = b.indices[t * 3]!, i1 = b.indices[t * 3 + 1]!, i2 = b.indices[t * 3 + 2]!;
-    const v0: Vec3 = [p[i0 * 3]!, p[i0 * 3 + 1]!, p[i0 * 3 + 2]!];
-    const v1: Vec3 = [p[i1 * 3]!, p[i1 * 3 + 1]!, p[i1 * 3 + 2]!];
-    const v2: Vec3 = [p[i2 * 3]!, p[i2 * 3 + 1]!, p[i2 * 3 + 2]!];
-    signedVolume += dot(v0, cross(v1, v2));
-    const u = normalize(cross(sub(v1, v0), sub(v2, v0)));
+    const v0x = p[i0 * 3]!, v0y = p[i0 * 3 + 1]!, v0z = p[i0 * 3 + 2]!;
+    const v1x = p[i1 * 3]!, v1y = p[i1 * 3 + 1]!, v1z = p[i1 * 3 + 2]!;
+    const v2x = p[i2 * 3]!, v2y = p[i2 * 3 + 1]!, v2z = p[i2 * 3 + 2]!;
+    signedVolume += v0x * (v1y * v2z - v1z * v2y) - v0y * (v1x * v2z - v1z * v2x) + v0z * (v1x * v2y - v1y * v2x);
+    const u = normalize([
+      (v1y - v0y) * (v2z - v0z) - (v1z - v0z) * (v2y - v0y),
+      (v1z - v0z) * (v2x - v0x) - (v1x - v0x) * (v2z - v0z),
+      (v1x - v0x) * (v2y - v0y) - (v1y - v0y) * (v2x - v0x),
+    ]);
     triNormal[t * 3] = u[0];
     triNormal[t * 3 + 1] = u[1];
     triNormal[t * 3 + 2] = u[2];
@@ -770,6 +748,7 @@ function prepare(b: RenderBody, bodyIndex: number, faces: Array<{ body: number; 
     triFace,
     triNormal,
     edges: b.edges.map((e) => ({ name: e.edge, points: e.points })),
+    color: b.color ?? null,
   };
 }
 
@@ -784,14 +763,18 @@ function computeBounds(bodies: PreparedBody[]): { center: Vec3; radius: number }
     }
   }
   if (!Number.isFinite(minX)) return null;
-  const center: Vec3 = [(minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2];
-  const radius = Math.max(Math.hypot(maxX - minX, maxY - minY, maxZ - minZ) / 2, 1e-3);
-  return { center, radius };
+  return sphereFromBox([minX, minY, minZ], [maxX, maxY, maxZ]);
+}
+
+function segmentParam(px: number, py: number, x0: number, y0: number, x1: number, y1: number): number {
+  const dx = x1 - x0, dy = y1 - y0;
+  const len2 = dx * dx + dy * dy;
+  return len2 > 0 ? Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / len2)) : 0;
 }
 
 function distToSegment(px: number, py: number, x0: number, y0: number, x1: number, y1: number): number {
-  const dx = x1 - x0, dy = y1 - y0;
-  const len2 = dx * dx + dy * dy;
-  const t = len2 > 0 ? Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / len2)) : 0;
-  return Math.hypot(px - (x0 + t * dx), py - (y0 + t * dy));
+  const t = segmentParam(px, py, x0, y0, x1, y1);
+  return Math.hypot(px - (x0 + t * (x1 - x0)), py - (y0 + t * (y1 - y0)));
 }
+
+export type { DisplayMode };

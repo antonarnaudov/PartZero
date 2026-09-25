@@ -1,0 +1,506 @@
+/* Viewport overlays, view cube, handles, panels and toolbars (VIEW/SEL). Tokens from styles.css. */
+
+.viewport {
+  /* Overlay ink: follows the renderer's background (the placeholder uses the theme's). */
+  --ov-text: var(--text);
+  --ov-muted: var(--text-muted);
+  --ov-halo: var(--vp-bg);
+  --vp-sel: #ff8c1f;
+  --vp-x: #e5534b;
+  --vp-y: #57ab5a;
+  --vp-z: #539bf5;
+}
+
+/* forge-render draws a light gradient in both themes (its colours are not themed yet). */
+.viewport[data-renderer="forge-web"] {
+  --ov-text: #1f242b;
+  --ov-muted: #505865;
+  --ov-halo: rgba(250, 251, 253, 0.92);
+}
+
+/* The toolbar wraps before it reaches the view cube. */
+.viewport .vp-toolbar {
+  max-width: calc(100% - 150px);
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+/* The renderer chip moves to the bottom right: the view cube owns the top right. */
+.viewport .vp-chip {
+  top: auto;
+  bottom: 10px;
+  right: 10px;
+}
+
+.vp-btn.on {
+  color: var(--text);
+  background: var(--panel-3);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.vp-btn.wide {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid var(--border);
+}
+.vp-select {
+  height: 24px;
+  margin: 0 3px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 11.5px;
+}
+
+/* ─── Overlay ─────────────────────────────────────────────────────────────────────────── */
+
+.vp-overlay,
+.vp-handles {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.vp-plane {
+  fill: rgba(120, 150, 200, 0.08);
+  stroke: rgba(120, 150, 200, 0.55);
+  stroke-width: 1;
+}
+.vp-plane.xy {
+  fill: rgba(83, 155, 245, 0.07);
+}
+.vp-plane.hover {
+  fill: rgba(240, 179, 90, 0.18);
+  stroke: var(--vp-hover);
+}
+.vp-plane.selected {
+  fill: rgba(255, 140, 31, 0.18);
+  stroke: var(--vp-sel);
+  stroke-width: 1.6;
+}
+.vp-origin-label {
+  pointer-events: auto;
+  cursor: pointer;
+  font: 600 10px var(--font-ui);
+  fill: var(--ov-muted);
+  paint-order: stroke;
+  stroke: var(--ov-halo);
+  stroke-width: 3px;
+}
+.vp-origin-label.selected {
+  fill: var(--vp-sel);
+}
+.vp-axis {
+  stroke-width: 1.6;
+}
+.vp-axis.x {
+  stroke: var(--vp-x);
+}
+.vp-axis.y {
+  stroke: var(--vp-y);
+}
+.vp-axis.z {
+  stroke: var(--vp-z);
+}
+.vp-axis.selected {
+  stroke-width: 3;
+  stroke: var(--vp-sel);
+}
+.vp-axis-hit {
+  pointer-events: stroke;
+  stroke: transparent;
+  stroke-width: 9;
+  cursor: pointer;
+}
+.vp-axis-label {
+  font: 600 10px var(--font-ui);
+}
+.vp-axis-label.x {
+  fill: var(--vp-x);
+}
+.vp-axis-label.y {
+  fill: var(--vp-y);
+}
+.vp-axis-label.z {
+  fill: var(--vp-z);
+}
+.vp-origin-point {
+  pointer-events: auto;
+  cursor: pointer;
+  fill: var(--ov-text);
+  stroke: var(--ov-halo);
+  stroke-width: 1.5;
+}
+.vp-origin-point.selected {
+  fill: var(--vp-sel);
+}
+.vp-vertex {
+  fill: var(--ov-halo);
+  stroke-width: 2.4;
+}
+.vp-vertex.selected {
+  stroke: var(--vp-sel);
+  fill: var(--vp-sel);
+}
+.vp-vertex.hover {
+  stroke: var(--vp-hover);
+}
+.vp-box {
+  fill: rgba(76, 141, 255, 0.1);
+  stroke: var(--accent);
+  stroke-width: 1;
+}
+.vp-box.crossing {
+  fill: rgba(79, 178, 134, 0.1);
+  stroke: var(--ok);
+  stroke-dasharray: 5 3;
+}
+.vp-dim line {
+  stroke: var(--accent);
+  stroke-width: 1.4;
+}
+.vp-dim circle {
+  fill: var(--accent);
+}
+.vp-dim text {
+  font: 600 11px var(--font-mono);
+  fill: var(--ov-text);
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--ov-halo);
+  stroke-width: 3px;
+}
+
+/* ─── Handles ─────────────────────────────────────────────────────────────────────────── */
+
+.vp-handle .vp-handle-shaft,
+.vp-handle .vp-handle-ring,
+.vp-handle .vp-handle-ref {
+  fill: none;
+  stroke: #2f8cff;
+  stroke-width: 2;
+}
+.vp-handle.pushPull .vp-handle-shaft {
+  stroke-width: 3.5;
+}
+.vp-handle .vp-handle-ref {
+  stroke-dasharray: 3 3;
+  opacity: 0.6;
+}
+.vp-handle .vp-handle-head {
+  fill: #2f8cff;
+  pointer-events: auto;
+  cursor: grab;
+}
+.vp-handle .vp-handle-grip {
+  pointer-events: auto;
+  cursor: grab;
+  fill: #ffffff;
+  stroke: #2f8cff;
+  stroke-width: 2.5;
+}
+.vp-handle.hover .vp-handle-grip,
+.vp-handle.active .vp-handle-grip {
+  fill: #2f8cff;
+  cursor: grabbing;
+}
+.vp-handle.active .vp-handle-shaft,
+.vp-handle.active .vp-handle-ring {
+  stroke: var(--vp-hover);
+}
+.vp-handle-value {
+  font: 600 11px var(--font-mono);
+  fill: var(--ov-text);
+  paint-order: stroke;
+  stroke: var(--ov-halo);
+  stroke-width: 3px;
+}
+.vp-handle-value.clamped {
+  fill: var(--warn);
+}
+.vp-handle-input {
+  pointer-events: auto;
+  width: 88px;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--text);
+  font: 11px var(--font-mono);
+}
+
+/* ─── View cube ───────────────────────────────────────────────────────────────────────── */
+
+.vp-cube {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 104px;
+  height: 104px;
+  user-select: none;
+}
+.vp-cube-cell {
+  fill: var(--vp-overlay);
+  stroke: var(--border-strong);
+  stroke-width: 0.8;
+  cursor: pointer;
+}
+.vp-cube-cell.center {
+  fill: var(--panel-2);
+}
+.vp-cube-cell.hover {
+  fill: var(--accent-weak);
+  stroke: var(--accent);
+}
+.vp-cube-label {
+  pointer-events: none;
+  fill: var(--text-muted);
+  font-family: var(--font-ui);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+.vp-cube-home {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--vp-overlay);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.vp-cube-home:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+/* ─── Menus, panels, selection bar ───────────────────────────────────────────────────── */
+
+.vp-menu-anchor {
+  position: relative;
+  display: inline-flex;
+}
+.vp-menu {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  z-index: 5;
+  min-width: 170px;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.vp-menu-item {
+  text-align: left;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.vp-menu-item:hover {
+  background: var(--accent-weak);
+}
+.vp-menu-note {
+  padding: 5px 8px;
+  color: var(--text-muted);
+}
+.vp-bodies {
+  min-width: 330px;
+}
+.vp-body-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+}
+.vp-eye {
+  width: 20px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.vp-eye.off {
+  color: var(--text-faint);
+}
+.vp-body-name {
+  flex: 1;
+  min-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vp-swatches {
+  display: flex;
+  gap: 2px;
+}
+.vp-swatch {
+  width: 13px;
+  height: 13px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.vp-swatch.default {
+  background: linear-gradient(135deg, var(--vp-body) 50%, var(--panel-3) 50%);
+}
+.vp-swatch.on {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.vp-side {
+  position: absolute;
+  top: 116px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 240px;
+  pointer-events: none;
+}
+.vp-panel {
+  pointer-events: auto;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--vp-overlay);
+  backdrop-filter: blur(8px);
+  color: var(--text);
+  font-size: 12px;
+}
+.vp-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.vp-panel-title {
+  font-weight: 600;
+}
+.vp-panel-sub {
+  color: var(--text-muted);
+}
+.vp-panel-head .spacer {
+  flex: 1;
+}
+.vp-seg {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+.vp-seg .vp-btn {
+  flex: 1;
+  border: 1px solid var(--border);
+}
+.vp-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.vp-field input[type="range"] {
+  flex: 1;
+  min-width: 60px;
+}
+.vp-num {
+  width: 64px;
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--text);
+  font: 11px var(--font-mono);
+}
+.vp-unit {
+  color: var(--text-muted);
+}
+.vp-measure-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.vp-measure-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 2px 0;
+}
+.vp-measure-table td {
+  text-align: right;
+  padding: 2px 0 2px 6px;
+}
+.vp-measure-table tr[data-exact="false"] td.mono {
+  color: var(--warn);
+}
+.vp-measure-empty {
+  color: var(--text-muted);
+}
+.vp-copy {
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.vp-copy:hover {
+  color: var(--text);
+}
+
+.vp-selbar {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--vp-overlay);
+  backdrop-filter: blur(8px);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.vp-selbar-label {
+  color: var(--text-faint);
+  padding: 0 4px;
+}
+.vp-filter {
+  height: 22px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.vp-filter.on {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--panel-3);
+}
+.vp-selcount {
+  color: var(--text-muted);
+  padding: 0 6px;
+}
+.viewport .vp-hover {
+  bottom: 44px;
+  left: 10px;
+  font-family: var(--font-ui);
+}

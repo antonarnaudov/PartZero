@@ -13,7 +13,7 @@ import {
 } from "../src/doc/provenance";
 import { buildTimeline } from "../src/doc/timeline";
 import { parseObj } from "../src/engine/obj";
-import { basis, STANDARD_VIEWS, defaultCamera } from "../src/viewport/camera";
+import { basis, cameraFrame, defaultCamera, viewAngles } from "../src/viewport/view-camera";
 import nemaObj from "./fixtures/nema17-plate.obj?raw";
 import twoObj from "./fixtures/two-regions.obj?raw";
 import { BOX } from "./helpers";
@@ -105,20 +105,24 @@ describe("timeline", () => {
   });
 });
 
-describe("placeholder camera", () => {
+describe("viewport camera", () => {
   it("standard views look where CAD users expect (Z up)", () => {
-    const top = basis({ ...defaultCamera(), ...STANDARD_VIEWS.top });
-    expect(top.forward[2]).toBeCloseTo(-1, 3);
-    expect(top.right).toEqual([expect.closeTo(1, 6), expect.closeTo(0, 6), 0]);
-    const front = basis({ ...defaultCamera(), ...STANDARD_VIEWS.front });
+    const at = (v: Parameters<typeof viewAngles>[0]) => {
+      const [yaw, pitch] = viewAngles(v);
+      return cameraFrame({ ...defaultCamera(), yaw, pitch }, 800, 600);
+    };
+    const top = at("top");
+    expect(top.forward[2]).toBeCloseTo(-1, 6);
+    expect(top.basis.right).toEqual([expect.closeTo(1, 6), expect.closeTo(0, 6), 0]);
+    const front = at("front");
     expect(front.forward).toEqual([expect.closeTo(0, 6), expect.closeTo(1, 6), expect.closeTo(0, 6)]);
-    expect(front.up[2]).toBeCloseTo(1, 6);
-    const right = basis({ ...defaultCamera(), ...STANDARD_VIEWS.right });
-    expect(right.forward[0]).toBeCloseTo(-1, 6);
-    const iso = basis({ ...defaultCamera(), ...STANDARD_VIEWS.iso });
+    expect(front.basis.up[2]).toBeCloseTo(1, 6);
+    expect(at("right").forward[0]).toBeCloseTo(-1, 6);
+    const iso = at("iso");
     expect(iso.eye[0]).toBeGreaterThan(0);
     expect(iso.eye[1]).toBeLessThan(0);
     expect(iso.eye[2]).toBeGreaterThan(0);
+    expect(basis(defaultCamera()).back[2]).toBeGreaterThan(0);
   });
 });
 
