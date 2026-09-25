@@ -11,8 +11,10 @@ const ID = /^[a-z][A-Za-z0-9]*(\.[a-z][A-Za-z0-9]*)+$/;
 const GROUPS = new Set<ToolGroupId>(TOOL_GROUPS.map((g) => g.id));
 
 export interface ToolRegistryState {
-  /** Every registered tool, sorted by group order, then `order`, then label. */
+  /** The tools this build shows (flags on), sorted by group order, then `order`, then label. */
   tools: readonly ToolDefinition[];
+  /** Registered tools whose build flag is off (hidden everywhere). */
+  hidden: readonly ToolDefinition[];
   /** Registration problems (duplicate shortcut, …); shown in the shortcuts map and logged. */
   warnings: readonly string[];
 }
@@ -33,15 +35,31 @@ function sortTools(tools: readonly ToolDefinition[]): ToolDefinition[] {
 export class ToolRegistry extends Store<ToolRegistryState> {
   /** Keys bound by app commands (they win over tool shortcuts). */
   private reservedKeys: ReadonlyMap<string, string> = new Map();
+  private all: ToolDefinition[] = [];
+  private flagOn: (flag: string) => boolean;
 
-  constructor() {
-    super({ tools: [], warnings: [] });
+  /** `flags`: which build flags are on (default: all). */
+  constructor(options: { flags?: (flag: string) => boolean } = {}) {
+    super({ tools: [], hidden: [], warnings: [] });
+    this.flagOn = options.flags ?? (() => true);
+  }
+
+  /** Change which build flags are on. */
+  setFlags(flags: (flag: string) => boolean): void {
+    this.flagOn = flags;
+    this.publish();
+  }
+
+  private publish(): void {
+    const tools = this.all.filter((t) => !t.flag || this.flagOn(t.flag));
+    const hidden = this.all.filter((t) => t.flag && !this.flagOn(t.flag));
+    this.setState({ tools, hidden, warnings: this.computeWarnings(tools) });
   }
 
   /** Tell the registry which keys app commands already own (checked on every registration). */
   reserveKeys(keys: ReadonlyMap<string, string>): void {
     this.reservedKeys = keys;
-    this.setState((s) => ({ warnings: this.computeWarnings(s.tools) }));
+    this.publish();
   }
 
   /**
@@ -56,23 +74,26 @@ export class ToolRegistry extends Store<ToolRegistryState> {
     if (def.shortcut !== undefined && !/^((Mod|Ctrl|Alt|Shift)\+)*[^+\s]+$/i.test(def.shortcut)) {
       throw new ToolRegistryError(`tool ${def.id}: shortcut "${def.shortcut}" is not like "E", "Shift+F" or "Mod+Shift+H"`);
     }
-    if (this.getState().tools.some((t) => t.id === def.id)) throw new ToolRegistryError(`a tool with id ${def.id} is already registered`);
-    this.setState((s) => {
-      const tools = sortTools([...s.tools, def]);
-      return { tools, warnings: this.computeWarnings(tools) };
-    });
+    if (this.all.some((t) => t.id === def.id)) throw new ToolRegistryError(`a tool with id ${def.id} is already registered`);
+    this.all = sortTools([...this.all, def]);
+    this.publish();
     return () => this.unregister(def.id);
   }
 
   unregister(id: string): void {
-    this.setState((s) => {
-      const tools = s.tools.filter((t) => t.id !== id);
-      return tools.length === s.tools.length ? {} : { tools, warnings: this.computeWarnings(tools) };
-    });
+    const before = this.all.length;
+    this.all = this.all.filter((t) => t.id !== id);
+    if (this.all.length !== before) this.publish();
   }
 
+  /** A tool this build shows (a flagged-off tool is undefined, like an unknown one). */
   get(id: string): ToolDefinition | undefined {
     return this.getState().tools.find((t) => t.id === id);
+  }
+
+  /** Whether a tool is registered but hidden by its build flag. */
+  isHidden(id: string): boolean {
+    return this.getState().hidden.some((t) => t.id === id);
   }
 
   list(): readonly ToolDefinition[] {

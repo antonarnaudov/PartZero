@@ -54,6 +54,24 @@ describe("the tool registry", () => {
   });
 });
 
+describe("build flags", () => {
+  it("hide a flagged tool (and its shortcut) until its flag is on", () => {
+    const on = new Set<string>();
+    const r = new ToolRegistry({ flags: (f) => on.has(f) });
+    r.register(tool({ id: "feature.fillet", shortcut: "Shift+F", flag: "fillet" }));
+    r.register(tool({ id: "feature.chamfer", label: "Chamfer" }));
+    expect(r.list().map((t) => t.id)).toEqual(["feature.chamfer"]);
+    expect(r.get("feature.fillet")).toBeUndefined();
+    expect(r.isHidden("feature.fillet")).toBe(true);
+    expect(r.keymap("model").has("shift+f")).toBe(false);
+    on.add("fillet");
+    r.setFlags((f) => on.has(f));
+    expect(r.list().map((t) => t.id)).toEqual(["feature.chamfer", "feature.fillet"]);
+    expect(r.keymap("model").get("shift+f")).toBe("feature.fillet");
+    expect(() => r.register(tool({ id: "feature.fillet" }))).toThrow(/already registered/);
+  });
+});
+
 async function shellHarness(source = BOX) {
   const h = await makeHarness({ source, agent: true });
   const shellCommands = createShellCommandRegistry(() => h.services);
@@ -94,6 +112,9 @@ describe("the shell", () => {
     shell.setMode("sketch");
     expect((await shell.startTool("sketch.line")).started).toBe(true);
     expect(await shell.startTool("nope.nope")).toMatchObject({ started: false, reason: "unknown tool: nope.nope" });
+    shell.tools.register(tool({ id: "feature.draft", label: "Draft", flag: "draft" }));
+    shell.tools.setFlags(() => false);
+    expect(await shell.startTool("feature.draft")).toMatchObject({ started: false, reason: "feature.draft is not in this build yet (its flag is off)" });
   });
 
   it("reports a tool that throws on start and leaves nothing open", async () => {

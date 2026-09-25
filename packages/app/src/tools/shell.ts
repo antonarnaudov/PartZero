@@ -208,7 +208,7 @@ export class Shell extends Store<ShellState> {
    */
   async startTool(id: string, source: CommandSource = "ui"): Promise<{ started: boolean; panel: boolean; reason?: string }> {
     const tool = this.tools.get(id);
-    if (!tool) return { started: false, panel: false, reason: `unknown tool: ${id}` };
+    if (!tool) return { started: false, panel: false, reason: this.tools.isHidden(id) ? `${id} is not in this build yet (its flag is off)` : `unknown tool: ${id}` };
     const en = this.enablement(tool);
     if (en !== true) return { started: false, panel: false, reason: en.reason };
     this.getState().panel?.replace();

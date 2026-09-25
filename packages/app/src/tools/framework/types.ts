@@ -22,8 +22,9 @@
  *
  * Keys in an open panel: Enter = OK, Esc = Cancel, Tab = next field (plan §2.5).
  *
- * Registration: `registerTool(def)` (`tools/index.ts`) returns an unregister function. Tool ids are
- * `<area>.<name>` (`feature.fillet`, `sketch.line`, `inspect.bodyProperties`), unique app-wide.
+ * Registration: a workstream adds one line to `TOOL_MODULES` in `tools/catalog.ts`: a function that
+ * calls `registry.register(def)` for each of its tools (it returns an unregister function). Tool ids
+ * are `<area>.<name>` (`feature.fillet`, `sketch.line`, `inspect.bodyProperties`), unique app-wide.
  *
  * This file is framework-only: no React, no DOM. Tools stay testable without a browser.
  */
@@ -127,6 +128,11 @@ export interface ToolDefinition {
   modes?: readonly ShellMode[];
   /** Position within its group (default 100; ties sort by label). */
   order?: number;
+  /**
+   * A build flag (plan §3.5): the tool is hidden, and cannot start, while the flag is off. Flags are
+   * on in development runs; a packaged build turns on the flags whose specs pass.
+   */
+  flag?: string;
   /**
    * Selection-first (plan §2.5): the selection kinds the tool acts on, so a contextual toolbar can
    * offer it. Informational for now.

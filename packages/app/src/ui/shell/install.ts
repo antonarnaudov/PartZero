@@ -37,13 +37,19 @@ declare global {
   }
 }
 
-export function installShell(services: AppServices, commands: AppCommandRegistry, options: { automation: boolean; tools?: ToolRegistry }): ShellContextValue {
+export function installShell(
+  services: AppServices,
+  commands: AppCommandRegistry,
+  options: { automation: boolean; tools?: ToolRegistry; flags?: (flag: string) => boolean },
+): ShellContextValue {
   const shellCommands = createShellCommandRegistry(() => services);
   // Failures of user-initiated shell commands surface as toasts, like the app's (bootstrap.ts).
   shellCommands.onDidExecute((r) => {
     if (!r.ok && r.error && (r.source === "ui" || r.source === "keyboard" || r.source === "menu" || r.source === "palette")) services.ui.toast("error", r.error.message);
   });
-  const tools = options.tools ?? new ToolRegistry();
+  // Build flags (plan §3.5): all on in development and e2e runs; a packaged build shows unflagged tools
+  // only until `packages/app/src/flags.ts` (INT) says which flags are on.
+  const tools = options.tools ?? new ToolRegistry({ flags: options.flags ?? (() => options.automation) });
   const shell = new Shell({ services, commands, shellCommands, tools });
   attachShell(services, shell);
   registerAllTools(tools);
