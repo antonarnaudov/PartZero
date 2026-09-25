@@ -15,7 +15,8 @@ import { DocStore } from "../src/doc/doc-store";
 import { buildTimeline } from "../src/doc/timeline";
 import { forgeWebCommandEngine, type ForgeWebCommandModule, type IrCommandEngine } from "../src/doc/v1/command-engine";
 import { IrDocStore } from "../src/doc/v1/ir-doc-store";
-import type { EvalResult, ForgeEngine, MeshFormat, TessellationOptions } from "../src/engine/types";
+import { PRINT_TESSELLATION, type EvalResult, type ForgeEngine, type MeshFormat, type TessellationOptions } from "../src/engine/types";
+import { exportFormat } from "../src/file/export-formats";
 import { DocStoreAdapter } from "../src/file/adapter";
 import { hostStateOf } from "../src/file/document-files";
 import { decodePartZero, encodePartZero } from "../src/file/partzero";
@@ -233,6 +234,27 @@ describe("IR v1 as the document model", () => {
     const withParam = JSON.parse(v1) as { params?: unknown[] };
     withParam.params = [{ name: "t", unit: "mm", value: 3 }];
     expect(downgradeToV0(JSON.stringify(withParam))).toBeNull();
+  });
+
+  it_("exports meshes at print quality (0.01 mm, at most 5°): a hole comes out round", async () => {
+    const { ir, doc, engine, adapter } = setup();
+    doc.load({ path: null, name: "puck", format: "ir-v1", source: blankDocument("puck") });
+    await doc.idle();
+    await ir.apply({ op: "addFeature", feature: { type: "sketch", plane: "XY", curves: [{ kind: "circle", id: "c", center: [0, 0], radius: 10 }] } });
+    await ir.apply({ op: "addFeature", feature: { type: "extrude", sketch: "sketch1", distance: 2 } });
+    const irJson = await adapter.exportIrJson("export");
+    const stl = exportFormat("stl")!;
+    const bytes = await stl.run({ irJson, engine, name: "puck" });
+    expect(engine.exports.at(-1)?.tess).toEqual(PRINT_TESSELLATION);
+    expect(PRINT_TESSELLATION.chordalDeflection).toBe(0.01);
+    expect(PRINT_TESSELLATION.angularDeflection).toBeLessThanOrEqual((5 * Math.PI) / 180 + 1e-12);
+    // Binary STL: 80-byte header, then the triangle count. The r = 10 mm rim needs ≥ 72 segments at 5°
+    // (and ≥ 71 for 0.01 mm chordal): far more than the default display tessellation.
+    const triangles = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(80, true);
+    const coarse = mod.exportMesh(irJson, "stl", {});
+    const coarseTriangles = new DataView(coarse.buffer, coarse.byteOffset, coarse.byteLength).getUint32(80, true);
+    expect(triangles).toBeGreaterThan(coarseTriangles);
+    expect(triangles).toBeGreaterThanOrEqual(4 * 72);
   });
 
   it_("opens a starter example (CadScript v1) as an IR v1 model", async () => {
