@@ -1,0 +1,19 @@
+forge/crates/forge-ops/tests/boolean_seed53_regressions.rs
+  s_59c0dd2af30db2::t_ab1e9b3bafcc23 179,192-196,198-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d0041cbf1bf93ac1115d5bfb9a18fa4e49f9fbc3",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
