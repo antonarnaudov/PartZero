@@ -1,0 +1,25 @@
+packages/model-ops/src/host.ts
+  s_59c0dd2af30db2::t_403f8156bffb91 118-122
+  s_59c0dd2af30db2::t_4d160890114486 167-168
+  s_59c0dd2af30db2::t_62ff036622136b 217
+  s_59c0dd2af30db2::t_3b7d153485e373 236-241,243-244
+  s_59c0dd2af30db2::t_eeebe6e74572c8 110-115
+  s_59c0dd2af30db2::t_60e284afc70824 242
+  s_59c0dd2af30db2::t_6b6153e05361cc 116-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9444ec01674f1c3db8b6b0673342fad299674022",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
