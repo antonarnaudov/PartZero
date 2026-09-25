@@ -160,6 +160,14 @@ class Walker:
                 self.b(f"{fp}/keep_tools", f["keep_tools"])
         elif t == "hole":
             self.hole(fp, f)
+        elif t == "thread":
+            self.r(f"{fp}/face", f["face"])
+            for k in ("major", "pitch", "length", "offset"):
+                self.opt(fp, f, k, "length")
+            self.opt(fp, f, "starts", "count")
+            for k in ("flip", "modeled"):
+                if k in f:
+                    self.b(f"{fp}/{k}", f[k])
         elif t == "fillet":
             self.r(f"{fp}/edges", f["edges"])
             self.s(f"{fp}/r", f["r"], "length")
@@ -282,6 +290,9 @@ class Walker:
         if isinstance(th, dict):
             self.opt(f"{fp}/thread", th, "pitch", "length")
             self.opt(f"{fp}/thread", th, "depth", "length")
+            self.opt(f"{fp}/thread", th, "starts", "count")
+            if "modeled" in th:
+                self.b(f"{fp}/thread/modeled", th["modeled"])
         self.targets(f"{fp}/targets", h.get("targets"))
 
     def curve(self, cp: str, c: dict) -> None:
@@ -694,6 +705,8 @@ class Validator:
             self.check_ref(f["tools"], f"{fp}/tools", BODY_SOME, ctx)
         elif t == "hole":
             self.hole(f, fp, ctx)
+        elif t == "thread":
+            self.thread(f, fp, ctx)
         elif t == "fillet":
             self.check_ref(f["edges"], f"{fp}/edges", EDGE_SOME, ctx)
             r = lit(f["r"])
@@ -1173,6 +1186,38 @@ class Validator:
                 if x is not None and x < 0.0:
                     self.range("INVALID_VALUE", f"{path}/radius", f, x, ">= 0")
 
+    # -- threads (§6.13) -------------------------------------------------------------------------
+    def thread_standard(self, path: str, s: str) -> None:
+        from .threads import standard
+
+        if standard(s) is None:
+            known = list(consts.constants()["THREAD_STANDARDS"]["threads"])
+            self.err("THREAD_STANDARD_UNKNOWN", path, f"{s!r} is not a thread designation of THREAD_STANDARDS",
+                     {"field": "standard", "value": s, "allowed": known})
+
+    def thread_starts(self, fp: str, v: Any) -> None:
+        if v is None:
+            return
+        n = lit(v)
+        if n is not None and not (n == math.floor(n) and 1.0 <= n <= 8.0):
+            self.range("INVALID_COUNT", fp, "starts", n, "an integer in [1, 8]")
+
+    def thread(self, f: dict, fp: str, ctx: PartCtx) -> None:
+        self.check_ref(f["face"], f"{fp}/face", FACE_ONE, ctx)
+        if "standard" in f:
+            self.thread_standard(f"{fp}/standard", f["standard"])
+        elif "major" not in f or "pitch" not in f:
+            self.err("THREAD_SIZE_REQUIRED", fp, "a thread needs a standard designation, or both major and pitch",
+                     {"field": "standard", "allowed": ["standard", "major + pitch"]})
+        for k in ("major", "pitch", "length"):
+            if k in f:
+                self.positive_len(fp, k, f[k])
+        if "offset" in f:
+            o = lit(f["offset"])
+            if o is not None and not (o >= 0.0):
+                self.range("INVALID_VALUE", fp, "offset", o, ">= 0")
+        self.thread_starts(fp, f.get("starts"))
+
     # -- holes -----------------------------------------------------------------------------------
     def hole(self, h: dict, fp: str, ctx: PartCtx) -> None:
         self.plane(h["on"], f"{fp}/on", ctx)
@@ -1189,7 +1234,11 @@ class Validator:
             return all(row.get(k) is not None for k in keys)
 
         size = h.get("size")
-        if size is None and "d" not in h:
+        thread = h.get("thread")
+        std = thread.get("standard") if isinstance(thread, dict) else None
+        if std is not None:
+            self.thread_standard(f"{fp}/thread/standard", std)
+        if size is None and "d" not in h and std is None:
             self.err("HOLE_SIZE_REQUIRED", fp, "a hole needs a standard size or an explicit diameter d",
                      {"field": "size", "allowed": sizes})
         for fld, kw in (("cbore", "iso4762"), ("csink", "iso10642"), ("insert", "std")):
@@ -1209,7 +1258,7 @@ class Validator:
             conflict("thread", ["thread", "insert"], "thread excludes insert")
         if threaded and h.get("fit", "normal") in ("close", "loose"):
             conflict("fit", ["normal", "tap"], "a threaded hole uses the tap drill")
-        if threaded and size is None and not (isinstance(thread, dict) and "pitch" in thread):
+        if threaded and size is None and std is None and not (isinstance(thread, dict) and "pitch" in thread):
             conflict("thread", {"pitch": "required without size"}, "a thread without a standard size needs a pitch")
         depth = h.get("depth")
         if depth is None and "insert" not in h:
@@ -1246,6 +1295,10 @@ class Validator:
             for f in ("pitch", "depth"):
                 if f in thread:
                     self.positive_len(f"{fp}/thread", f, thread[f])
+            self.thread_starts(f"{fp}/thread", thread.get("starts"))
+            if thread.get("modeled", False) is not False and size is None and std is None:
+                conflict("thread", {"standard": "required for a modelled thread without size"},
+                         "a modelled thread needs a size or thread.standard (its major diameter)")
         self.placement(h["at"], f"{fp}/at", ctx)
         on_face = isinstance(h["on"], dict) and "face" in h["on"]
         if "targets" in h:

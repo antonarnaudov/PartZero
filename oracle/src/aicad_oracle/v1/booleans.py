@@ -73,7 +73,7 @@ import math
 from OCP.BRep import BRep_Builder, BRep_Tool
 from OCP.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCP.BRepAlgoAPI import BRepAlgoAPI_Common, BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse
-from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeVertex
+from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeVertex, BRepBuilderAPI_NurbsConvert
 from OCP.BRepClass import BRepClass_FaceClassifier
 from OCP.BRepClass3d import BRepClass3d_SolidClassifier
 from OCP.BRepExtrema import BRepExtrema_DistShapeShape
@@ -673,6 +673,24 @@ class _ChainHistory:
         return not self._through(s)
 
 
+class _ModifyHistory:
+    """A `BRepBuilderAPI_ModifyShape` (the B-spline conversion of a target) in the form
+    `_images` reads: its `Modified` raises for a shape it was not given (a tool's faces, chained
+    after it), which passes through unchanged here."""
+
+    def __init__(self, op):
+        self.op = op
+
+    def Modified(self, s) -> list:
+        try:
+            return [x for x in self.op.Modified(s)]
+        except Exception:  # noqa: BLE001 — OCCT's Standard_Failure: not an input sub-shape
+            return []
+
+    def IsDeleted(self, s) -> bool:
+        return False
+
+
 def fused_tools(tools: list):
     """(tool shape, history) for a cut or intersect: the union ∪K of the tools as **one** operand
     (§6.0.3: `t ∩ ∪K`, `t − ∪K`), with the fuse's history (None for a single tool). OCCT's
@@ -929,7 +947,8 @@ def _check_pieces_apart(pieces: list[Body]) -> None:
 
 
 def apply_body_op(ev, st, gid: str, order: int, op: str, targets: list[Body], tools: list[Body], entry: dict,
-                  keep_tools: bool, *, extra_face_src=None, band_peers: list[Body] = ()) -> list[Body]:
+                  keep_tools: bool, *, extra_face_src=None, band_peers: list[Body] = (),
+                  nurbs_targets: bool = False) -> list[Body]:
     """Apply join / cut / intersect of `tools` to `targets` in the part state `st`; fill the
     feature entry (`bodies`, `removed`, `warnings`). Returns the result bodies it created or
     modified."""
@@ -994,10 +1013,18 @@ def apply_body_op(ev, st, gid: str, order: int, op: str, targets: list[Body], to
         # t − ∪K, and intersect builds t ∩ ∪K as one solid per connected component
         kshape, kfuse = fused_tools(tool_shapes)
         for t in targets:
-            common = _common(t.solid, [kshape])
+            # [threads] the target as B-splines (§8.3 rule 9): OCCT intersects swept thread
+            # flanks with analytic faces unreliably (whole grooves lost or cut short, depending
+            # on where a cylinder's seam lies), and reliably with B-spline faces
+            ts, conv = t.solid, None
+            if nurbs_targets:
+                raw_conv = BRepBuilderAPI_NurbsConvert(t.solid, True)
+                ts = TopoDS.Solid_s(_solids(raw_conv.Shape())[0])
+                conv = _ModifyHistory(raw_conv)
+            common = _common(ts, [kshape])
             inter = sum(_vol(c) for c in common)
             if op == "cut":
-                if not (common and meets(t.solid, [kshape])):
+                if not (common and meets(ts, [kshape])):
                     empty_all = False
                     continue
                 met_any = True
@@ -1007,14 +1034,15 @@ def apply_body_op(ev, st, gid: str, order: int, op: str, targets: list[Body], to
             if band is None:
                 band = tool_band_pairs(tools, band_peers)
             for a, b, dist in band:
-                if dist > 0.0 and gap_within(t.solid, a, b, _is_peer(b, band_peers)):
+                if dist > 0.0 and gap_within(ts, a, b, _is_peer(b, band_peers)):
                     raise _band_failure(a, b, dist)
             if op == "cut":
-                o = _run(BRepAlgoAPI_Cut, [t.solid], tool_shapes)
-                hist = o
+                o = _run(BRepAlgoAPI_Cut, [ts], tool_shapes)
+                hist = o if conv is None else _ChainHistory(conv, o)
             else:
-                o = _run(BRepAlgoAPI_Common, [t.solid], [kshape])
-                hist = o if kfuse is None else _ChainHistory(kfuse, o)
+                o = _run(BRepAlgoAPI_Common, [ts], [kshape])
+                pre = [h for h in (conv, kfuse) if h is not None]
+                hist = o if not pre else _ChainHistory(*pre, o)
             ushape, usd = unified(o.Shape())
             raw = _solids(ushape)
             vt = t.body_metrics()["volume"]
@@ -1029,17 +1057,17 @@ def apply_body_op(ev, st, gid: str, order: int, op: str, targets: list[Body], to
                 # (W7b review 5: each side's noise is relative to that operand's volume, so a small
                 # result is checked tightly whenever one operand is small): vol(t ∩ K) = vol t −
                 # vol(t − K) with a Cut by the separate tools, and = vol K − vol(K − t)
-                vcut = sum(_vol(x) for x in _solids(_run(BRepAlgoAPI_Cut, [t.solid], tool_shapes).Shape()))
+                vcut = sum(_vol(x) for x in _solids(_run(BRepAlgoAPI_Cut, [ts], tool_shapes).Shape()))
                 _gate(_close_diff(vraw, vt, vcut, scale) and vraw <= vt * (1 + GATE_REL) + 1e-9 * scale ** 3,
                       f"vol(t ∩ K) = {vraw}, vol t − vol(t − K) = {vt - vcut}, vol t = {vt}")
                 vk = _vol(kshape)
-                vkt = sum(_vol(x) for x in _solids(_run(BRepAlgoAPI_Cut, [kshape], [t.solid]).Shape()))
+                vkt = sum(_vol(x) for x in _solids(_run(BRepAlgoAPI_Cut, [kshape], [ts]).Shape()))
                 _gate(_close_diff(vraw, vk, vkt, scale),
                       f"vol(t ∩ K) = {vraw}, vol K − vol(K − t) = {vk - vkt}, vol K = {vk}")
-            keep = [s for s in raw if not degenerate_piece(s, t.solid, [kshape])]
+            keep = [s for s in raw if not degenerate_piece(s, ts, [kshape])]
             # [R-3] between a tool face and a face of this target (a blind floor 5e-7 mm above the
             # far face): the coincident faces change the topology — an explicit failure
-            check_target_band(t.solid, tool_shapes, keep)
+            check_target_band(ts, tool_shapes, keep)
             results = []
             if keep:
                 if len(keep) == len(raw):

@@ -91,6 +91,9 @@ class HoleSpec:
     csink: tuple[float, float] | None = None
     insert: tuple[float, float] | None = None
     thread: tuple[float, float | None] | None = None  # (pitch, explicit depth)
+    #: The thread's form beyond its pitch: `{standard, major, starts, right_hand, modeled}`
+    #: (Forge's `HoleThreadForm`; §6.5 modelled threads).
+    thread_form: dict | None = None
     size: str | None = None
     #: The field a head-depth violation names: `/cbore/depth` or `/csink/d` for custom heads,
     #: `/cbore` or `/csink` for the presets (whose numbers come from `HOLE_SIZES`).
@@ -145,6 +148,15 @@ def hole_spec(ev, st, h: dict) -> HoleSpec:
     if isinstance(th, str):
         th = sc(th, "bool")
     threaded = th is not None and th is not False
+    std = None
+    if isinstance(th, dict) and "standard" in th:
+        from .threads import standard
+
+        std = standard(th["standard"])
+        if std is None:
+            raise FeatureFailure("HOLE_OPTIONS_CONFLICT", f"{th['standard']!r} is not a THREAD_STANDARDS designation",
+                                 {"field": "/thread/standard",
+                                  "allowed": list(consts.constants()["THREAD_STANDARDS"]["threads"])})
     insert = None
     ins = h.get("insert")
     if ins == "std":
@@ -155,6 +167,9 @@ def hole_spec(ev, st, h: dict) -> HoleSpec:
         d = _positive(sc(h["d"]), "/d")
     elif insert is not None:
         d = insert[0]
+    elif not size and std is not None:
+        # §6.5: without a size, a thread standard gives the bore: its basic minor diameter
+        d = float(std["minor"])
     else:
         key = "tap" if (threaded or fit == "tap") else fit
         d = _tv(row, key)
@@ -184,8 +199,26 @@ def hole_spec(ev, st, h: dict) -> HoleSpec:
             if "depth" in th:
                 tdepth = _positive(sc(th["depth"]), "/thread/depth")
         if pitch is None:
-            pitch = _tv(row, "pitch")
+            pitch = float(std["pitch"]) if std is not None else _tv(row, "pitch")
         thread = (pitch, tdepth)
+    thread_form = None
+    if threaded:
+        from .threads import standard
+
+        starts, right, modeled = 1, True, False
+        if isinstance(th, dict):
+            if "starts" in th:
+                n = sc(th["starts"], "count")
+                if not (math.isfinite(n) and n == math.floor(n) and 1.0 <= n <= 8.0):
+                    raise FeatureFailure("INVALID_COUNT", f"/thread/starts = {n}: must be an integer in [1, 8]",
+                                         {"field": "/thread/starts", "value": n, "expected": "an integer in [1, 8]"})
+                starts = int(n)
+            right = th.get("hand", "right") == "right"
+            modeled = bool(sc(th.get("modeled", False), "bool"))
+        by_size = standard(size) if size else None
+        major = float(std["major"]) if std is not None else (float(by_size["major"]) if by_size else None)
+        thread_form = {"standard": th.get("standard") if isinstance(th, dict) else None, "major": major,
+                       "starts": starts, "right_hand": right, "modeled": modeled}
     kind = "insert" if insert else "counterbore" if cbore else "countersink" if csink else "simple"
     head_field = None
     if cbore is not None:
@@ -193,7 +226,7 @@ def hole_spec(ev, st, h: dict) -> HoleSpec:
     elif csink is not None:
         head_field = "/csink/d" if isinstance(cs, dict) else "/csink"
     spec = HoleSpec(d=d, kind=kind, depth_kind="blind", cbore=cbore, csink=csink, insert=insert,
-                    thread=thread, size=size, head_field=head_field)
+                    thread=thread, thread_form=thread_form, size=size, head_field=head_field)
     dep = h.get("depth")
     if insert is not None:
         spec.depth_kind, spec.blind, spec.tip = "blind", insert[1], None
@@ -348,9 +381,10 @@ def profile_volume(prof: list) -> float:
 
 
 def build_tool(fid: str, pid: str, order: int, spec: HoleSpec, p: tuple, d: tuple, h: float,
-               through: bool, gate: list | None = None) -> Body:
+               through: bool, gate: list | None = None, nurbs: bool = False) -> Body:
     """The hole tool at position `p` (id `pid`) along `d`: the revolution of the §6.5 profile, keyed
-    `H/<role>@p`."""
+    `H/<role>@p`. `nurbs`: converted to B-splines (exactly: rational), for a modelled thread's
+    grooves to be fused with it (§8.3 rule 9)."""
     e = _radial(d)
     prof = profile(spec, h, through)
 
@@ -376,7 +410,6 @@ def build_tool(fid: str, pid: str, order: int, spec: HoleSpec, p: tuple, d: tupl
     if len(sols) != 1:
         raise TopoError("OCCT_HOLE_TOOL_FAILED", f"hole {fid} position {pid}: the tool is not one solid")
     solid = sols[0]
-    body = Body(solid, fid, pid, order)
     gp = GProp_GProps()
     BRepGProp.VolumeProperties_s(solid, gp, False, False, False)
     exp = profile_volume(prof)
@@ -385,6 +418,14 @@ def build_tool(fid: str, pid: str, order: int, spec: HoleSpec, p: tuple, d: tupl
         if gate is not None:
             gate.append(msg)
         raise TopoError("OCCT_SELF_CHECK_FAILED", msg)
+    if nurbs:
+        # after the gate: the conversion is exact (rational), OCCT's fixed-order integrator on
+        # rational patches is not
+        from OCP.BRepBuilderAPI import BRepBuilderAPI_NurbsConvert
+        from OCP.TopoDS import TopoDS
+
+        solid = TopoDS.Solid_s(_solids(BRepBuilderAPI_NurbsConvert(solid, True).Shape())[0])
+    body = Body(solid, fid, pid, order)
     body.build_topology()
     body.metrics = None
     targets = []
@@ -516,6 +557,11 @@ def hole_feature(ev, st, fi: int, f: dict, entry: dict, refs: list, fs) -> None:
         shallow = min(positions, key=lambda p: (depths[p.id], positions.index(p)))
         check_head_depth(spec, depths[shallow.id], shallow.id)
     scale = max([1.0] + [math.dist(b.body_metrics()["bbox_min"], b.body_metrics()["bbox_max"]) for b in targets])
+    modeled = spec.thread_form is not None and spec.thread_form["modeled"]
+    if modeled and spec.thread_form["major"] is None:
+        raise FeatureFailure("HOLE_OPTIONS_CONFLICT",
+                             "a modelled thread needs a size or thread.standard (its major diameter)",
+                             {"field": "thread", "allowed": {"standard": "required for a modelled thread without size"}})
     tools: list[Body] = []
     for p in positions:
         if spec.depth_kind == "through":
@@ -532,10 +578,10 @@ def hole_feature(ev, st, fi: int, f: dict, entry: dict, refs: list, fs) -> None:
             # holes), not a folded profile
             y0 = spec.cbore[1] if spec.cbore else (_csink_depth(spec) if spec.csink else 0.0)
             h = max(reach, y0) + max(1.0, 0.01 * scale)
-            tools.append(build_tool(fid, p.id, fi, spec, p.point, d, h, True, ev.gate))
+            tools.append(build_tool(fid, p.id, fi, spec, p.point, d, h, True, ev.gate, nurbs=modeled))
         else:
             h = depths[p.id] if spec.depth_kind == "up_to" else spec.blind
-            tools.append(build_tool(fid, p.id, fi, spec, p.point, d, h, False, ev.gate))
+            tools.append(build_tool(fid, p.id, fi, spec, p.point, d, h, False, ev.gate, nurbs=modeled))
     for p, k in zip(positions, tools):
         if not any(meets(t.solid, [k.solid]) for t in targets):
             raise FeatureFailure("HOLE_MISSES_BODY", f"the hole at {p.id} meets no target", {"at": p.id})
@@ -544,7 +590,16 @@ def hole_feature(ev, st, fi: int, f: dict, entry: dict, refs: list, fs) -> None:
         for p, k in zip(positions, tools):
             if breaks_through(k, p.id, fid, targets):
                 through_warn.append(p.id)
-    apply_body_op(ev, st, fid, fi, "cut", targets, tools, entry, keep_tools=False)
+    grooves: list[Body] = []
+    if modeled:
+        from .threads import hole_grooves
+
+        grooves = hole_grooves(ev, fid, fi, spec, positions, d, plane.x, depths, targets)
+    apply_body_op(ev, st, fid, fi, "cut", targets, tools + grooves, entry, keep_tools=False)
+    if modeled:
+        from .threads import normalized
+
+        normalized(entry)
     for pid in through_warn:
         warns.append({"code": "HOLE_BREAKS_THROUGH", "severity": "warning",
                       "message": f"the blind hole at {pid} breaks through", "details": {"at": pid}})
@@ -570,6 +625,13 @@ def hole_report(spec: HoleSpec, p: HolePos, d: tuple, up_to: float | None) -> di
             t["size"] = spec.size
         t["pitch"] = spec.thread[0]
         t["depth"] = spec.thread[1] if spec.thread[1] is not None else depth
+        tf = spec.thread_form or {}
+        if tf.get("standard") is not None:
+            t["standard"] = tf["standard"]
+        if tf.get("major") is not None and (tf.get("modeled") or tf.get("standard") is not None):
+            t["major"] = tf["major"]
+        if tf.get("modeled"):
+            t["modeled"] = True
         out["thread"] = t
     return out
 

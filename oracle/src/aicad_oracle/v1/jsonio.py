@@ -319,6 +319,8 @@ FEATURE_ORDER: dict[str, list[str]] = {
                               "origin", "normal", "x_dir"] + _META,
     "datum_axis": _COMMON + ["mode", "edge", "face", "a", "b", "points", "flip"] + _META,
     "tag": _COMMON + ["target"] + _META,
+    "thread": _COMMON + ["face", "standard", "major", "pitch", "length", "offset", "flip", "hand",
+                         "starts", "modeled"] + _META,
 }
 CURVE_ORDER: dict[str, list[str]] = {
     "line": ["kind", "id", "start", "end", "construction"],

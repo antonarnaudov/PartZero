@@ -321,6 +321,11 @@ def pattern_feature(ev, st, fi: int, f: dict, entry: dict, refs: list, fs) -> No
                 fs.outer_curves.setdefault(m, oc)
                 fs.region_curves.setdefault(m, sfs.region_curves.get(m, []))
             is_hole = sf["type"] == "hole"
+            tf = getattr(getattr(sd, "spec", None), "thread_form", None)
+            if is_hole and tf is not None and tf.get("modeled"):
+                # Forge refuses it too (FORGE_PATTERN_MODELED_THREAD): the copies would not be threaded.
+                raise TopoError("ORACLE_PATTERN_MODELED_THREAD",
+                                f"the hole seed {sid} has a modelled thread: put the positions into the hole itself")
             op = "cut" if is_hole else sd.op
             copies = [(inst, [copy_body(b, inst.trsf, pid if op == "new_body" else b.feature, b.member, fi, inst,
                                         _key_of(pid, inst)) for b in sd.tools]) for inst in kept]

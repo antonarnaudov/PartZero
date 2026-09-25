@@ -34,7 +34,7 @@ report lacks a §5.8 `refs` entry) → ROBUSTNESS; the constraint-replay finding
 does not state — `ORACLE_TANGENCY_MODE_DIFFERS` (an arc–arc tangency at a joint solved in the other
 mode than `internal` / the guess rule) and `ORACLE_REPLAY_SIZE_BOUND` (an angular constraint within
 `SOLVE_CHECK_TOLERANCE` at the solver's scale but off by more than *tol* at the solved size) →
-ROBUSTNESS; `ORACLE_NORMALIZED` (details `{rule}`) marks a MATCH that needed §8.3 rule 4 or 5 →
+ROBUSTNESS; `ORACLE_NORMALIZED` (details `{rule}`) marks a MATCH that needed §8.3 rule 4, 5 or 9 →
 NORMALIZED. Reference replay findings are subject to the downstream cap below like every other
 difference; a failed constrained-sketch replay check is not (it does not depend on the part state,
 `_Cmp.oracle_findings`).
@@ -174,6 +174,10 @@ def _hist(h: Any) -> dict:
 
 
 _ANALYTIC = ("plane", "cylinder", "cone", "sphere", "torus")
+#: §8.3 rule 9 (modelled threads): what the oracle's B-spline sweep of a thread groove stands for —
+#: Forge's exact helicoid flanks and the crest and root cylinders, and its helix / spiral edges and
+#: the circular arcs where the thread meets a plane.
+_THREAD_TYPES = {"face_types": ("helicoid", "cylinder"), "edge_types": ("helix", "circle")}
 
 
 def _rule4_match(ha: dict, hb: dict, allowed=_ANALYTIC) -> bool:
@@ -243,7 +247,8 @@ class _Cmp:
             if corner:
                 continue
             ha, hb = _hist(x.get(k)), _hist(y.get(k))
-            if ha != hb and not (k == "face_types" and "4" in rules and _rule4_match(ha, hb, blend_types)):
+            if ha != hb and not (k == "face_types" and "4" in rules and _rule4_match(ha, hb, blend_types)) \
+                    and not ("9" in rules and _rule4_match(ha, hb, _THREAD_TYPES[k])):
                 self.add(part, path, f"{k} {la}={ha} {lb}={hb}", SILENT_WRONG)
         if corner:
             for k in ("volume", "area"):
@@ -350,7 +355,7 @@ class _Cmp:
         ca, cb = _code(fa.get("error")), _code(fb.get("error"))
         self.oracle_findings(i, fb)
         rules = {str(_d(w.get("details")).get("rule")) for w in _dicts(fb.get("warnings"))
-                 if w.get("code") == "ORACLE_NORMALIZED"} & {"4", "5"}
+                 if w.get("code") == "ORACLE_NORMALIZED"} & {"4", "5", "9"}
         if rules:
             types = set()
             for w in _dicts(fb.get("warnings")):

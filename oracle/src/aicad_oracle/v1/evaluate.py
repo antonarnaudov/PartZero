@@ -474,6 +474,10 @@ class Evaluator:
                 from .blends import draft_feature
 
                 draft_feature(self, st, fi, f, entry, refs)
+            elif t == "thread":
+                from .threads import thread_feature
+
+                thread_feature(self, st, fi, f, entry, refs)
             else:
                 raise FeatureFailure("ORACLE_UNSUPPORTED_FEATURE",
                                      f"the oracle does not evaluate {t} features", {"type": t})
@@ -988,6 +992,8 @@ def by_id_refs(f: dict) -> list[tuple[str, str]]:
         if isinstance(dep, dict) and "up_to" in dep:
             r(dep["up_to"])
         targets(f.get("targets"))
+    elif t == "thread":
+        r(f.get("face"))
     elif t == "fillet":
         r(f.get("edges"))
     elif t == "chamfer":
@@ -1069,7 +1075,8 @@ def _literal(m, construction: bool) -> dict:
 
 
 _ENTRY_ORDER = ("part", "feature", "feature_id", "type", "status", "error", "warnings", "regions", "sketch",
-                "datum", "bodies", "removed", "refs", "holes", "fillet", "chamfer", "shell", "pattern")
+                "datum", "bodies", "removed", "refs", "holes", "fillet", "chamfer", "shell", "pattern",
+                "thread")
 
 
 def _order_entry(e: dict) -> dict:
