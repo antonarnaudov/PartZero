@@ -174,6 +174,17 @@ function pick(o: Obj, keys: readonly string[]): J {
   return out as J;
 }
 
+/** A hole's thread object in forge-ir's field order, defaults (`modeled: false`, `hand: "right"`) omitted. */
+function threadSpec(o: Obj): J {
+  if (!isObj(o)) return (o ?? null) as J;
+  const out: Obj = {};
+  for (const k of ["pitch", "depth", "standard", "modeled", "hand", "starts"]) {
+    if (!has(o, k) || (k === "modeled" && o[k] === false) || (k === "hand" && o[k] === "right")) continue;
+    out[k] = o[k];
+  }
+  return out as J;
+}
+
 function query(q: Obj): J {
   if (!isObj(q)) return (q ?? null) as J;
   const op = q["op"] as string;
@@ -457,7 +468,7 @@ function feature(f: Obj): J {
         return r as J;
       });
       put("insert", (v) => (typeof v === "string" ? v : pick(v as Obj, ["d", "depth"])));
-      put("thread", (v) => (typeof v === "boolean" ? v : pick(v as Obj, ["pitch", "depth"])), eq(false));
+      put("thread", (v) => (typeof v === "boolean" ? v : threadSpec(v as Obj)), eq(false));
       put("targets", targets);
       break;
     case "fillet":
@@ -519,6 +530,18 @@ function feature(f: Obj): J {
       break;
     case "tag":
       put("target", (v) => refJ(v as Obj, "some"));
+      break;
+    case "thread":
+      put("face", (v) => refJ(v as Obj, "one"));
+      put("standard");
+      put("major");
+      put("pitch");
+      put("length");
+      put("offset");
+      put("flip", (v) => v as J, eq(false));
+      put("hand", (v) => v as J, eq("right"));
+      put("starts");
+      put("modeled", (v) => v as J, eq(true));
       break;
     default:
       break;

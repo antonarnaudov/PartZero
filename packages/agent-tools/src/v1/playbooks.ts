@@ -224,6 +224,21 @@ export const PLAYBOOK_V1: Readonly<Record<string, string>> = {
   SHELL_CLOSED_VOID: "Informational: with no open face the body is hollow inside (2 shells); give open faces to make a cup.",
   DRAFT_FACE_UNSUPPORTED: "Draft applies to planar faces only: narrow the face query to planes.",
   DRAFT_FAILED: "The draft could not be built: reduce the angle or draft fewer faces.",
+  // ── Threads (§6.5 thread.modeled, §6.13) ──
+  THREAD_STANDARD_UNKNOWN:
+    'Thread standards are ISO metric coarse and fine ("M8", "M14x1") and Unified coarse and fine ("1/4-20 UNC", "#10-32 UNF", "1/2-20 UNF"): use a listed designation, or give the numbers (a thread feature: major and pitch; a hole: size or d, and pitch).',
+  THREAD_SIZE_REQUIRED: 'A thread needs standard: "M8" (or "1/2-20 UNF", …), or both major and pitch in mm.',
+  THREAD_INVALID_VALUE: "A thread number is out of range (details: field, value, expected): pitch > 0.001 mm, the major diameter more than twice the pitch, starts an integer in [1, 8].",
+  THREAD_DIAMETER_MISMATCH:
+    "The face's diameter does not fit the thread: its crest must lie in [min_d, max_d] (a bore about the tap drill or basic minor diameter, a boss about the major diameter). Change the hole's d or size or the boss radius into that range, or pick the standard that fits the face.",
+  THREAD_FACE_UNSUPPORTED:
+    "Threads go on a cylindrical face bounded by two full circles (a plain bore or boss): pick that face, or add the thread before cutting slots or cross holes through it.",
+  THREAD_LENGTH_OUT_OF_RANGE: "The thread runs past its face: shorten length (or offset) so that offset + length fits the face, or leave length out to thread the whole face.",
+  THREAD_END_TOO_CLOSE:
+    "A thread end falls just short of the face's end: end it exactly on the end (leave length out, or length = the face's length − offset) or at least the reported margin away from it.",
+  THREAD_END_UNSUPPORTED: "A thread starts on an end of its face (the entry plane, a chamfer or a countersink): use offset: 0, or flip: true to start from the other end.",
+  THREAD_INTERFERENCE:
+    "Another face comes into the thread's groove region (a wall thinner than the thread, a cross hole, a nearby pocket): move that feature away or thicken the wall, or choose a smaller or finer thread.",
   // ── Patterns ──
   PATTERN_ALL_INSTANCES_FAILED: "Every pattern instance failed: check spacing/direction/axis so the copies land on the body.",
   PATTERN_INSTANCE_SKIPPED: "One pattern instance was skipped (it missed the body or failed): adjust the count/spacing, or skip it explicitly with skip: [[i]].",
@@ -267,6 +282,8 @@ export const PLAYBOOK_V1: Readonly<Record<string, string>> = {
   FORGE_PROBE_FAILED:
     "Forge could not place a probe point on an entity, so it is left out of the report (not a modelling error): if the model is as intended, accept the warning; a reference that needs that entity fails with this code — re-aim it at a neighbouring face or edge.",
   FORGE_UNSUPPORTED_FEATURE: "Forge does not evaluate that feature type: model the geometry with the operations it has.",
+  FORGE_PATTERN_MODELED_THREAD:
+    "Forge does not pattern a hole with a modelled thread yet: put the positions into the hole feature itself (grid, boltCircle or a position list), where every position gets its thread.",
   // ── The OCCT oracle's own codes (a test engine: its limitations, not spec errors; others: ORACLE_INTERNAL_HINT_V1) ──
   ORACLE_SOLVE_REQUIRES_REPLAY:
     "The OCCT oracle does not solve sketch constraints (SPEC-v1 §8.1): it evaluates a constrained sketch only when the stored geometry already satisfies them. Evaluate constrained sketches on Forge; on the oracle, draw the geometry at its solved sizes without constraints (rect/circle/slot driven by param(), or literal lines and arcs).",
@@ -304,6 +321,7 @@ export const FORGE_INTERNAL_CODES_V1: Readonly<Record<string, string>> = {
   FORGE_PATTERN_INVALID_COPY: "a moved copy failed Forge's validity checks",
   FORGE_PATTERN_SEED_UNAVAILABLE: "a pattern seed kept no tools to copy",
   FORGE_STALE_ENTITY: "an entity missing from the reference resolver's scope",
+  FORGE_THREAD_INTERNAL: "the threaded body failed Forge's validity or construction checks (details: what)",
 };
 
 /** The fallback for the OCCT oracle's other codes (report findings, replay checks, OCCT failures). */
@@ -1415,6 +1433,66 @@ function unsupportedHint(code: string, d: Details | undefined): string | undefin
 /** The feature field a range code is about when `field` is absent: the one the code names for this feature type. */
 const RANGE_FIELDS: Readonly<Record<string, readonly string[]>> = { INVALID_DISTANCE: ["distance", "depth"], INVALID_ANGLE: ["angle"], INVALID_AXIS: ["axis"], INVALID_RADIUS: ["r", "radius"], INVALID_COUNT: ["count", "n"] };
 
+/** The thread codes (§6.13): the numbers of the details, and the change they call for. */
+function threadHint(code: string, ctx: V1HintContext, d: Details | undefined): string | undefined {
+  const face = str(d, "face");
+  const on = face ? ` on ${entityName(ctx, face)}` : "";
+  const hint = PLAYBOOK_V1[code] ?? "";
+  switch (code) {
+    case "THREAD_STANDARD_UNKNOWN": {
+      const value = str(d, "value");
+      const allowed = strings(d, "allowed");
+      if (value === undefined) return undefined;
+      const near = allowed.filter((a) => a.replace(/\s/g, "").toUpperCase().startsWith(value.replace(/\s/g, "").toUpperCase().slice(0, 2))).slice(0, 8);
+      return `${jsonQuote(value)} is not a thread standard${near.length ? ` (close: ${near.map((x) => jsonQuote(x)).join(", ")})` : ""}. ${hint}`;
+    }
+    case "THREAD_SIZE_REQUIRED":
+      return `${fname(ctx) ? `${ident(fname(ctx)!)}: ` : ""}no standard, and major or pitch is missing. ${hint}`;
+    case "THREAD_INVALID_VALUE": {
+      const field = str(d, "field");
+      if (field === undefined) return undefined;
+      return `${ident(field)} = ${valueText(d?.["value"])}${str(d, "expected") ? `, expected ${oneLine(str(d, "expected")!, 80)}` : ""}. ${hint}`;
+    }
+    case "THREAD_DIAMETER_MISMATCH": {
+      const dd = numberOf(d, "d");
+      const lo = numberOf(d, "min_d");
+      const hi = numberOf(d, "max_d");
+      if (dd === undefined || lo === undefined || hi === undefined) return undefined;
+      const target = Math.min(Math.max(dd, lo), hi);
+      return `The ${str(d, "kind") ?? ""} thread ${str(d, "designation") ?? ""} needs a crest diameter in [${num(lo)}, ${num(hi)}] mm; the face is Ø${num(dd)} — make it Ø${num(target)} (or anywhere in that range). ${hint}`.replace(/\s+/g, " ");
+    }
+    case "THREAD_FACE_UNSUPPORTED":
+    case "THREAD_END_UNSUPPORTED": {
+      const reason = str(d, "reason");
+      return face || reason ? `Thread${on}: ${reason ? oneLine(reason, 160) : "unsupported"}. ${hint}` : undefined;
+    }
+    case "THREAD_LENGTH_OUT_OF_RANGE": {
+      const a = numberOf(d, "start");
+      const b = numberOf(d, "end");
+      const fa = numberOf(d, "face_start");
+      const fb = numberOf(d, "face_end");
+      if (a === undefined || b === undefined || fb === undefined) return undefined;
+      return `The thread runs over [${num(a)}, ${num(b)}] mm but the face${on} spans [${num(fa ?? 0)}, ${num(fb)}] mm: length ≤ ${num(fb - a)} (with this offset). ${hint}`;
+    }
+    case "THREAD_END_TOO_CLOSE": {
+      const dist = numberOf(d, "distance");
+      const margin = numberOf(d, "margin");
+      if (dist === undefined) return undefined;
+      return `A thread end lies ${num(dist)} mm from the end of the face${on}${margin !== undefined ? ` (the minimum is ${num(margin)} mm)` : ""}. ${hint}`;
+    }
+    case "THREAD_INTERFERENCE": {
+      const rin = numberOf(d, "r_in");
+      const rout = numberOf(d, "r_out");
+      const za = numberOf(d, "z_start");
+      const zb = numberOf(d, "z_end");
+      if (rin === undefined || rout === undefined) return undefined;
+      return `Another face lies within the thread's groove region${on}: radius ${num(rin)}–${num(rout)} mm${za !== undefined && zb !== undefined ? `, ${num(za)}–${num(zb)} mm along the axis` : ""}. ${hint}`;
+    }
+    default:
+      return undefined;
+  }
+}
+
 function rangeHint(code: string, d: Details | undefined, ctx: V1HintContext): string | undefined {
   const value = d?.["value"];
   const expected = str(d, "expected");
@@ -1751,6 +1829,16 @@ function computeHint(code: string, ctx: V1HintContext, d: Details | undefined): 
       const faces = list(d, "faces");
       return faces.length > 0 ? `Faces ${capList(faces, 4, (x) => (typeof x === "string" ? entityName(ctx, x) : valueText(x))).join(", ")}: ${PLAYBOOK_V1[code]}` : undefined;
     }
+    case "THREAD_STANDARD_UNKNOWN":
+    case "THREAD_SIZE_REQUIRED":
+    case "THREAD_INVALID_VALUE":
+    case "THREAD_DIAMETER_MISMATCH":
+    case "THREAD_FACE_UNSUPPORTED":
+    case "THREAD_LENGTH_OUT_OF_RANGE":
+    case "THREAD_END_TOO_CLOSE":
+    case "THREAD_END_UNSUPPORTED":
+    case "THREAD_INTERFERENCE":
+      return threadHint(code, ctx, d);
     case "SHELL_FAILED": {
       const r = str(d, "reason");
       return r ? `Shell failed: ${oneLine(r, 200)}. ${PLAYBOOK_V1["SHELL_FAILED"]}` : undefined;

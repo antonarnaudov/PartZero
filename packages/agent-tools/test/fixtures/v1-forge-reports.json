@@ -9448,6 +9448,2602 @@
    }
   },
   {
+   "label": "thread_diameter",
+   "ir_sha256": "9bd1be898e60653f13ea426ac674d033c7294a2c9c6889d95c92de432813bc74",
+   "ir": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p_p",
+      "name": "p",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "f_s",
+        "name": "s",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "o",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "f_e",
+        "name": "e",
+        "sketch": "f_s",
+        "distance": 5
+       },
+       {
+        "type": "hole",
+        "id": "f_h",
+        "name": "h",
+        "on": {
+         "face": {
+          "kind": "face",
+          "q": {
+           "op": "cap",
+           "feature": "f_e",
+           "end": "end"
+          }
+         }
+        },
+        "at": {
+         "list": [
+          {
+           "id": "a",
+           "at": [
+            0,
+            0
+           ]
+          }
+         ]
+        },
+        "d": 5,
+        "depth": "through"
+       },
+       {
+        "type": "thread",
+        "id": "f_t",
+        "name": "t",
+        "face": {
+         "kind": "face",
+         "q": {
+          "op": "hole_face",
+          "feature": "f_h",
+          "at": "a",
+          "part": "wall"
+         }
+        },
+        "standard": "M8"
+       }
+      ]
+     }
+    ]
+   },
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "thread_diameter",
+    "status": "error",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 400,
+        "loops": 1,
+        "outer_curves": [
+         "o.bottom",
+         "o.left",
+         "o.right",
+         "o.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "o.bottom",
+         "start": [
+          -10,
+          -10
+         ],
+         "end": [
+          10,
+          -10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.right",
+         "start": [
+          10,
+          -10
+         ],
+         "end": [
+          10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.top",
+         "start": [
+          10,
+          10
+         ],
+         "end": [
+          -10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.left",
+         "start": [
+          -10,
+          10
+         ],
+         "end": [
+          -10,
+          -10
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1999.9999999999998,
+        "area": 1200.0000000000002,
+        "centroid": [
+         0,
+         -1.7763568394002508e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "h",
+      "feature_id": "f_h",
+      "type": "hole",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1901.8252295753186,
+        "area": 1239.2699081698727,
+        "centroid": [
+         -9.500809771994264e-18,
+         -2.406540019393447e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true,
+        "change": "modified"
+       }
+      ],
+      "holes": [
+       {
+        "at": "a",
+        "center": [
+         0,
+         0,
+         5
+        ],
+        "axis": [
+         0,
+         0,
+         -1
+        ],
+        "d": 5,
+        "depth": null,
+        "kind": "simple"
+       }
+      ],
+      "refs": [
+       {
+        "field": "/on/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_e/cap:end@o.bottom",
+          "name": "e/cap:end",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -2.8421709430404003e-16,
+            1.9984014443252818e-16,
+            5
+           ],
+           "normal": [
+            0,
+            0,
+            1
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "t",
+      "feature_id": "f_t",
+      "type": "thread",
+      "status": "error",
+      "error": {
+       "code": "THREAD_DIAMETER_MISMATCH",
+       "message": "the internal thread D 8 × P 1.25 needs a crest diameter in [6.148870699410763, 7.6875] mm, the face has 5 mm",
+       "details": {
+        "d": 5,
+        "designation": "D 8 × P 1.25",
+        "kind": "internal",
+        "max_d": 7.6875,
+        "min_d": 6.148870699410763
+       }
+      },
+      "refs": [
+       {
+        "field": "/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_h/wall@a",
+          "name": "h/wall",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            0.8471486442475952,
+            2.352092509777084,
+            2.5
+           ],
+           "normal": [
+            -0.3388594576990381,
+            -0.9408370039108336,
+            0
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1901.8252295753186,
+        "area": 1239.2699081698727,
+        "centroid": [
+         -9.500809771994264e-18,
+         -2.406540019393447e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "thread_face",
+   "ir_sha256": "f91b783067b7610e266772d600adad5c84b63f7ebf8483a524810c70eaeef809",
+   "ir": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p_p",
+      "name": "p",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "f_s",
+        "name": "s",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "o",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "f_e",
+        "name": "e",
+        "sketch": "f_s",
+        "distance": 5
+       },
+       {
+        "type": "thread",
+        "id": "f_t",
+        "name": "t",
+        "face": {
+         "kind": "face",
+         "q": {
+          "op": "cap",
+          "feature": "f_e",
+          "end": "end"
+         }
+        },
+        "standard": "M8"
+       }
+      ]
+     }
+    ]
+   },
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "thread_face",
+    "status": "error",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 400,
+        "loops": 1,
+        "outer_curves": [
+         "o.bottom",
+         "o.left",
+         "o.right",
+         "o.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "o.bottom",
+         "start": [
+          -10,
+          -10
+         ],
+         "end": [
+          10,
+          -10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.right",
+         "start": [
+          10,
+          -10
+         ],
+         "end": [
+          10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.top",
+         "start": [
+          10,
+          10
+         ],
+         "end": [
+          -10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.left",
+         "start": [
+          -10,
+          10
+         ],
+         "end": [
+          -10,
+          -10
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1999.9999999999998,
+        "area": 1200.0000000000002,
+        "centroid": [
+         0,
+         -1.7763568394002508e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "t",
+      "feature_id": "f_t",
+      "type": "thread",
+      "status": "error",
+      "error": {
+       "code": "THREAD_FACE_UNSUPPORTED",
+       "message": "face f_e/cap:end cannot be threaded: it is a plane, not a cylinder",
+       "details": {
+        "face": "f_e/cap:end",
+        "reason": "it is a plane, not a cylinder"
+       }
+      },
+      "refs": [
+       {
+        "field": "/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_e/cap:end@o.bottom",
+          "name": "e/cap:end",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -2.8421709430404003e-16,
+            1.9984014443252818e-16,
+            5
+           ],
+           "normal": [
+            0,
+            0,
+            1
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1999.9999999999998,
+        "area": 1200.0000000000002,
+        "centroid": [
+         0,
+         -1.7763568394002508e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "thread_length",
+   "ir_sha256": "baeec48d53ea078584cf902eb0c8e473724a5cc00f6a06c4f4bf451682c27ce9",
+   "ir": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p_p",
+      "name": "p",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "f_s",
+        "name": "s",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "o",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "f_e",
+        "name": "e",
+        "sketch": "f_s",
+        "distance": 5
+       },
+       {
+        "type": "hole",
+        "id": "f_h",
+        "name": "h",
+        "on": {
+         "face": {
+          "kind": "face",
+          "q": {
+           "op": "cap",
+           "feature": "f_e",
+           "end": "end"
+          }
+         }
+        },
+        "at": {
+         "list": [
+          {
+           "id": "a",
+           "at": [
+            0,
+            0
+           ]
+          }
+         ]
+        },
+        "d": 6.8,
+        "depth": "through"
+       },
+       {
+        "type": "thread",
+        "id": "f_t",
+        "name": "t",
+        "face": {
+         "kind": "face",
+         "q": {
+          "op": "hole_face",
+          "feature": "f_h",
+          "at": "a",
+          "part": "wall"
+         }
+        },
+        "standard": "M8",
+        "length": 8
+       }
+      ]
+     }
+    ]
+   },
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "thread_length",
+    "status": "error",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 400,
+        "loops": 1,
+        "outer_curves": [
+         "o.bottom",
+         "o.left",
+         "o.right",
+         "o.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "o.bottom",
+         "start": [
+          -10,
+          -10
+         ],
+         "end": [
+          10,
+          -10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.right",
+         "start": [
+          10,
+          -10
+         ],
+         "end": [
+          10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.top",
+         "start": [
+          10,
+          10
+         ],
+         "end": [
+          -10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.left",
+         "start": [
+          -10,
+          10
+         ],
+         "end": [
+          -10,
+          -10
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1999.9999999999998,
+        "area": 1200.0000000000002,
+        "centroid": [
+         0,
+         -1.7763568394002508e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "h",
+      "feature_id": "f_h",
+      "type": "hole",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1818.4159446225092,
+        "area": 1234.1805280710573,
+        "centroid": [
+         -1.706470603166367e-17,
+         -1.8601977231680387e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true,
+        "change": "modified"
+       }
+      ],
+      "holes": [
+       {
+        "at": "a",
+        "center": [
+         0,
+         0,
+         5
+        ],
+        "axis": [
+         0,
+         0,
+         -1
+        ],
+        "d": 6.8,
+        "depth": null,
+        "kind": "simple"
+       }
+      ],
+      "refs": [
+       {
+        "field": "/on/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_e/cap:end@o.bottom",
+          "name": "e/cap:end",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -2.8421709430404003e-16,
+            1.9984014443252818e-16,
+            5
+           ],
+           "normal": [
+            0,
+            0,
+            1
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "t",
+      "feature_id": "f_t",
+      "type": "thread",
+      "status": "error",
+      "error": {
+       "code": "THREAD_LENGTH_OUT_OF_RANGE",
+       "message": "the thread spans [0, 8] mm along its axis but face f_h/wall spans [0, 5] mm",
+       "details": {
+        "end": 8,
+        "face": "f_h/wall",
+        "face_end": 5,
+        "face_start": 0,
+        "start": 0
+       }
+      },
+      "refs": [
+       {
+        "field": "/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_h/wall@a",
+          "name": "h/wall",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -0.9720183258907651,
+            3.2580945925697913,
+            2.5
+           ],
+           "normal": [
+            0.28588774290904856,
+            -0.9582631154617033,
+            0
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1818.4159446225092,
+        "area": 1234.1805280710573,
+        "centroid": [
+         -1.706470603166367e-17,
+         -1.8601977231680387e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "thread_end_close",
+   "ir_sha256": "af929eed5230d34899e66ca9cebdaf240a43889367e28414faafef2931ccbc2c",
+   "ir": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p_p",
+      "name": "p",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "f_s",
+        "name": "s",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "o",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "f_e",
+        "name": "e",
+        "sketch": "f_s",
+        "distance": 5
+       },
+       {
+        "type": "hole",
+        "id": "f_h",
+        "name": "h",
+        "on": {
+         "face": {
+          "kind": "face",
+          "q": {
+           "op": "cap",
+           "feature": "f_e",
+           "end": "end"
+          }
+         }
+        },
+        "at": {
+         "list": [
+          {
+           "id": "a",
+           "at": [
+            0,
+            0
+           ]
+          }
+         ]
+        },
+        "d": 6.8,
+        "depth": "through"
+       },
+       {
+        "type": "thread",
+        "id": "f_t",
+        "name": "t",
+        "face": {
+         "kind": "face",
+         "q": {
+          "op": "hole_face",
+          "feature": "f_h",
+          "at": "a",
+          "part": "wall"
+         }
+        },
+        "standard": "M8",
+        "length": 4.9995
+       }
+      ]
+     }
+    ]
+   },
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "thread_end_close",
+    "status": "error",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 400,
+        "loops": 1,
+        "outer_curves": [
+         "o.bottom",
+         "o.left",
+         "o.right",
+         "o.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "o.bottom",
+         "start": [
+          -10,
+          -10
+         ],
+         "end": [
+          10,
+          -10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.right",
+         "start": [
+          10,
+          -10
+         ],
+         "end": [
+          10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.top",
+         "start": [
+          10,
+          10
+         ],
+         "end": [
+          -10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.left",
+         "start": [
+          -10,
+          10
+         ],
+         "end": [
+          -10,
+          -10
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1999.9999999999998,
+        "area": 1200.0000000000002,
+        "centroid": [
+         0,
+         -1.7763568394002508e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "h",
+      "feature_id": "f_h",
+      "type": "hole",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1818.4159446225092,
+        "area": 1234.1805280710573,
+        "centroid": [
+         -1.706470603166367e-17,
+         -1.8601977231680387e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true,
+        "change": "modified"
+       }
+      ],
+      "holes": [
+       {
+        "at": "a",
+        "center": [
+         0,
+         0,
+         5
+        ],
+        "axis": [
+         0,
+         0,
+         -1
+        ],
+        "d": 6.8,
+        "depth": null,
+        "kind": "simple"
+       }
+      ],
+      "refs": [
+       {
+        "field": "/on/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_e/cap:end@o.bottom",
+          "name": "e/cap:end",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -2.8421709430404003e-16,
+            1.9984014443252818e-16,
+            5
+           ],
+           "normal": [
+            0,
+            0,
+            1
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "t",
+      "feature_id": "f_t",
+      "type": "thread",
+      "status": "error",
+      "error": {
+       "code": "THREAD_END_TOO_CLOSE",
+       "message": "the thread ends 0.0004999999999997229 mm from the end of face f_h/wall; end it there or at least 0.001 mm before",
+       "details": {
+        "distance": 0.0004999999999997229,
+        "face": "f_h/wall",
+        "margin": 0.001
+       }
+      },
+      "refs": [
+       {
+        "field": "/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_h/wall@a",
+          "name": "h/wall",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -0.9720183258907651,
+            3.2580945925697913,
+            2.5
+           ],
+           "normal": [
+            0.28588774290904856,
+            -0.9582631154617033,
+            0
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1818.4159446225092,
+        "area": 1234.1805280710573,
+        "centroid": [
+         -1.706470603166367e-17,
+         -1.8601977231680387e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "thread_end_inside",
+   "ir_sha256": "e2cf8c1e45f5a138608db0007261ba8d2657de05d3e9d5e115468503ecda792a",
+   "ir": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p_p",
+      "name": "p",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "f_s",
+        "name": "s",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "o",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "f_e",
+        "name": "e",
+        "sketch": "f_s",
+        "distance": 5
+       },
+       {
+        "type": "hole",
+        "id": "f_h",
+        "name": "h",
+        "on": {
+         "face": {
+          "kind": "face",
+          "q": {
+           "op": "cap",
+           "feature": "f_e",
+           "end": "end"
+          }
+         }
+        },
+        "at": {
+         "list": [
+          {
+           "id": "a",
+           "at": [
+            0,
+            0
+           ]
+          }
+         ]
+        },
+        "d": 6.8,
+        "depth": "through"
+       },
+       {
+        "type": "thread",
+        "id": "f_t",
+        "name": "t",
+        "face": {
+         "kind": "face",
+         "q": {
+          "op": "hole_face",
+          "feature": "f_h",
+          "at": "a",
+          "part": "wall"
+         }
+        },
+        "standard": "M8",
+        "length": 3,
+        "offset": 1
+       }
+      ]
+     }
+    ]
+   },
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "thread_end_inside",
+    "status": "error",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 400,
+        "loops": 1,
+        "outer_curves": [
+         "o.bottom",
+         "o.left",
+         "o.right",
+         "o.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "o.bottom",
+         "start": [
+          -10,
+          -10
+         ],
+         "end": [
+          10,
+          -10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.right",
+         "start": [
+          10,
+          -10
+         ],
+         "end": [
+          10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.top",
+         "start": [
+          10,
+          10
+         ],
+         "end": [
+          -10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.left",
+         "start": [
+          -10,
+          10
+         ],
+         "end": [
+          -10,
+          -10
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1999.9999999999998,
+        "area": 1200.0000000000002,
+        "centroid": [
+         0,
+         -1.7763568394002508e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "h",
+      "feature_id": "f_h",
+      "type": "hole",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1818.4159446225092,
+        "area": 1234.1805280710573,
+        "centroid": [
+         -1.706470603166367e-17,
+         -1.8601977231680387e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true,
+        "change": "modified"
+       }
+      ],
+      "holes": [
+       {
+        "at": "a",
+        "center": [
+         0,
+         0,
+         5
+        ],
+        "axis": [
+         0,
+         0,
+         -1
+        ],
+        "d": 6.8,
+        "depth": null,
+        "kind": "simple"
+       }
+      ],
+      "refs": [
+       {
+        "field": "/on/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_e/cap:end@o.bottom",
+          "name": "e/cap:end",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -2.8421709430404003e-16,
+            1.9984014443252818e-16,
+            5
+           ],
+           "normal": [
+            0,
+            0,
+            1
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "t",
+      "feature_id": "f_t",
+      "type": "thread",
+      "status": "error",
+      "error": {
+       "code": "THREAD_END_UNSUPPORTED",
+       "message": "the thread cannot end on face f_h/wall: a thread must start at an end of its cylinder (both ends are inside it)",
+       "details": {
+        "face": "f_h/wall",
+        "reason": "a thread must start at an end of its cylinder (both ends are inside it)"
+       }
+      },
+      "refs": [
+       {
+        "field": "/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_h/wall@a",
+          "name": "h/wall",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -0.9720183258907651,
+            3.2580945925697913,
+            2.5
+           ],
+           "normal": [
+            0.28588774290904856,
+            -0.9582631154617033,
+            0
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1818.4159446225092,
+        "area": 1234.1805280710573,
+        "centroid": [
+         -1.706470603166367e-17,
+         -1.8601977231680387e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "thread_interference",
+   "ir_sha256": "7a660250bd670362f7d3981d35207e5bb62deb961a705ce9d8e58c7ec1c087b8",
+   "ir": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p_p",
+      "name": "p",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "f_s",
+        "name": "s",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "o",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "f_e",
+        "name": "e",
+        "sketch": "f_s",
+        "distance": 5
+       },
+       {
+        "type": "hole",
+        "id": "f_h",
+        "name": "h",
+        "on": {
+         "face": {
+          "kind": "face",
+          "q": {
+           "op": "cap",
+           "feature": "f_e",
+           "end": "end"
+          }
+         }
+        },
+        "at": {
+         "list": [
+          {
+           "id": "a",
+           "at": [
+            6.2,
+            0
+           ]
+          }
+         ]
+        },
+        "d": 6.8,
+        "depth": "through"
+       },
+       {
+        "type": "thread",
+        "id": "f_t",
+        "name": "t",
+        "face": {
+         "kind": "face",
+         "q": {
+          "op": "hole_face",
+          "feature": "f_h",
+          "at": "a",
+          "part": "wall"
+         }
+        },
+        "standard": "M8"
+       }
+      ]
+     }
+    ]
+   },
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "thread_interference",
+    "status": "error",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 400,
+        "loops": 1,
+        "outer_curves": [
+         "o.bottom",
+         "o.left",
+         "o.right",
+         "o.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "o.bottom",
+         "start": [
+          -10,
+          -10
+         ],
+         "end": [
+          10,
+          -10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.right",
+         "start": [
+          10,
+          -10
+         ],
+         "end": [
+          10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.top",
+         "start": [
+          10,
+          10
+         ],
+         "end": [
+          -10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.left",
+         "start": [
+          -10,
+          10
+         ],
+         "end": [
+          -10,
+          -10
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1999.9999999999998,
+        "area": 1200.0000000000002,
+        "centroid": [
+         0,
+         -1.7763568394002508e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "h",
+      "feature_id": "f_h",
+      "type": "hole",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1818.4159446225094,
+        "area": 1234.1805280710573,
+        "centroid": [
+         -0.6191219047928844,
+         -8.491308238494383e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true,
+        "change": "modified"
+       }
+      ],
+      "holes": [
+       {
+        "at": "a",
+        "center": [
+         6.2,
+         0,
+         5
+        ],
+        "axis": [
+         0,
+         0,
+         -1
+        ],
+        "d": 6.8,
+        "depth": null,
+        "kind": "simple"
+       }
+      ],
+      "refs": [
+       {
+        "field": "/on/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_e/cap:end@o.bottom",
+          "name": "e/cap:end",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -2.8421709430404003e-16,
+            1.9984014443252818e-16,
+            5
+           ],
+           "normal": [
+            0,
+            0,
+            1
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "t",
+      "feature_id": "f_t",
+      "type": "thread",
+      "status": "error",
+      "error": {
+       "code": "THREAD_INTERFERENCE",
+       "message": "face f_e/cap:end comes within the thread's region (radius 3.39999..4.00001 mm, axial -0.000009999999999999999..5.00001 mm)",
+       "details": {
+        "face": "f_e/cap:end",
+        "r_in": 3.39999,
+        "r_out": 4.00001,
+        "z_end": 5.00001,
+        "z_start": -0.000009999999999999999
+       }
+      },
+      "refs": [
+       {
+        "field": "/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_h/wall@a",
+          "name": "h/wall",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            6.199999999999999,
+            3.4,
+            2.5
+           ],
+           "normal": [
+            1.8369701987210297e-16,
+            -1,
+            0
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1818.4159446225094,
+        "area": 1234.1805280710573,
+        "centroid": [
+         -0.6191219047928844,
+         -8.491308238494383e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "thread_invalid",
+   "ir_sha256": "fbdeefaf7bd4b3669baf981cf3b55924a27c58ab67808e2dc90fd68ace4bba2c",
+   "ir": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p_p",
+      "name": "p",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "f_s",
+        "name": "s",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "o",
+          "center": [
+           0,
+           0
+          ],
+          "w": 20,
+          "h": 20
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "f_e",
+        "name": "e",
+        "sketch": "f_s",
+        "distance": 5
+       },
+       {
+        "type": "hole",
+        "id": "f_h",
+        "name": "h",
+        "on": {
+         "face": {
+          "kind": "face",
+          "q": {
+           "op": "cap",
+           "feature": "f_e",
+           "end": "end"
+          }
+         }
+        },
+        "at": {
+         "list": [
+          {
+           "id": "a",
+           "at": [
+            0,
+            0
+           ]
+          }
+         ]
+        },
+        "d": 6.8,
+        "depth": "through"
+       },
+       {
+        "type": "thread",
+        "id": "f_t",
+        "name": "t",
+        "face": {
+         "kind": "face",
+         "q": {
+          "op": "hole_face",
+          "feature": "f_h",
+          "at": "a",
+          "part": "wall"
+         }
+        },
+        "major": 1,
+        "pitch": 1
+       }
+      ]
+     }
+    ]
+   },
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "thread_invalid",
+    "status": "error",
+    "features": [
+     {
+      "part": "p",
+      "feature": "s",
+      "feature_id": "f_s",
+      "type": "sketch",
+      "status": "ok",
+      "regions": [
+       {
+        "area": 400,
+        "loops": 1,
+        "outer_curves": [
+         "o.bottom",
+         "o.left",
+         "o.right",
+         "o.top"
+        ]
+       }
+      ],
+      "sketch": {
+       "mode": "explicit",
+       "solved": [
+        {
+         "kind": "line",
+         "id": "o.bottom",
+         "start": [
+          -10,
+          -10
+         ],
+         "end": [
+          10,
+          -10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.right",
+         "start": [
+          10,
+          -10
+         ],
+         "end": [
+          10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.top",
+         "start": [
+          10,
+          10
+         ],
+         "end": [
+          -10,
+          10
+         ]
+        },
+        {
+         "kind": "line",
+         "id": "o.left",
+         "start": [
+          -10,
+          10
+         ],
+         "end": [
+          -10,
+          -10
+         ]
+        }
+       ]
+      },
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "e",
+      "feature_id": "f_e",
+      "type": "extrude",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1999.9999999999998,
+        "area": 1200.0000000000002,
+        "centroid": [
+         0,
+         -1.7763568394002508e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 6,
+        "edges": 12,
+        "shells": 1,
+        "face_types": {
+         "plane": 6
+        },
+        "edge_types": {
+         "line": 12
+        },
+        "valid": true,
+        "change": "created"
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "h",
+      "feature_id": "f_h",
+      "type": "hole",
+      "status": "ok",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1818.4159446225092,
+        "area": 1234.1805280710573,
+        "centroid": [
+         -1.706470603166367e-17,
+         -1.8601977231680387e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true,
+        "change": "modified"
+       }
+      ],
+      "holes": [
+       {
+        "at": "a",
+        "center": [
+         0,
+         0,
+         5
+        ],
+        "axis": [
+         0,
+         0,
+         -1
+        ],
+        "d": 6.8,
+        "depth": null,
+        "kind": "simple"
+       }
+      ],
+      "refs": [
+       {
+        "field": "/on/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_e/cap:end@o.bottom",
+          "name": "e/cap:end",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -2.8421709430404003e-16,
+            1.9984014443252818e-16,
+            5
+           ],
+           "normal": [
+            0,
+            0,
+            1
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     },
+     {
+      "part": "p",
+      "feature": "t",
+      "feature_id": "f_t",
+      "type": "thread",
+      "status": "error",
+      "error": {
+       "code": "THREAD_INVALID_VALUE",
+       "message": "major = 1 is invalid: expected > 2 × pitch",
+       "details": {
+        "expected": "> 2 × pitch",
+        "field": "major",
+        "value": 1
+       }
+      },
+      "refs": [
+       {
+        "field": "/face",
+        "status": "exact",
+        "members": [
+         {
+          "key": "f_h/wall@a",
+          "name": "h/wall",
+          "via": "named",
+          "status": "exact",
+          "probe": {
+           "kind": "face",
+           "point": [
+            -0.9720183258907651,
+            3.2580945925697913,
+            2.5
+           ],
+           "normal": [
+            0.28588774290904856,
+            -0.9582631154617033,
+            0
+           ]
+          }
+         }
+        ]
+       }
+      ],
+      "warnings": []
+     }
+    ],
+    "params": [],
+    "parts": [
+     {
+      "part": "p",
+      "part_id": "p_p",
+      "bodies": [
+       {
+        "origin": {
+         "feature": "f_e",
+         "member": "o.bottom"
+        },
+        "volume": 1818.4159446225092,
+        "area": 1234.1805280710573,
+        "centroid": [
+         -1.706470603166367e-17,
+         -1.8601977231680387e-17,
+         2.5
+        ],
+        "bbox_min": [
+         -10,
+         -10,
+         0
+        ],
+        "bbox_max": [
+         10,
+         10,
+         5
+        ],
+        "faces": 7,
+        "edges": 14,
+        "shells": 1,
+        "face_types": {
+         "cylinder": 1,
+         "plane": 6
+        },
+        "edge_types": {
+         "circle": 2,
+         "line": 12
+        },
+        "valid": true
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
    "label": "ok_plate",
    "ir_sha256": "5ac0bec02ae57508dd4f3574ea000be1e22ed216587d7898d9438c9b11f51ff8",
    "ir": {
@@ -11396,7 +13992,7 @@
       "status": "error",
       "error": {
        "code": "FILLET_RADIUS_TOO_LARGE",
-       "message": "4/4 edges failed: max feasible r = 9.999 (r = 12) (face width at f_e/side:o.bottom, edge e/edge:{e/side:o.bottom|e/side:o.left})",
+       "message": "4/4 edges failed: max feasible r = 9.999 (r = 12) (face width 20 at e/side:o.bottom, edge e/edge:{e/side:o.bottom|e/side:o.left})",
        "details": {
         "edges": [
          {
@@ -11738,7 +14334,7 @@
       "status": "error",
       "error": {
        "code": "FILLET_RADIUS_TOO_LARGE",
-       "message": "4/4 edges failed: max feasible r = 4.999 (r = 6) (face width at f_e/side:o.bottom, edge e/edge:{e/cap:end|e/side:o.bottom})",
+       "message": "4/4 edges failed: max feasible r = 4.999 (r = 6) (face width 5 at e/side:o.bottom, edge e/edge:{e/cap:end|e/side:o.bottom})",
        "details": {
         "edges": [
          {
@@ -12556,62 +15152,62 @@
       "status": "error",
       "error": {
        "code": "FILLET_RADIUS_TOO_LARGE",
-       "message": "12/12 edges failed: max feasible r = 2.499 (r = 2.5) (adjacent blend at f_e/side:o.bottom, edge e/edge:{e/cap:end|e/side:o.bottom})",
+       "message": "12/12 edges failed: max feasible r = 2.499 (r = 2.5) (face width 5 at e/side:o.bottom, edge e/edge:{e/cap:end|e/side:o.bottom})",
        "details": {
         "edges": [
          {
           "face": "f_e/side:o.bottom",
           "key": "f_e/edge:{f_e/cap:end@o.bottom|f_e/side:o.bottom}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:end|e/side:o.bottom}"
          },
          {
-          "face": "f_e/side:o.bottom",
+          "face": "f_e/side:o.left",
           "key": "f_e/edge:{f_e/cap:end@o.bottom|f_e/side:o.left}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:end|e/side:o.left}"
          },
          {
-          "face": "f_e/side:o.bottom",
+          "face": "f_e/side:o.right",
           "key": "f_e/edge:{f_e/cap:end@o.bottom|f_e/side:o.right}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:end|e/side:o.right}"
          },
          {
-          "face": "f_e/side:o.right",
+          "face": "f_e/side:o.top",
           "key": "f_e/edge:{f_e/cap:end@o.bottom|f_e/side:o.top}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:end|e/side:o.top}"
          },
          {
           "face": "f_e/side:o.bottom",
           "key": "f_e/edge:{f_e/cap:start@o.bottom|f_e/side:o.bottom}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:start|e/side:o.bottom}"
          },
          {
-          "face": "f_e/side:o.bottom",
+          "face": "f_e/side:o.left",
           "key": "f_e/edge:{f_e/cap:start@o.bottom|f_e/side:o.left}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:start|e/side:o.left}"
          },
          {
-          "face": "f_e/side:o.bottom",
+          "face": "f_e/side:o.right",
           "key": "f_e/edge:{f_e/cap:start@o.bottom|f_e/side:o.right}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:start|e/side:o.right}"
          },
          {
-          "face": "f_e/side:o.right",
+          "face": "f_e/side:o.top",
           "key": "f_e/edge:{f_e/cap:start@o.bottom|f_e/side:o.top}",
-          "limit": "adjacent-blend",
+          "limit": "face-width",
           "max_r": 2.499,
           "name": "e/edge:{e/cap:start|e/side:o.top}"
          },
@@ -14707,7 +17303,7 @@
       "status": "error",
       "error": {
        "code": "SHELL_THICKNESS_TOO_LARGE",
-       "message": "shell thickness 12 is too large: max feasible thickness = 4.999",
+       "message": "shell thickness 12 is too large: max feasible thickness = 4.999 (an offset edge collapses or turns over)",
        "details": {
         "limits": [
          {
@@ -15043,7 +17639,7 @@
       "status": "error",
       "error": {
        "code": "SHELL_THICKNESS_TOO_LARGE",
-       "message": "shell thickness 12 is too large: max feasible thickness = 4.999",
+       "message": "shell thickness 12 is too large: max feasible thickness = 4.999 (an offset edge collapses or turns over)",
        "details": {
         "limits": [
          {
@@ -22329,7 +24925,8 @@
           "pattern",
           "datum_plane",
           "datum_axis",
-          "tag"
+          "tag",
+          "thread"
          ],
          "type": "\"loft\""
         },
@@ -23799,6 +26396,155 @@
         },
         "message": "mode \"offset\" takes from, distance; missing [distance], not allowed []",
         "path": "/parts/0/features/0"
+       }
+      ]
+     }
+    },
+    "params": [],
+    "parts": []
+   }
+  },
+  {
+   "label": "invalid:hole-thread-standard-unknown",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "doc",
+    "status": "error",
+    "features": [],
+    "error": {
+     "code": "THREAD_STANDARD_UNKNOWN",
+     "message": "THREAD_STANDARD_UNKNOWN at /parts/0/features/2/thread/standard: \"M7.5\" is not a thread designation of THREAD_STANDARDS",
+     "details": {
+      "errors": [
+       {
+        "code": "THREAD_STANDARD_UNKNOWN",
+        "details": {
+         "allowed": [
+          "#10-24 UNC",
+          "#10-32 UNF",
+          "#2-56 UNC",
+          "#2-64 UNF",
+          "#4-40 UNC",
+          "#4-48 UNF",
+          "#6-32 UNC",
+          "#6-40 UNF",
+          "#8-32 UNC",
+          "#8-36 UNF",
+          "1-12 UNF",
+          "1-8 UNC",
+          "1/2-13 UNC",
+          "1/2-20 UNF",
+          "1/4-20 UNC",
+          "1/4-28 UNF",
+          "3/4-10 UNC",
+          "3/4-16 UNF",
+          "3/8-16 UNC",
+          "3/8-24 UNF",
+          "5/16-18 UNC",
+          "5/16-24 UNF",
+          "5/8-11 UNC",
+          "5/8-18 UNF",
+          "7/16-14 UNC",
+          "7/16-20 UNF",
+          "7/8-14 UNF",
+          "7/8-9 UNC",
+          "9/16-12 UNC",
+          "9/16-18 UNF",
+          "M1.6",
+          "M1.6x0.2",
+          "M10",
+          "M10x0.75",
+          "M10x1",
+          "M10x1.25",
+          "M12",
+          "M12x1",
+          "M12x1.25",
+          "M12x1.5",
+          "M14",
+          "M14x1",
+          "M14x1.25",
+          "M14x1.5",
+          "M16",
+          "M16x1",
+          "M16x1.5",
+          "M18",
+          "M18x1",
+          "M18x1.5",
+          "M18x2",
+          "M2",
+          "M2.5",
+          "M2.5x0.35",
+          "M20",
+          "M20x1",
+          "M20x1.5",
+          "M20x2",
+          "M22",
+          "M22x1",
+          "M22x1.5",
+          "M22x2",
+          "M24",
+          "M24x1",
+          "M24x1.5",
+          "M24x2",
+          "M27",
+          "M27x1",
+          "M27x1.5",
+          "M27x2",
+          "M2x0.25",
+          "M3",
+          "M30",
+          "M30x1.5",
+          "M30x2",
+          "M30x3",
+          "M3x0.35",
+          "M4",
+          "M4x0.5",
+          "M5",
+          "M5x0.5",
+          "M6",
+          "M6x0.75",
+          "M8",
+          "M8x0.75",
+          "M8x1"
+         ],
+         "field": "standard",
+         "value": "M7.5"
+        },
+        "message": "\"M7.5\" is not a thread designation of THREAD_STANDARDS",
+        "path": "/parts/0/features/2/thread/standard"
+       }
+      ]
+     }
+    },
+    "params": [],
+    "parts": []
+   }
+  },
+  {
+   "label": "invalid:thread-size-required",
+   "report": {
+    "schema": "aicad.metrics/1",
+    "engine": "forge 0.0.1",
+    "document": "doc",
+    "status": "error",
+    "features": [],
+    "error": {
+     "code": "THREAD_SIZE_REQUIRED",
+     "message": "THREAD_SIZE_REQUIRED at /parts/0/features/2: a thread needs a standard designation, or both major and pitch",
+     "details": {
+      "errors": [
+       {
+        "code": "THREAD_SIZE_REQUIRED",
+        "details": {
+         "allowed": [
+          "standard",
+          "major + pitch"
+         ],
+         "field": "standard"
+        },
+        "message": "a thread needs a standard designation, or both major and pitch",
+        "path": "/parts/0/features/2"
        }
       ]
      }

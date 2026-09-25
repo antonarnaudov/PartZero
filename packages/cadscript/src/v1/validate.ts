@@ -70,6 +70,18 @@ const RESERVED_ALL: ReadonlySet<string> = new Set(v1.RESERVED_NAMES);
 const RESERVED_V0: ReadonlySet<string> = new Set(v1.RESERVED_NAMES_V0);
 const FEATURE_TYPES: readonly string[] = v1.FEATURE_TYPES;
 const HOLE_SIZE_NAMES: readonly string[] = Object.keys(v1.HOLE_SIZES.sizes);
+const THREAD_NAMES: readonly string[] = Object.keys(v1.THREAD_STANDARDS.threads);
+
+/** The `THREAD_STANDARDS` row a designation names (case, spaces and `×` ignored; `M8x1.25` is the coarse `M8`). */
+export function threadStandard(designation: string): { designation: string; family: string; major: number; pitch: number; minor: number } | undefined {
+  const key = (s: string): string => [...s].filter((c) => !/\s/.test(c)).map((c) => (c === "×" ? "X" : c.toUpperCase())).join("");
+  const k = key(designation);
+  for (const [name, row] of Object.entries(v1.THREAD_STANDARDS.threads) as [string, { family: string; major: number; pitch: number; minor: number }][]) {
+    const rk = key(name);
+    if (rk === k || (row.family === "metric_coarse" && k === `${rk}X${String(row.pitch)}`)) return { designation: name, family: row.family, major: row.major, pitch: row.pitch, minor: row.minor };
+  }
+  return undefined;
+}
 const PARAM_UNITS: readonly string[] = v1.PARAM_UNITS;
 const CONSTRAINT_TYPES: readonly string[] = v1.CONSTRAINT_TYPES;
 const DIMENSION_TYPES: readonly string[] = v1.DIMENSION_TYPES;
@@ -425,10 +437,19 @@ export class Walker {
         if (isObj(f["thread"])) {
           this.opt(`${fp}/thread/pitch`, f["thread"], "pitch", "length");
           this.opt(`${fp}/thread/depth`, f["thread"], "depth", "length");
+          this.opt(`${fp}/thread/starts`, f["thread"], "starts", "count");
+          this.b(`${fp}/thread/modeled`, f["thread"]["modeled"]);
         }
         this.targets(`${fp}/targets`, f["targets"]);
         break;
       }
+      case "thread":
+        this.r(`${fp}/face`, f["face"]);
+        for (const k of ["major", "pitch", "length", "offset"]) this.opt(`${fp}/${k}`, f, k, "length");
+        this.opt(`${fp}/starts`, f, "starts", "count");
+        this.b(`${fp}/flip`, f["flip"]);
+        this.b(`${fp}/modeled`, f["modeled"]);
+        break;
       case "fillet":
         this.r(`${fp}/edges`, f["edges"]);
         this.s(`${fp}/r`, f["r"], "length");
@@ -1011,6 +1032,9 @@ class Validator {
       case "tag":
         this.checkRef(f["target"], `${fp}/target`, ANY_SOME, ctx);
         break;
+      case "thread":
+        this.thread(f, fp, ctx);
+        break;
       default:
         break;
     }
@@ -1526,13 +1550,41 @@ class Validator {
     }
   }
 
+  // ── threads (§6.13) ──
+
+  /** A `THREAD_STANDARDS` designation (`THREAD_STANDARD_UNKNOWN` otherwise). */
+  private threadStandard(path: string, s: string): void {
+    if (threadStandard(s) === undefined) {
+      this.err("THREAD_STANDARD_UNKNOWN", path, `${JSON.stringify(s)} is not a thread designation of THREAD_STANDARDS`, { field: "standard", value: s, allowed: THREAD_NAMES });
+    }
+  }
+
+  /** A literal `starts` is a count in `[1, 8]` (`INVALID_COUNT`). */
+  private threadStarts(fp: string, v: unknown): void {
+    const n = lit(v);
+    if (n !== undefined && !(Number.isInteger(n) && n >= 1 && n <= 8)) this.range("INVALID_COUNT", fp, "starts", n, "an integer in [1, 8]");
+  }
+
+  private thread(t: Obj, fp: string, ctx: PartCtx): void {
+    this.checkRef(t["face"], `${fp}/face`, FACE_ONE, ctx);
+    if (typeof t["standard"] === "string") this.threadStandard(`${fp}/standard`, t["standard"]);
+    else if (!has(t, "major") || !has(t, "pitch")) {
+      this.err("THREAD_SIZE_REQUIRED", fp, "a thread needs a standard designation, or both major and pitch", { field: "standard", allowed: ["standard", "major + pitch"] });
+    }
+    for (const f of ["major", "pitch", "length"]) if (has(t, f)) this.positiveLen(fp, f, t[f]);
+    const o = lit(t["offset"]);
+    if (o !== undefined && !(o >= 0)) this.range("INVALID_VALUE", fp, "offset", o, ">= 0");
+    this.threadStarts(fp, t["starts"]);
+  }
+
   // ── holes ──
 
   private hole(h: Obj, fp: string, ctx: PartCtx): void {
     this.plane(h["on"], `${fp}/on`, ctx);
     const conflict = (field: string, allowed: unknown, message: string): void => this.err("HOLE_OPTIONS_CONFLICT", `${fp}/${field}`, message, { field, allowed });
     const size = typeof h["size"] === "string" && HOLE_SIZE_NAMES.includes(h["size"]) ? h["size"] : undefined;
-    if (!has(h, "size") && !has(h, "d")) {
+    const threadStd = isObj(h["thread"]) && typeof h["thread"]["standard"] === "string" ? h["thread"]["standard"] : undefined;
+    if (!has(h, "size") && !has(h, "d") && threadStd === undefined) {
       this.err("HOLE_SIZE_REQUIRED", fp, 'a hole needs a standard size ("M3", …) or an explicit diameter d', { field: "size", allowed: HOLE_SIZE_NAMES });
     }
     const presets: [string, boolean, (s: string) => boolean][] = [
@@ -1553,7 +1605,7 @@ class Validator {
     const threaded = thread !== undefined && thread !== false;
     if (threaded && has(h, "insert")) conflict("thread", ["thread", "insert"], "thread excludes insert");
     if (threaded && (h["fit"] === "close" || h["fit"] === "loose")) conflict("fit", ["normal", "tap"], "a threaded hole uses the tap drill; fit close/loose contradicts it");
-    if (threaded && !has(h, "size") && !(isObj(thread) && has(thread, "pitch"))) {
+    if (threaded && !has(h, "size") && threadStd === undefined && !(isObj(thread) && has(thread, "pitch"))) {
       conflict("thread", { pitch: "required without size" }, "a thread without a standard size needs a pitch");
     }
     if (!has(h, "depth") && !has(h, "insert")) {
@@ -1583,6 +1635,12 @@ class Validator {
     }
     if (isObj(thread)) {
       for (const f of ["pitch", "depth"]) if (has(thread, f)) this.positiveLen(`${fp}/thread`, f, thread[f]);
+      if (threadStd !== undefined) this.threadStandard(`${fp}/thread/standard`, threadStd);
+      this.threadStarts(`${fp}/thread`, thread["starts"]);
+      // A modelled thread needs its major diameter: a size or a standard.
+      if (thread["modeled"] !== undefined && thread["modeled"] !== false && !has(h, "size") && threadStd === undefined) {
+        conflict("thread", { standard: "required for a modelled thread without size" }, "a modelled thread needs a size or thread.standard (its major diameter)");
+      }
     }
     this.placement(h["at"], `${fp}/at`, ctx);
     const onFace = has(h["on"], "face");

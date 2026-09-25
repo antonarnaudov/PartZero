@@ -969,18 +969,33 @@ export type HoleSize = "M2" | "M2.5" | "M3" | "M4" | "M5" | "M6" | "M8";
 /** Standard metric sizes of the `HOLE_SIZES` table (§6.5). */
 export const HoleSizeSchema = z.enum(["M2", "M2.5", "M3", "M4", "M5", "M6", "M8"]);
 
-/** A cosmetic thread (no geometry). */
+/**
+ * A hole's thread: cosmetic (no geometry) or modelled (`modeled: true`, the helical groove
+ * is cut).
+ */
 export interface ThreadOut {
   pitch: number;
   /** Thread depth, or `null` for the full (through) depth. */
   depth: number | null;
+  /** Basic major diameter, when known (a standard or a size). */
+  major?: number | null;
+  /** `true` when the groove is modelled. */
+  modeled?: boolean;
   size?: HoleSize;
+  /** The `THREAD_STANDARDS` designation, when given. */
+  standard?: string | null;
 }
-/** A cosmetic thread (no geometry). */
+/**
+ * A hole's thread: cosmetic (no geometry) or modelled (`modeled: true`, the helical groove
+ * is cut).
+ */
 export const ThreadOutSchema = z.strictObject({
   pitch: z.number(),
   depth: z.number().nullable(),
+  major: z.number().nullable().exactOptional(),
+  modeled: z.boolean().exactOptional(),
   size: HoleSizeSchema.exactOptional(),
+  standard: z.string().nullable().exactOptional(),
 });
 
 /** One hole instance (§6.5), in position order. */
@@ -1254,6 +1269,50 @@ export const SketchReportSchema = z.strictObject({
 export type Status = "ok" | "error";
 export const StatusSchema = z.enum(["ok", "error"]);
 
+/** Thread handedness. */
+export type ThreadHand = "right" | "left";
+/** Thread handedness. */
+export const ThreadHandSchema = z.enum(["right", "left"]);
+
+/** A thread feature's summary (§6.13). */
+export interface ThreadReport {
+  /** Key of the threaded face. */
+  face: string;
+  /** `internal` (a bore) or `external` (a boss). */
+  kind: string;
+  /** Basic major diameter `D`. */
+  major: number;
+  pitch: number;
+  /** Basic minor diameter `D1 = D − 1.25·H`. */
+  minor: number;
+  /** The face's (crest) diameter. */
+  crest_d: number;
+  /** Threaded length and its distance from the start end. */
+  length: number;
+  offset: number;
+  starts: number;
+  hand: ThreadHand;
+  /** `false` for a cosmetic thread (no geometry). */
+  modeled: boolean;
+  /** The `THREAD_STANDARDS` designation, when given. */
+  standard?: string | null;
+}
+/** A thread feature's summary (§6.13). */
+export const ThreadReportSchema = z.strictObject({
+  face: z.string(),
+  kind: z.string(),
+  major: z.number(),
+  pitch: z.number(),
+  minor: z.number(),
+  crest_d: z.number(),
+  length: z.number(),
+  offset: z.number(),
+  starts: z.number().int().min(0).max(4294967295),
+  hand: ThreadHandSchema,
+  modeled: z.boolean(),
+  standard: z.string().nullable().exactOptional(),
+});
+
 /**
  * - "info": Expected, informational (never blocks).
  * - "warning": Probably unintended but well-defined (the agent's L1 check explains it).
@@ -1308,6 +1367,7 @@ export interface FeatureReport {
   shell?: ShellReport;
   /** Sketches: the solve block (§4.4). */
   sketch?: SketchReport;
+  thread?: ThreadReport;
   /**
    * In the order raised.
    *
@@ -1334,6 +1394,7 @@ export const FeatureReportSchema = z.strictObject({
   removed: z.array(OriginSchema).exactOptional(),
   shell: ShellReportSchema.exactOptional(),
   sketch: SketchReportSchema.exactOptional(),
+  thread: ThreadReportSchema.exactOptional(),
   warnings: z.array(WarningSchema).exactOptional(),
 });
 
@@ -1592,6 +1653,8 @@ type __SchemaTypeChecks = [
   AssertTrue<MutuallyAssignable<SolveStatus, z.infer<typeof SolveStatusSchema>>>,
   AssertTrue<MutuallyAssignable<SketchReport, z.infer<typeof SketchReportSchema>>>,
   AssertTrue<MutuallyAssignable<Status, z.infer<typeof StatusSchema>>>,
+  AssertTrue<MutuallyAssignable<ThreadHand, z.infer<typeof ThreadHandSchema>>>,
+  AssertTrue<MutuallyAssignable<ThreadReport, z.infer<typeof ThreadReportSchema>>>,
   AssertTrue<MutuallyAssignable<Severity, z.infer<typeof SeveritySchema>>>,
   AssertTrue<MutuallyAssignable<Warning, z.infer<typeof WarningSchema>>>,
   AssertTrue<MutuallyAssignable<FeatureReport, z.infer<typeof FeatureReportSchema>>>,

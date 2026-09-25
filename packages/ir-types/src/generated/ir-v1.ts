@@ -2018,23 +2018,52 @@ export type Insert = InsertKeyword | CustomInsert;
 /** Heat-set insert hole: the `std` preset (`HOLE_SIZES`) or explicit `{ d, depth }`. */
 export const InsertSchema = z.union([InsertKeywordSchema, CustomInsertSchema]);
 
+/** Thread handedness. */
+export type ThreadHand = "right" | "left";
+/** Thread handedness. */
+export const ThreadHandSchema = z.enum(["right", "left"]);
+
 export interface ThreadSpec {
   depth?: Scalar;
+  /** @default "right" */
+  hand?: ThreadHand;
+  /**
+   * Cut the helical groove (true) or record a cosmetic thread only (false).
+   *
+   * @default false
+   */
+  modeled?: BoolScalar;
   pitch?: Scalar;
+  /**
+   * A `THREAD_STANDARDS` designation (`M8`, `M14x1`, `1/2-20 UNF`): the major diameter and
+   * pitch of the thread (`pitch` still overrides). Without it the major diameter is the
+   * hole `size`'s nominal diameter.
+   */
+  standard?: string | null;
+  /** Number of starts (a count in `[1, 8]`, default 1). */
+  starts?: Scalar;
 }
 export const ThreadSpecSchema = z.strictObject({
   depth: ScalarSchema.exactOptional(),
+  hand: ThreadHandSchema.exactOptional(),
+  modeled: BoolScalarSchema.exactOptional(),
   pitch: ScalarSchema.exactOptional(),
+  standard: z.string().nullable().exactOptional(),
+  starts: ScalarSchema.exactOptional(),
 });
 
 /**
- * Cosmetic thread: `true`, or `{ pitch?, depth? }` (defaults: the size's coarse pitch, the
- * full hole depth). `false` means no thread.
+ * Thread: `true`, or `{ pitch?, depth?, standard?, modeled?, hand?, starts? }` (defaults: the
+ * size's coarse pitch, the full hole depth, cosmetic, right hand, one start). `false` means no
+ * thread. A **cosmetic** thread changes no geometry; a **modelled** one (`modeled: true`) cuts
+ * the helical groove of the 60° basic profile into the hole's wall (§6.5, `THREAD_STANDARDS`).
  */
 export type Thread = boolean | ThreadSpec;
 /**
- * Cosmetic thread: `true`, or `{ pitch?, depth? }` (defaults: the size's coarse pitch, the
- * full hole depth). `false` means no thread.
+ * Thread: `true`, or `{ pitch?, depth?, standard?, modeled?, hand?, starts? }` (defaults: the
+ * size's coarse pitch, the full hole depth, cosmetic, right hand, one start). `false` means no
+ * thread. A **cosmetic** thread changes no geometry; a **modelled** one (`modeled: true`) cuts
+ * the helical groove of the 60° basic profile into the hole's wall (§6.5, `THREAD_STANDARDS`).
  */
 export const ThreadSchema = z.union([z.boolean(), ThreadSpecSchema]);
 
@@ -2766,10 +2795,124 @@ export const TagFeatureSchema = z.strictObject({
   v: z.number().int().min(1).max(4294967295).exactOptional(),
 });
 
+/**
+ * Thread (FM9 stretch, §6.13): a screw thread of the 60° basic profile on a cylindrical
+ * face — a bore gets a nut thread, a boss a bolt thread. `modeled` (default) cuts the
+ * exact helical groove; `false` records a cosmetic thread in the report only.
+ */
+export interface ThreadFeature {
+  type: "thread";
+  /** Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`). */
+  id: string;
+  /** The CadScript `const` name; shares one namespace with parameters (§0.3). */
+  name: string;
+  /** The cylindrical face (face, `one`). */
+  face: Ref;
+  /**
+   * Not semantic (§6.0.1).
+   *
+   * @default []
+   */
+  assumptions?: string[];
+  /**
+   * Not semantic (§6.0.1).
+   *
+   * @default ""
+   */
+  author?: string;
+  /**
+   * Not semantic (§6.0.1).
+   *
+   * @default []
+   */
+  decision_ids?: string[];
+  /**
+   * Start from the other end of the face.
+   *
+   * @default false
+   */
+  flip?: BoolScalar;
+  /** @default "right" */
+  hand?: ThreadHand;
+  /**
+   * Not semantic (§6.0.1).
+   *
+   * @default ""
+   */
+  intent?: string;
+  /** Threaded length from the start end (default: the rest of the face). */
+  length?: Scalar;
+  /** Basic major diameter (overrides the standard's). */
+  major?: Scalar;
+  /**
+   * Cut the helical groove (default) or record a cosmetic thread only.
+   *
+   * @default true
+   */
+  modeled?: BoolScalar;
+  /**
+   * Not semantic (§6.0.1).
+   *
+   * @default ""
+   */
+  note?: string;
+  /** Distance of the thread's start from the start end (default 0). */
+  offset?: Scalar;
+  /** Pitch (overrides the standard's). */
+  pitch?: Scalar;
+  /**
+   * A `THREAD_STANDARDS` designation (`M8`, `M14x1`, `1/2-20 UNF`). Required unless
+   * both `major` and `pitch` are given (`THREAD_SIZE_REQUIRED`).
+   */
+  standard?: string | null;
+  /** Number of starts (a count in `[1, 8]`, default 1). */
+  starts?: Scalar;
+  /**
+   * Suppressed features are skipped and produce no report entry. Accepts a Bool
+   * expression ([W0-3]).
+   *
+   * @default false
+   */
+  suppressed?: BoolScalar;
+  /**
+   * Behavior version (§0.2): a feature type's semantics never change for a given `v`.
+   *
+   * @default 1
+   */
+  v?: number;
+}
+/**
+ * Thread (FM9 stretch, §6.13): a screw thread of the 60° basic profile on a cylindrical
+ * face — a bore gets a nut thread, a boss a bolt thread. `modeled` (default) cuts the
+ * exact helical groove; `false` records a cosmetic thread in the report only.
+ */
+export const ThreadFeatureSchema = z.strictObject({
+  type: z.literal("thread"),
+  id: z.string(),
+  name: z.string(),
+  face: RefSchema,
+  assumptions: z.array(z.string()).exactOptional(),
+  author: z.string().exactOptional(),
+  decision_ids: z.array(z.string()).exactOptional(),
+  flip: BoolScalarSchema.exactOptional(),
+  hand: ThreadHandSchema.exactOptional(),
+  intent: z.string().exactOptional(),
+  length: ScalarSchema.exactOptional(),
+  major: ScalarSchema.exactOptional(),
+  modeled: BoolScalarSchema.exactOptional(),
+  note: z.string().exactOptional(),
+  offset: ScalarSchema.exactOptional(),
+  pitch: ScalarSchema.exactOptional(),
+  standard: z.string().nullable().exactOptional(),
+  starts: ScalarSchema.exactOptional(),
+  suppressed: BoolScalarSchema.exactOptional(),
+  v: z.number().int().min(1).max(4294967295).exactOptional(),
+});
+
 /** A feature in the timeline. `type` selects the variant. */
-export type Feature = SketchFeature | ExtrudeFeature | RevolveFeature | BooleanFeature | HoleFeature | FilletFeature | ChamferFeature | ShellFeature | DraftFeature | PatternFeature | DatumPlaneFeature | DatumAxisFeature | TagFeature;
+export type Feature = SketchFeature | ExtrudeFeature | RevolveFeature | BooleanFeature | HoleFeature | FilletFeature | ChamferFeature | ShellFeature | DraftFeature | PatternFeature | DatumPlaneFeature | DatumAxisFeature | TagFeature | ThreadFeature;
 /** A feature in the timeline. `type` selects the variant. */
-export const FeatureSchema = z.discriminatedUnion("type", [SketchFeatureSchema, ExtrudeFeatureSchema, RevolveFeatureSchema, BooleanFeatureSchema, HoleFeatureSchema, FilletFeatureSchema, ChamferFeatureSchema, ShellFeatureSchema, DraftFeatureSchema, PatternFeatureSchema, DatumPlaneFeatureSchema, DatumAxisFeatureSchema, TagFeatureSchema]);
+export const FeatureSchema = z.discriminatedUnion("type", [SketchFeatureSchema, ExtrudeFeatureSchema, RevolveFeatureSchema, BooleanFeatureSchema, HoleFeatureSchema, FilletFeatureSchema, ChamferFeatureSchema, ShellFeatureSchema, DraftFeatureSchema, PatternFeatureSchema, DatumPlaneFeatureSchema, DatumAxisFeatureSchema, TagFeatureSchema, ThreadFeatureSchema]);
 
 export interface Meta {
   /** @default "" */
@@ -2955,6 +3098,8 @@ export const IR_DEFAULTS = {
   SketchFeature: {"assumptions":[],"author":"","constraints":[],"decision_ids":[],"intent":"","note":"","suppressed":false,"v":1},
   SlotSketchCurve: {"construction":false},
   TagFeature: {"assumptions":[],"author":"","decision_ids":[],"intent":"","note":"","suppressed":false,"v":1},
+  ThreadFeature: {"assumptions":[],"author":"","decision_ids":[],"flip":false,"hand":"right","intent":"","modeled":true,"note":"","suppressed":false,"v":1},
+  ThreadSpec: {"hand":"right","modeled":false},
 } as const;
 
 // Compile-time guard: every TS type above is exactly what its zod schema accepts and returns.
@@ -3077,6 +3222,7 @@ type __SchemaTypeChecks = [
   AssertTrue<MutuallyAssignable<HoleTip, z.infer<typeof HoleTipSchema>>>,
   AssertTrue<MutuallyAssignable<InsertKeyword, z.infer<typeof InsertKeywordSchema>>>,
   AssertTrue<MutuallyAssignable<Insert, z.infer<typeof InsertSchema>>>,
+  AssertTrue<MutuallyAssignable<ThreadHand, z.infer<typeof ThreadHandSchema>>>,
   AssertTrue<MutuallyAssignable<ThreadSpec, z.infer<typeof ThreadSpecSchema>>>,
   AssertTrue<MutuallyAssignable<Thread, z.infer<typeof ThreadSchema>>>,
   AssertTrue<MutuallyAssignable<HoleFeature, z.infer<typeof HoleFeatureSchema>>>,
@@ -3098,6 +3244,7 @@ type __SchemaTypeChecks = [
   AssertTrue<MutuallyAssignable<SketchCurve, z.infer<typeof SketchCurveSchema>>>,
   AssertTrue<MutuallyAssignable<SketchFeature, z.infer<typeof SketchFeatureSchema>>>,
   AssertTrue<MutuallyAssignable<TagFeature, z.infer<typeof TagFeatureSchema>>>,
+  AssertTrue<MutuallyAssignable<ThreadFeature, z.infer<typeof ThreadFeatureSchema>>>,
   AssertTrue<MutuallyAssignable<Feature, z.infer<typeof FeatureSchema>>>,
   AssertTrue<MutuallyAssignable<Meta, z.infer<typeof MetaSchema>>>,
   AssertTrue<MutuallyAssignable<ParamUnit, z.infer<typeof ParamUnitSchema>>>,

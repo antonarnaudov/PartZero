@@ -63,6 +63,8 @@ const IR_CASES: Record<string, [string, string]> = {
   HOLE_OPTIONS_CONFLICT: [`${PLATE}const h = hole(slab.cap("end"), { at: { a: [0, 0] }, size: "M3", depth: "through", cbore: "iso4762", csink: "iso10642" });`, '"iso10642"'],
   HOLE_SIZE_REQUIRED: [`${PLATE}const h = hole(slab.cap("end"), { at: { a: [0, 0] }, depth: "through" });`, `const h = hole(slab.cap("end"), { at: { a: [0, 0] }, depth: "through" });`],
   HOLE_SIZE_UNKNOWN: [`${PLATE}const h = hole(slab.cap("end"), { at: { a: [0, 0] }, size: "M7", depth: "through" });`, '"M7"'],
+  THREAD_STANDARD_UNKNOWN: [`${PLATE}const h = hole(slab.cap("end"), { at: { a: [0, 0] }, depth: "through", thread: { standard: "M7.5", modeled: true } });`, '"M7.5"'],
+  THREAD_SIZE_REQUIRED: [`${PLATE}const t = thread(slab.cap("end"), { length: 5 });`, `const t = thread(slab.cap("end"), { length: 5 });`],
   INVALID_CARDINALITY: [`${PLATE}const s2 = sketch(slab.cap("end").some(), { c: circle({ center: [0, 0], radius: 2 }) });`, "some"],
   INVALID_ID: [`part("p");\nconst s = sketch(XY, { "a-b": line([0, 0], [10, 0]) });`, '"a-b"'],
   INVALID_NAME: [`part("p");\nconst a$b = sketch(XY, { a: line([0, 0], [10, 0]) });`, "a$b"],

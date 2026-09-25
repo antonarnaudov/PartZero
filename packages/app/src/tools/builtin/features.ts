@@ -6,10 +6,16 @@
  *   parameter expression), direction, and new body / join / cut / intersect. It previews the
  *   candidate's bodies live and commits one `addFeature`; re-editing an extrude (`feature.edit`,
  *   the timeline's double-click) commits `setField`s.
+ * - **Thread** (`feature.thread`): a screw thread of a standard (ISO metric, UNC/UNF) on a picked
+ *   cylindrical face — a hole wall gets a nut thread, a boss a bolt thread — modelled (the real
+ *   helical groove, for printing) or cosmetic. Commits one `addFeature` (`type: "thread"`, SPEC-v1
+ *   §6.13); re-editing commits `updateFeature`. `tool.start { id: "feature.thread", args }` makes it
+ *   a command the agent and MCP call like the user does.
  * - **Feature properties** ({@link featurePropertiesPanel}): the panel `feature.edit` opens for a
  *   feature no dedicated tool edits yet — its name and its top-level numbers (distance, angle,
  *   radius, thickness, …) and choices, each a `setField`.
  */
+import { v1 as irV1 } from "@aicad/ir-types";
 import type { IrOp } from "@aicad/model-ops";
 import type { RenderBody } from "../../engine/types";
 import type { AppServices } from "../../services";
@@ -18,6 +24,7 @@ import type {
   FeatureInfo,
   FieldSpec,
   NumberFieldSpec,
+  SelectionItem,
   NumberValue,
   PanelSpec,
   PanelValues,
@@ -216,6 +223,146 @@ export const extrudeTool: ToolDefinition = {
   },
 };
 
+// ─── Thread (SPEC-v1 §6.13) ──────────────────────────────────────────────────────────────────
+
+interface ThreadRow {
+  family: string;
+  major: number;
+  pitch: number;
+}
+
+const FAMILY_ORDER = ["metric_coarse", "metric_fine", "unc", "unf"];
+
+/** `THREAD_STANDARDS` as choices: metric coarse, metric fine, UNC, UNF, each by size. */
+export const THREAD_CHOICES: ChoiceFieldSpec["options"] = (Object.entries(irV1.THREAD_STANDARDS.threads) as [string, ThreadRow][])
+  .sort(([, a], [, b]) => FAMILY_ORDER.indexOf(a.family) - FAMILY_ORDER.indexOf(b.family) || a.major - b.major || a.pitch - b.pitch)
+  .map(([name, r]) => ({ value: name, label: name, hint: `Ø${+r.major.toFixed(3)} mm × P${+r.pitch.toFixed(4)} mm` }));
+
+const ID = String.raw`[A-Za-z_][A-Za-z0-9_]*`;
+
+/**
+ * The IR reference of a picked face, from its provenance key (SPEC-v1 §5.2): an extrude or
+ * revolve side `F/side:<curve>`, a cap `F/cap:start|end`, a hole wall `H/wall@<position>`. Null for
+ * any other key (a thread needs a plain bore or boss side).
+ */
+export function faceRefForKey(key: string): Json | null {
+  let m = new RegExp(`^(${ID})/side:([A-Za-z0-9_.]+)$`).exec(key);
+  if (m) return { kind: "face", q: { op: "side", feature: m[1], curve: m[2] } };
+  m = new RegExp(`^(${ID})/wall@(${ID})$`).exec(key);
+  if (m) return { kind: "face", q: { op: "hole_face", feature: m[1], at: m[2], part: "wall" } };
+  m = new RegExp(`^(${ID})/cap:(start|end)$`).exec(key);
+  if (m) return { kind: "face", q: { op: "cap", feature: m[1], end: m[2] } };
+  return null;
+}
+
+function pickedFace(values: PanelValues): { part: string; ref: Json | null } | null {
+  const sel = values["face"];
+  if (!Array.isArray(sel) || sel.length !== 1) return null;
+  const item = sel[0] as SelectionItem;
+  if (item.kind !== "face") return null;
+  return { part: item.part, ref: faceRefForKey(item.key) };
+}
+
+const THREAD_KINDS: ChoiceFieldSpec["options"] = [
+  { value: "modeled", label: "Modelled", hint: "the real helical groove (prints as a thread)" },
+  { value: "cosmetic", label: "Cosmetic", hint: "recorded only; the face stays a plain cylinder" },
+];
+
+const HANDS: ChoiceFieldSpec["options"] = [
+  { value: "right", label: "Right hand" },
+  { value: "left", label: "Left hand" },
+];
+
+function threadFields(withFace: boolean): FieldSpec[] {
+  const fields: FieldSpec[] = [];
+  if (withFace) fields.push({ key: "face", label: "Face", kind: "selection", accepts: ["face"], min: 1, max: 1, hint: "A hole wall (nut thread) or a boss side (bolt thread)" });
+  fields.push(
+    { key: "standard", label: "Standard", kind: "choice", style: "dropdown", options: THREAD_CHOICES, default: "M8", hint: "ISO metric coarse/fine, Unified UNC/UNF" },
+    { key: "length", label: "Length", kind: "number", quantity: "length", min: 0, minExclusive: true, optional: true, hint: "Empty: the whole face" },
+    { key: "kind", label: "Geometry", kind: "choice", options: THREAD_KINDS, default: "modeled" },
+    { key: "hand", label: "Hand", kind: "choice", options: HANDS, default: "right" },
+  );
+  return fields;
+}
+
+/** The thread feature's fields from a panel (without `face`). */
+function threadJson(values: PanelValues): Json {
+  const out: Json = { standard: String(values["standard"] ?? "M8") };
+  const length = values["length"] ? irScalar(values["length"] as NumberValue) : null;
+  if (length !== null) out["length"] = length;
+  if (values["hand"] === "left") out["hand"] = "left";
+  if (values["kind"] === "cosmetic") out["modeled"] = false;
+  return out;
+}
+
+export const threadTool: ToolDefinition = {
+  id: "feature.thread",
+  label: "Thread",
+  group: "create",
+  icon: "hole",
+  order: 40,
+  description: "A standard screw thread (M8, 1/2-20 UNF, …) on a hole wall or a boss: the real helical groove, ready to print",
+  accepts: ["face"],
+  features: ["thread"],
+  enabledWhen(ctx) {
+    if (!ctx.services.doc.isV1) return { reason: "Threads need an IR v1 model (File ▸ New)." };
+    return features(ctx.services).some((f) => f.type === "hole" || f.type === "extrude" || f.type === "revolve") ? true : { reason: "Make a hole or a boss first." };
+  },
+  activate(ctx): PanelSpec {
+    return {
+      title: "Thread",
+      description: "Pick a hole wall or a boss side; the standard sets the diameter and pitch",
+      fields: threadFields(true),
+      apply: true,
+      validate: (values) => {
+        const f = pickedFace(values);
+        if (f && f.ref === null) return [{ field: "face", message: "Pick a hole wall or the side of a round extrude or revolve." }];
+        return [];
+      },
+      preview: (values, io) => {
+        const f = pickedFace(values);
+        if (!f?.ref) return { ok: true };
+        const feature = { type: "thread", id: "__preview", name: "__preview", face: f.ref, ...threadJson(values) };
+        return previewBodies(ctx.services, candidate(ctx.services, f.part, feature), io.signal);
+      },
+      toOps: (values): IrOp[] => {
+        const f = pickedFace(values);
+        if (!f?.ref) return [];
+        return [{ op: "addFeature", part: f.part, feature: { type: "thread", face: f.ref, ...threadJson(values) } as { type: string } & Json }];
+      },
+      label: (values) => `Thread ${String(values["standard"] ?? "")}`.trim(),
+    };
+  },
+  fromFeature(feature: FeatureInfo): PanelSpec {
+    const j = feature.json;
+    const before = threadJson({
+      standard: typeof j["standard"] === "string" ? j["standard"] : "M8",
+      hand: j["hand"] === "left" ? "left" : "right",
+      kind: j["modeled"] === false ? "cosmetic" : "modeled",
+    });
+    return {
+      title: `Edit ${feature.name ?? feature.id}`,
+      fields: threadFields(false),
+      initial: {
+        standard: typeof j["standard"] === "string" ? j["standard"] : "M8",
+        ...(j["length"] !== undefined ? { length: scalarText(j["length"], "") } : {}),
+        hand: j["hand"] === "left" ? "left" : "right",
+        kind: j["modeled"] === false ? "cosmetic" : "modeled",
+      },
+      toOps: (values): IrOp[] => {
+        const next = threadJson(values);
+        const set: Record<string, unknown> = {};
+        if (next["standard"] !== before["standard"]) set["standard"] = next["standard"];
+        if ((next["length"] ?? null) !== (j["length"] ?? null)) set["length"] = next["length"] ?? null;
+        if ((next["hand"] ?? "right") !== (j["hand"] ?? "right")) set["hand"] = next["hand"] ?? null;
+        if ((next["modeled"] ?? true) !== (j["modeled"] ?? true)) set["modeled"] = next["modeled"] ?? null;
+        return Object.keys(set).length ? [{ op: "updateFeature", feature: feature.id, set }] : [];
+      },
+      label: () => `Edit ${feature.name ?? feature.id}`,
+    };
+  },
+};
+
 // ─── Any feature: its name, numbers and choices ──────────────────────────────────────────────
 
 /** Top-level numeric fields and what they measure. */
@@ -283,4 +430,5 @@ export function featurePropertiesPanel(feature: FeatureInfo): PanelSpec {
 
 export function registerFeatureTools(registry: ToolRegistry): void {
   registry.register(extrudeTool);
+  registry.register(threadTool);
 }

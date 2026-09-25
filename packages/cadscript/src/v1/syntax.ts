@@ -39,6 +39,7 @@ export const FEATURE_BUILTINS: Readonly<Record<string, string>> = {
   datumPlane: "datum_plane",
   datumAxis: "datum_axis",
   tag: "tag",
+  thread: "thread",
 };
 
 export function isFeatureBuiltin(name: string): boolean {
@@ -64,6 +65,7 @@ export const HANDLE_METHODS: Readonly<Record<string, readonly string[]>> = {
   chamfer: ["faces"],
   shell: ["faces"],
   draft: ["faces"],
+  thread: ["faces"],
   sketch: ["points"],
   datum_plane: [],
   datum_axis: [],

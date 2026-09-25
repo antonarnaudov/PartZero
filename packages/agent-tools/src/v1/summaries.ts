@@ -187,9 +187,15 @@ export function measureTextV1(report: Report, options: { feature?: string | unde
       lines.push(`sketch: ${f.sketch.mode}${f.sketch.status ? `, ${f.sketch.status}` : ""}${f.sketch.dof !== undefined && f.sketch.dof !== null ? `, ${f.sketch.dof} DOF` : ""}${dims2.length ? `; dimensions ${capList(dims2, 12, (x) => x).join(", ")}` : ""}`);
     }
     for (const h of (f.holes ?? []).slice(0, 12)) {
-      lines.push(`  hole ${ident(h.at)}: Ø${num(h.d)} ${h.depth === null ? "through" : `depth ${num(h.depth)}`} ${h.kind}${h.size ? ` ${h.size}` : ""} at ${vec(h.center)} axis ${vec(h.axis)}${h.cbore ? `, cbore Ø${num(h.cbore.d)}×${num(h.cbore.depth)}` : ""}${h.csink ? `, csink Ø${num(h.csink.d)} ${num(h.csink.angle)}°` : ""}${h.thread ? `, thread P${num(h.thread.pitch)}` : ""}`);
+      lines.push(`  hole ${ident(h.at)}: Ø${num(h.d)} ${h.depth === null ? "through" : `depth ${num(h.depth)}`} ${h.kind}${h.size ? ` ${h.size}` : ""} at ${vec(h.center)} axis ${vec(h.axis)}${h.cbore ? `, cbore Ø${num(h.cbore.d)}×${num(h.cbore.depth)}` : ""}${h.csink ? `, csink Ø${num(h.csink.d)} ${num(h.csink.angle)}°` : ""}${h.thread ? `, ${h.thread.modeled ? "modelled " : ""}thread ${h.thread.standard ?? ""}${h.thread.standard ? " " : ""}P${num(h.thread.pitch)}` : ""}`);
     }
     if ((f.holes?.length ?? 0) > 12) lines.push(`  … ${f.holes!.length - 12} more holes`);
+    if (f.thread) {
+      const t = f.thread;
+      lines.push(
+        `thread: ${t.modeled ? "modelled" : "cosmetic"} ${t.kind} ${t.standard ?? `D${num(t.major)}×P${num(t.pitch)}`} on ${ident(t.face)}: major Ø${num(t.major)}, minor Ø${num(t.minor)}, crest Ø${num(t.crest_d)}, length ${num(t.length)}${t.offset ? ` from ${num(t.offset)}` : ""}${t.starts > 1 ? `, ${t.starts} starts` : ""}${t.hand === "left" ? ", left hand" : ""}`,
+      );
+    }
     const blend = f.fillet ?? f.chamfer;
     if (blend) lines.push(`${f.fillet ? "fillet" : "chamfer"}: ${plural(blend.edges.length, "edge")}${blend.chain_added?.length ? ` (${blend.chain_added.length} added by tangent chain)` : ""}, ${plural(blend.faces_created.length, "face")} created`);
     for (const r of f.refs ?? []) {

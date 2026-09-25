@@ -513,6 +513,16 @@ export class Printer {
         return call("datumAxis", [opts(this.datumAxisFields(f))]);
       case "tag":
         return call("tag", common.length > 0 ? [this.ref(f.target), `{ ${common.join(", ")} }`] : [this.ref(f.target)]);
+      case "thread": {
+        const fields: string[] = [];
+        if (typeof f.standard === "string") fields.push(`standard: ${formatString(f.standard)}`);
+        for (const k of ["major", "pitch", "length", "offset"] as const) if (f[k] !== undefined) fields.push(`${k}: ${this.scalar(f[k])}`);
+        if (f.flip !== undefined && f.flip !== false) fields.push(`flip: ${this.bool(f.flip)}`);
+        if (f.hand !== undefined && f.hand !== "right") fields.push(`hand: ${formatString(f.hand)}`);
+        if (f.starts !== undefined) fields.push(`starts: ${this.scalar(f.starts)}`);
+        if (f.modeled !== undefined && f.modeled !== true) fields.push(`modeled: ${this.bool(f.modeled)}`);
+        return call("thread", [this.ref(f.face), opts(fields)]);
+      }
       default:
         return this.fail(`unknown feature type ${shownText(String((f as { type: string }).type), '"')}`);
     }
@@ -564,7 +574,15 @@ export class Printer {
     if (f.thread !== undefined && f.thread !== false) {
       const t = f.thread as unknown;
       if (t === true) fields.push("thread: true");
-      else fields.push(`thread: { ${["pitch", "depth"].filter((x) => has(t, x)).map((x) => `${x}: ${this.scalar((t as Obj)[x])}`).join(", ")} }`);
+      else {
+        const o = t as Obj;
+        const tf: string[] = ["pitch", "depth"].filter((x) => has(o, x)).map((x) => `${x}: ${this.scalar(o[x])}`);
+        if (typeof o["standard"] === "string") tf.push(`standard: ${formatString(o["standard"])}`);
+        if (o["modeled"] !== undefined && o["modeled"] !== false) tf.push(`modeled: ${this.bool(o["modeled"])}`);
+        if (o["hand"] !== undefined && o["hand"] !== "right") tf.push(`hand: ${formatString(String(o["hand"]))}`);
+        if (has(o, "starts")) tf.push(`starts: ${this.scalar(o["starts"])}`);
+        fields.push(`thread: { ${tf.join(", ")} }`);
+      }
     }
     if (f.flip !== undefined && f.flip !== false) fields.push(`flip: ${this.bool(f.flip)}`);
     if (f.targets !== undefined) fields.push(`targets: ${this.targets(f.targets)}`);

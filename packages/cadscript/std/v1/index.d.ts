@@ -877,13 +877,16 @@ export interface HoleOptions extends FeatureOptions {
   readonly csink?: "iso10642" | { readonly d: Scalar; readonly angle?: Scalar };
   /** Heat-set insert hole: `"std"` (common tapered brass insert, needs `size`) or `{ d, depth }` (mm). */
   readonly insert?: "std" | { readonly d: Scalar; readonly depth: Scalar };
-  /** Cosmetic thread (no geometry change): `true` (coarse pitch, tap drill) or `{ pitch?, depth? }` (mm). */
-  readonly thread?: boolean | { readonly pitch?: Scalar; readonly depth?: Scalar };
+  /** Thread: `true` (cosmetic, tap drill) or options; `modeled: true` cuts the real groove. */
+  readonly thread?: boolean | { readonly pitch?: Scalar; readonly depth?: Scalar; readonly standard?: ThreadStandard; readonly modeled?: BoolScalar; readonly hand?: "right" | "left"; readonly starts?: Scalar };
   /** Reverse the drilling direction (default: into the material under the face). */
   readonly flip?: BoolScalar;
   /** Bodies to drill (default: the body owning the `on` face); required when `on` is not a face. */
   readonly targets?: Targets;
 }
+
+/** `"M8"`, `"M14x1"`, `"1/4-20 UNC"`, `"1/2-20 UNF"`, … */
+export type ThreadStandard = string;
 
 /**
  * Standard holes on a plane (usually a face): simple, counterbored, countersunk, heat-set
@@ -894,6 +897,15 @@ export interface HoleOptions extends FeatureOptions {
  * const pilots = hole(plate.cap("end"), { at: { a: [15.5, 15.5], b: [-15.5, 15.5] }, d: 3.4, depth: { blind: 6 } });
  */
 export declare function hole(on: PlaneRef, options: HoleOptions): Hole;
+
+/**
+ * A screw thread on a bore or boss face: `standard`, or `major` and `pitch`; `modeled: false` is cosmetic.
+ * @example const t = thread(boss.side("ring"), { standard: "M8", length: 12 });
+ */
+export declare function thread(
+  face: FaceSel,
+  options: FeatureOptions & { readonly standard?: ThreadStandard; readonly major?: Scalar; readonly pitch?: Scalar; readonly length?: Scalar; readonly offset?: Scalar; readonly flip?: BoolScalar; readonly hand?: "right" | "left"; readonly starts?: Scalar; readonly modeled?: BoolScalar },
+): Modifier;
 
 // ─── Blends and offsets ──────────────────────────────────────────────────────────────────────
 

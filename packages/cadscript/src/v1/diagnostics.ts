@@ -125,6 +125,8 @@ const IR_HINTS: Readonly<Record<string, string>> = {
   HOLE_SIZE_REQUIRED: "give a size (\"M3\", …) or an explicit diameter d",
   HOLE_OPTIONS_CONFLICT: "at most one of cbore, csink, insert; presets need a size; thread excludes insert and close/loose fits; tip is for blind holes",
   HOLE_DEPTH_REQUIRED: 'give a depth: "through", { blind: 6 } or { upTo: face } (inserts set their own)',
+  THREAD_STANDARD_UNKNOWN: 'thread standards are ISO metric ("M8", "M14x1") and Unified ("1/4-20 UNC", "#10-32 UNF", "1/2-20 UNF") designations of THREAD_STANDARDS',
+  THREAD_SIZE_REQUIRED: 'give a standard ("M8", "1/2-20 UNF") or both major and pitch (mm)',
   CHAMFER_OPTIONS_CONFLICT: "a chamfer is { d }, { d, d2, side } or { d, angle, side }",
   PATTERN_SEED_UNSUPPORTED: "pattern seeds are extrude, revolve or hole features",
   INVALID_RADIUS: "the radius is a positive length in mm",

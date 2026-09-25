@@ -5,7 +5,7 @@
  */
 
 const IMPORT =
-  'import { part, sketch, line, arc, circle, point, extrude, revolve, boolean, frame, XY, XZ, YZ, X, Y, Z, param, rect, polygon, C, tag, bodies, datumPlane, datumAxis, sqrt, hole, fillet, chamfer, shell, draft, linearPattern } from "@aicad/std";\n';
+  'import { part, sketch, line, arc, circle, point, extrude, revolve, boolean, frame, XY, XZ, YZ, X, Y, Z, param, rect, polygon, C, tag, bodies, datumPlane, datumAxis, sqrt, hole, fillet, chamfer, shell, draft, linearPattern, thread } from "@aicad/std";\n';
 
 const RECT = 'part("p");\nconst s = sketch(XY, { o: rect({ center: [0, 0], w: 20, h: 20 }) });\nconst e = extrude(s, { distance: 5 });\n';
 
@@ -71,6 +71,14 @@ const body: Record<string, string> = {
   unsupported_fillet: `${RECT}const f = fillet(e.sides().edges().parallel(Z), { r: 2 });\n`,
   unsupported_shell: `${RECT}const sh = shell(e, { open: e.cap("end"), thickness: 1 });\n`,
   unsupported_draft: `${RECT}const dr = draft(e.sides(), { neutral: XY, angle: 2 });\n`,
+  // ── Modelled threads (§6.13): Forge raises each; the oracle checks only some of them ──
+  thread_diameter: `${RECT}const h = hole(e.cap("end"), { at: { a: [0, 0] }, d: 5, depth: "through" });\nconst t = thread(h.wall("a"), { standard: "M8" });\n`,
+  thread_face: `${RECT}const t = thread(e.cap("end"), { standard: "M8" });\n`,
+  thread_length: `${RECT}const h = hole(e.cap("end"), { at: { a: [0, 0] }, d: 6.8, depth: "through" });\nconst t = thread(h.wall("a"), { standard: "M8", length: 8 });\n`,
+  thread_end_close: `${RECT}const h = hole(e.cap("end"), { at: { a: [0, 0] }, d: 6.8, depth: "through" });\nconst t = thread(h.wall("a"), { standard: "M8", length: 4.9995 });\n`,
+  thread_end_inside: `${RECT}const h = hole(e.cap("end"), { at: { a: [0, 0] }, d: 6.8, depth: "through" });\nconst t = thread(h.wall("a"), { standard: "M8", offset: 1, length: 3 });\n`,
+  thread_interference: `${RECT}const h = hole(e.cap("end"), { at: { a: [6.2, 0] }, d: 6.8, depth: "through" });\nconst t = thread(h.wall("a"), { standard: "M8" });\n`,
+  thread_invalid: `${RECT}const h = hole(e.cap("end"), { at: { a: [0, 0] }, d: 6.8, depth: "through" });\nconst t = thread(h.wall("a"), { major: 1, pitch: 1 });\n`,
   // ── Healthy models (tool tests) ──
   ok_plate: 'const width = param(80, { min: 20, max: 300, note: "outer width" });\nconst depth = param(50);\nconst thick = param(8, { min: 2 });\npart("plate");\nconst base = sketch(XY, { outline: rect({ center: [0, 0], w: width, h: depth }) });\nconst slab = extrude(base, { distance: thick });\n',
 };

@@ -1086,6 +1086,9 @@ function lowerFeature(ctx: Ctx, stmt: ts.VariableStatement, nameNode: ts.Identif
     case "draft":
       lf.ir = lowerDraft(ctx, call, lf);
       break;
+    case "thread":
+      lf.ir = lowerThread(ctx, call, lf);
+      break;
     case "linearPattern":
     case "circularPattern":
     case "mirror":
@@ -1645,13 +1648,27 @@ function lowerHole(ctx: Ctx, call: ts.CallExpression, lf: LFeature): Record<stri
     lf.sink.paths.set("/thread", thread.value);
     if (thread.value.kind === ts.SyntaxKind.TrueKeyword || thread.value.kind === ts.SyntaxKind.FalseKeyword) ir["thread"] = thread.value.kind === ts.SyntaxKind.TrueKeyword;
     else {
-      const o = readObject(ctx, thread.value, "thread", [], ["pitch", "depth"]);
+      const o = readObject(ctx, thread.value, "thread", [], ["pitch", "depth", "standard", "modeled", "hand", "starts"]);
       if (o) {
         const out: Record<string, unknown> = {};
         for (const f of ["pitch", "depth"]) {
           const fp = o.get(f);
           if (fp) put(out, f, lowerScalar(ctx, fp.value, `thread ${f}`, `/thread/${f}`, lf.sink));
         }
+        const std = o.get("standard");
+        if (std) {
+          lf.sink.paths.set("/thread/standard", std.value);
+          put(out, "standard", readString(ctx, std.value, "thread standard"));
+        }
+        const modeled = o.get("modeled");
+        if (modeled) put(out, "modeled", lowerBoolScalar(ctx, modeled.value, "thread modeled", "/thread/modeled", lf.sink));
+        const hand = o.get("hand");
+        if (hand) {
+          lf.sink.paths.set("/thread/hand", hand.value);
+          put(out, "hand", readString(ctx, hand.value, "thread hand", ["right", "left"]));
+        }
+        const starts = o.get("starts");
+        if (starts) put(out, "starts", lowerScalar(ctx, starts.value, "thread starts", "/thread/starts", lf.sink));
         ir["thread"] = out;
       }
     }
@@ -1778,6 +1795,33 @@ function lowerDraft(ctx: Ctx, call: ts.CallExpression, lf: LFeature): Record<str
   put(ir, "neutral", lowerPlane(ctx, props.get("neutral")!.value, lf.sink, "/neutral"));
   put(ir, "angle", scalar(ctx, props, "angle", "/angle", lf, "draft angle"));
   put(ir, "pull", enumProp(ctx, props, "pull", ["normal", "reverse"], lf));
+  return ir;
+}
+
+// ── thread (§6.13) ──
+
+function lowerThread(ctx: Ctx, call: ts.CallExpression, lf: LFeature): Record<string, unknown> {
+  const ir: Record<string, unknown> = {};
+  const args = callArgs(ctx, call, "thread", 2, 2, 'thread(boss.side("ring"), { standard: "M8", length: 12 })');
+  if (!args) return ir;
+  put(ir, "face", lowerRef(ctx, args[0]!, lf.sink, "/face", { fallback: "face" }));
+  const props = featureOptions(ctx, args[1], "thread options", lf, [], ["standard", "major", "pitch", "length", "offset", "flip", "hand", "starts", "modeled"], {
+    size: "use `standard`",
+    diameter: "use `major`",
+  });
+  if (!props) return ir;
+  const std = props.get("standard");
+  if (std) {
+    lf.sink.paths.set("/standard", std.value);
+    put(ir, "standard", readString(ctx, std.value, "thread standard"));
+  }
+  for (const k of ["major", "pitch", "length", "offset"]) put(ir, k, scalar(ctx, props, k, `/${k}`, lf, `thread ${k}`));
+  const flip = props.get("flip");
+  if (flip) put(ir, "flip", lowerBoolScalar(ctx, flip.value, "flip", "/flip", lf.sink));
+  put(ir, "hand", enumProp(ctx, props, "hand", ["right", "left"], lf));
+  put(ir, "starts", scalar(ctx, props, "starts", "/starts", lf, "thread starts"));
+  const modeled = props.get("modeled");
+  if (modeled) put(ir, "modeled", lowerBoolScalar(ctx, modeled.value, "modeled", "/modeled", lf.sink));
   return ir;
 }
 

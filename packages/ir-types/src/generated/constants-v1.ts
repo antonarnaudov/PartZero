@@ -1056,6 +1056,99 @@ export const ERROR_CODES = {
     "since": "v1",
     "stage": "R"
   },
+  "THREAD_DIAMETER_MISMATCH": {
+    "details": [
+      "kind",
+      "designation",
+      "d",
+      "min_d",
+      "max_d"
+    ],
+    "section": "§6.13",
+    "since": "v1",
+    "stage": "E"
+  },
+  "THREAD_END_TOO_CLOSE": {
+    "details": [
+      "face",
+      "distance",
+      "margin"
+    ],
+    "section": "§6.13",
+    "since": "v1",
+    "stage": "E"
+  },
+  "THREAD_END_UNSUPPORTED": {
+    "details": [
+      "face",
+      "reason"
+    ],
+    "section": "§6.13",
+    "since": "v1",
+    "stage": "E"
+  },
+  "THREAD_FACE_UNSUPPORTED": {
+    "details": [
+      "face",
+      "reason"
+    ],
+    "section": "§6.13",
+    "since": "v1",
+    "stage": "E"
+  },
+  "THREAD_INTERFERENCE": {
+    "details": [
+      "face",
+      "r_in",
+      "r_out",
+      "z_start",
+      "z_end"
+    ],
+    "section": "§6.13",
+    "since": "v1",
+    "stage": "E"
+  },
+  "THREAD_INVALID_VALUE": {
+    "details": [
+      "field",
+      "value",
+      "expected"
+    ],
+    "section": "§6.13",
+    "since": "v1",
+    "stage": "E"
+  },
+  "THREAD_LENGTH_OUT_OF_RANGE": {
+    "details": [
+      "face",
+      "start",
+      "end",
+      "face_start",
+      "face_end"
+    ],
+    "section": "§6.13",
+    "since": "v1",
+    "stage": "E"
+  },
+  "THREAD_SIZE_REQUIRED": {
+    "details": [
+      "field",
+      "allowed"
+    ],
+    "section": "§6.13",
+    "since": "v1",
+    "stage": "R"
+  },
+  "THREAD_STANDARD_UNKNOWN": {
+    "details": [
+      "field",
+      "value",
+      "allowed"
+    ],
+    "section": "§6.13",
+    "since": "v1",
+    "stage": "R"
+  },
   "UNRESOLVED_FEATURE": {
     "details": [
       "id",
@@ -1117,7 +1210,8 @@ export const FEATURE_TYPES = [
   "pattern",
   "datum_plane",
   "datum_axis",
-  "tag"
+  "tag",
+  "thread"
 ] as const;
 
 export const FEATURE_VERSIONS = {
@@ -1158,6 +1252,9 @@ export const FEATURE_VERSIONS = {
     1
   ],
   "tag": [
+    1
+  ],
+  "thread": [
     1
   ]
 } as const;
@@ -1839,6 +1936,7 @@ export const RESERVED_NAMES = [
   "datumPlane",
   "datumAxis",
   "tag",
+  "thread",
   "edgesBetween",
   "faceOf",
   "body",
@@ -1958,6 +2056,7 @@ export const RESERVED_NAMES_V1_BUILTINS = [
   "datumPlane",
   "datumAxis",
   "tag",
+  "thread",
   "edgesBetween",
   "faceOf",
   "body",
@@ -1994,5 +2093,999 @@ export const SOLVE_CHECK_TOLERANCE = 1e-9 as const;
 export const SOLVE_TOLERANCE = 1e-10 as const;
 
 export const TANGENT_CHAIN_TOLERANCE = 0.000001 as const;
+
+export const THREAD_STANDARDS = {
+  "note": "Nominal (basic) diameters. Tolerance classes and FDM compensation are not part of the IR (ADR 0013 decision 1).",
+  "profile": "ISO 68-1 / ASME B1.1 basic profile: 60°, H = P·√3/2, D1 = D − 1.25·H, D2 = D − 0.75·H",
+  "sources": {
+    "amesweb-unc": "AMESWeb, UNC thread chart per ASME B1.1: https://amesweb.info/Screws/unc-thread-chart.aspx",
+    "amesweb-unf": "AMESWeb, UNF thread chart per ASME B1.1 (1/2-20 UNF internal minor 0.4460-0.4570 in): https://amesweb.info/Screws/unf-thread-chart.aspx",
+    "fuller-metric": "Fuller Fasteners, Basic metric thread chart M1-M100: https://fullerfasteners.com/tech/basic-metric-thread-chart-m1-m100-2/",
+    "modulus-iso261": "Modulus Metal, Metric thread size table M1-M300 (ISO 261, coarse and fine): https://www.modulusmetal.com/standard-metric-thread-size-table/",
+    "wiki-iso-thread": "Wikipedia, ISO metric screw thread: preferred sizes (ISO 262) and the basic profile formulas: https://en.wikipedia.org/wiki/ISO_metric_screw_thread",
+    "wiki-uts": "Wikipedia, Unified Thread Standard (UNC/UNF table; the UTS basic profile is the ISO basic profile): https://en.wikipedia.org/wiki/Unified_Thread_Standard"
+  },
+  "threads": {
+    "#10-24 UNC": {
+      "family": "unc",
+      "major": 4.826,
+      "minor": 3.680320559577,
+      "pitch": 1.058333333333,
+      "pitch_diameter": 4.138592335746,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "#10-32 UNF": {
+      "family": "unf",
+      "major": 4.826,
+      "minor": 3.966740419683,
+      "pitch": 0.79375,
+      "pitch_diameter": 4.31044425181,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "#2-56 UNC": {
+      "family": "unc",
+      "major": 2.1844,
+      "minor": 1.693394525533,
+      "pitch": 0.453571428571,
+      "pitch_diameter": 1.88979671532,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "#2-64 UNF": {
+      "family": "unf",
+      "major": 2.1844,
+      "minor": 1.754770209841,
+      "pitch": 0.396875,
+      "pitch_diameter": 1.926622125905,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "#4-40 UNC": {
+      "family": "unc",
+      "major": 2.8448,
+      "minor": 2.157392335746,
+      "pitch": 0.635,
+      "pitch_diameter": 2.432355401448,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "#4-48 UNF": {
+      "family": "unf",
+      "major": 2.8448,
+      "minor": 2.271960279788,
+      "pitch": 0.529166666667,
+      "pitch_diameter": 2.501096167873,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "#6-32 UNC": {
+      "family": "unc",
+      "major": 3.5052,
+      "minor": 2.645940419683,
+      "pitch": 0.79375,
+      "pitch_diameter": 2.98964425181,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "#6-40 UNF": {
+      "family": "unf",
+      "major": 3.5052,
+      "minor": 2.817792335746,
+      "pitch": 0.635,
+      "pitch_diameter": 3.092755401448,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "#8-32 UNC": {
+      "family": "unc",
+      "major": 4.1656,
+      "minor": 3.306340419683,
+      "pitch": 0.79375,
+      "pitch_diameter": 3.65004425181,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "#8-36 UNF": {
+      "family": "unf",
+      "major": 4.1656,
+      "minor": 3.401813706385,
+      "pitch": 0.705555555556,
+      "pitch_diameter": 3.707328223831,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "1-12 UNF": {
+      "family": "unf",
+      "major": 25.4,
+      "minor": 23.108641119154,
+      "pitch": 2.116666666667,
+      "pitch_diameter": 24.025184671492,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "1-8 UNC": {
+      "family": "unc",
+      "major": 25.4,
+      "minor": 21.962961678731,
+      "pitch": 3.175,
+      "pitch_diameter": 23.337777007238,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "1/2-13 UNC": {
+      "family": "unc",
+      "major": 12.7,
+      "minor": 10.584899494603,
+      "pitch": 1.953846153846,
+      "pitch_diameter": 11.430939696762,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "1/2-20 UNF": {
+      "family": "unf",
+      "major": 12.7,
+      "minor": 11.325184671492,
+      "pitch": 1.27,
+      "pitch_diameter": 11.875110802895,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "1/4-20 UNC": {
+      "family": "unc",
+      "major": 6.35,
+      "minor": 4.975184671492,
+      "pitch": 1.27,
+      "pitch_diameter": 5.525110802895,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "1/4-28 UNF": {
+      "family": "unf",
+      "major": 6.35,
+      "minor": 5.367989051066,
+      "pitch": 0.907142857143,
+      "pitch_diameter": 5.76079343064,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "3/4-10 UNC": {
+      "family": "unc",
+      "major": 19.05,
+      "minor": 16.300369342984,
+      "pitch": 2.54,
+      "pitch_diameter": 17.400221605791,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "3/4-16 UNF": {
+      "family": "unf",
+      "major": 19.05,
+      "minor": 17.331480839365,
+      "pitch": 1.5875,
+      "pitch_diameter": 18.018888503619,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "3/8-16 UNC": {
+      "family": "unc",
+      "major": 9.525,
+      "minor": 7.806480839365,
+      "pitch": 1.5875,
+      "pitch_diameter": 8.493888503619,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "3/8-24 UNF": {
+      "family": "unf",
+      "major": 9.525,
+      "minor": 8.379320559577,
+      "pitch": 1.058333333333,
+      "pitch_diameter": 8.837592335746,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "5/16-18 UNC": {
+      "family": "unc",
+      "major": 7.9375,
+      "minor": 6.409927412769,
+      "pitch": 1.411111111111,
+      "pitch_diameter": 7.020956447661,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "5/16-24 UNF": {
+      "family": "unf",
+      "major": 7.9375,
+      "minor": 6.791820559577,
+      "pitch": 1.058333333333,
+      "pitch_diameter": 7.250092335746,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "5/8-11 UNC": {
+      "family": "unc",
+      "major": 15.875,
+      "minor": 13.375335766349,
+      "pitch": 2.309090909091,
+      "pitch_diameter": 14.37520145981,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "5/8-18 UNF": {
+      "family": "unf",
+      "major": 15.875,
+      "minor": 14.347427412769,
+      "pitch": 1.411111111111,
+      "pitch_diameter": 14.958456447661,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "7/16-14 UNC": {
+      "family": "unc",
+      "major": 11.1125,
+      "minor": 9.148478102132,
+      "pitch": 1.814285714286,
+      "pitch_diameter": 9.934086861279,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "7/16-20 UNF": {
+      "family": "unf",
+      "major": 11.1125,
+      "minor": 9.737684671492,
+      "pitch": 1.27,
+      "pitch_diameter": 10.287610802895,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "7/8-14 UNF": {
+      "family": "unf",
+      "major": 22.225,
+      "minor": 20.260978102132,
+      "pitch": 1.814285714286,
+      "pitch_diameter": 21.046586861279,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "7/8-9 UNC": {
+      "family": "unc",
+      "major": 22.225,
+      "minor": 19.169854825538,
+      "pitch": 2.822222222222,
+      "pitch_diameter": 20.391912895323,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "9/16-12 UNC": {
+      "family": "unc",
+      "major": 14.2875,
+      "minor": 11.996141119154,
+      "pitch": 2.116666666667,
+      "pitch_diameter": 12.912684671492,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unc"
+      ]
+    },
+    "9/16-18 UNF": {
+      "family": "unf",
+      "major": 14.2875,
+      "minor": 12.759927412769,
+      "pitch": 1.411111111111,
+      "pitch_diameter": 13.370956447661,
+      "sources": [
+        "wiki-uts",
+        "amesweb-unf"
+      ]
+    },
+    "M1.6": {
+      "family": "metric_coarse",
+      "major": 1.6,
+      "minor": 1.221113885844,
+      "pitch": 0.35,
+      "pitch_diameter": 1.372668331507,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M1.6x0.2": {
+      "family": "metric_fine",
+      "major": 1.6,
+      "minor": 1.383493649054,
+      "pitch": 0.2,
+      "pitch_diameter": 1.470096189432,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M10": {
+      "family": "metric_coarse",
+      "major": 10,
+      "minor": 8.376202367904,
+      "pitch": 1.5,
+      "pitch_diameter": 9.025721420743,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M10x0.75": {
+      "family": "metric_fine",
+      "major": 10,
+      "minor": 9.188101183952,
+      "pitch": 0.75,
+      "pitch_diameter": 9.512860710371,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M10x1": {
+      "family": "metric_fine",
+      "major": 10,
+      "minor": 8.917468245269,
+      "pitch": 1,
+      "pitch_diameter": 9.350480947162,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M10x1.25": {
+      "family": "metric_fine",
+      "major": 10,
+      "minor": 8.646835306587,
+      "pitch": 1.25,
+      "pitch_diameter": 9.188101183952,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M12": {
+      "family": "metric_coarse",
+      "major": 12,
+      "minor": 10.105569429222,
+      "pitch": 1.75,
+      "pitch_diameter": 10.863341657533,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M12x1": {
+      "family": "metric_fine",
+      "major": 12,
+      "minor": 10.917468245269,
+      "pitch": 1,
+      "pitch_diameter": 11.350480947162,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M12x1.25": {
+      "family": "metric_fine",
+      "major": 12,
+      "minor": 10.646835306587,
+      "pitch": 1.25,
+      "pitch_diameter": 11.188101183952,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M12x1.5": {
+      "family": "metric_fine",
+      "major": 12,
+      "minor": 10.376202367904,
+      "pitch": 1.5,
+      "pitch_diameter": 11.025721420743,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M14": {
+      "family": "metric_coarse",
+      "major": 14,
+      "minor": 11.834936490539,
+      "pitch": 2,
+      "pitch_diameter": 12.700961894323,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M14x1": {
+      "family": "metric_fine",
+      "major": 14,
+      "minor": 12.917468245269,
+      "pitch": 1,
+      "pitch_diameter": 13.350480947162,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M14x1.25": {
+      "family": "metric_fine",
+      "major": 14,
+      "minor": 12.646835306587,
+      "pitch": 1.25,
+      "pitch_diameter": 13.188101183952,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M14x1.5": {
+      "family": "metric_fine",
+      "major": 14,
+      "minor": 12.376202367904,
+      "pitch": 1.5,
+      "pitch_diameter": 13.025721420743,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M16": {
+      "family": "metric_coarse",
+      "major": 16,
+      "minor": 13.834936490539,
+      "pitch": 2,
+      "pitch_diameter": 14.700961894323,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M16x1": {
+      "family": "metric_fine",
+      "major": 16,
+      "minor": 14.917468245269,
+      "pitch": 1,
+      "pitch_diameter": 15.350480947162,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M16x1.5": {
+      "family": "metric_fine",
+      "major": 16,
+      "minor": 14.376202367904,
+      "pitch": 1.5,
+      "pitch_diameter": 15.025721420743,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M18": {
+      "family": "metric_coarse",
+      "major": 18,
+      "minor": 15.293670613174,
+      "pitch": 2.5,
+      "pitch_diameter": 16.376202367904,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M18x1": {
+      "family": "metric_fine",
+      "major": 18,
+      "minor": 16.917468245269,
+      "pitch": 1,
+      "pitch_diameter": 17.350480947162,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M18x1.5": {
+      "family": "metric_fine",
+      "major": 18,
+      "minor": 16.376202367904,
+      "pitch": 1.5,
+      "pitch_diameter": 17.025721420743,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M18x2": {
+      "family": "metric_fine",
+      "major": 18,
+      "minor": 15.834936490539,
+      "pitch": 2,
+      "pitch_diameter": 16.700961894323,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M2": {
+      "family": "metric_coarse",
+      "major": 2,
+      "minor": 1.566987298108,
+      "pitch": 0.4,
+      "pitch_diameter": 1.740192378865,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M2.5": {
+      "family": "metric_coarse",
+      "major": 2.5,
+      "minor": 2.012860710371,
+      "pitch": 0.45,
+      "pitch_diameter": 2.207716426223,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M2.5x0.35": {
+      "family": "metric_fine",
+      "major": 2.5,
+      "minor": 2.121113885844,
+      "pitch": 0.35,
+      "pitch_diameter": 2.272668331507,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M20": {
+      "family": "metric_coarse",
+      "major": 20,
+      "minor": 17.293670613174,
+      "pitch": 2.5,
+      "pitch_diameter": 18.376202367904,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M20x1": {
+      "family": "metric_fine",
+      "major": 20,
+      "minor": 18.917468245269,
+      "pitch": 1,
+      "pitch_diameter": 19.350480947162,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M20x1.5": {
+      "family": "metric_fine",
+      "major": 20,
+      "minor": 18.376202367904,
+      "pitch": 1.5,
+      "pitch_diameter": 19.025721420743,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M20x2": {
+      "family": "metric_fine",
+      "major": 20,
+      "minor": 17.834936490539,
+      "pitch": 2,
+      "pitch_diameter": 18.700961894323,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M22": {
+      "family": "metric_coarse",
+      "major": 22,
+      "minor": 19.293670613174,
+      "pitch": 2.5,
+      "pitch_diameter": 20.376202367904,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M22x1": {
+      "family": "metric_fine",
+      "major": 22,
+      "minor": 20.917468245269,
+      "pitch": 1,
+      "pitch_diameter": 21.350480947162,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M22x1.5": {
+      "family": "metric_fine",
+      "major": 22,
+      "minor": 20.376202367904,
+      "pitch": 1.5,
+      "pitch_diameter": 21.025721420743,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M22x2": {
+      "family": "metric_fine",
+      "major": 22,
+      "minor": 19.834936490539,
+      "pitch": 2,
+      "pitch_diameter": 20.700961894323,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M24": {
+      "family": "metric_coarse",
+      "major": 24,
+      "minor": 20.752404735808,
+      "pitch": 3,
+      "pitch_diameter": 22.051442841485,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M24x1": {
+      "family": "metric_fine",
+      "major": 24,
+      "minor": 22.917468245269,
+      "pitch": 1,
+      "pitch_diameter": 23.350480947162,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M24x1.5": {
+      "family": "metric_fine",
+      "major": 24,
+      "minor": 22.376202367904,
+      "pitch": 1.5,
+      "pitch_diameter": 23.025721420743,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M24x2": {
+      "family": "metric_fine",
+      "major": 24,
+      "minor": 21.834936490539,
+      "pitch": 2,
+      "pitch_diameter": 22.700961894323,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M27": {
+      "family": "metric_coarse",
+      "major": 27,
+      "minor": 23.752404735808,
+      "pitch": 3,
+      "pitch_diameter": 25.051442841485,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M27x1": {
+      "family": "metric_fine",
+      "major": 27,
+      "minor": 25.917468245269,
+      "pitch": 1,
+      "pitch_diameter": 26.350480947162,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M27x1.5": {
+      "family": "metric_fine",
+      "major": 27,
+      "minor": 25.376202367904,
+      "pitch": 1.5,
+      "pitch_diameter": 26.025721420743,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M27x2": {
+      "family": "metric_fine",
+      "major": 27,
+      "minor": 24.834936490539,
+      "pitch": 2,
+      "pitch_diameter": 25.700961894323,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M2x0.25": {
+      "family": "metric_fine",
+      "major": 2,
+      "minor": 1.729367061317,
+      "pitch": 0.25,
+      "pitch_diameter": 1.83762023679,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M3": {
+      "family": "metric_coarse",
+      "major": 3,
+      "minor": 2.458734122635,
+      "pitch": 0.5,
+      "pitch_diameter": 2.675240473581,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M30": {
+      "family": "metric_coarse",
+      "major": 30,
+      "minor": 26.211138858443,
+      "pitch": 3.5,
+      "pitch_diameter": 27.726683315066,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M30x1.5": {
+      "family": "metric_fine",
+      "major": 30,
+      "minor": 28.376202367904,
+      "pitch": 1.5,
+      "pitch_diameter": 29.025721420743,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M30x2": {
+      "family": "metric_fine",
+      "major": 30,
+      "minor": 27.834936490539,
+      "pitch": 2,
+      "pitch_diameter": 28.700961894323,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M30x3": {
+      "family": "metric_fine",
+      "major": 30,
+      "minor": 26.752404735808,
+      "pitch": 3,
+      "pitch_diameter": 28.051442841485,
+      "sources": [
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M3x0.35": {
+      "family": "metric_fine",
+      "major": 3,
+      "minor": 2.621113885844,
+      "pitch": 0.35,
+      "pitch_diameter": 2.772668331507,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M4": {
+      "family": "metric_coarse",
+      "major": 4,
+      "minor": 3.242227771689,
+      "pitch": 0.7,
+      "pitch_diameter": 3.545336663013,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M4x0.5": {
+      "family": "metric_fine",
+      "major": 4,
+      "minor": 3.458734122635,
+      "pitch": 0.5,
+      "pitch_diameter": 3.675240473581,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M5": {
+      "family": "metric_coarse",
+      "major": 5,
+      "minor": 4.133974596216,
+      "pitch": 0.8,
+      "pitch_diameter": 4.480384757729,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M5x0.5": {
+      "family": "metric_fine",
+      "major": 5,
+      "minor": 4.458734122635,
+      "pitch": 0.5,
+      "pitch_diameter": 4.675240473581,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M6": {
+      "family": "metric_coarse",
+      "major": 6,
+      "minor": 4.917468245269,
+      "pitch": 1,
+      "pitch_diameter": 5.350480947162,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M6x0.75": {
+      "family": "metric_fine",
+      "major": 6,
+      "minor": 5.188101183952,
+      "pitch": 0.75,
+      "pitch_diameter": 5.512860710371,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M8": {
+      "family": "metric_coarse",
+      "major": 8,
+      "minor": 6.646835306587,
+      "pitch": 1.25,
+      "pitch_diameter": 7.188101183952,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M8x0.75": {
+      "family": "metric_fine",
+      "major": 8,
+      "minor": 7.188101183952,
+      "pitch": 0.75,
+      "pitch_diameter": 7.512860710371,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    },
+    "M8x1": {
+      "family": "metric_fine",
+      "major": 8,
+      "minor": 6.917468245269,
+      "pitch": 1,
+      "pitch_diameter": 7.350480947162,
+      "sources": [
+        "wiki-iso-thread",
+        "modulus-iso261",
+        "fuller-metric"
+      ]
+    }
+  },
+  "units": "mm"
+} as const;
 
 export const TIE_MARGIN = 0.1 as const;
