@@ -1878,6 +1878,9 @@ button.sb-item:hover {
 .question-card.approval .question-title {
   color: var(--warn);
 }
+.run-result.live .run-review button {
+  white-space: nowrap;
+}
 .autonomy-dial {
   height: 22px;
   margin-left: auto;

@@ -99,6 +99,8 @@ async function launch(): Promise<void> {
   page.on("pageerror", (e) => pageErrors.push(e.message));
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setBounds({ x: 40, y: 40, width: 1480, height: 920 }));
   await expect(page.getByTestId("app-shell")).toBeVisible();
+  // The runtime plumbing is surface-independent; the fake CLI scripts the CadScript designer, so the proposal path runs here.
+  await page.evaluate(() => (window as unknown as AW).__aicad.execute({ id: "agent.setSurface", args: { surface: "code" } }));
 }
 
 test.skip(process.platform === "win32", "the fake CLI is a POSIX script");

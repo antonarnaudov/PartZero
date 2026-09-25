@@ -74,6 +74,8 @@ test.beforeAll(async () => {
   });
   await page.reload();
   await expect(page.getByTestId("app-shell")).toBeVisible();
+  // This suite covers the CadScript proposal path (the fallback); the live operator has agent-operator.e2e.ts.
+  await page.evaluate(() => (window as unknown as AW).__aicad.execute({ id: "agent.setSurface", args: { surface: "code" } }));
 });
 
 test.afterAll(async () => {

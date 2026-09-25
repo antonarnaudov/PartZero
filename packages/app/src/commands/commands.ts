@@ -691,6 +691,20 @@ export const COMMANDS = {
     },
   }),
 
+  "agent.setSurface": command({
+    id: "agent.setSurface",
+    title: "Agent Edits: Live Tools or Code Proposal",
+    category: "Agent",
+    description:
+      'How the agent changes the model: "auto" (default) — it operates the modeling tools on the open model live, step by step; "code" — the fallback: it writes CadScript into a draft and you review a proposal.',
+    args: z.strictObject({ surface: z.enum(["auto", "code"]) }),
+    palette: false,
+    run({ surface }, ctx, meta) {
+      refuseAgentCaller(meta, "agent.setSurface");
+      return ctx.agent.setSurface(surface);
+    },
+  }),
+
   "settings.setAutonomy": command({
     id: "settings.setAutonomy",
     title: "Set Agent Autonomy",

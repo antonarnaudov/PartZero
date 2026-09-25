@@ -98,7 +98,7 @@ export const WELCOME_MESSAGE: ChatMessage = {
   id: "welcome",
   role: "system",
   text:
-    "Describe a change and the design agent drafts it as a proposal you can review, preview and accept feature by feature. " +
+    "Describe a part or a change. The assistant builds it with the same modeling tools you use, step by step, live in the viewport and the timeline — Stop keeps what it built, and one Undo takes its whole turn back. " +
     "Select a feature or a face first and it travels with your message as context.",
   chips: [],
   time: 0,

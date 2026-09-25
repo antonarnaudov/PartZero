@@ -79,6 +79,8 @@ test.beforeAll(async () => {
   });
   await page.reload();
   await expect(page.getByTestId("app-shell")).toBeVisible();
+  // The provider plumbing is surface-independent; this suite drives it through the CadScript proposal path (its fake CLI scripts code).
+  await page.evaluate(() => (window as unknown as AW).__aicad.execute({ id: "agent.setSurface", args: { surface: "code" } }));
 });
 
 test.afterAll(async () => {

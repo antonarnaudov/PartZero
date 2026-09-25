@@ -322,9 +322,21 @@ export class AgentService extends Store<AgentState> {
 
   /** Whether a run now would operate the open document live (an IR v1 model, a shell with the ops channel). */
   get liveAvailable(): boolean {
+    if (this.#surfacePref === "code") return false;
     const bridge = this.#deps.agent;
     const ir = this.#liveEnv?.services.ir;
     return !!bridge?.onOpsRequest && !!bridge.opsReply && !!ir && ir.getState().document !== null && this.#deps.doc.getState().format === "ir-v1";
+  }
+
+  #surfacePref: "auto" | "code" = "auto";
+
+  /**
+   * The fallback: `code` makes runs take the CadScript proposal path even on an IR v1 model (the
+   * agent writes code into a draft; you review a proposal). `auto` (default): live whenever possible.
+   */
+  setSurface(surface: "auto" | "code"): { surface: "auto" | "code"; live: boolean } {
+    this.#surfacePref = surface;
+    return { surface, live: this.liveAvailable };
   }
 
   #opsReply(reply: Parameters<NonNullable<AgentBridge["opsReply"]>>[0]): void {

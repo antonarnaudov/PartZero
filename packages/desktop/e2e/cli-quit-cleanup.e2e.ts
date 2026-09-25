@@ -92,6 +92,8 @@ test.beforeAll(async () => {
   page = await app.firstWindow();
   page.on("pageerror", (e) => pageErrors.push(e.message));
   await expect(page.getByTestId("app-shell")).toBeVisible();
+  // The quit cleanup is surface-independent; the fake CLI scripts the CadScript designer, so the proposal path runs here.
+  expect((await execute({ id: "agent.setSurface", args: { surface: "code" } })).ok).toBe(true);
   expect((await execute({ id: "file.newFromTemplate", args: { templateId: "t1-nema17-plate" } })).ok).toBe(true);
 });
 
