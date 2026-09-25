@@ -168,11 +168,16 @@ test("the timeline edits a feature in its property panel (double-click) as one u
 });
 
 test("the agent's op host commits live and its feature is marked", async () => {
-  await page.evaluate(() =>
-    (window as unknown as AW).__aicad.ops.apply([{ op: "setAppearance", feature: "extrude1", color: "#e0552b" }, { op: "addParam", name: "boss_h", unit: "mm", value: 3 }], {
-      label: "Agent: colour and a parameter",
-    }),
+  // Recolouring your extrude is a change to your work: refused without your approval (ADR 0015).
+  const recolour = await page.evaluate(() =>
+    (window as unknown as AW).__aicad.ops.apply([{ op: "setAppearance", feature: "extrude1", color: "#e0552b" }, { op: "addParam", name: "boss_h", unit: "mm", value: 3 }]).then(
+      () => null,
+      (e: { code?: string }) => e.code ?? "?",
+    ),
   );
+  expect(recolour).toBe("unapproved_user_change");
+  // A new parameter of its own is fine.
+  await page.evaluate(() => (window as unknown as AW).__aicad.ops.apply([{ op: "addParam", name: "boss_h", unit: "mm", value: 3 }], { label: "Agent: a parameter" }));
   let s = await summary();
   expect(s.features.map((f) => f.author)).toEqual(["user", "user"]);
   // A feature the agent adds shows at once, marked, and Keep makes it yours.
@@ -201,7 +206,7 @@ test("the agent's op host commits live and its feature is marked", async () => {
     ),
   );
   expect(refused).toBe("unapproved_user_change");
-  expect(await exec("edit.undo")).toMatchObject({ ok: true, value: { undone: true, label: "Agent: colour and a parameter" } });
+  expect(await exec("edit.undo")).toMatchObject({ ok: true, value: { undone: true, label: "Agent: a parameter" } });
 });
 
 test("Save As writes a .partzero with the v1 model; reopened from disk it is identical", async () => {
@@ -219,7 +224,7 @@ test("Save As writes a .partzero with the v1 model; reopened from disk it is ide
   expect(pz.manifest.document.irSchema).toBe("aicad.ir/1");
   expect(pz.files.get("document.json")!.toString("utf8")).toBe(before);
   expect(pz.code).toBeNull();
-  // The appearance the agent set was undone, so nothing but the model and the view state.
+  // The agent's parameter was undone, so nothing but the model and the view state.
   expect(pz.manifest.view.rollbackMarker).toBeNull();
 
   // Quit, launch the app again and open the file from disk: the identical model.
