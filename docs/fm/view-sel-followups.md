@@ -68,6 +68,19 @@ then delete the app's own `view.fit`, `view.setView` and `view.setProjection` (s
   `ForgeWebViewportV2`; move it into the contract and `isForgeWebModule`.
 - `ViewName` there has 4 views; the viewport uses all 7 (`viewport/view-camera.ts`
   `StandardView`), as forge-render does.
+- C2 (selection) as built, `packages/app/src/selection/types.ts`: model entities are
+  `{ kind: "face" | "edge" | "vertex", body, key, point? }` — `body` is the render body name
+  (the plan's `part` + body origin once ENG-0 lands), `key` the provenance name, `point` the probe.
+  When `packages/model-ops/src/selection.ts` is created (FM-W0), move these types there and keep
+  `selection/types.ts` as a re-export.
+
+## 5a. Native menu (desktop `menu.ts`, a shared hot file)
+
+The View menu still lists the first shell's four views. Add entries for the new commands when
+the menu is next touched: Display ▸ (the five `view.setDisplayMode` modes), Section ▸ (XY, XZ,
+YZ, From Face, Remove), Show ▸ (`view.setToggle`: grid, origin, sketches, view cube, axes),
+Measure (`measure.toggle`, I), Zoom to Selection (⇧Z), Look At (N). They run through the same
+registry once step 2 is done.
 
 ## 5. Phase C (IR v1) notes
 
