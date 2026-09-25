@@ -24,6 +24,7 @@ import { fileURLToPath } from "node:url";
 import { app, BrowserWindow, dialog, Menu, safeStorage, screen, session, shell, utilityProcess } from "electron";
 import type { AgentEvent, AppInfo, DocumentStateMessage, MenuCommandMessage } from "@aicad/app/bridge";
 import type { WorkerHandle } from "./agent/host.js";
+import { applyDevDockIcon } from "./app-icon.js";
 import type { Cipher } from "./agent/keys.js";
 import { parseWorkerMessage, PROTOCOL_VERSION, scrubKeyLike } from "./agent/protocol.js";
 import { setupAgent, workspaceMcpServerDir, type AgentSetup } from "./agent/setup.js";
@@ -332,6 +333,7 @@ function start(): void {
 
   void app.whenReady().then(() => {
     if (selfTest) app.dock?.hide();
+    else applyDevDockIcon(app, here);
     // The self-test's watchdog fired before the app got ready: its report is out and the app is exiting.
     if (selfTestFinished) return;
     // Deny every permission request (camera, notifications, …): the app needs none.

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="1024" height="1024">
+  <title>PartZero</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#232b3d"/><stop offset="1" stop-color="#121620"/></linearGradient>
+    <clipPath id="hole"><ellipse cx="32" cy="25.5" rx="7" ry="4.041"/></clipPath>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="13" fill="url(#tile)"/>
+  <polygon points="32,16 48.454,25.5 32,35 15.546,25.5" fill="#9cc0ff"/>
+  <polygon points="15.546,25.5 32,35 32,54 15.546,44.5" fill="#4c8dff"/>
+  <polygon points="32,35 48.454,25.5 48.454,44.5 32,54" fill="#2a5bd0"/>
+  <ellipse cx="32" cy="25.5" rx="7" ry="4.041" fill="#0d1426"/>
+  <path clip-path="url(#hole)" fill-rule="evenodd" fill="#3f74e0" d="M25,25.5 a7,4.041 0 1,0 14,0 a7,4.041 0 1,0 -14,0 Z M25,28.1 a7,4.041 0 1,0 14,0 a7,4.041 0 1,0 -14,0 Z"/>
+</svg>
