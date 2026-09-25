@@ -36,6 +36,11 @@ export interface ViewState {
   sketches: boolean;
   /** Per-body display state (bodies not listed use the default: visible, default colour). */
   bodies: Readonly<Record<string, BodyDisplay>>;
+  /**
+   * Per-sketch visibility (the browser's eye), by sketch name: overrides `sketches` for that
+   * sketch. A sketch not listed follows `sketches`; the selected sketch is always drawn.
+   */
+  sketchVisibility: Readonly<Record<string, boolean>>;
   section: SectionState | null;
   projection: Projection;
   /** The standard view the camera was last set to (cleared by orbiting). */
@@ -94,6 +99,7 @@ export class ViewStore extends Store<ViewState> {
       viewCube: p.viewCube ?? true,
       sketches: p.sketches ?? false,
       bodies: {},
+      sketchVisibility: {},
       section: null,
       projection: p.projection ?? "perspective",
       view: "iso",
@@ -116,7 +122,8 @@ export class ViewStore extends Store<ViewState> {
   }
 
   setToggle(key: "grid" | "axes" | "origin" | "viewCube" | "sketches", on: boolean): void {
-    this.setState({ [key]: on } as Partial<ViewState>);
+    // The Sketches toggle shows or hides them all: per-sketch choices are dropped.
+    this.setState(key === "sketches" ? { sketches: on, sketchVisibility: {} } : ({ [key]: on } as Partial<ViewState>));
     this.savePrefs();
   }
 
@@ -162,6 +169,20 @@ export class ViewStore extends Store<ViewState> {
     this.setState({ bodies });
   }
 
+  /** Show or hide one sketch (null: follow the Sketches toggle again). */
+  setSketchVisible(sketch: string, visible: boolean | null): void {
+    const next = { ...this.getState().sketchVisibility };
+    if (visible === null) delete next[sketch];
+    else next[sketch] = visible;
+    this.setState({ sketchVisibility: next });
+  }
+
+  /** Whether a sketch's curves are drawn (not counting the selection, which always shows). */
+  sketchShown(sketch: string): boolean {
+    const s = this.getState();
+    return s.sketchVisibility[sketch] ?? s.sketches;
+  }
+
   hiddenBodies(): Set<string> {
     return new Set(Object.entries(this.getState().bodies).filter(([, b]) => !b.visible).map(([n]) => n));
   }
@@ -177,8 +198,8 @@ export class ViewStore extends Store<ViewState> {
    */
   resetDocumentState(): void {
     const s = this.getState();
-    if (Object.keys(s.bodies).length === 0 && s.section === null) return;
-    this.setState({ bodies: {}, section: null });
+    if (Object.keys(s.bodies).length === 0 && Object.keys(s.sketchVisibility).length === 0 && s.section === null) return;
+    this.setState({ bodies: {}, sketchVisibility: {}, section: null });
   }
 
   patchSection(patch: Partial<SectionState>): SectionState | null {

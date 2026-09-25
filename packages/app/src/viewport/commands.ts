@@ -233,6 +233,21 @@ export const VIEW_COMMANDS = {
     },
   }),
 
+  "view.setSketchVisible": command({
+    id: "view.setSketchVisible",
+    title: "Show / Hide Sketch",
+    category: "View",
+    description: "Show or hide one sketch's curves in the viewport (by sketch name); `visible` null follows the Sketches toggle again.",
+    args: z.strictObject({ sketch: z.string().min(1), visible: z.boolean().nullable().optional() }),
+    palette: false,
+    run({ sketch, visible }, ctx) {
+      const r = rt(ctx);
+      const next = visible === undefined ? !r.view.sketchShown(sketch) : visible;
+      r.view.setSketchVisible(sketch, next);
+      return { sketch, visible: next === null ? r.view.sketchShown(sketch) : next };
+    },
+  }),
+
   "view.setBodyVisible": command({
     id: "view.setBodyVisible",
     title: "Show / Hide Body",

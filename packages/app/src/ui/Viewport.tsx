@@ -345,10 +345,11 @@ export function Viewport(): ReactElement {
   const onlySketches = sel.filter.sketch && !sel.filter.face && !sel.filter.edge && !sel.filter.vertex && !sel.filter.body;
   const shownSketches = useMemo(() => {
     // With only sketches selectable (key 5), every sketch is shown so there is something to pick.
-    if (view.sketches || onlySketches) return allSketches;
+    if (onlySketches) return allSketches;
+    // Each sketch follows its own eye (the browser), else the Sketches toggle; selected ones always show.
     const keep = new Set(sel.items.flatMap((it) => (it.kind === "sketch" ? [it.feature] : [])));
-    return keep.size ? allSketches.filter((s) => keep.has(s.sketch)) : [];
-  }, [allSketches, view.sketches, onlySketches, sel.items]);
+    return allSketches.filter((s) => keep.has(s.sketch) || (view.sketchVisibility[s.sketch] ?? view.sketches));
+  }, [allSketches, view.sketches, view.sketchVisibility, onlySketches, sel.items]);
   const onSketchClick = useCallback(
     (sketch: string, additive: boolean) => {
       const it = { kind: "sketch" as const, feature: sketch };
