@@ -15,3 +15,4 @@ export * from "./host.js";
 export * from "./queries.js";
 export * from "./rules.js";
 export * from "./transaction.js";
+export * from "./modeling/index.js";
