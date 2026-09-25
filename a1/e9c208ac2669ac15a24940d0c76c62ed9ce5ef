@@ -1,0 +1,111 @@
+packages/app/src/bridge.ts
+  s_59c0dd2af30db2::t_16a51d6e2d1583 31,34,281-282,286,315,322
+packages/app/src/doc/doc-store.ts
+  s_59c0dd2af30db2::t_5e00418769c4ea 196-205
+packages/app/src/file/adapter.ts
+  s_59c0dd2af30db2::t_45638592cd1051 1-247
+packages/app/src/file/bridge-types.ts
+  s_59c0dd2af30db2::t_fbc8ef8995946b 1-145
+packages/app/src/file/commands.ts
+  s_59c0dd2af30db2::t_9f3412401c54e9 1-252
+packages/app/src/file/document-files.ts
+  s_59c0dd2af30db2::t_7144b86775792b 1-807
+packages/app/src/file/export-formats.ts
+  s_59c0dd2af30db2::t_57b8eca0b11dc0 1-71
+packages/app/src/file/host.ts
+  s_59c0dd2af30db2::t_3eb80339bf288d 1-184
+packages/app/src/file/install.ts
+  s_59c0dd2af30db2::t_ad8a717234b515 1-127
+packages/app/src/file/mesh/index.ts
+  s_59c0dd2af30db2::t_eadfa2161d31aa 1-29
+packages/app/src/file/mesh/mesh.ts
+  s_59c0dd2af30db2::t_433536d5a0bf07 1-214
+packages/app/src/file/mesh/obj.ts
+  s_59c0dd2af30db2::t_176463d93efcec 1-46
+packages/app/src/file/mesh/stl.ts
+  s_59c0dd2af30db2::t_24c96385d16ee4 1-71
+packages/app/src/file/mesh/threemf.ts
+  s_59c0dd2af30db2::t_6d44da3593b4cf 1-286
+packages/app/src/file/partzero/checksum.ts
+  s_59c0dd2af30db2::t_7f93caa4d4ee1b 1-118
+packages/app/src/file/partzero/codec.ts
+  s_59c0dd2af30db2::t_fb04b23fd7b910 1-360
+packages/app/src/file/partzero/deflate.ts
+  s_59c0dd2af30db2::t_21854bc51b4a6d 1-349
+packages/app/src/file/partzero/index.ts
+  s_59c0dd2af30db2::t_04895659573076 1-6
+packages/app/src/file/partzero/manifest.ts
+  s_59c0dd2af30db2::t_6e1c47b40e45cc 1-108
+packages/app/src/file/partzero/zip.ts
+  s_59c0dd2af30db2::t_0aa6d0bbe03c84 1-258
+packages/app/src/file/thumbnail.ts
+  s_59c0dd2af30db2::t_ebefda95d72396 1-199
+packages/app/src/file/ui/FileLayer.tsx
+  s_59c0dd2af30db2::t_d137233de1626f 1-325
+packages/app/src/file/ui/file.css
+  s_59c0dd2af30db2::t_5bec6a65fceee6 1-273
+packages/app/src/file/ui/hooks.ts
+  s_59c0dd2af30db2::t_9a47451203858b 1-23
+packages/app/src/main.tsx
+  s_59c0dd2af30db2::t_f826c01a3ed180 4,18-19
+packages/app/src/ui/App.tsx
+  s_59c0dd2af30db2::t_9ba830161b57c8 3,176
+packages/app/src/ui/Toolbar.tsx
+  s_59c0dd2af30db2::t_630058d68f1561 4,58-60,105-106
+packages/app/src/ui/Viewport.tsx
+  s_59c0dd2af30db2::t_8f660bf0b71298 11,91-94
+packages/app/test/doc-store.test.ts
+  s_59c0dd2af30db2::t_397171c3de99f9 219-230
+packages/app/test/document-files.test.ts
+  s_59c0dd2af30db2::t_bcbf2ce44c5719 1-806
+packages/app/test/mesh-import.test.ts
+  s_59c0dd2af30db2::t_558c3495b849db 1-186
+packages/app/test/partzero.test.ts
+  s_59c0dd2af30db2::t_16ae33816a54f9 1-264
+packages/desktop/e2e/files.e2e.ts
+  s_59c0dd2af30db2::t_98faf90d343165 1-505
+packages/desktop/e2e/partzero-files.ts
+  s_59c0dd2af30db2::t_f317c43ca9508f 1-85
+packages/desktop/electron-builder.alpha-local.cjs
+  s_59c0dd2af30db2::t_8d89430b27999b 29-31,43-44,57
+packages/desktop/electron-builder.config.cjs
+  s_59c0dd2af30db2::t_ea594b58ab5456 22-24,48-49,77
+packages/desktop/file-associations.cjs
+  s_59c0dd2af30db2::t_7394ec25081d64 1-42
+packages/desktop/src/files.ts
+  s_59c0dd2af30db2::t_d8ad0c7070298e 17-20,154,156,220-401
+packages/desktop/src/ipc.ts
+  s_59c0dd2af30db2::t_527451b061f8ef 42-45,176-179,222
+packages/desktop/src/ipc/files.ts
+  s_59c0dd2af30db2::t_fb29f7ac423d7f 1-167
+packages/desktop/src/main.ts
+  s_59c0dd2af30db2::t_3fb129b03ab3be 10-12,28,37,40-42,114-141,209,211-212,216-243,261-265,269,271-273,283,307-308,310-311,313-318,330,332-336,394-422,425-433,505-506,513-538,544-545,551-557,559,563-567
+packages/desktop/src/menu.ts
+  s_59c0dd2af30db2::t_f4da3dd57045e9 45,82,85-86,88-89,91,93,99
+packages/desktop/src/preload.cts
+  s_59c0dd2af30db2::t_641d8132e77427 10,29,79-106
+packages/desktop/src/recovery.ts
+  s_59c0dd2af30db2::t_3ba0ed1e54c5c9 1-120
+packages/desktop/src/windows.ts
+  s_59c0dd2af30db2::t_c90ec33676e5af 1-328
+packages/desktop/test/documents.test.ts
+  s_59c0dd2af30db2::t_813a85396d6abc 1-540
+packages/desktop/test/packaging.test.ts
+  s_59c0dd2af30db2::t_08c80002811455 64-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a1e9c208ac2669ac15a24940d0c76c62ed9ce5ef",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
