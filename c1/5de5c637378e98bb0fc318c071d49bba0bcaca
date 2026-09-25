@@ -1,0 +1,51 @@
+oracle/src/aicad_oracle/v1/threads.py
+  s_59c0dd2af30db2::t_8ac343df3078e2 9-13,19-20
+  s_59c0dd2af30db2::t_b727dc0fa07fe6 325-332
+  s_59c0dd2af30db2::t_da82c75a3d02a9 231
+  s_59c0dd2af30db2::t_99a64956fb6405 45
+  s_59c0dd2af30db2::t_95fb8a38d6fec5 1-8,14-18,21-44,46-230,232-300,303-323,333-336,340-353,362,364-365,386-388
+  s_59c0dd2af30db2::t_9d2be8e9872d0c 366-385
+  s_59c0dd2af30db2::t_8cd60d42afa45e 301-302
+  s_59c0dd2af30db2::t_499b585f935832 324,337-339,363
+  s_59c0dd2af30db2::t_f6cdcdc3c04b4e 354-361
+oracle/src/aicad_oracle/v1/evaluate.py
+  s_59c0dd2af30db2::t_e9b5878238fc81 477-480,1078-1079
+  s_59c0dd2af30db2::t_40a6ab11c74ba0 995-996
+oracle/src/aicad_oracle/v1/validate.py
+  s_59c0dd2af30db2::t_e9b5878238fc81 163-170,293-295,708-709,1189-1220,1237-1241,1261,1298-1301
+oracle/src/aicad_oracle/v1/compare.py
+  s_59c0dd2af30db2::t_b727dc0fa07fe6 177-180,250-251,358
+  s_59c0dd2af30db2::t_d6b78fb9baaef2 37
+oracle/tests/test_v1_threads.py
+  s_59c0dd2af30db2::t_f47373698b7db1 1-53
+oracle/README.md
+  s_59c0dd2af30db2::t_cba87ab9f97fd9 55,142
+oracle/src/aicad_oracle/v1/patterns.py
+  s_59c0dd2af30db2::t_8f0b663fb66615 324-328
+oracle/src/aicad_oracle/v1/holes.py
+  s_59c0dd2af30db2::t_fb16418f158de0 421-428
+  s_59c0dd2af30db2::t_fbe007ae58e9ae 94-96,151-159,170-172,202,204-221,229,596,628-634
+  s_59c0dd2af30db2::t_499b585f935832 384,386-387,560-564,581,584,593-595,597-598
+  s_59c0dd2af30db2::t_b727dc0fa07fe6 599-602
+oracle/src/aicad_oracle/v1/jsonio.py
+  s_59c0dd2af30db2::t_e9b5878238fc81 322-323
+oracle/src/aicad_oracle/v1/booleans.py
+  s_59c0dd2af30db2::t_251459f813376b 676-693,1021-1023
+  s_59c0dd2af30db2::t_43a88c86df93b9 76,950-951,1016-1020,1024,1027,1037,1040-1041,1043-1045,1060,1064,1067,1070
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c15de5c637378e98bb0fc318c071d49bba0bcaca",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
