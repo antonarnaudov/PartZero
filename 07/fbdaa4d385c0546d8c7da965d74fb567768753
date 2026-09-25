@@ -1,0 +1,24 @@
+packages/app/src/ui/Viewport.tsx
+  s_59c0dd2af30db2::t_25529d3a2da6d8 203
+packages/app/test/viewport-commands.test.ts
+  s_59c0dd2af30db2::t_7183ab2d2c5538 227-229
+packages/app/src/viewport/runtime.ts
+  s_59c0dd2af30db2::t_25529d3a2da6d8 201,226-231,238,241-242
+  s_59c0dd2af30db2::t_e63a31344a01d0 243
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "07fbdaa4d385c0546d8c7da965d74fb567768753",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
