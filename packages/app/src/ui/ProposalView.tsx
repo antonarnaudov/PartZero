@@ -1,9 +1,11 @@
 /**
- * The proposal review (the "draft branch" of ARCHITECTURE §7), shown in the code panel:
- * - while the agent runs: the live draft as a diff against the document;
- * - at the end: the per-feature change list (tick/untick, dependency-aware warnings), the CadScript
- *   diff of the ticked variant (Monaco diff editor), the viewport preview toggle and
- *   Accept / Accept selected / Reject. Accepting is one undoable transaction.
+ * The proposal review (the "draft branch" of ARCHITECTURE §7):
+ * - while the agent runs: a note (the timeline marks the features the live draft touches);
+ * - at the end: the per-feature change list (tick/untick, dependency-aware warnings), the viewport
+ *   preview toggle and Accept / Accept selected / Reject. Accepting is one undoable transaction.
+ *
+ * No code in the default UI (the owner's rule): the CadScript diff of the ticked variant (Monaco
+ * diff editor) shows only while View ▸ Show Code is on.
  */
 import type { editor as MonacoEditor } from "monaco-editor";
 import { useEffect, useRef, useState, type ReactElement } from "react";
@@ -124,6 +126,7 @@ export function ProposalView(): ReactElement {
   const { services, run, isMac } = useApp();
   const review = useStore(services.agent, (s) => s.review);
   const activeRun = useStore(services.agent, (s) => (s.activeRunId ? s.runs.find((r) => r.runId === s.activeRunId) : undefined));
+  const codeShown = useStore(services.ui, (s) => s.panels.code);
   const [sideBySide, setSideBySide] = useState(false);
   if (!review) return <div className="empty">No proposal.</div>;
 
@@ -149,13 +152,15 @@ export function ProposalView(): ReactElement {
           ) : (
             <>
               <Icon.Diff size={13} /> Proposal
-              <span className="muted"> · {total === 0 ? "code changes only" : `${ticked}/${total} change${total === 1 ? "" : "s"} selected`}</span>
+              <span className="muted"> · {total === 0 ? "no feature changes" : `${ticked}/${total} change${total === 1 ? "" : "s"} selected`}</span>
             </>
           )}
           <span className="spacer" />
-          <button type="button" className="ghost-btn tiny" onClick={() => setSideBySide(!sideBySide)} title="Toggle side-by-side / inline diff">
-            {sideBySide ? "Inline" : "Side by side"}
-          </button>
+          {codeShown && (
+            <button type="button" className="ghost-btn tiny" onClick={() => setSideBySide(!sideBySide)} title="Toggle side-by-side / inline code diff">
+              {sideBySide ? "Inline" : "Side by side"}
+            </button>
+          )}
         </div>
         <div className="proposal-prompt muted" title={review.prompt}>
           “{review.prompt}”
@@ -187,7 +192,17 @@ export function ProposalView(): ReactElement {
           ))}
         </div>
       )}
-      <ProposalDiff original={review.baseSource} modified={review.variantSource} sideBySide={sideBySide} />
+      {draft && !codeShown && (
+        <div className="proposal-note muted" data-testid="proposal-draft-note">
+          The assistant is still working. The timeline marks the features it changes; when it is done, its changes are listed here to accept one by one.
+        </div>
+      )}
+      {review.status === "ready" && total === 0 && !codeShown && (
+        <div className="proposal-note muted" data-testid="proposal-no-changes">
+          The proposal changes no feature.
+        </div>
+      )}
+      {codeShown && <ProposalDiff original={review.baseSource} modified={review.variantSource} sideBySide={sideBySide} />}
       {pending && (
         <footer className="proposal-actions">
           <label className="preview-toggle" title="Show the proposal (tinted) in the viewport instead of the current document">

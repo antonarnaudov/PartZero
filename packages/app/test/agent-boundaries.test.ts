@@ -10,14 +10,17 @@
 import { IR_SCHEMA } from "@aicad/ir-types";
 import { MemoryOpsHost, type IrOp, type OpsHost } from "@aicad/model-ops";
 import { beforeAll, describe, expect, it } from "vitest";
+import type { AgentRunResult } from "../src/agent-protocol";
+import { AgentService } from "../src/agent/agent-service";
 import { appOpsHost } from "../src/agent/ops-host";
 import { InlineCadScriptService } from "../src/cadscript/inline-service";
 import type { CommandSource } from "../src/commands/registry";
 import { DocStore } from "../src/doc/doc-store";
 import { forgeWebCommandEngine, type ForgeWebCommandModule, type IrCommandEngine } from "../src/doc/v1/command-engine";
 import { IrDocStore, type IrDocChange } from "../src/doc/v1/ir-doc-store";
+import { namesAsIds } from "../src/doc/v1/names-as-ids";
 import type { EvalResult, ForgeEngine, MeshFormat } from "../src/engine/types";
-import { BOX, makeHarness, type Harness } from "./helpers";
+import { BOX, FakeAgentBridge, FakeSettingsBridge, makeHarness, type Harness } from "./helpers";
 
 const nodeFs = "node:fs";
 const fs = (await import(/* @vite-ignore */ nodeFs)) as { existsSync(p: URL): boolean; readFileSync(p: URL): Uint8Array };
@@ -296,5 +299,78 @@ describe("host-only routes", () => {
     const undo = await h.commands.execute({ id: "edit.undo", args: {} }, { source: "keyboard" });
     expect(undo.ok && undo.value.undone).toBe(true);
     expect(h.ir.document).toBe(edited);
+  });
+});
+
+describe("accepting an assistant proposal on an IR v1 model", () => {
+  const MARK = "const mark = sketch(XY, {\n  rim: circle({ center: [0, 0], radius: 2 }),\n});\n";
+  const BASE = `${BOX}${MARK}`;
+  const BOSS = "const boss_sk = sketch(XY, {\n  rim: circle({ center: [0, 0], radius: 6 }),\n});\nconst boss = extrude(boss_sk, { distance: 12 });\n";
+
+  async function agentHarness(): Promise<{ h: Harness; bridge: FakeAgentBridge; ir: IrDocStore }> {
+    const h = await makeHarness();
+    const bridge = new FakeAgentBridge();
+    const ir = new IrDocStore({ engine: () => engine });
+    const nodeEngine = new NodeForgeEngine();
+    const cadscript = new InlineCadScriptService();
+    const doc = new DocStore({ cadscript, engine: () => nodeEngine, ir, debounceMs: 0 });
+    h.services.doc = doc;
+    h.services.ir = ir;
+    h.services.agent = new AgentService({ agent: bridge, settings: new FakeSettingsBridge(), cadscript, engine: () => nodeEngine, doc, ui: h.services.ui });
+    const c = await cadscript.compile(BASE);
+    if (!c.ok || !c.ir) throw new Error("the base does not compile");
+    doc.load({ path: null, name: "plate", format: "ir-v1", source: JSON.stringify(namesAsIds(c.ir)) });
+    await doc.idle();
+    return { h, bridge, ir };
+  }
+
+  async function propose(x: { h: Harness; bridge: FakeAgentBridge }, proposedSource: string): Promise<void> {
+    const r = await x.h.commands.execute({ id: "agent.run", args: { prompt: "thicker" } });
+    expect(r.ok).toBe(true);
+    const baseSource = x.bridge.starts[0]!.source;
+    const result: AgentRunResult = {
+      status: "proposed",
+      stopReason: "proposed",
+      message: "done",
+      baseSource,
+      proposedSource,
+      changed: true,
+      verified: true,
+      summary: "Thicker.",
+      assumptions: [],
+      knownIssues: [],
+      costUsd: 0,
+      budgetUsd: 1,
+      latencyMs: 1,
+      turns: 1,
+    };
+    x.bridge.emit("run-1", { type: "result", result });
+    await x.h.services.agent.waitFor((s) => s.review?.status === "ready");
+  }
+
+  it_("approves only what you accepted: a change the list did not show you (a reorder of your features) is refused", async () => {
+    const x = await agentHarness();
+    const before = x.ir.document;
+    // The proposal thickens the plate, and also moves your mark sketch to the front.
+    await propose(x, BOX.replace('part("plate");\n', `part("plate");\n${MARK}`).replace("distance: 5", "distance: 7"));
+    const review = x.h.services.agent.getState().review!;
+    expect(review.changes.map((c) => [c.key, c.kind])).toEqual([["plate/plate", "modified"]]);
+    const r = await x.h.commands.execute({ id: "agent.accept", args: {} });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.message).toMatch(/without their approval: mark \(moved\)/);
+    expect(x.ir.document).toBe(before);
+  });
+
+  it_("a partial accept approves the accepted features only, and lands as one agent step", async () => {
+    const x = await agentHarness();
+    await propose(x, `${BASE.replace("distance: 5", "distance: 7")}${BOSS}`);
+    const review = x.h.services.agent.getState().review!;
+    expect(review.changes.map((c) => c.key)).toEqual(["plate/plate", "plate/boss_sk", "plate/boss"]);
+    const r = await x.h.commands.execute({ id: "agent.acceptFeatures", args: { features: ["plate"] } });
+    expect(r.ok).toBe(true);
+    const doc = JSON.parse(x.ir.document) as { parts: Array<{ features: Array<{ id: string; distance?: number }> }> };
+    expect(doc.parts[0]!.features.map((f) => f.id)).toEqual(["outline", "plate", "mark"]);
+    expect(doc.parts[0]!.features[1]!.distance).toBe(7);
+    expect(x.ir.getState().history.undoLabel).toBe("Agent: thicker");
   });
 });

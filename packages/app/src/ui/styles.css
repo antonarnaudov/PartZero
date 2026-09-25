@@ -1603,6 +1603,20 @@ button.sb-item:hover {
   flex: 1;
   min-height: 120px;
 }
+/* Without the code diff (View ▸ Show Code off, the default) the change list fills the panel. */
+.proposal:not(:has(.proposal-diff)) .change-list {
+  flex: 1;
+  overflow: auto;
+}
+.proposal-note {
+  flex: none;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.proposal:not(:has(.proposal-diff)) .proposal-actions {
+  margin-top: auto;
+}
 .proposal-actions {
   flex: none;
   display: flex;

@@ -29,7 +29,7 @@ import type { DocStore } from "../doc/doc-store";
 import type { ForgeEngine, RenderBody } from "../engine/types";
 import { Store } from "../store";
 import type { SelectionChip, UiStore } from "../ui-store";
-import { buildVariant, checkVariant, diffProposal, type DependencyWarning, type FeatureChange } from "./proposal";
+import { approvalsFor, buildVariant, checkVariant, diffProposal, type DependencyWarning, type FeatureChange } from "./proposal";
 import { describeSelection } from "./selection";
 import { downgradeToV0 } from "./v0-surface";
 import { namesAsIds } from "../doc/v1/names-as-ids";
@@ -448,7 +448,7 @@ export class AgentService extends Store<AgentState> {
           accepted: changes.map((c) => c.key),
           variantIr: proposedIr,
           previewEnabled: proposedIr !== null,
-          error: proposedIr ? null : "The proposed code does not compile; only accepting it as a whole is possible.",
+          error: proposedIr ? null : "The proposal could not be read as a model; only accepting it as a whole is possible.",
         },
       });
       if (proposedIr) void this.#evaluatePreview(proposedIr);
@@ -599,7 +599,9 @@ export class AgentService extends Store<AgentState> {
   /**
    * Accept on an IR v1 model: the accepted changes (the whole proposal, or the variant of the ticked
    * features) replace the model as ONE undoable code edit (`replaceDocument`, origin `agent`). Your
-   * accept is the approval ADR 0015 asks for: of the features and parameters the proposal changes.
+   * accept is the approval ADR 0015 asks for, of exactly what you accepted: the features and
+   * parameters the accepted changes modify or remove. Anything else the proposal would change of
+   * yours (a reorder the change list does not show) is refused by the commit check.
    */
   async #acceptV1(
     review: ProposalReview,
@@ -613,7 +615,7 @@ export class AgentService extends Store<AgentState> {
     if (base !== undefined && s.source !== base) {
       throw new AgentError("CONFLICT", "The model changed since the run started; reject the proposal and run again (or undo your edits).");
     }
-    if (!review.proposedIr) throw new AgentError("INVALID", review.error ?? "The proposed code does not compile to a model.");
+    if (!review.proposedIr) throw new AgentError("INVALID", review.error ?? "The proposal could not be read as a model.");
     let target: IrDocument = review.proposedIr;
     let warnings: DependencyWarning[] = [];
     if (!all && review.baseIr) {
@@ -623,11 +625,8 @@ export class AgentService extends Store<AgentState> {
       if (errors.length > 0 && !options.force) throw new AgentError("DEPENDENCY", `This selection breaks the model: ${errors.map((w) => w.message).join(" ")}`);
       target = v.ir;
     }
-    const current = JSON.parse(s.source) as IrDocument;
-    const approvals = {
-      features: current.parts.flatMap((p) => p.features.map((f) => f.id)),
-      params: [...((current as { params?: Array<{ name: string }> }).params ?? []), ...current.parts.flatMap((p) => (p as { params?: Array<{ name: string }> }).params ?? [])].map((p) => p.name),
-    };
+    const approvedBase = review.baseIr ?? (JSON.parse(s.source) as IrDocument);
+    const approvals = approvalsFor(approvedBase, review.changes, all ? new Set(review.changes.map((c) => c.key)) : set);
     const ir = this.#deps.doc;
     let changed: boolean;
     try {

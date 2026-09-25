@@ -126,9 +126,16 @@ test("runs the agent on the NEMA 17 template: progress, question, proposal diff,
   const change = view.locator('[data-change="plate/plate"]');
   await expect(change).toHaveAttribute("data-kind", "modified");
   await expect(change).toContainText("distance 5 → 7 mm");
+  // No code in the default UI: the review is the change list and the viewport preview…
+  await expect(view.getByTestId("proposal-diff")).toHaveCount(0);
+  await expect(view.locator(".monaco-editor")).toHaveCount(0);
+  // …and the code diff is there for power users behind View ▸ Show Code.
+  expect(await page.evaluate(() => (window as unknown as AW).__aicad.execute({ id: "view.toggleCode", args: { visible: true } }))).toMatchObject({ ok: true });
   const diff = page.getByTestId("proposal-diff");
   await expect(diff).toHaveAttribute("data-line-changes", "1");
   await expect(diff).toContainText("distance: 5"); // the removed line, shown inline in the diff
+  expect(await page.evaluate(() => (window as unknown as AW).__aicad.execute({ id: "view.toggleCode", args: { visible: false } }))).toMatchObject({ ok: true });
+  await expect(page.getByTestId("proposal-diff")).toHaveCount(0);
   await expect(page.locator('[data-testid="timeline-feature"][data-feature="plate"]')).toHaveAttribute("data-draft", "modified");
   await expect(card.locator(".assumption-chip")).toHaveCount(2);
   for (const step of ["understand", "build", "propose"]) await expect(card.locator(`[data-step="${step}"]`)).toHaveAttribute("data-state", "done");

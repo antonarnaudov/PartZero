@@ -3,7 +3,7 @@ import type { IrDocument } from "@aicad/ir-types";
 import { describe, expect, it } from "vitest";
 import type { AgentRunResult } from "../src/agent-protocol";
 import { reduceRun, PREVIEW_TINT } from "../src/agent/agent-service";
-import { buildVariant, checkVariant, diffProposal } from "../src/agent/proposal";
+import { approvalsFor, buildVariant, checkVariant, diffProposal } from "../src/agent/proposal";
 import { describeFace, describeSelection } from "../src/agent/selection";
 import { BOX, HEADER, makeHarness } from "./helpers";
 
@@ -87,6 +87,70 @@ describe("proposal: per-feature diff, variants and dependency warnings", () => {
     // The additions still merge onto the user's version.
     expect(v.ir.parts[0]!.features.map((f) => f.name)).toEqual(["outline", "plate", "boss_sk", "boss"]);
     expect((v.ir.parts[0]!.features[1] as { distance: number }).distance).toBe(6);
+  });
+});
+
+describe("proposal on an IR v1 model: parameters and what an accept approves", () => {
+  /** An IR v1 model as the agent's proposals come back (ids = the const names): parameter `t` and your plate. */
+  const v1 = (t: number, extra: { params?: unknown[]; features?: unknown[] } = {}): IrDocument =>
+    ({
+      schema: "aicad.ir/1",
+      params: [{ name: "t", unit: "mm", value: t }, ...(extra.params ?? [])],
+      parts: [
+        {
+          id: "p1",
+          name: "part",
+          features: [
+            { type: "sketch", id: "outline", name: "outline", plane: "XY", curves: [{ kind: "rect", id: "r", center: [0, 0], w: 40, h: 20 }] },
+            { type: "extrude", id: "slab", name: "slab", sketch: "outline", distance: "t" },
+            ...(extra.features ?? []),
+          ],
+        },
+      ],
+    }) as unknown as IrDocument;
+  const base = v1(5);
+  const proposed = v1(6, {
+    params: [{ name: "boss_h", unit: "mm", value: 3 }],
+    features: [
+      { type: "sketch", id: "boss_sk", name: "boss_sk", plane: "XY", curves: [{ kind: "circle", id: "c", center: [0, 0], radius: 4 }] },
+      { type: "extrude", id: "boss", name: "boss", sketch: "boss_sk", distance: "boss_h", op: "join", targets: "all" },
+    ],
+  });
+  const changes = diffProposal(base, proposed);
+
+  it("lists parameter changes, and the features that use a new parameter build on it", () => {
+    expect(changes.map((c) => [c.key, c.kind, c.type, c.summary, c.requires])).toEqual([
+      ["param:t", "modified", "parameter", "5 mm → 6 mm", []],
+      ["param:boss_h", "added", "parameter", "new parameter = 3 mm", []],
+      ["part/boss_sk", "added", "sketch", "new sketch on XY, 1 curve", []],
+      ["part/boss", "added", "extrude", "new extrude of `boss_sk`, boss_h", ["param:boss_h", "part/boss_sk"]],
+    ]);
+  });
+
+  it("carries accepted parameter changes into the variant; rejecting a parameter an accepted feature uses is an error", () => {
+    const v = buildVariant(base, proposed, base, new Set(["param:boss_h", "part/boss_sk", "part/boss"]), changes);
+    expect(v.conflicts).toEqual([]);
+    const params = (v.ir as unknown as { params: Array<{ name: string; value: number }> }).params;
+    expect(params.map((p) => [p.name, p.value])).toEqual([
+      ["t", 5],
+      ["boss_h", 3],
+    ]);
+    const without = new Set(["part/boss_sk", "part/boss"]);
+    const w = checkVariant(buildVariant(base, proposed, base, without, changes).ir, changes, without);
+    expect(w).toEqual([{ severity: "error", key: "param:boss_h", message: "`boss` uses parameter `boss_h`, which you rejected. Accept `boss_h` too, or reject `boss`." }]);
+    // A parameter you changed since the run started conflicts.
+    expect(buildVariant(base, proposed, v1(8), new Set(["param:t"]), changes).conflicts).toEqual(["parameter `t` was edited since the run started"]);
+  });
+
+  it("approves exactly the features and parameters the accepted changes modify or remove", () => {
+    expect(approvalsFor(base, changes, new Set(changes.map((c) => c.key)))).toEqual({ features: [], params: ["t"] });
+    expect(approvalsFor(base, changes, new Set(["param:boss_h", "part/boss_sk", "part/boss"]))).toEqual({ features: [], params: [] });
+    const thicker = v1(5, {});
+    (thicker.parts[0]!.features[1] as unknown as { distance: unknown }).distance = 7;
+    const ch = diffProposal(base, thicker);
+    expect(ch.map((c) => c.key)).toEqual(["part/slab"]);
+    expect(approvalsFor(base, ch, new Set(["part/slab"]))).toEqual({ features: ["slab"], params: [] });
+    expect(approvalsFor(base, ch, new Set())).toEqual({ features: [], params: [] });
   });
 });
 
