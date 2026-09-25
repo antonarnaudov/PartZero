@@ -1,0 +1,37 @@
+{
+  "name": "@aicad/model-ops",
+  "version": "0.0.1",
+  "description": "The IR v1 op catalogue (FULL-MODELING-PLAN §2.2, contract C1): one zod definition per domain op, its label, semantic inverse, authorship rules and the failure rule, applied through the Forge engine's command layer. The app's command registry, the agent's tools and the MCP server are generated from it.",
+  "license": "MPL-2.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aicad/ir-types": "workspace:*",
+    "zod": "^4.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
