@@ -158,7 +158,7 @@ export function makeFileCommands(filesOf: (ctx: AppServices) => DocumentFiles) {
       category: "File",
       description: `Export the document. Without a format, opens the export dialog. Formats: ${exportFormats()
         .map((f) => f.id)
-        .join(", ")} (STEP arrives with Forge's STEP writer).`,
+        .join(", ")} (STEP needs the desktop app's Forge engine).`,
       args: z.strictObject({ format: z.string().min(1).max(20).optional(), path: Path.optional() }),
       keys: ["Mod+E"],
       palette: [{ title: "Export…", args: {} }],

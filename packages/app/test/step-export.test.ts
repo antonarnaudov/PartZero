@@ -10,6 +10,7 @@ import {
   STEP_FILE_FILTER,
   StepExportError,
   stepExportAvailable,
+  stepExportFormat,
   stepFileName,
 } from "../src/io/step-export";
 
@@ -150,5 +151,26 @@ describe("stepFileName", () => {
     expect(stepFileName("Klammer ü")).toBe("Klammer ü.step");
     expect(stepFileName("a/b:c")).toBe("a_b_c.step");
     expect(stepFileName("  ")).toBe("part.step");
+  });
+});
+
+describe("STEP in the export dialog (stepExportFormat)", () => {
+  const engine = {} as never;
+  it("exports AP214 through the host and returns the bytes for the document layer to write", async () => {
+    const { host: h, rec } = host({ data: STEP_BYTES, summary: SUMMARY, exitCode: 0, stderr: "" });
+    const f = stepExportFormat(h);
+    expect(f.id).toBe("step");
+    expect(f.extensions[0]).toBe("step");
+    expect(f.available({ engine })).toEqual({ ok: true });
+    expect(await f.run({ irJson: "{}", engine, name: "plate" })).toBe(STEP_BYTES);
+    expect(rec.requests).toEqual([{ irJson: "{}", schema: "ap214", productName: "plate", allowPartial: false }]);
+    expect(rec.dialogs).toEqual([]);
+    expect(rec.writes).toEqual([]);
+  });
+
+  it("is unavailable without the host's Forge CLI, and a refusal keeps its code", async () => {
+    expect(stepExportFormat(host(null).host).available({ engine })).toMatchObject({ ok: false, reason: /desktop app's Forge engine/ });
+    const refused = stepExportFormat(host({ data: null, summary: { error: { code: "STEP_UNSUPPORTED_SEAM", message: "a seam it cannot write" } }, exitCode: 3, stderr: "" }).host);
+    await expect(refused.run({ irJson: "{}", engine, name: "plate" })).rejects.toMatchObject({ code: "STEP_UNSUPPORTED_SEAM", message: /a seam it cannot write \(STEP_UNSUPPORTED_SEAM\)/ });
   });
 });

@@ -16,6 +16,7 @@
  * `allowPartial` was not set), `EXPORT_NO_BODIES`, or `EXPORT_FAILED`.
  */
 import type { FileFilter, ForgeStepExportResponse, StepSchema } from "../bridge";
+import type { ExportFormat } from "../file/export-formats";
 import type { AppHost } from "../host/host";
 
 /** The save dialog filter for STEP files. */
@@ -154,4 +155,32 @@ export function classifyFailure(res: ForgeStepExportResponse): StepExportError {
   }
   const line = lines.find((l) => /^(error|aicad):/i.test(l)) ?? lines.at(-1);
   return new StepExportError("EXPORT_FAILED", (line ?? `exit code ${String(res.exitCode)}`).slice(0, 500));
+}
+
+/**
+ * STEP in the export dialog (File → Export…, `file.export { format: "step" }`): the same export
+ * as {@link exportStepFile} (AP214), with the document layer choosing the path and writing the
+ * bytes. It replaces the documents stream's placeholder (`registerExportFormat` in main.tsx).
+ */
+export function stepExportFormat(host: Pick<AppHost, "forgeCli">): ExportFormat {
+  return {
+    id: "step",
+    label: "STEP",
+    extensions: ["step", "stp"],
+    description: "Exact B-rep (AP214) for other CAD programs, written and checked by Forge.",
+    available: () =>
+      stepExportAvailable(host) ? { ok: true } : { ok: false, reason: "STEP export needs the desktop app's Forge engine; this build has none." },
+    async run({ irJson, name }) {
+      const cli = host.forgeCli;
+      if (!cli || typeof cli.exportStep !== "function") {
+        throw new StepExportError("STEP_UNAVAILABLE", "STEP export needs the desktop app's Forge engine; this build has none.");
+      }
+      const res = await cli.exportStep({ irJson, schema: "ap214", productName: name, allowPartial: false });
+      if (res.data === null || res.exitCode !== 0) {
+        const e = classifyFailure(res);
+        throw new StepExportError(e.code, `${e.message} (${e.code})`);
+      }
+      return res.data;
+    },
+  };
 }

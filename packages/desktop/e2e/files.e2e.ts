@@ -485,7 +485,7 @@ test("an STL imported as a reference is shown, measured, saved inside the .partz
   }
 });
 
-test("the export dialog lists 3MF, STL, OBJ and a STEP placeholder", async () => {
+test("the export dialog lists 3MF, STL, OBJ and STEP (Forge's own writer, through the bundled Forge CLI)", async () => {
   const userData = freshDir("profile-export");
   const { app, page } = await launch(userData, { AICAD_SKIP_CLOSE_PROMPT: "1" });
   try {
@@ -493,10 +493,11 @@ test("the export dialog lists 3MF, STL, OBJ and a STEP placeholder", async () =>
     const dialog = page.getByTestId("export-dialog");
     await expect(dialog).toBeVisible();
     await expect(page.getByTestId("export-format")).toHaveCount(4);
-    await expect(page.locator('[data-testid="export-format"][data-format="step"]')).toContainText("Coming with Forge's own STEP writer");
+    await expect(page.locator('[data-testid="export-format"][data-format="step"]')).toContainText("Exact B-rep (AP214)");
+    await expect(page.locator('[data-testid="export-format"][data-format="step"]')).not.toContainText("Coming with");
     await shot(page, "export");
     await page.locator('[data-testid="export-format"][data-format="step"] input').check();
-    await expect(page.getByTestId("export-run")).toBeDisabled();
+    await expect(page.getByTestId("export-run")).toBeEnabled();
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
   } finally {

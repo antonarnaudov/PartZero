@@ -15,6 +15,7 @@ import { featureNameOfPick, findFeature } from "../doc/provenance";
 import type { EnginePreference } from "../engine/engine-manager";
 import { baseName, docNameFromPath } from "../host/host";
 import { BLANK_SOURCE, findTemplate } from "../host/templates";
+import { makeExportStepCommand } from "../io/step-export-command";
 import type { AppServices } from "../services";
 import { selectionChips } from "../selection/chips";
 import type { SelectionChip } from "../ui-store";
@@ -268,6 +269,21 @@ export const COMMANDS = {
       ctx.ui.toast("success", `Exported ${baseName(target)} (${formatBytes(bytes.length)})`);
       return { exported: true, path: target, format, bytes: bytes.length };
     },
+  }),
+
+  // STEP (forge-io's own AP214/AP242 writer through the desktop's Forge CLI). The document: the IR v1
+  // document of record when the v1 store holds one (as the print handoff does), else the compiled CadScript.
+  "file.exportStep": makeExportStepCommand<AppServices>({
+    async document(ctx, action) {
+      if (ctx.ir) {
+        const v1 = await ctx.ir.waitFor((s) => !s.busy, 30_000);
+        if (v1.document !== null) return { irJson: v1.document, name: ctx.doc.getState().name };
+      }
+      const { ir, state } = await currentIr(ctx, action);
+      return { irJson: JSON.stringify(ir), name: state.name };
+    },
+    host: (ctx) => ctx.host,
+    toast: (ctx, kind, message) => ctx.ui.toast(kind, message),
   }),
 
   // ─── Edit ──────────────────────────────────────────────────────────────────────────────────
