@@ -14,6 +14,13 @@ const STATE_WIDTH: u32 = 2048u;
 const STATE_HOVER: u32 = 1u;
 const STATE_SELECTED: u32 = 2u;
 
+// Display modes (`frame.flags.w`; see src/display.rs, a unit test checks these).
+const MODE_SHADED: u32 = 0u;
+const MODE_SHADED_EDGES: u32 = 1u;
+const MODE_WIREFRAME: u32 = 2u;
+const MODE_HIDDEN_LINE: u32 = 3u;
+const MODE_XRAY: u32 = 4u;
+
 struct Frame {
     view_proj: mat4x4<f32>,
     inv_view_proj: mat4x4<f32>,
@@ -29,7 +36,7 @@ struct Frame {
     viewport: vec4<f32>,
     // xyz: section plane normal (clipped side); w: dot(normal, origin).
     section: vec4<f32>,
-    // x: section on; y: grid on; z: silhouettes on; w: frame counter (unused).
+    // x: section on; y: grid on; z: silhouettes on; w: display mode (MODE_*).
     flags: vec4<u32>,
     // x: edge half width px; y: silhouette half width px; z: depth bias px; w: highlight width scale.
     lines: vec4<f32>,
@@ -49,6 +56,8 @@ struct Frame {
     grid: vec4<f32>,
     grid_minor: vec4<f32>,
     grid_major: vec4<f32>,
+    // x: X-ray face opacity; yzw: hidden-line face colour (linear).
+    display: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> frame: Frame;
