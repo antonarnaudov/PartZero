@@ -1,0 +1,24 @@
+packages/desktop/e2e/shell.e2e.ts
+  s_59c0dd2af30db2::t_bd55f601b99250 126-127
+  s_59c0dd2af30db2::t_f5cefe678a4cfc 299
+  s_59c0dd2af30db2::t_3da925b08999ea 75-78,116,142,158,175,194,202-203,232,276,312,324,354-355,363,371,379
+  s_59c0dd2af30db2::t_740c37923190ce 1-46,79-115,117-125,128-141,143-157,159-174,176-193,195-201,204-231,233-256,258-262,264,266,268-275,277-280,282,284-298,300-311,313-323,325-353,356-362,364-370,372-378,380
+  s_59c0dd2af30db2::t_2fdc9b9a34ba13 47-74,257,265,267,283
+  s_59c0dd2af30db2::t_96926bc1d69bfe 263,281
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "cd2b112b9da303bba4611615f49f06cbb38209f7",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
