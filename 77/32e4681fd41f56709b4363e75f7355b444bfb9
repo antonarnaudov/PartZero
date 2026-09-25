@@ -1,0 +1,51 @@
+packages/model-ops/src/modeling/frames.ts
+  s_59c0dd2af30db2::t_f7974d369e1a82 25,27
+  s_59c0dd2af30db2::t_8e34418db20236 182-193
+  s_59c0dd2af30db2::t_9be2405e698ffb 1-24,26,28-181
+packages/model-ops/src/modeling/keys.ts
+  s_59c0dd2af30db2::t_b12f47bd1f24cc 1-331
+packages/model-ops/src/modeling/boolean.ts
+  s_59c0dd2af30db2::t_5894ebd47dddd1 1-46
+packages/model-ops/src/modeling/push-pull.ts
+  s_59c0dd2af30db2::t_d0edf0e7f8874a 1-123
+packages/model-ops/src/modeling/hole.ts
+  s_59c0dd2af30db2::t_bf3f82a3c908ca 1-7,10-150,152-204
+  s_59c0dd2af30db2::t_8e34418db20236 8-9,151
+packages/model-ops/src/modeling/tool.ts
+  s_59c0dd2af30db2::t_31d3fb759d42f5 1-186
+packages/model-ops/src/modeling/probe.ts
+  s_59c0dd2af30db2::t_df8a4d71c85b5d 1-52
+packages/model-ops/src/modeling/extrude.ts
+  s_59c0dd2af30db2::t_1af5c1e508d01d 49
+  s_59c0dd2af30db2::t_7b422e96535e22 1-48,50-87
+packages/model-ops/src/modeling/revolve.ts
+  s_59c0dd2af30db2::t_1af5c1e508d01d 77
+  s_59c0dd2af30db2::t_26ab7d7a6ab32e 1-76,78-116
+packages/model-ops/src/modeling/datum.ts
+  s_59c0dd2af30db2::t_ffd4eeccbb5cb1 11,96,146
+  s_59c0dd2af30db2::t_74e13b0de30ddf 1-10,12-95,97-145,147-153
+packages/model-ops/src/modeling/index.ts
+  s_59c0dd2af30db2::t_c2316d536ccbe7 1-62
+packages/model-ops/test/modeling.test.ts
+  s_59c0dd2af30db2::t_f7974d369e1a82 154,172
+  s_59c0dd2af30db2::t_16016257e6f6ec 1-60,62-153,155-171,173-297
+  s_59c0dd2af30db2::t_43e23215d24c58 61
+packages/model-ops/src/index.ts
+  s_59c0dd2af30db2::t_977d1b1bd2f92c 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7732e4681fd41f56709b4363e75f7355b444bfb9",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
