@@ -1447,6 +1447,7 @@ mod through_props {
             insert: None,
             size: None,
             thread: None,
+            thread_form: None,
             head_field: None,
         };
         let e = (Vec3::unit_x() - info.dir * info.dir.x)

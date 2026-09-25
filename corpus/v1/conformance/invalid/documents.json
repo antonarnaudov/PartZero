@@ -13874,6 +13874,550 @@
      }
     }
    ]
+  },
+  {
+   "id": "hole-thread-standard-unknown",
+   "document": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       },
+       {
+        "type": "hole",
+        "id": "h1",
+        "name": "holes",
+        "on": {
+         "face": {
+          "kind": "face",
+          "q": {
+           "op": "cap",
+           "feature": "e1",
+           "end": "end"
+          }
+         }
+        },
+        "at": {
+         "list": [
+          {
+           "id": "a",
+           "at": [
+            10,
+            0
+           ]
+          }
+         ]
+        },
+        "depth": "through",
+        "size": "M3",
+        "thread": {
+         "standard": "M7.5",
+         "modeled": true
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expected": [
+    {
+     "code": "THREAD_STANDARD_UNKNOWN",
+     "path": "/parts/0/features/2/thread/standard"
+    }
+   ]
+  },
+  {
+   "id": "hole-modeled-thread-without-major",
+   "document": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       },
+       {
+        "type": "hole",
+        "id": "h1",
+        "name": "holes",
+        "on": {
+         "face": {
+          "kind": "face",
+          "q": {
+           "op": "cap",
+           "feature": "e1",
+           "end": "end"
+          }
+         }
+        },
+        "at": {
+         "list": [
+          {
+           "id": "a",
+           "at": [
+            10,
+            0
+           ]
+          }
+         ]
+        },
+        "depth": "through",
+        "d": 11.3,
+        "thread": {
+         "modeled": true,
+         "pitch": 1.27
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expected": [
+    {
+     "code": "HOLE_OPTIONS_CONFLICT",
+     "path": "/parts/0/features/2/thread"
+    }
+   ]
+  },
+  {
+   "id": "hole-thread-starts-out-of-range",
+   "document": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       },
+       {
+        "type": "hole",
+        "id": "h1",
+        "name": "holes",
+        "on": {
+         "face": {
+          "kind": "face",
+          "q": {
+           "op": "cap",
+           "feature": "e1",
+           "end": "end"
+          }
+         }
+        },
+        "at": {
+         "list": [
+          {
+           "id": "a",
+           "at": [
+            10,
+            0
+           ]
+          }
+         ]
+        },
+        "depth": "through",
+        "thread": {
+         "standard": "1/2-20 UNF",
+         "modeled": true,
+         "starts": 9
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expected": [
+    {
+     "code": "INVALID_COUNT",
+     "path": "/parts/0/features/2/thread/starts"
+    }
+   ]
+  },
+  {
+   "id": "hole-thread-standard-without-size-is-valid",
+   "document": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       },
+       {
+        "type": "hole",
+        "id": "h1",
+        "name": "holes",
+        "on": {
+         "face": {
+          "kind": "face",
+          "q": {
+           "op": "cap",
+           "feature": "e1",
+           "end": "end"
+          }
+         }
+        },
+        "at": {
+         "list": [
+          {
+           "id": "a",
+           "at": [
+            10,
+            0
+           ]
+          }
+         ]
+        },
+        "depth": "through",
+        "thread": {
+         "standard": "1/2-20 UNF",
+         "modeled": true,
+         "hand": "left",
+         "starts": 2
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "expected": []
+  },
+  {
+   "id": "thread-size-required",
+   "document": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       },
+       {
+        "type": "thread",
+        "id": "t1",
+        "name": "thread",
+        "face": {
+         "kind": "face",
+         "q": {
+          "op": "cap",
+          "feature": "e1",
+          "end": "start"
+         },
+         "card": "one"
+        },
+        "length": 5
+       }
+      ]
+     }
+    ]
+   },
+   "expected": [
+    {
+     "code": "THREAD_SIZE_REQUIRED",
+     "path": "/parts/0/features/2"
+    }
+   ]
+  },
+  {
+   "id": "thread-standard-unknown",
+   "document": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       },
+       {
+        "type": "thread",
+        "id": "t1",
+        "name": "thread",
+        "face": {
+         "kind": "face",
+         "q": {
+          "op": "cap",
+          "feature": "e1",
+          "end": "start"
+         },
+         "card": "one"
+        },
+        "standard": "M8x0.9"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": [
+    {
+     "code": "THREAD_STANDARD_UNKNOWN",
+     "path": "/parts/0/features/2/standard"
+    }
+   ]
+  },
+  {
+   "id": "thread-negative-offset",
+   "document": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       },
+       {
+        "type": "thread",
+        "id": "t1",
+        "name": "thread",
+        "face": {
+         "kind": "face",
+         "q": {
+          "op": "cap",
+          "feature": "e1",
+          "end": "start"
+         },
+         "card": "one"
+        },
+        "major": 8,
+        "pitch": 1.25,
+        "offset": -1
+       }
+      ]
+     }
+    ]
+   },
+   "expected": [
+    {
+     "code": "INVALID_VALUE",
+     "path": "/parts/0/features/2/offset"
+    }
+   ]
+  },
+  {
+   "id": "thread-coarse-designation-with-pitch-is-valid",
+   "document": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 8
+       },
+       {
+        "type": "thread",
+        "id": "t1",
+        "name": "thread",
+        "face": {
+         "kind": "face",
+         "q": {
+          "op": "cap",
+          "feature": "e1",
+          "end": "start"
+         },
+         "card": "one"
+        },
+        "standard": "m8 x 1.25",
+        "length": 5,
+        "hand": "left",
+        "modeled": false
+       }
+      ]
+     }
+    ]
+   },
+   "expected": []
   }
  ]
 }

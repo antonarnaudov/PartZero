@@ -584,6 +584,7 @@ mod tests {
             insert: None,
             size: None,
             thread: None,
+            thread_form: None,
             head_field: None,
         };
         let tool = hole_tool(

@@ -29,12 +29,13 @@ macro_rules! programs {
     };
 }
 
-const PROGRAMS: [(&str, &str); 36] = programs![
+const PROGRAMS: [(&str, &str); 37] = programs![
     "../../../../corpus/v1/programs/" / "constrained_plate",
     "../../../../corpus/v1/programs/" / "knob_queries",
     "../../../../corpus/v1/programs/" / "params_plate",
     "../../../../corpus/v1/programs/" / "plate_features",
     "../../../../corpus/v1/programs/" / "shell_box",
+    "../../../../corpus/v1/programs/" / "threads",
     "v1_programs/" / "boolean_intersect",
     "v1_programs/" / "boolean_keep_tools",
     "v1_programs/" / "boss_on_face",
@@ -96,7 +97,10 @@ fn fnv(h: &mut u64, b: &[u8]) {
 ///   (`blends_box`, `fillet_then_chamfer_keys`, `holes_kinds`, `patterns_mixed`). Every other
 ///   program's hash is unchanged (the [W0-40] `removed` fix of forge-regen changes none of
 ///   them).
-const PINNED: u64 = 0xaf34_a471_1876_8a6f;
+/// - → `0x8828_191c_aee6_4fd9` (FM9 stretch, modelled threads): `threads` (0x218d08c70b30d0b6: a
+///   1/2-20 UNF through hole, an M8 blind tapped hole and an M8 bolt thread) is hashed after
+///   `shell_box`; every other program's hash is unchanged.
+const PINNED: u64 = 0x8828_191c_aee6_4fd9;
 
 #[test]
 fn v1_reports_are_bit_identical_to_the_recorded_hash() {

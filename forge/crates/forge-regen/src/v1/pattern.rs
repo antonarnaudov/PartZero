@@ -233,6 +233,18 @@ impl PartEval<'_> {
         order.sort_unstable();
         order.dedup();
         for (si, sid) in order {
+            if self.threaded_seeds.contains(sid) {
+                return Err(FeatureError::new(
+                    "FORGE_PATTERN_MODELED_THREAD",
+                    format!(
+                        "the seed {:?} is a hole with a modelled thread; a pattern would not \
+                         thread its copies (place the holes with the hole's list, grid or \
+                         circle placement instead)",
+                        self.name_of(sid)
+                    ),
+                    json!({ "seed": sid }),
+                ));
+            }
             let Some(tools) = self.seeds.get(sid).cloned() else {
                 return Err(FeatureError::new(
                     "FORGE_PATTERN_SEED_UNAVAILABLE",

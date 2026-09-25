@@ -114,6 +114,7 @@ fn feature(f: &mut Feature) {
             targets(&mut h.targets);
         }
         Feature::Fillet(fl) => card(&mut fl.edges, Cardinality::SOME),
+        Feature::Thread(t) => card(&mut t.face, Cardinality::ONE),
         Feature::Chamfer(c) => {
             card(&mut c.edges, Cardinality::SOME);
             if let Some(s) = &mut c.side {

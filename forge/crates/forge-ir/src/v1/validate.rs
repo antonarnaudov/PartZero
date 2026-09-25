@@ -574,6 +574,7 @@ impl<'a> Validator<'a> {
                 self.check_ref(&b.tools, &format!("{fp}/tools"), BODY_SOME, ctx);
             }
             Feature::Hole(h) => self.hole(h, fp, ctx),
+            Feature::Thread(t) => self.thread(t, fp, ctx),
             Feature::Fillet(fl) => {
                 self.check_ref(&fl.edges, &format!("{fp}/edges"), EDGE_SOME, ctx);
                 if let Some(r) = fl.r.literal()
@@ -1524,7 +1525,13 @@ impl<'a> Validator<'a> {
             );
         };
         let sizes: Vec<&str> = HoleSize::ALL.iter().map(|s| s.as_str()).collect();
-        if h.size.is_none() && h.d.is_none() {
+        let thread_standard = match &h.thread {
+            Some(Thread::Spec(ThreadSpec {
+                standard: Some(s), ..
+            })) => Some(s.as_str()),
+            _ => None,
+        };
+        if h.size.is_none() && h.d.is_none() && thread_standard.is_none() {
             self.err(
                 "HOLE_SIZE_REQUIRED",
                 fp,
@@ -1619,6 +1626,7 @@ impl<'a> Validator<'a> {
         }
         if threaded
             && h.size.is_none()
+            && thread_standard.is_none()
             && !matches!(
                 &h.thread,
                 Some(Thread::Spec(ThreadSpec { pitch: Some(_), .. }))
@@ -1698,6 +1706,19 @@ impl<'a> Validator<'a> {
                     self.positive_len(&format!("{fp}/thread"), f, v);
                 }
             }
+            if let Some(s) = &t.standard {
+                self.thread_standard(&format!("{fp}/thread/standard"), s);
+            }
+            self.thread_starts(&format!("{fp}/thread"), &t.starts);
+            // A modelled thread needs its major diameter: a size or a standard.
+            if !t.modeled.is_false() && h.size.is_none() && t.standard.is_none() {
+                conflict(
+                    self,
+                    "thread",
+                    json!({ "standard": "required for a modelled thread without size" }),
+                    "a modelled thread needs a size or thread.standard (its major diameter)".into(),
+                );
+            }
         }
         self.placement(&h.at, &format!("{fp}/at"), ctx);
         let on_face = matches!(h.on, PlaneRef::Face(_));
@@ -1711,6 +1732,58 @@ impl<'a> Validator<'a> {
             ),
             None => {}
         }
+    }
+
+    /// A `THREAD_STANDARDS` designation (`THREAD_STANDARD_UNKNOWN` otherwise).
+    fn thread_standard(&mut self, path: &str, s: &str) {
+        if super::threads::thread_standard(s).is_none() {
+            let known = super::threads::thread_designations();
+            self.err(
+                "THREAD_STANDARD_UNKNOWN",
+                path,
+                format!("{s:?} is not a thread designation of THREAD_STANDARDS"),
+                json!({ "field": "standard", "value": s, "allowed": known }),
+            );
+        }
+    }
+
+    /// A literal `starts` is a count in `[1, 8]` (`INVALID_COUNT`).
+    fn thread_starts(&mut self, fp: &str, starts: &Option<Scalar>) {
+        if let Some(n) = starts.as_ref().and_then(Scalar::literal)
+            && !(n.fract() == 0.0 && (1.0..=8.0).contains(&n))
+        {
+            self.range("INVALID_COUNT", fp, "starts", n, "an integer in [1, 8]");
+        }
+    }
+
+    /// Thread feature (§6.13).
+    fn thread(&mut self, t: &ThreadFeature, fp: &str, ctx: &PartCtx) {
+        self.check_ref(&t.face, &format!("{fp}/face"), FACE_ONE, ctx);
+        match &t.standard {
+            Some(s) => self.thread_standard(&format!("{fp}/standard"), s),
+            None if t.major.is_none() || t.pitch.is_none() => self.err(
+                "THREAD_SIZE_REQUIRED",
+                fp,
+                "a thread needs a standard designation, or both major and pitch",
+                json!({ "field": "standard", "allowed": ["standard", "major + pitch"] }),
+            ),
+            None => {}
+        }
+        for (f, v) in [
+            ("major", &t.major),
+            ("pitch", &t.pitch),
+            ("length", &t.length),
+        ] {
+            if let Some(v) = v {
+                self.positive_len(fp, f, v);
+            }
+        }
+        if let Some(o) = t.offset.as_ref().and_then(Scalar::literal)
+            && (o < 0.0 || o.is_nan())
+        {
+            self.range("INVALID_VALUE", fp, "offset", o, ">= 0");
+        }
+        self.thread_starts(fp, &t.starts);
     }
 
     fn placement(&mut self, at: &HolePlacement, ap: &str, ctx: &PartCtx) {
@@ -2684,8 +2757,20 @@ impl<'a> Walker<'a> {
                 if let Some(Thread::Spec(t)) = &h.thread {
                     self.opt(format!("{fp}/thread/pitch"), &t.pitch, Length);
                     self.opt(format!("{fp}/thread/depth"), &t.depth, Length);
+                    self.opt(format!("{fp}/thread/starts"), &t.starts, Count);
+                    self.b(format!("{fp}/thread/modeled"), &t.modeled);
                 }
                 self.targets(&format!("{fp}/targets"), &h.targets);
+            }
+            Feature::Thread(t) => {
+                self.r(&format!("{fp}/face"), &t.face);
+                self.opt(format!("{fp}/major"), &t.major, Length);
+                self.opt(format!("{fp}/pitch"), &t.pitch, Length);
+                self.opt(format!("{fp}/length"), &t.length, Length);
+                self.opt(format!("{fp}/offset"), &t.offset, Length);
+                self.opt(format!("{fp}/starts"), &t.starts, Count);
+                self.b(format!("{fp}/flip"), &t.flip);
+                self.b(format!("{fp}/modeled"), &t.modeled);
             }
             Feature::Fillet(fl) => {
                 self.r(&format!("{fp}/edges"), &fl.edges);

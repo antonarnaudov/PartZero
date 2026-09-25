@@ -67,6 +67,7 @@ pub(crate) fn by_id(f: &Feature) -> Vec<(String, ByIdKind)> {
             w.targets(h.targets.as_ref());
         }
         Feature::Fillet(x) => w.r(&x.edges),
+        Feature::Thread(x) => w.r(&x.face),
         Feature::Chamfer(x) => {
             w.r(&x.edges);
             if let Some(r) = &x.side {

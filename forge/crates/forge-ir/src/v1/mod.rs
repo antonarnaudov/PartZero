@@ -15,6 +15,7 @@
 //! | [`metrics`] | the `aicad.metrics/1` report (I5) |
 //! | [`expr`] | the hook where W1's parser/type checker plugs into validation |
 //! | [`compound`], [`degtrig`], [`holes`] | normative compound-curve expansion, degree trig, `HOLE_SIZES` |
+//! | [`threads`] | `THREAD_STANDARDS` (ISO metric, UNC/UNF designations with sources) |
 //! | [`codes`] | the error-code catalogue of SPEC §7.5 |
 
 pub mod canonical;
@@ -34,6 +35,7 @@ mod precheck;
 pub mod refs;
 pub mod scalar;
 pub mod sketch;
+pub mod threads;
 pub mod validate;
 
 use schemars::JsonSchema;
@@ -101,7 +103,8 @@ pub const MAX_COUNT_MAGNITUDE: f64 = 2147483648.0;
 pub const RESERVED_NAMES_V1_BUILTINS: &[&str] = &[
     "param", "measure", "point", "rect", "slot", "polygon", "hole", "grid", "boltCircle",
     "fillet", "chamfer", "shell", "draft", "boolean", "linearPattern", "circularPattern",
-    "mirror", "datumPlane", "datumAxis", "tag", "edgesBetween", "faceOf", "body", "bodies",
+    "mirror", "datumPlane", "datumAxis", "tag", "thread", "edgesBetween", "faceOf", "body",
+    "bodies",
     "min", "max", "abs", "sqrt", "floor", "ceil", "round", "clamp", "hypot", "sin", "cos", "tan",
     "asin", "acos", "atan", "atan2", "PI", "mm", "cm", "inch", "deg", "X", "Y", "Z", "C",
 ];
@@ -303,5 +306,6 @@ pub fn constants_json() -> serde_json::Value {
         "PARAM_UNITS": ParamUnit::ALL,
         "ERROR_CODES": codes::catalogue_json(),
         "HOLE_SIZES": holes::hole_sizes_json(),
+        "THREAD_STANDARDS": threads::thread_standards_json(),
     })
 }

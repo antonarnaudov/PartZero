@@ -58,8 +58,12 @@ pub struct HoleSpec {
     pub insert: Option<(f64, f64)>,
     /// The standard size, when given.
     pub size: Option<HoleSize>,
-    /// Cosmetic thread: pitch and explicit depth (`None`: the full hole depth).
+    /// Thread: pitch and explicit depth (`None`: the full hole depth).
     pub thread: Option<(f64, Option<f64>)>,
+    /// The thread's form beyond its pitch (standard, major diameter, starts, hand), and
+    /// whether it is modelled (`modeled` is a Bool field: the caller sets it after evaluating
+    /// it; [`hole_spec`] leaves it `false`).
+    pub thread_form: Option<HoleThreadForm>,
     /// The field a head that does not end above the hole's floor is reported at
     /// (`INVALID_VALUE`, SPEC §6.5): `/cbore/depth` (custom) or `/cbore` (preset), with the
     /// counterbore depth as the value; `/csink/d` (custom) or `/csink` (preset), with the
@@ -69,6 +73,21 @@ pub struct HoleSpec {
     pub head_field: Option<&'static str>,
 }
 
+/// The form of a hole's thread beyond its pitch.
+#[derive(Clone, Debug, PartialEq)]
+pub struct HoleThreadForm {
+    /// The `THREAD_STANDARDS` designation, when given.
+    pub standard: Option<String>,
+    /// Basic major diameter (a standard's, or the size's nominal diameter).
+    pub major: Option<f64>,
+    /// Number of starts.
+    pub starts: u32,
+    /// Right-hand thread.
+    pub right_hand: bool,
+    /// The groove is modelled (set by the caller).
+    pub modeled: bool,
+}
+
 impl HoleSpec {
     /// The report's `thread` entry for a hole of depth `depth` (`None` for through).
     pub fn thread_out(&self, depth: Option<f64>) -> Option<ThreadOut> {
@@ -76,6 +95,15 @@ impl HoleSpec {
             size: self.size,
             pitch,
             depth: d.or(depth),
+            standard: self.thread_form.as_ref().and_then(|f| f.standard.clone()),
+            // Only a modelled thread or one with a standard reports its major diameter: a plain
+            // cosmetic thread's report is unchanged from before modelled threads.
+            major: self
+                .thread_form
+                .as_ref()
+                .filter(|f| f.modeled || f.standard.is_some())
+                .and_then(|f| f.major),
+            modeled: self.thread_form.as_ref().is_some_and(|f| f.modeled),
         })
     }
 }
@@ -146,6 +174,14 @@ pub fn literal_hole<E>(
                 Some(p) => Some(lit(p, Length, "/thread/depth")?),
                 None => None,
             },
+            starts: match &t.starts {
+                Some(p) => Some(lit(p, Count, "/thread/starts")?),
+                None => None,
+            },
+            // A Bool field: the caller evaluates it.
+            modeled: t.modeled.clone(),
+            standard: t.standard.clone(),
+            hand: t.hand,
         }));
     }
     out.at = match &h.at {
@@ -264,7 +300,22 @@ pub(crate) fn tan_half_deg(a: f64) -> f64 {
 /// violation in that order is returned; `field` is its path relative to the feature.
 pub fn hole_spec(h: &HoleFeature) -> Result<HoleSpec, HoleError> {
     // The rejections validation owns, re-checked for callers that bypass it.
-    if h.d.is_none() && h.size.is_none() {
+    let thread_standard = match &h.thread {
+        Some(Thread::Spec(t)) => t.standard.as_deref(),
+        _ => None,
+    };
+    if let Some(s) = thread_standard
+        && forge_ir::v1::threads::thread_standard(s).is_none()
+    {
+        return Err(HoleError::OptionsConflict {
+            field: "/thread/standard".into(),
+            allowed: forge_ir::v1::threads::thread_designations()
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+        });
+    }
+    if h.d.is_none() && h.size.is_none() && thread_standard.is_none() {
         return Err(HoleError::SizeRequired {
             field: "/size".into(),
             allowed: all_sizes(),
@@ -329,7 +380,7 @@ pub fn hole_spec(h: &HoleFeature) -> Result<HoleSpec, HoleError> {
         });
     }
     let explicit_pitch = matches!(&h.thread, Some(Thread::Spec(t)) if t.pitch.is_some());
-    if threaded && h.size.is_none() && !explicit_pitch {
+    if threaded && h.size.is_none() && !explicit_pitch && thread_standard.is_none() {
         return Err(HoleError::OptionsConflict {
             field: "/thread".into(),
             allowed: vec!["pitch".into(), "size".into()],
@@ -500,6 +551,42 @@ pub fn hole_spec(h: &HoleFeature) -> Result<HoleSpec, HoleError> {
             Some((pitch, depth))
         }
     };
+    let thread_form = match (&thread, &h.thread) {
+        (Some(_), Some(Thread::Spec(t))) => {
+            let starts = match &t.starts {
+                Some(s) => {
+                    let n = num(s, "/thread/starts")?;
+                    // Exact comparison on purpose: counts are exact integers.
+                    #[allow(clippy::float_cmp)]
+                    let integral = n == n.trunc();
+                    if !(integral && (1.0..=8.0).contains(&n)) {
+                        return Err(HoleError::InvalidCount {
+                            field: "/thread/starts".into(),
+                            value: n,
+                            expected: "an integer in [1, 8]".into(),
+                        });
+                    }
+                    n as u32
+                }
+                None => 1,
+            };
+            Some(HoleThreadForm {
+                standard: t.standard.clone(),
+                major: dims.thread_major,
+                starts,
+                right_hand: t.hand == forge_ir::v1::ThreadHand::Right,
+                modeled: false,
+            })
+        }
+        (Some(_), _) => Some(HoleThreadForm {
+            standard: None,
+            major: dims.thread_major,
+            starts: 1,
+            right_hand: true,
+            modeled: false,
+        }),
+        _ => None,
+    };
     let head_field = match (&h.cbore, &h.csink) {
         (Some(Counterbore::Custom(_)), _) => Some("/cbore/depth"),
         (Some(_), _) => Some("/cbore"),
@@ -518,6 +605,7 @@ pub fn hole_spec(h: &HoleFeature) -> Result<HoleSpec, HoleError> {
         insert,
         size: h.size,
         thread,
+        thread_form,
         head_field,
     })
 }

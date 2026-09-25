@@ -24,7 +24,7 @@
 use forge_core::linalg::{Frame, Point3, Vec3};
 use forge_ir::v1::metrics::{FeatureReport, Severity, Warning};
 use forge_ir::v1::{
-    Cardinality, HoleDepth, HoleFeature, HolePlacement, LiteralCurve, PointIds, Targets,
+    Cardinality, HoleDepth, HoleFeature, HolePlacement, LiteralCurve, PointIds, Targets, Thread,
 };
 use forge_ops::BodyOp;
 use forge_ops::hole::{
@@ -48,7 +48,14 @@ impl PartEval<'_> {
         // 1. Values and range checks.
         let lit = literal_hole(h, |s, t, _path| self.scalar(s, t))?;
         let flip = self.pv.boolean(self.pi, &h.flip)?;
-        let spec = hole_spec(&lit)?;
+        let mut spec = hole_spec(&lit)?;
+        let modeled = match &h.thread {
+            Some(Thread::Spec(t)) => self.pv.boolean(self.pi, &t.modeled)?,
+            _ => false,
+        };
+        if let Some(tf) = &mut spec.thread_form {
+            tf.modeled = modeled;
+        }
         let sketch_points = self.hole_sketch_points(&lit.at)?;
         if let Err(
             e @ (HoleError::InvalidCount { .. }
@@ -106,12 +113,21 @@ impl PartEval<'_> {
                 json!({ "field": "/depth/up_to", "expected": "face", "found": "not a face" }),
             ));
         }
-        let outcome = apply_hole(&spec, &positions, &site, &t_ops)?;
+        let mut outcome = apply_hole(&spec, &positions, &site, &t_ops)?;
+        if modeled {
+            self.thread_hole(&spec, &positions, &frame, flip, &mut outcome)?;
+        }
         let timeline_of = timelines(&t_ops, &outcome.tools);
         let seed = self.seed_ids.contains(h.id.as_str()).then(|| SeedTools {
             op: forge_ops::pattern::SeedOp::Hole,
             bodies: outcome.seed_bodies(),
         });
+        let seed = if modeled && seed.is_some() {
+            self.threaded_seeds.insert(h.id.clone());
+            None
+        } else {
+            seed
+        };
         let c = self.commit_op(fi, BodyOp::Cut, &targets, &[], outcome.op, &timeline_of)?;
         entry.bodies = c.bodies;
         entry.removed = c.removed;
@@ -122,6 +138,57 @@ impl PartEval<'_> {
         entry.holes = outcome.holes;
         if let Some(seed) = seed {
             self.seeds.insert(h.id.clone(), seed);
+        }
+        Ok(())
+    }
+
+    /// Cut the modelled thread into every wall piece of every position of the hole's result
+    /// bodies (see the `thread` module docs).
+    fn thread_hole(
+        &self,
+        spec: &forge_ops::hole::HoleSpec,
+        positions: &[forge_ops::hole::HolePos],
+        frame: &Frame,
+        flip: bool,
+        outcome: &mut forge_ops::hole::HoleOutcome,
+    ) -> Result<(), FeatureError> {
+        let form_of = spec.thread_form.as_ref();
+        let (Some((pitch, explicit_depth)), Some(tf)) = (spec.thread, form_of) else {
+            return Ok(());
+        };
+        let Some(major) = tf.major else {
+            return Err(FeatureError::new(
+                "HOLE_OPTIONS_CONFLICT",
+                "a modelled thread needs a size or thread.standard (its major diameter)",
+                json!({ "field": "thread", "allowed": { "standard": "required for a modelled thread without size" } }),
+            ));
+        };
+        let form = forge_ops::thread::ThreadForm {
+            kind: forge_ops::thread::ThreadKind::Internal,
+            major,
+            pitch,
+            starts: tf.starts,
+            right_hand: tf.right_hand,
+        };
+        form.validate()?;
+        let d = forge_ops::hole::drill_direction(frame, flip);
+        let x_dir = frame.x();
+        for (k, p) in positions.iter().enumerate() {
+            let depth = explicit_depth.or_else(|| outcome.holes.get(k).and_then(|r| r.depth));
+            for rb in &mut outcome.op.bodies {
+                let body = std::mem::take(&mut rb.body);
+                rb.body = Self::thread_hole_walls(
+                    body,
+                    form,
+                    p.point,
+                    d,
+                    x_dir,
+                    0.5 * spec.d,
+                    depth,
+                    &spec.feature,
+                    &p.id,
+                )?;
+            }
         }
         Ok(())
     }

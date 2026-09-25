@@ -2501,6 +2501,119 @@
             "target"
           ],
           "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Thread (FM9 stretch, §6.13): a screw thread of the 60° basic profile on a cylindrical\nface — a bore gets a nut thread, a boss a bolt thread. `modeled` (default) cuts the\nexact helical groove; `false` records a cosmetic thread in the report only.",
+          "properties": {
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "face": {
+              "$ref": "#/$defs/Ref",
+              "description": "The cylindrical face (face, `one`)."
+            },
+            "flip": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Start from the other end of the face."
+            },
+            "hand": {
+              "$ref": "#/$defs/ThreadHand",
+              "default": "right"
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "length": {
+              "$ref": "#/$defs/Scalar",
+              "description": "Threaded length from the start end (default: the rest of the face)."
+            },
+            "major": {
+              "$ref": "#/$defs/Scalar",
+              "description": "Basic major diameter (overrides the standard's)."
+            },
+            "modeled": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": true,
+              "description": "Cut the helical groove (default) or record a cosmetic thread only."
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "offset": {
+              "$ref": "#/$defs/Scalar",
+              "description": "Distance of the thread's start from the start end (default 0)."
+            },
+            "pitch": {
+              "$ref": "#/$defs/Scalar",
+              "description": "Pitch (overrides the standard's)."
+            },
+            "standard": {
+              "description": "A `THREAD_STANDARDS` designation (`M8`, `M14x1`, `1/2-20 UNF`). Required unless\nboth `major` and `pitch` are given (`THREAD_SIZE_REQUIRED`).",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "starts": {
+              "$ref": "#/$defs/Scalar",
+              "description": "Number of starts (a count in `[1, 8]`, default 1)."
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "type": {
+              "const": "thread",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "face"
+          ],
+          "type": "object"
         }
       ]
     },
@@ -4399,7 +4512,15 @@
           "$ref": "#/$defs/ThreadSpec"
         }
       ],
-      "description": "Cosmetic thread: `true`, or `{ pitch?, depth? }` (defaults: the size's coarse pitch, the\nfull hole depth). `false` means no thread."
+      "description": "Thread: `true`, or `{ pitch?, depth?, standard?, modeled?, hand?, starts? }` (defaults: the\nsize's coarse pitch, the full hole depth, cosmetic, right hand, one start). `false` means no\nthread. A **cosmetic** thread changes no geometry; a **modelled** one (`modeled: true`) cuts\nthe helical groove of the 60° basic profile into the hole's wall (§6.5, `THREAD_STANDARDS`)."
+    },
+    "ThreadHand": {
+      "description": "Thread handedness.",
+      "enum": [
+        "right",
+        "left"
+      ],
+      "type": "string"
     },
     "ThreadSpec": {
       "additionalProperties": false,
@@ -4407,8 +4528,28 @@
         "depth": {
           "$ref": "#/$defs/Scalar"
         },
+        "hand": {
+          "$ref": "#/$defs/ThreadHand",
+          "default": "right"
+        },
+        "modeled": {
+          "$ref": "#/$defs/BoolScalar",
+          "default": false,
+          "description": "Cut the helical groove (true) or record a cosmetic thread only (false)."
+        },
         "pitch": {
           "$ref": "#/$defs/Scalar"
+        },
+        "standard": {
+          "description": "A `THREAD_STANDARDS` designation (`M8`, `M14x1`, `1/2-20 UNF`): the major diameter and\npitch of the thread (`pitch` still overrides). Without it the major diameter is the\nhole `size`'s nominal diameter.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "starts": {
+          "$ref": "#/$defs/Scalar",
+          "description": "Number of starts (a count in `[1, 8]`, default 1)."
         }
       },
       "type": "object"

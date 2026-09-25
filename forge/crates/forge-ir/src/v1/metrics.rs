@@ -155,6 +155,8 @@ pub struct FeatureReport {
     pub shell: Option<ShellReport>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pattern: Option<PatternReport>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thread: Option<ThreadReport>,
 }
 
 // ---- sketches -------------------------------------------------------------------------------
@@ -480,7 +482,8 @@ pub struct CsinkOut {
     pub angle: f64,
 }
 
-/// A cosmetic thread (no geometry).
+/// A hole's thread: cosmetic (no geometry) or modelled (`modeled: true`, the helical groove
+/// is cut).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ThreadOut {
@@ -490,6 +493,42 @@ pub struct ThreadOut {
     /// Thread depth, or `null` for the full (through) depth.
     #[schemars(schema_with = "nullable_number", required)]
     pub depth: Option<f64>,
+    /// The `THREAD_STANDARDS` designation, when given.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub standard: Option<String>,
+    /// Basic major diameter, when known (a standard or a size).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub major: Option<f64>,
+    /// `true` when the groove is modelled.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub modeled: bool,
+}
+
+/// A thread feature's summary (§6.13).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ThreadReport {
+    /// Key of the threaded face.
+    pub face: String,
+    /// `internal` (a bore) or `external` (a boss).
+    pub kind: String,
+    /// The `THREAD_STANDARDS` designation, when given.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub standard: Option<String>,
+    /// Basic major diameter `D`.
+    pub major: f64,
+    pub pitch: f64,
+    /// Basic minor diameter `D1 = D − 1.25·H`.
+    pub minor: f64,
+    /// The face's (crest) diameter.
+    pub crest_d: f64,
+    /// Threaded length and its distance from the start end.
+    pub length: f64,
+    pub offset: f64,
+    pub starts: u32,
+    pub hand: super::ThreadHand,
+    /// `false` for a cosmetic thread (no geometry).
+    pub modeled: bool,
 }
 
 /// Fillet and chamfer summary (§6.6, §6.7).

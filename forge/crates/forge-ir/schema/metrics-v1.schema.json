@@ -960,6 +960,9 @@
         "status": {
           "$ref": "#/$defs/Status"
         },
+        "thread": {
+          "$ref": "#/$defs/ThreadReport"
+        },
         "type": {
           "type": "string"
         },
@@ -2626,9 +2629,17 @@
       ],
       "type": "string"
     },
+    "ThreadHand": {
+      "description": "Thread handedness.",
+      "enum": [
+        "right",
+        "left"
+      ],
+      "type": "string"
+    },
     "ThreadOut": {
       "additionalProperties": false,
-      "description": "A cosmetic thread (no geometry).",
+      "description": "A hole's thread: cosmetic (no geometry) or modelled (`modeled: true`, the helical groove\nis cut).",
       "properties": {
         "depth": {
           "description": "Thread depth, or `null` for the full (through) depth.",
@@ -2638,17 +2649,111 @@
             "null"
           ]
         },
+        "major": {
+          "description": "Basic major diameter, when known (a standard or a size).",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "modeled": {
+          "description": "`true` when the groove is modelled.",
+          "type": "boolean"
+        },
         "pitch": {
           "format": "double",
           "type": "number"
         },
         "size": {
           "$ref": "#/$defs/HoleSize"
+        },
+        "standard": {
+          "description": "The `THREAD_STANDARDS` designation, when given.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
         "pitch",
         "depth"
+      ],
+      "type": "object"
+    },
+    "ThreadReport": {
+      "additionalProperties": false,
+      "description": "A thread feature's summary (§6.13).",
+      "properties": {
+        "crest_d": {
+          "description": "The face's (crest) diameter.",
+          "format": "double",
+          "type": "number"
+        },
+        "face": {
+          "description": "Key of the threaded face.",
+          "type": "string"
+        },
+        "hand": {
+          "$ref": "#/$defs/ThreadHand"
+        },
+        "kind": {
+          "description": "`internal` (a bore) or `external` (a boss).",
+          "type": "string"
+        },
+        "length": {
+          "description": "Threaded length and its distance from the start end.",
+          "format": "double",
+          "type": "number"
+        },
+        "major": {
+          "description": "Basic major diameter `D`.",
+          "format": "double",
+          "type": "number"
+        },
+        "minor": {
+          "description": "Basic minor diameter `D1 = D − 1.25·H`.",
+          "format": "double",
+          "type": "number"
+        },
+        "modeled": {
+          "description": "`false` for a cosmetic thread (no geometry).",
+          "type": "boolean"
+        },
+        "offset": {
+          "format": "double",
+          "type": "number"
+        },
+        "pitch": {
+          "format": "double",
+          "type": "number"
+        },
+        "standard": {
+          "description": "The `THREAD_STANDARDS` designation, when given.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "starts": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "face",
+        "kind",
+        "major",
+        "pitch",
+        "minor",
+        "crest_d",
+        "length",
+        "offset",
+        "starts",
+        "hand",
+        "modeled"
       ],
       "type": "object"
     },

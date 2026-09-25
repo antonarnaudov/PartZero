@@ -79,7 +79,7 @@ instead of recomputing it. Nothing in the trace is trusted without an independen
 | Sketches | lines, arcs, circles; literal coordinates | + points, construction curves, `rect`/`slot`/`polygon` compound curves, **constraints and dimensions** solved by forge-solve (§4) |
 | Planes | `XY`/`XZ`/`YZ`, explicit frame | + planar faces, datum planes; datum axes (§3) |
 | Body ops | new bodies only | `join`/`cut`/`intersect` with explicit targets, standalone `boolean` (§6.2–6.4) |
-| Features | sketch, extrude, revolve | + hole, fillet, chamfer, shell, draft (optional), pattern (linear, circular, mirror), datum_plane, datum_axis, tag (§6) |
+| Features | sketch, extrude, revolve | + hole, fillet, chamfer, shell, draft (optional), pattern (linear, circular, mirror), datum_plane, datum_axis, tag, thread (§6) |
 | References | sketch by name | features by **id**; faces/edges/vertices/bodies by typed **query** with declared **cardinality** and an optional **capture** (§5) |
 | Report | metrics | + parameter values, warnings, structured error details, reference resolutions, per-part final bodies (§7) |
 
@@ -1716,7 +1716,7 @@ const merged = boolean("join", { targets: floor, tools: walls });
 | `cbore` | `"iso4762"` or `{ "d", "depth" }` | — | counterbore |
 | `csink` | `"iso10642"` or `{ "d", "angle" (default 90) }` | — | countersink |
 | `insert` | `"std"` or `{ "d", "depth" }` | — | heat-set insert hole (flat floor) |
-| `thread` | `true` or `{ "pitch"?, "depth"? }` | — | cosmetic thread; with `size`, the default diameter becomes the tap drill |
+| `thread` | `true` or `{ "pitch"?, "depth"?, "standard"?, "modeled"?, "hand"?, "starts"? }` | — | a thread, cosmetic unless `modeled`; with `size`, the default diameter becomes the tap drill; with `standard` and neither `size` nor `d`, the standard's basic minor diameter |
 | `targets` | `"all"` or Ref (body, `some`) | the body owning the `on` face | required when `on` is not a face |
 
 At most one of `cbore`, `csink`, `insert`; `thread` excludes `insert`; the presets need `size`.
@@ -1748,8 +1748,22 @@ every position must lie on that face (inside or on its boundary within tol), els
 - The tools of all positions form one `cut` of the targets (§6.0.3). A position whose tool meets no
   target is `HOLE_MISSES_BODY`, `{ "at" }`. A blind hole that breaks through is warning
   `HOLE_BREAKS_THROUGH`, `{ "at" }`.
-- `thread` changes no geometry: the report records `{ "size", "pitch", "depth" }` on the instance
-  and the wall face `H/wall@p` carries the thread attribute for drawings and export.
+- A **cosmetic** `thread` (the default) changes no geometry: the report records `{ "size", "pitch",
+  "depth" }` on the instance and the wall face `H/wall@p` carries the thread attribute for drawings
+  and export.
+- A **modelled** thread (`thread.modeled: true`, FM9 stretch) cuts the groove of the 60° basic
+  profile (ISO 68-1 / ASME B1.1, §6.13 "Geometry") into every wall piece `H/wall@p` of every
+  position, from the placement plane (or the wall's top, below a counterbore or countersink) down to
+  the thread `depth` (default: the hole's depth; `through`: every wall piece): a nut thread whose
+  crest is the bore (`D`) and whose root is the major diameter. The major diameter is `standard`'s
+  (`THREAD_STANDARDS`), else the `size`'s nominal diameter; the pitch is `pitch`, else the
+  standard's, else the size's coarse pitch; `hand` `"right"` (default) or `"left"`; `starts` a count
+  in `[1, 8]` (default 1). The frame: origin `P`, `z = d`, `x` the placement frame's `x`; the groove
+  of start 0 is centred on the placement plane at `x`. A modelled thread without `size` or
+  `standard` is `HOLE_OPTIONS_CONFLICT`; an unknown `standard` is `THREAD_STANDARD_UNKNOWN`; its
+  construction fails like §6.13's (`THREAD_*`). The report's `holes[].thread` adds `standard`,
+  `major` and `modeled: true`. A hole with a modelled thread cannot be a pattern seed yet
+  (`FORGE_PATTERN_MODELED_THREAD`): use the hole's own placement forms.
 
 **Standard sizes** (normative table `HOLE_SIZES` in `schema/ir-v1.constants.json`, values in mm,
 **verified 2026-09-23** against at least two independent published tables per family; ADR 0013
@@ -2024,6 +2038,60 @@ it. A tag is a stable, named handle for a selection (the agent's "mount_face").
 const mountFace = tag(slab.faces().planes().normal("-Z").one());
 const inserts   = hole(mountFace, { at: { a: [10, 10], b: [-10, 10] }, size: "M3", insert: "std" });
 ```
+
+### 6.13 `thread` (FM9 stretch: modelled threads)
+
+A screw thread of the 60° basic profile on a cylindrical face: a **bore** (its material outside)
+gets a nut thread, a **boss** (material inside) a bolt thread.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `face` | Ref (face, `one`) | — | a cylinder bounded by two full circles |
+| `standard` | string | — | a `THREAD_STANDARDS` designation: `M8`, `M14x1`, `1/2-20 UNF`, `#10-32 UNF` (case, spaces and `×` are ignored; `M8x1.25` names the coarse `M8`) |
+| `major`, `pitch` | length | the standard's | override; without `standard` both are required (`THREAD_SIZE_REQUIRED`) |
+| `length` | length | the rest of the face | threaded length from the start end, > tol |
+| `offset` | length | 0 | distance of the thread's start from the start end, ≥ 0 |
+| `flip` | bool | false | start from the other end |
+| `hand` | `"right"` / `"left"` | `"right"` | |
+| `starts` | count | 1 | in `[1, 8]` (`INVALID_COUNT`); the lead is `starts·pitch` |
+| `modeled` | bool | true | `false`: a cosmetic thread (report only, no geometry) |
+
+**Start end.** The end circle whose neighbouring face is a plane opening away from the cylinder (a
+hole's entry, a boss's free end); when both or neither do, the one with the larger world `z` (then
+`y`, then `x`); `flip` takes the other one.
+
+**Geometry** (normative). Thread frame: origin the start end's centre, `z` along the axis into the
+face, `x` the cylinder's `x` made perpendicular to `z`. `H = P·√3/2`, `D1 = D − (5/4)·H`. The groove
+of start `j` is centred on `z = j·P + p·θ` (`p = ±starts·P/2π`, `+` right hand), its axial width at
+radius `r` is `w(r) = w₀ + 2·|R_r − r|·tan 30°` with the root at `R_r = D/2`, `w₀ = P/8` (nut) or
+`R_r = D1/2`, `w₀ = P/4` (bolt). The crest is the face itself: its diameter must leave a crest flat
+of at least 0.02·P and a groove at least `w₀` deep (`THREAD_DIAMETER_MISMATCH { kind, designation,
+d, min_d, max_d }`). The thread runs over `[offset, offset + length]`; each end lies on an end
+circle of the face or at least 1e-3 mm inside it (`THREAD_END_TOO_CLOSE`, `THREAD_LENGTH_OUT_OF_RANGE`),
+and at least one end lies on an end circle (`THREAD_END_UNSUPPORTED`). An end on a plane across the
+axis changes that plane's boundary (it loses or gains the groove sections); an end on a coaxial cone
+on the far side (a drill point, a countersink), or inside the face, closes each groove with a planar
+end face. No other face may come within the annulus the grooves occupy
+(`THREAD_INTERFERENCE`: a wall thinner than the thread). Faces are exact helicoids (flanks), cylinders
+(root, crest) and planes; edges exact helices, spirals and arcs.
+
+**Keys.** The crest keeps its key; new faces `F/thread_upper`, `F/thread_lower`, `F/thread_root`,
+`F/thread_end_start`, `F/thread_end_end` (start `j > 0` adds the source `s<j>`; a hole's modelled
+thread qualifies them with the position, `@p`).
+
+**Report**: `thread: { "face", "kind", "standard"?, "major", "pitch", "minor", "crest_d", "length",
+"offset", "starts", "hand", "modeled" }` and, when modelled, the modified body.
+
+```json
+{ "type": "thread", "id": "th1", "name": "boltThread",
+  "face": { "kind": "face", "q": { "op": "side", "feature": "e2", "curve": "ring" }, "card": "one" },
+  "standard": "M8", "length": 10 }
+```
+
+**`THREAD_STANDARDS`** (in `schema/ir-v1.constants.json`, every row with two independent sources;
+`forge_ir::v1::threads`): ISO metric coarse M1.6–M30 and fine (M1.6x0.2 … M30x1.5, the pitches both
+tables list), Unified coarse and fine #2–1" (UNC/UNF, ASME B1.1: major `0.060 + 0.013·N` in for
+numbered sizes). Nominal diameters only: tolerance classes and FDM compensation are not in the IR.
 
 ## 7. Evaluation and report (`aicad.metrics/1`)
 
@@ -2446,6 +2514,18 @@ named constants (*tol*, `ANGULAR_TOLERANCE`) [W0-42] [W0-43].
 7. **Holes**: the oracle builds each hole tool as the revolution of the exact §6.5 profile and
    applies one cut.
 8. **Draft**: `BRepOffsetAPI_DraftAngle` with the neutral plane and pull direction of §6.9.
+9. **Threads** (FM9 stretch, §6.5 `thread.modeled`, §6.13): OCCT has no helicoid, so the oracle
+   builds each start's groove as a Frenet sweep of the §6.13 profile along a helix
+   (`BRepOffsetAPI_MakePipeShell`, its volume gated against the closed form to 1e-4), clipped to
+   `[z_a, z_b]`, and cuts it: a hole's grooves in the hole's own cut, fused with the hole tool
+   converted to B-splines; a `thread` feature's from its target converted to B-splines
+   (`BRepBuilderAPI_NurbsConvert`: OCCT intersects swept flanks with analytic faces unreliably —
+   whole grooves lost or cut short depending on where a cylinder's seam lies — and reliably with
+   B-spline faces). On the bodies a thread touched, from that feature on, face and edge **counts,
+   volume, area, box and centroid are compared as usual**, and the types are compared as in rule
+   4: the oracle may have `k` more `bspline` faces where Forge has `k` more `helicoid` or
+   `cylinder` faces, and `k` more `bspline` edges where Forge has `k` more `helix` or `circle`
+   edges (`ORACLE_NORMALIZED` `{ "rule": "9" }`, the program `NORMALIZED`).
 
 ### 8.4 Classes [D-58]
 
@@ -2454,7 +2534,7 @@ v0's classes, plus:
 | Class | Meaning | Severity |
 |---|---|---|
 | `REF_MISMATCH` | independent-refs mode: the engines resolved a reference to different sets | between `POTENTIAL_SILENT_WRONG` and `CODE_MISMATCH` |
-| `NORMALIZED` | a MATCH that needed §8.3 rule 4 or 5; logged with the rule | just above `MATCH` |
+| `NORMALIZED` | a MATCH that needed §8.3 rule 4, 5 or 9; logged with the rule | just above `MATCH` |
 
 Severity order, most severe first: `POTENTIAL_SILENT_WRONG`, `REF_MISMATCH`, `CODE_MISMATCH`,
 `ROBUSTNESS`, `NORMALIZED`, `MATCH`. A release requires zero `POTENTIAL_SILENT_WRONG` and zero
@@ -2524,8 +2604,8 @@ printing a v0 IR prints its migration.
 
 v1 adds these CadScript builtins to `RESERVED_NAMES`: `param`, `measure`, `point`, `rect`, `slot`,
 `polygon`, `hole`, `grid`, `boltCircle`, `fillet`, `chamfer`, `shell`, `draft`, `boolean`,
-`linearPattern`, `circularPattern`, `mirror`, `datumPlane`, `datumAxis`, `tag`, `edgesBetween`,
-`faceOf`, `body`, `bodies`, `min`, `max`, `abs`, `sqrt`, `floor`, `ceil`, `round`, `clamp`, `hypot`,
+`linearPattern`, `circularPattern`, `mirror`, `datumPlane`, `datumAxis`, `tag`, `thread` (FM9
+stretch, §6.13), `edgesBetween`, `faceOf`, `body`, `bodies`, `min`, `max`, `abs`, `sqrt`, `floor`, `ceil`, `round`, `clamp`, `hypot`,
 `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `PI`, `mm`, `cm`, `inch`, `deg`, `X`, `Y`, `Z`,
 `C`. A v0 document that uses one of them as a feature name is still valid IR v1 at the IR level,
 because migration does not rename; the CadScript printer then reports `CS_RESERVED_NAME` for it,

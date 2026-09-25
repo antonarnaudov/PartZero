@@ -1199,6 +1199,7 @@ impl HoleCopies<'_> {
             insert: None,
             size: None,
             thread: None,
+            thread_form: None,
             head_field: None,
         };
         let e = perpendicular(d).ok_or_else(|| PatternError::internal("a zero hole axis"))?;

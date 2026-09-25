@@ -31,7 +31,7 @@ use crate::checked;
 /// IR v1 type (§0.2 rule 3): the optional ones of [`super::REJECTED_FEATURE_TYPES`] with
 /// `UNSUPPORTED_FEATURE`, the mandatory ones of [`super::UNIMPLEMENTED_FEATURE_TYPES`] (none
 /// since Phase C) with `UNSUPPORTED_FEATURE_VERSION`.
-pub const SUPPORTED_FEATURE_TYPES: [&str; 12] = [
+pub const SUPPORTED_FEATURE_TYPES: [&str; 13] = [
     "sketch",
     "extrude",
     "revolve",
@@ -44,6 +44,7 @@ pub const SUPPORTED_FEATURE_TYPES: [&str; 12] = [
     "datum_plane",
     "datum_axis",
     "tag",
+    "thread",
 ];
 
 /// Defensive, engine-internal feature error (SPEC-v1 §7.5 "engine-internal failures keep the
@@ -139,6 +140,9 @@ pub(crate) struct PartEval<'d> {
     pub(super) seed_ids: BTreeSet<&'d str>,
     /// The tools of every evaluated seed feature, by feature id.
     pub(super) seeds: BTreeMap<String, SeedTools>,
+    /// Seed holes whose thread is modelled: a pattern of them is refused
+    /// (`FORGE_PATTERN_MODELED_THREAD`, the copies would not be threaded).
+    pub(super) threaded_seeds: BTreeSet<String>,
     /// Feature report entries, in timeline order (suppressed features have none).
     pub(crate) features: Vec<FeatureReport>,
     /// Check the key invariant (SPEC-v1 §5.2 rule 3) after every feature that produced bodies.
@@ -180,6 +184,7 @@ impl<'d> PartEval<'d> {
                 .map(String::as_str)
                 .collect(),
             seeds: BTreeMap::new(),
+            threaded_seeds: BTreeSet::new(),
             features: Vec::new(),
             check_keys: false,
             key_problems: Vec::new(),
@@ -259,6 +264,7 @@ impl<'d> PartEval<'d> {
             chamfer: None,
             shell: None,
             pattern: None,
+            thread: None,
         };
         // Suppressed features are skipped and produce no entry (v0); a `suppressed` expression
         // that cannot be evaluated fails the feature.
@@ -377,6 +383,7 @@ impl<'d> PartEval<'d> {
                 Ok(())
             }
             Feature::Hole(h) => self.hole(fi, h, entry),
+            Feature::Thread(t) => self.thread(fi, t, entry),
             Feature::Pattern(p) => self.pattern(fi, p, entry),
             Feature::Fillet(x) => self.fillet(fi, x, entry),
             Feature::Chamfer(x) => self.chamfer(fi, x, entry),

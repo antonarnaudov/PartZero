@@ -145,6 +145,16 @@ pub const CATALOGUE: &[CodeInfo] = &[
     c("DRAFT_FACE_UNSUPPORTED", "E", "§6.9", &["faces"], "v1"),
     c("DRAFT_FAILED", "E", "§6.9", &["faces"], "v1"),
     c("PATTERN_ALL_INSTANCES_FAILED", "E", "§6.10", &["instances"], "v1"),
+    // Modelled threads (§6.5 thread.modeled, §6.12 thread; FM9 stretch).
+    c("THREAD_STANDARD_UNKNOWN", "R", "§6.13", &["field", "value", "allowed"], "v1"),
+    c("THREAD_SIZE_REQUIRED", "R", "§6.13", &["field", "allowed"], "v1"),
+    c("THREAD_INVALID_VALUE", "E", "§6.13", &["field", "value", "expected"], "v1"),
+    c("THREAD_DIAMETER_MISMATCH", "E", "§6.13", &["kind", "designation", "d", "min_d", "max_d"], "v1"),
+    c("THREAD_FACE_UNSUPPORTED", "E", "§6.13", &["face", "reason"], "v1"),
+    c("THREAD_LENGTH_OUT_OF_RANGE", "E", "§6.13", &["face", "start", "end", "face_start", "face_end"], "v1"),
+    c("THREAD_END_TOO_CLOSE", "E", "§6.13", &["face", "distance", "margin"], "v1"),
+    c("THREAD_END_UNSUPPORTED", "E", "§6.13", &["face", "reason"], "v1"),
+    c("THREAD_INTERFERENCE", "E", "§6.13", &["face", "r_in", "r_out", "z_start", "z_end"], "v1"),
     // ---- warnings and infos -----------------------------------------------------------------
     c("SKETCH_UNDER_CONSTRAINED", "I", "§4.4", &["dof", "entities"], "v1"),
     c("SKETCH_REDUNDANT_CONSTRAINTS", "W", "§4.4", &["redundant"], "v1"),

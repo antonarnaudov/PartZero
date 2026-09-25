@@ -1,0 +1,180 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "threads",
+    "description": "Modelled threads (SPEC-v1 §6.5 thread.modeled, §6.13 thread): a 1/2-20 UNF through hole and an M8 blind tapped hole in a plate, and an M8 bolt thread on a boss"
+  },
+  "params": [
+    {
+      "name": "thick",
+      "unit": "mm",
+      "value": 10.0,
+      "min": 4.0
+    },
+    {
+      "name": "boss_h",
+      "unit": "mm",
+      "value": 12.0,
+      "min": 4.0
+    }
+  ],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "plate",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "s1",
+          "name": "base",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "outline",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "w": 60.0,
+              "h": 30.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e1",
+          "name": "slab",
+          "sketch": "s1",
+          "distance": "thick"
+        },
+        {
+          "type": "tag",
+          "id": "t1",
+          "name": "topFace",
+          "target": {
+            "kind": "face",
+            "q": {
+              "op": "cap",
+              "feature": "e1",
+              "end": "end"
+            },
+            "card": "one"
+          }
+        },
+        {
+          "type": "hole",
+          "id": "h1",
+          "name": "muzzleThread",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "tagged",
+                "feature": "t1"
+              }
+            }
+          },
+          "at": {
+            "list": [
+              {
+                "id": "a",
+                "at": [
+                  -15.0,
+                  0.0
+                ]
+              }
+            ]
+          },
+          "depth": "through",
+          "thread": {
+            "standard": "1/2-20 UNF",
+            "modeled": true
+          }
+        },
+        {
+          "type": "hole",
+          "id": "h2",
+          "name": "tapped",
+          "on": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "tagged",
+                "feature": "t1"
+              }
+            }
+          },
+          "at": {
+            "list": [
+              {
+                "id": "b",
+                "at": [
+                  2.0,
+                  0.0
+                ]
+              }
+            ]
+          },
+          "size": "M8",
+          "depth": {
+            "blind": 7.0
+          },
+          "tip": "flat",
+          "thread": {
+            "modeled": true
+          }
+        },
+        {
+          "type": "sketch",
+          "id": "s2",
+          "name": "bossSk",
+          "plane": {
+            "face": {
+              "kind": "face",
+              "q": {
+                "op": "tagged",
+                "feature": "t1"
+              }
+            }
+          },
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "ring",
+              "center": [
+                18.0,
+                0.0
+              ],
+              "radius": 4.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "e2",
+          "name": "boss",
+          "sketch": "s2",
+          "distance": "boss_h",
+          "op": "join",
+          "targets": "all"
+        },
+        {
+          "type": "thread",
+          "id": "th1",
+          "name": "bossThread",
+          "face": {
+            "kind": "face",
+            "q": {
+              "op": "side",
+              "feature": "e2",
+              "curve": "ring"
+            }
+          },
+          "standard": "M8",
+          "length": 10.0
+        }
+      ]
+    }
+  ]
+}

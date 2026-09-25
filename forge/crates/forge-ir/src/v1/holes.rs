@@ -117,8 +117,11 @@ pub struct ToolDims {
     pub cbore: Option<(f64, f64)>,
     /// `(Dk, β)`.
     pub csink: Option<(f64, f64)>,
-    /// Cosmetic thread pitch.
+    /// Thread pitch (cosmetic or modelled).
     pub thread_pitch: Option<f64>,
+    /// Basic major diameter of the thread: `thread.standard`'s, else the size's nominal
+    /// diameter (`None` without either).
+    pub thread_major: Option<f64>,
 }
 
 /// Resolve `d`, the preset dimensions and the thread pitch of a hole from its fields and
@@ -128,6 +131,13 @@ pub fn tool_dims(h: &super::features::HoleFeature) -> Option<ToolDims> {
     use super::features::{Counterbore, Countersink, Insert, Thread};
     use super::metrics::HoleKind;
     let threaded = !matches!(h.thread, None | Some(Thread::Flag(false)));
+    let standard = match &h.thread {
+        Some(Thread::Spec(t)) => match &t.standard {
+            Some(s) => Some(super::threads::thread_standard(s)?),
+            None => None,
+        },
+        _ => None,
+    };
     let insert = match &h.insert {
         None => None,
         Some(Insert::Preset(_)) => preset_dims(h.size?, Preset::Insert),
@@ -136,7 +146,12 @@ pub fn tool_dims(h: &super::features::HoleFeature) -> Option<ToolDims> {
     let d = match (&h.d, insert) {
         (Some(d), _) => d.literal()?,
         (None, Some((bore, _))) => bore,
-        (None, None) => diameter(h.size?, h.fit, threaded)?,
+        // Without a size, a thread standard gives the bore: its basic minor diameter.
+        (None, None) => match (h.size, standard) {
+            (Some(size), _) => diameter(size, h.fit, threaded)?,
+            (None, Some(st)) => st.basic_minor(),
+            (None, None) => return None,
+        },
     };
     let cbore = match &h.cbore {
         None => None,
@@ -150,8 +165,20 @@ pub fn tool_dims(h: &super::features::HoleFeature) -> Option<ToolDims> {
     };
     let thread_pitch = match &h.thread {
         Some(Thread::Spec(t)) if t.pitch.is_some() => Some(t.pitch.as_ref()?.literal()?),
-        _ if threaded => Some(row(h.size?).pitch?.value),
+        _ if threaded => match standard {
+            Some(st) => Some(st.pitch),
+            None => Some(row(h.size?).pitch?.value),
+        },
         _ => None,
+    };
+    let thread_major = if threaded {
+        match (standard, h.size) {
+            (Some(st), _) => Some(st.major),
+            (None, Some(size)) => super::threads::thread_standard(size.as_str()).map(|r| r.major),
+            (None, None) => None,
+        }
+    } else {
+        None
     };
     let kind = if insert.is_some() {
         HoleKind::Insert
@@ -169,6 +196,7 @@ pub fn tool_dims(h: &super::features::HoleFeature) -> Option<ToolDims> {
         cbore,
         csink,
         thread_pitch,
+        thread_major,
     })
 }
 

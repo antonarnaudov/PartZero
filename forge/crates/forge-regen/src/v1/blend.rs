@@ -312,7 +312,7 @@ impl PartEval<'_> {
     /// Replace bodies of the part (index, new body) by their blended or shelled versions: same
     /// origin and timeline, validity checked and measured ([R-12]) before anything changes.
     /// Returns their `modified` reports in canonical order.
-    fn replace_bodies(
+    pub(super) fn replace_bodies(
         &mut self,
         made: Vec<(usize, Body)>,
     ) -> Result<Vec<forge_ir::v1::metrics::BodyReport>, FeatureError> {

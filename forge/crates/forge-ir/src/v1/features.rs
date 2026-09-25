@@ -88,10 +88,11 @@ pub enum Feature {
     DatumPlane(DatumPlaneFeature),
     DatumAxis(DatumAxisFeature),
     Tag(TagFeature),
+    Thread(ThreadFeature),
 }
 
 /// Every feature `type` of IR v1, in declaration order.
-pub const FEATURE_TYPES: [&str; 13] = [
+pub const FEATURE_TYPES: [&str; 14] = [
     "sketch",
     "extrude",
     "revolve",
@@ -105,6 +106,7 @@ pub const FEATURE_TYPES: [&str; 13] = [
     "datum_plane",
     "datum_axis",
     "tag",
+    "thread",
 ];
 
 /// The behavior versions this revision of the contract defines, per feature type (§0.2).
@@ -132,6 +134,7 @@ macro_rules! each_feature {
             Feature::DatumPlane($f) => $e,
             Feature::DatumAxis($f) => $e,
             Feature::Tag($f) => $e,
+            Feature::Thread($f) => $e,
         }
     };
 }
@@ -164,6 +167,7 @@ impl Feature {
             Feature::DatumPlane(_) => "datum_plane",
             Feature::DatumAxis(_) => "datum_axis",
             Feature::Tag(_) => "tag",
+            Feature::Thread(_) => "thread",
         }
     }
 }
@@ -539,8 +543,10 @@ pub struct CustomInsert {
     pub depth: Scalar,
 }
 
-/// Cosmetic thread: `true`, or `{ pitch?, depth? }` (defaults: the size's coarse pitch, the
-/// full hole depth). `false` means no thread.
+/// Thread: `true`, or `{ pitch?, depth?, standard?, modeled?, hand?, starts? }` (defaults: the
+/// size's coarse pitch, the full hole depth, cosmetic, right hand, one start). `false` means no
+/// thread. A **cosmetic** thread changes no geometry; a **modelled** one (`modeled: true`) cuts
+/// the helical groove of the 60° basic profile into the hole's wall (§6.5, `THREAD_STANDARDS`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum Thread {
@@ -555,6 +561,33 @@ pub struct ThreadSpec {
     pub pitch: Option<Scalar>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub depth: Option<Scalar>,
+    /// A `THREAD_STANDARDS` designation (`M8`, `M14x1`, `1/2-20 UNF`): the major diameter and
+    /// pitch of the thread (`pitch` still overrides). Without it the major diameter is the
+    /// hole `size`'s nominal diameter.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub standard: Option<String>,
+    /// Cut the helical groove (true) or record a cosmetic thread only (false).
+    #[serde(
+        default = "BoolScalar::r#false",
+        skip_serializing_if = "BoolScalar::is_false"
+    )]
+    #[schemars(extend("default" = false))]
+    pub modeled: BoolScalar,
+    #[serde(default, skip_serializing_if = "is_default")]
+    #[schemars(extend("default" = "right"))]
+    pub hand: ThreadHand,
+    /// Number of starts (a count in `[1, 8]`, default 1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub starts: Option<Scalar>,
+}
+
+/// Thread handedness.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ThreadHand {
+    #[default]
+    Right,
+    Left,
 }
 
 feature_struct! {
@@ -593,6 +626,48 @@ feature_struct! {
         /// Default: the body owning the `on` face; required when `on` is not a face.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         targets: Option<Targets>,
+    }
+}
+
+// ---- thread ---------------------------------------------------------------------------------
+
+feature_struct! {
+    /// Thread (FM9 stretch, §6.13): a screw thread of the 60° basic profile on a cylindrical
+    /// face — a bore gets a nut thread, a boss a bolt thread. `modeled` (default) cuts the
+    /// exact helical groove; `false` records a cosmetic thread in the report only.
+    ThreadFeature {
+        /// The cylindrical face (face, `one`).
+        face: Ref,
+        /// A `THREAD_STANDARDS` designation (`M8`, `M14x1`, `1/2-20 UNF`). Required unless
+        /// both `major` and `pitch` are given (`THREAD_SIZE_REQUIRED`).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        standard: Option<String>,
+        /// Basic major diameter (overrides the standard's).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        major: Option<Scalar>,
+        /// Pitch (overrides the standard's).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pitch: Option<Scalar>,
+        /// Threaded length from the start end (default: the rest of the face).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        length: Option<Scalar>,
+        /// Distance of the thread's start from the start end (default 0).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        offset: Option<Scalar>,
+        /// Start from the other end of the face.
+        #[serde(default = "BoolScalar::r#false", skip_serializing_if = "BoolScalar::is_false")]
+        #[schemars(extend("default" = false))]
+        flip: BoolScalar,
+        #[serde(default, skip_serializing_if = "is_default")]
+        #[schemars(extend("default" = "right"))]
+        hand: ThreadHand,
+        /// Number of starts (a count in `[1, 8]`, default 1).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        starts: Option<Scalar>,
+        /// Cut the helical groove (default) or record a cosmetic thread only.
+        #[serde(default = "BoolScalar::r#true", skip_serializing_if = "BoolScalar::is_true")]
+        #[schemars(extend("default" = true))]
+        modeled: BoolScalar,
     }
 }
 

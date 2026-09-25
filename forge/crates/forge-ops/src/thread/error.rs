@@ -103,12 +103,6 @@ pub enum ThreadError {
         /// Axial end of the region.
         z_end: f64,
     },
-    /// No cylinder face of the target matches the thread's axis and crest diameter.
-    #[error("no cylindrical face of diameter {d} mm on the thread's axis")]
-    NoFace {
-        /// The crest diameter looked for.
-        d: f64,
-    },
     /// An internal consistency check failed (a bug): the built body did not validate.
     #[error("internal error building the thread: {detail}")]
     Internal {
@@ -128,7 +122,6 @@ impl ThreadError {
             ThreadError::EndTooClose { .. } => "THREAD_END_TOO_CLOSE",
             ThreadError::EndUnsupported { .. } => "THREAD_END_UNSUPPORTED",
             ThreadError::Interference { .. } => "THREAD_INTERFERENCE",
-            ThreadError::NoFace { .. } => "THREAD_NO_FACE",
             ThreadError::Internal { .. } => "FORGE_THREAD_INTERNAL",
         }
     }
