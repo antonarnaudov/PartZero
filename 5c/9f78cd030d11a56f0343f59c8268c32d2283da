@@ -1,0 +1,31 @@
+packages/app/src/sketch/wheel.ts
+  s_59c0dd2af30db2::t_491008ba01e851 1-81,83-132
+  s_59c0dd2af30db2::t_3de75021ede702 82
+packages/app/src/sketch/controller.ts
+  s_59c0dd2af30db2::t_d4888ec67db24f 39-40,190-191,233,618,621-624
+packages/app/src/sketch/view.ts
+  s_59c0dd2af30db2::t_9418fad54cca18 3-4,8,10
+packages/app/src/ui/sketch/SketchCanvas.tsx
+  s_59c0dd2af30db2::t_d4888ec67db24f 343-355
+packages/app/test/sketch/geom.test.ts
+  s_59c0dd2af30db2::t_a7b1db60ca7638 4
+packages/app/test/sketch/wheel.test.ts
+  s_59c0dd2af30db2::t_b50b4bf08911aa 106-107
+  s_59c0dd2af30db2::t_123a2b37f96f62 1-105,108-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5c9f78cd030d11a56f0343f59c8268c32d2283da",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
