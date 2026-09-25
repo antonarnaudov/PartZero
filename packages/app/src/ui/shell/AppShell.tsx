@@ -37,7 +37,7 @@ import { Welcome } from "./Welcome";
 
 type Sizes = { left: number; right: number; chat: number; problems: number };
 const SIZES_KEY = "aicad.layout";
-const DEFAULT_SIZES: Sizes = { left: 292, right: 420, chat: 280, problems: 112 };
+const DEFAULT_SIZES: Sizes = { left: 264, right: 420, chat: 280, problems: 112 };
 const LIMITS: Record<keyof Sizes, [number, number]> = { left: [180, 520], right: [320, 900], chat: [140, 700], problems: [60, 480] };
 
 function loadSizes(): Sizes {

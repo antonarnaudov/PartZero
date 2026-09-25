@@ -135,8 +135,9 @@ function summarize(f: Json, r: FeatureReport | undefined): string {
 
 /** Whether a report entry carries a warning worth a timeline badge. */
 function notable(r: FeatureReport | undefined): boolean {
-  const warnings = (r as { warnings?: Array<{ code?: string }> } | undefined)?.warnings ?? [];
-  return warnings.some((w) => !INFORMATIONAL_WARNINGS.has(w.code ?? ""));
+  const warnings = (r as { warnings?: Array<{ code?: string; severity?: string }> } | undefined)?.warnings ?? [];
+  // Notes (severity info) are listed in Problems but do not mark the feature.
+  return warnings.some((w) => w.severity !== "info" && !INFORMATIONAL_WARNINGS.has(w.code ?? ""));
 }
 
 export function buildTimeline(

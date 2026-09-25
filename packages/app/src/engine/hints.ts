@@ -22,6 +22,11 @@ export const KERNEL_HINTS: Readonly<Record<string, string>> = {
   ENGINE_FAILED: "The engine failed to run. See the message for details.",
 };
 
+/** Whether a hint was written for exactly this code (not the generic engine-failure one). */
+export function hasKernelHint(code: string): boolean {
+  return code in KERNEL_HINTS;
+}
+
 export function kernelHint(code: string): string | undefined {
   if (code in KERNEL_HINTS) return KERNEL_HINTS[code];
   if (code.startsWith("FORGE_") || code.startsWith("OCCT_")) return "Engine-internal failure (not a modeling error). Please report it with the model.";

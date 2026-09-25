@@ -5,7 +5,7 @@
  */
 import type { Diagnostic, Severity, Span } from "@aicad/cadscript";
 import type { IrDocument } from "@aicad/ir-types";
-import { kernelHint } from "../engine/hints";
+import { hasKernelHint as KERNEL_HINTS_KNOWN, kernelHint } from "../engine/hints";
 import type { DocState } from "./doc-store";
 import { featureAtPosition, findFeature } from "./provenance";
 
@@ -51,7 +51,8 @@ export function collectProblems(state: Pick<DocState, "compile" | "model" | "rep
       for (const [wi, w] of ((f as { warnings?: Array<{ code: string; severity: string; message: string }> }).warnings ?? []).entries()) {
         if (INFORMATIONAL_WARNINGS.has(w.code)) continue;
         const loc = findFeature(model.ir, f.feature);
-        const hint = kernelHint(w.code);
+        // A note is not a failure: only a hint written for this very code (not the engine-failure fallback).
+        const hint = KERNEL_HINTS_KNOWN(w.code) ? kernelHint(w.code) : undefined;
         out.push({
           key: `forge:${f.part}/${f.feature}:w${wi}:${w.code}`,
           severity: w.severity === "info" ? "info" : "warning",

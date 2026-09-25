@@ -4,8 +4,8 @@
  *
  * Bodies are the evaluated model's bodies. Their names are `part/feature[#k]` (SPEC-v1 §5.2, the
  * origin feature's name, `#k` when one feature made several), so each body knows the feature that
- * made it: its colour is that feature's appearance (`ir.setAppearance`, saved with the document and
- * written to the 3MF), and "the feature" is what selecting it in the timeline shows.
+ * made it: its colour is that feature's appearance (`ir.setAppearance`, saved with the document),
+ * and "the feature" is what selecting it in the timeline shows.
  */
 import type { TimelineFeature, TimelineModel } from "../../doc/timeline";
 import { isConstruction } from "./feature-types";
