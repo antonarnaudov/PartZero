@@ -1,0 +1,55 @@
+packages/app/src/file/install.ts
+  s_59c0dd2af30db2::t_746c9c79441640 1-10,19-71
+  s_59c0dd2af30db2::t_9a7864be6ec78e 11-18
+packages/app/src/file/ui/FileLayer.tsx
+  s_59c0dd2af30db2::t_466d48a310f7ba 6,30-35,50,79,82,99,112-113,153,169,173,178,183,213,229,233,243,253,261,303
+  s_59c0dd2af30db2::t_d7a8459813219d 1-5,7-29,36-49,51-78,80-81,83-98,100-111,114-152,154-168,170-172,174-177,179-182,184-212,214-228,230-232,234-242,244-252,254-260,262-302,304-314
+packages/app/test/mesh-import.test.ts
+  s_59c0dd2af30db2::t_bc87c3025583db 165
+  s_59c0dd2af30db2::t_cc7795f3175562 177-178
+packages/app/src/file/commands.ts
+  s_59c0dd2af30db2::t_c2308d2148dbbe 1-252
+packages/app/src/file/adapter.ts
+  s_59c0dd2af30db2::t_b16cdfb70e84e4 1-212
+packages/app/src/file/host.ts
+  s_59c0dd2af30db2::t_84cebc1f057c0c 1-184
+packages/app/src/file/ui/hooks.ts
+  s_59c0dd2af30db2::t_70d12c1aa5bf78 1-23
+packages/app/src/file/document-files.ts
+  s_59c0dd2af30db2::t_ead0f8f2e6b438 666-670
+  s_59c0dd2af30db2::t_8c3d1d22c76c1f 282
+  s_59c0dd2af30db2::t_f36e8af3627871 161-166
+  s_59c0dd2af30db2::t_f4a866e0e25b7f 1-145,148-160,167-251,253-258,260-281,283-325,327-455,467-665,671-713
+  s_59c0dd2af30db2::t_fc76fcb7ffbff9 146-147
+  s_59c0dd2af30db2::t_011b0c8fbf6d05 326
+  s_59c0dd2af30db2::t_cf19dd98b7d579 259
+  s_59c0dd2af30db2::t_3e9a44710f6874 252
+  s_59c0dd2af30db2::t_760ab0b85fe0b5 456-466
+packages/app/src/file/ui/file.css
+  s_59c0dd2af30db2::t_32cd24f8111ba1 1-266
+packages/app/test/partzero.test.ts
+  s_59c0dd2af30db2::t_c23622dcce2b8a 22-32
+  s_59c0dd2af30db2::t_311b04631073ac 92,94,98,100-101,103-105
+  s_59c0dd2af30db2::t_ed0e851956018b 71,76
+  s_59c0dd2af30db2::t_c028699e9ea7e0 116
+packages/app/src/file/export-formats.ts
+  s_59c0dd2af30db2::t_cc42716d51384d 1-71
+packages/app/test/document-files.test.ts
+  s_59c0dd2af30db2::t_5a9a763fdbdaca 1-521
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d6bc0475e1a5207678d7a69346e58725962d686d",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
