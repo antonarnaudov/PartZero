@@ -63,6 +63,7 @@ Parasolid shows the alternative works at industrial scale. It handles periodicit
 ### File I/O
 
 - **Export adds artefacts where readers need them.** Many STEP consumers expect seam and degenerate edges on periodic and singular faces, so `forge-io` synthesizes them on export where the format or target reader requires it.
+  - *As built (2026-09-25, `forge-io::step`):* a periodic face whose loops wind around its axis, or that contains a pole, gets **one** iso-parametric seam (a whole torus gets two seam circles through one vertex); ring edges get one vertex, and edges through a pole or apex are split there. **Degenerate edges and vertex loops are not written:** STEP readers (OCCT among them) add their own at poles and apexes. Each periodic face's written frame puts `u = 0` at its seam (or in its gap), and the edges of non-planar faces carry Forge's own pcurves, so a reader integrates over Forge's exact face domains. The writer re-reads and verifies every file it returns. Checked against OCCT on about 3,000 corpus bodies (`oracle step-check`).
 - **Import removes them.** On import, seams are removed and degenerate edges are dropped, which heals imported data into this model.
 
 ### Oracle diffs
