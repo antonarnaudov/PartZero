@@ -24,6 +24,12 @@
   flex-wrap: wrap;
   row-gap: 2px;
 }
+.viewport .vp-toolbar .vp-btn:not(.icon) {
+  padding: 0 6px;
+}
+.viewport .vp-toolbar .vp-select {
+  max-width: 132px;
+}
 
 /* The renderer chip moves to the bottom right: the view cube owns the top right. */
 .viewport .vp-chip {

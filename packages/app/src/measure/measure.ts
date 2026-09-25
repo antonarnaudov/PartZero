@@ -6,6 +6,7 @@
  */
 import type { EvalReport } from "@aicad/ir-types";
 import { edgeGeom, faceGeom, type EdgeGeom, type FaceGeom } from "./geometry";
+import { facesOfEdgeName, facesOfVertex } from "../selection/picking";
 import { edgePoints, faceTriangles, type SceneTopology } from "../selection/topology";
 import type { EntityItem, SelectionItem } from "../selection/types";
 import { add, cross, dot, length, normalize, scale, sub, type Vec3 } from "../viewport/view-camera";
@@ -311,7 +312,43 @@ function single(g: Geom, report: EvalReport | null | undefined, topo: SceneTopol
   };
 }
 
-function pair(a: Geom, b: Geom, topo: SceneTopology): MeasureResult {
+/**
+ * Topologically touching entities (adjacent faces, a face and its boundary edge, edges sharing a
+ * vertex, a vertex on its edge or face): their distance is exactly 0. Returns a contact point.
+ */
+export function contactPoint(topo: SceneTopology, x: SelectionItem, y: SelectionItem): Vec3 | null {
+  if (!isEntityItem(x) || !isEntityItem(y) || x.body !== y.body) return null;
+  const b = topo.bodies.get(x.body);
+  if (!b) return null;
+  const [p, q] = x.kind <= y.kind ? [x, y] : [y, x];
+  const firstPoint = (edge: string): Vec3 | null => {
+    const e = b.edges.get(edge);
+    return e && e.points.length >= 3 ? [e.points[0]!, e.points[1]!, e.points[2]!] : null;
+  };
+  if (p.kind === "face" && q.kind === "face") {
+    for (const e of b.edges.values()) {
+      const fs = facesOfEdgeName(e.name);
+      if (fs.includes(p.key) && fs.includes(q.key)) return firstPoint(e.name);
+    }
+    return null;
+  }
+  if (p.kind === "edge" && q.kind === "face") return facesOfEdgeName(p.key).includes(q.key) ? firstPoint(p.key) : null;
+  if (p.kind === "edge" && q.kind === "vertex") return b.vertices.get(q.key)?.edges.includes(p.key) ? (b.vertices.get(q.key)?.point ?? null) : null;
+  if (p.kind === "face" && q.kind === "vertex") {
+    const v = b.vertices.get(q.key);
+    return v && facesOfVertex(v).has(p.key) ? v.point : null;
+  }
+  if (p.kind === "edge" && q.kind === "edge") {
+    for (const v of b.vertices.values()) if (v.edges.includes(p.key) && v.edges.includes(q.key)) return v.point;
+  }
+  return null;
+}
+
+function isEntityItem(it: SelectionItem): it is EntityItem {
+  return it.kind === "face" || it.kind === "edge" || it.kind === "vertex";
+}
+
+function pair(a: Geom, b: Geom, topo: SceneTopology, contact: Vec3 | null = null): MeasureResult {
   const rows: Measurement[] = [];
   const kindName = (g: Geom): string => (g.kind === "point" ? "Vertex" : g.kind === "edge" ? "Edge" : g.kind === "face" ? "Face" : "Body");
   const title = `${kindName(a)} ↔ ${kindName(b)}`;
@@ -320,7 +357,10 @@ function pair(a: Geom, b: Geom, topo: SceneTopology): MeasureResult {
   const da = directionOf(a);
   const db = directionOf(b);
   let parallelDistance: Measurement | null = null;
-  if (a.kind === "face" && b.kind === "face" && a.g.type === "plane" && b.g.type === "plane" && length(cross(a.g.normal, b.g.normal)) < 1e-6) {
+  if (contact) {
+    // Touching (they share an edge or a vertex): exactly 0.
+    parallelDistance = row("distance", "Distance (touching)", 0, "mm", true);
+  } else if (a.kind === "face" && b.kind === "face" && a.g.type === "plane" && b.g.type === "plane" && length(cross(a.g.normal, b.g.normal)) < 1e-6) {
     const d = Math.abs(dot(sub(b.g.point, a.g.point), a.g.normal));
     const from = a.g.centroid;
     const to = sub(from, scale(a.g.normal, dot(sub(from, b.g.point), a.g.normal)));
@@ -333,7 +373,7 @@ function pair(a: Geom, b: Geom, topo: SceneTopology): MeasureResult {
       parallelDistance = row("distance", "Distance", Math.abs(dot(sub(a.p, b.g.point), n)), "mm", true, { from: a.p, to: foot });
     }
   } else if (b.kind === "point" && a.kind === "face" && a.g.type === "plane") {
-    return pair(b, a, topo);
+    return pair(b, a, topo, contact);
   }
   if (parallelDistance) rows.push(parallelDistance);
   else {
@@ -390,10 +430,11 @@ function many(gs: Geom[]): MeasureResult {
 
 /** Measure a selection (null when nothing measurable is selected). */
 export function measureSelection(items: readonly SelectionItem[], topo: SceneTopology, report?: EvalReport | null): MeasureResult | null {
-  const gs = items.map((it) => geomOf(topo, it)).filter((g): g is Geom => g !== null);
+  const measurable = items.filter((it) => geomOf(topo, it) !== null);
+  const gs = measurable.map((it) => geomOf(topo, it)!);
   if (gs.length === 0) return null;
   if (gs.length === 1) return single(gs[0]!, report, topo);
-  if (gs.length === 2) return pair(gs[0]!, gs[1]!, topo);
+  if (gs.length === 2) return pair(gs[0]!, gs[1]!, topo, contactPoint(topo, measurable[0]!, measurable[1]!));
   return many(gs);
 }
 

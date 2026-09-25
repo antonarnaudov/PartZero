@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseObj } from "../src/engine/obj";
 import { circumcenter, edgeGeom, faceGeom } from "../src/measure/geometry";
-import { bodyMetrics, closestOnTriangle, closestSegmentSegment, formatMeasurement, measureSelection, type Measurement } from "../src/measure/measure";
+import { bodyMetrics, closestOnTriangle, closestSegmentSegment, contactPoint, formatMeasurement, measureSelection, type Measurement } from "../src/measure/measure";
 import { buildTopology } from "../src/selection/topology";
 import type { SelectionItem } from "../src/selection/types";
 import nemaObj from "./fixtures/nema17-plate.obj?raw";
@@ -109,6 +109,16 @@ describe("measuring selections", () => {
     const vf = row([vertexAt(25, 25, 5), face("plate/cap:start")], "distance");
     expect(vf.value).toBeCloseTo(5, 6);
     expect(vf.exact).toBe(true);
+  });
+
+  it("touching entities are exactly 0 apart (shared edge or vertex)", () => {
+    const d = row([face("plate/cap:end"), face("plate/side:right")], "distance");
+    expect(d).toMatchObject({ value: 0, exact: true });
+    expect(contactPoint(topo, face("plate/cap:end"), edge("plate/edge:{plate/cap:end|plate/side:top}"))).not.toBeNull();
+    expect(contactPoint(topo, vertexAt(25, 25, 5), face("plate/side:top"))).toEqual([25, 25, 5]);
+    expect(contactPoint(topo, edge("plate/edge:{plate/cap:end|plate/side:top}"), edge("plate/edge:{plate/cap:end|plate/side:right}"))).toEqual([25, 25, 5]);
+    expect(contactPoint(topo, face("plate/cap:end"), face("plate/cap:start"))).toBeNull();
+    expect(row([vertexAt(25, 25, 5), edge("plate/edge:{plate/cap:end|plate/side:right}")], "distance").value).toBe(0);
   });
 
   it("several entities: totals; bodies read exact metrics from the report", () => {
