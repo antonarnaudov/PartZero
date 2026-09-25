@@ -14,7 +14,8 @@ import type { SketchMode, SketchModeState, SketchPlaneChoice } from "../../sketc
 import { faceFrame, namedFrame, type NamedPlane } from "../../sketch/frames";
 import { fmt } from "../../sketch/geom";
 import { sketchMode } from "../../sketch/instance";
-import { documentSource, exposeSketchTestHooks, faceSource, newSketchOptions } from "../../sketch/integration";
+import { documentSource, exposeSketchTestHooks, faceSource, newSketchOptions, quickExtrudeSource } from "../../sketch/integration";
+import { installCadScriptBridge } from "../../sketch/v0-app";
 import { PlaneView } from "../../sketch/view";
 import { SKETCH_TOOLS, type ToolId } from "../../tools/sketch";
 import { useApp, useStore } from "../context";
@@ -358,13 +359,89 @@ function TypedBox({ mode, state }: { mode: SketchMode; state: SketchModeState })
   );
 }
 
+type Direction = "normal" | "reverse" | "symmetric";
+
+/**
+ * After Finish: extrude the new sketch right away (the quick follow-up until the feature tools'
+ * extrude exists; `quickExtrudeSource`).
+ */
+function ExtrudeOffer({ sketch, onClose }: { sketch: string; onClose: () => void }): ReactElement {
+  const { services } = useApp();
+  const [text, setText] = useState("10");
+  const [direction, setDirection] = useState<Direction>("normal");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const run = async (): Promise<void> => {
+    const extrude = quickExtrudeSource.current;
+    const d = Number(text);
+    if (!extrude) return;
+    if (!(d > 0) || !Number.isFinite(d)) {
+      setError("Type a distance greater than zero.");
+      return;
+    }
+    setBusy(true);
+    const r = await extrude(sketch, d, direction);
+    setBusy(false);
+    if (!r.ok) {
+      setError(r.message);
+      return;
+    }
+    if (r.warning) services.ui.toast("error", r.warning);
+    else if (r.note) services.ui.toast("success", r.note);
+    onClose();
+  };
+  return (
+    <div className="sk-extrude-offer" role="dialog" aria-label={`Extrude ${sketch}`} data-testid="sketch-extrude-offer">
+      <span className="sk-extrude-title">
+        Extrude <b>{sketch}</b>
+      </span>
+      <label className="sk-extrude-field">
+        <input
+          value={text}
+          inputMode="decimal"
+          aria-label="Distance (mm)"
+          data-testid="sketch-extrude-distance"
+          onChange={(e) => {
+            setText(e.target.value);
+            setError(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void run();
+            else if (e.key === "Escape") onClose();
+          }}
+        />
+        <span className="sk-muted">mm</span>
+      </label>
+      <select value={direction} aria-label="Direction" data-testid="sketch-extrude-direction" onChange={(e) => setDirection(e.target.value as Direction)}>
+        <option value="normal">Along the normal</option>
+        <option value="reverse">Reversed</option>
+        <option value="symmetric">Symmetric</option>
+      </select>
+      <button type="button" className="primary-btn" disabled={busy} data-testid="sketch-extrude-run" onClick={() => void run()}>
+        Extrude
+      </button>
+      <button type="button" className="ghost-btn" aria-label="Close" data-testid="sketch-extrude-close" onClick={onClose}>
+        ×
+      </button>
+      {error && (
+        <span className="sk-extrude-error" data-testid="sketch-extrude-error">
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}
+
 /** The sketch mode overlay (mounted inside the viewport column). */
 export function SketchModeHost(): ReactElement | null {
-  const { services } = useApp();
+  const { services, commands } = useApp();
   const state = useSketch((s) => s);
   const bodies = useStore(services.doc, (s) => s.bodies);
+  const [offer, setOffer] = useState<string | null>(null);
 
   useEffect(() => exposeSketchTestHooks(sketchMode), []);
+  // Finished sketches go into the open CadScript document (the interim sink, docs/fm/sketcher.md).
+  useEffect(() => installCadScriptBridge(sketchMode, services.doc, commands), [services.doc, commands]);
 
   const beginOn = useCallback(
     (plane: SketchPlaneChoice) => {
@@ -379,17 +456,23 @@ export function SketchModeHost(): ReactElement | null {
     if (state.error) services.ui.toast("error", state.error);
   }, [state.error, services.ui]);
 
-  // Say what Finish produced.
+  // Say what Finish produced, and offer to extrude it.
   const finished = state.finished;
+  const finishedNote = state.finishedNote;
   useEffect(() => {
     if (!finished) return;
     const c = finished.check;
     const how = c.status === "fully_constrained" ? "fully constrained" : c.dof !== undefined ? `${c.dof} DOF left` : "explicit";
-    const where = sketchMode.usingMemorySink ? " It joins the model once the IR v1 command layer is merged." : "";
+    const where = sketchMode.usingMemorySink ? " It joins the model once the IR v1 command layer is merged." : finishedNote?.note ? ` ${finishedNote.note}` : "";
     services.ui.toast(c.ok ? "success" : "error", `Sketch ${finished.feature.name}: ${c.regions} region${c.regions === 1 ? "" : "s"}, ${how}.${where}`);
-  }, [finished, services.ui]);
+    if (finishedNote?.warning) services.ui.toast("error", finishedNote.warning);
+    setOffer(c.ok && c.regions > 0 && quickExtrudeSource.current ? finished.feature.name : null);
+  }, [finished, finishedNote, services.ui]);
+  useEffect(() => {
+    if (state.phase !== "off") setOffer(null);
+  }, [state.phase]);
 
-  if (state.phase === "off") return null;
+  if (state.phase === "off") return offer ? <ExtrudeOffer sketch={offer} onClose={() => setOffer(null)} /> : null;
   if (state.phase === "choosePlane") return <PlanePicker onPick={beginOn} />;
   if (state.phase === "loading") {
     return (

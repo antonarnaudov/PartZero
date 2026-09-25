@@ -7,6 +7,7 @@ import type { Problem } from "../doc/problems";
 import type { FeatureStatus, TimelineFeature, TimelineModel } from "../doc/timeline";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
+import { editSketchFeature } from "../sketch/integration";
 
 const TYPE_ICON: Record<TimelineFeature["type"], (p: { size?: number }) => ReactElement> = {
   sketch: Icon.Sketch,
@@ -70,6 +71,7 @@ function FeatureRow({ f, selected, focused, draft }: { f: TimelineFeature; selec
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onClick={() => run({ id: "selection.selectFeature", args: { feature: f.id, origin: "timeline" } })}
+      onDoubleClick={f.type === "sketch" ? () => editSketchFeature(f.id) : undefined}
     >
       <span className={`tl-type type-${f.type}`} title={f.type}>
         <TypeIcon size={15} />

@@ -840,3 +840,48 @@
 .sk-tb-label {
   font-size: 12px;
 }
+
+/* The Finish follow-up: extrude the new sketch (until the feature tools' extrude exists). */
+.sk-extrude-offer {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 24px);
+  padding: 8px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+}
+
+.sk-extrude-title {
+  white-space: nowrap;
+}
+
+.sk-extrude-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sk-extrude-field input {
+  width: 64px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.sk-extrude-offer select {
+  font: inherit;
+}
+
+.sk-extrude-error {
+  flex-basis: 100%;
+  color: var(--sk-conflict);
+}

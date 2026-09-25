@@ -18,11 +18,16 @@ export function namesIn(document: v1.IrDocument | null | undefined): string[] {
   return out;
 }
 
-/** The first `sketch<n>` (n ≥ 1) that is not in `taken`. */
-export function nextSketchName(taken: Iterable<string>): string {
+/** The first `<prefix><n>` (n ≥ 1) that is not in `taken`. */
+export function nextName(prefix: string, taken: Iterable<string>): string {
   const used = new Set(taken);
   for (let n = 1; ; n++) {
-    const name = `sketch${n}`;
+    const name = `${prefix}${n}`;
     if (!used.has(name)) return name;
   }
+}
+
+/** The first `sketch<n>` (n ≥ 1) that is not in `taken`. */
+export function nextSketchName(taken: Iterable<string>): string {
+  return nextName("sketch", taken);
 }

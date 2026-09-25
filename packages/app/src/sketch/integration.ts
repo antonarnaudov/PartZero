@@ -53,6 +53,25 @@ export interface SketchDocContext {
  */
 export const documentSource: { current: (() => SketchDocContext | null) | null } = { current: null };
 
+/**
+ * Set by the document layer: open the document's sketch `idOrName` in sketch mode (the timeline's
+ * double-click). Returns false when it is not a sketch the sketcher can open.
+ */
+export const editSketchSource: { current: ((idOrName: string) => boolean) | null } = { current: null };
+
+/** Open a sketch of the document for editing (timeline double-click). */
+export function editSketchFeature(idOrName: string): boolean {
+  return editSketchSource.current?.(idOrName) ?? false;
+}
+
+/**
+ * Set by the document layer: extrude a finished sketch (the Finish follow-up, until the feature
+ * tools' extrude exists). Null hides the offer.
+ */
+export const quickExtrudeSource: {
+  current: ((sketch: string, distance: number, direction: "normal" | "reverse" | "symmetric") => Promise<{ ok: true; note?: string; warning?: string } | { ok: false; message: string }>) | null;
+} = { current: null };
+
 /** The `begin` options for a new sketch on `plane`: the document's parameters, part and names. */
 export function newSketchOptions(plane: SketchPlaneChoice, context: ContextGeometry, doc: SketchDocContext | null): BeginOptions {
   return {
@@ -78,7 +97,7 @@ export interface SketchTestHooks {
   client(u: number, v: number): P2;
   /** Sketch coordinates of a client point. */
   sketch(x: number, y: number): P2;
-  /** Finished sketches kept by the default sink. */
+  /** Every sketch finished in this window (whichever sink took it). */
   finished(): unknown[];
   mode: SketchMode;
 }
@@ -109,7 +128,7 @@ export function exposeSketchTestHooks(mode: SketchMode): () => void {
       const r = canvas()?.getBoundingClientRect();
       return new PlaneView(mode.getState().view).toSketch([x - (r?.left ?? 0), y - (r?.top ?? 0)]);
     },
-    finished: () => mode.memory.results.map((r) => JSON.parse(JSON.stringify(r)) as unknown),
+    finished: () => mode.finishedLog.map((r) => JSON.parse(JSON.stringify(r)) as unknown),
     mode,
   };
   window.__pzSketch = hooks;

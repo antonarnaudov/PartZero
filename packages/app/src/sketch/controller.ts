@@ -83,6 +83,8 @@ export interface BeginOptions {
   /** Ids and names the document already uses, beyond `document`'s (e.g. an IR v0 document's). */
   taken?: readonly string[];
   context?: ContextGeometry;
+  /** A notice to show on opening (e.g. what an edited sketch's source could not keep). */
+  notice?: string | null;
 }
 
 export interface Notice {
@@ -140,6 +142,8 @@ export interface SketchModeState {
   error: string | null;
   /** The last finished sketch (the harness and e2e read it). */
   finished: SketchFinish | null;
+  /** What the sink said about it (the Finish toast). */
+  finishedNote: { note: string | null; warning: string | null } | null;
   hint: string;
   /** Pending defaults for a new sketch (from requestNew). */
   pending: Omit<BeginOptions, "plane"> | null;
@@ -173,6 +177,7 @@ function initialState(): SketchModeState {
     context: EMPTY_CONTEXT,
     error: null,
     finished: null,
+    finishedNote: null,
     hint: "",
     pending: null,
   };
@@ -232,6 +237,8 @@ export class SketchMode extends Store<SketchModeState> {
   private part: string | null = null;
   private readonly wheelMemory = newWheelMemory();
   readonly memory = new MemorySink();
+  /** Every sketch finished in this window, whichever sink took it (tests, the e2e harness). */
+  readonly finishedLog: SketchFinish[] = [];
 
   constructor(engines: SketchEngineFactory | null = null, sink?: SketchCommitSink) {
     super(initialState());
@@ -291,7 +298,8 @@ export class SketchMode extends Store<SketchModeState> {
     const sketch = o.sketch ?? ({ type: "sketch", id, name, plane: o.plane.ref, curves: [] } as v1.SketchFeature);
     let engine: SketchEngine;
     try {
-      engine = this.engines.load({ sketch, ...(o.document ? { document: o.document } : {}), ...(o.part ? { part: o.part } : {}) });
+      // The part names a part of `document` (without one, the session uses its own empty document).
+      engine = this.engines.load({ sketch, ...(o.document ? { document: o.document, ...(o.part ? { part: o.part } : {}) } : {}) });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       this.setState({ phase: "off", error: `This sketch cannot be edited here: ${msg}` });
@@ -323,13 +331,16 @@ export class SketchMode extends Store<SketchModeState> {
       labels: {},
       context: o.context ?? EMPTY_CONTEXT,
       finished: null,
+      finishedNote: null,
       pending: null,
       view: box ? fitBox(view, box) : { ...view, cx: 0, cy: 0 },
       hint: this.tool.hint(),
       notice:
         o.sketch && (o.sketch.constraints ?? []).length === 0 && snapshot.constraints.length > 0
           ? { kind: "info", text: "Converted to a constrained sketch: its sizes are now dimensions bound to the same parameters." }
-          : null,
+          : o.notice
+            ? { kind: "info", text: o.notice }
+            : null,
     });
     return true;
   }
@@ -355,14 +366,24 @@ export class SketchMode extends Store<SketchModeState> {
       params: r.params,
       edits: r.edits,
       conversion: r.conversion ?? null,
-      check: { ok: r.ok, ...(r.error ? { error: r.error } : {}), regions: r.regions, ...(r.status ? { status: r.status } : {}), ...(r.dof !== undefined ? { dof: r.dof } : {}), warnings: r.warnings, validation: r.validation },
+      check: {
+        ok: r.ok,
+        ...(r.error ? { error: r.error } : {}),
+        regions: r.regions,
+        ...(r.status ? { status: r.status } : {}),
+        ...(r.dof !== undefined ? { dof: r.dof } : {}),
+        warnings: r.warnings,
+        validation: r.validation,
+        areas: r.ok ? (s.snapshot?.profile.regions ?? []).map((g) => g.area) : [],
+      },
     };
     const out = await this.sink.commit(f);
     if (!out.ok) {
       this.setState({ notice: { kind: "error", text: `The model did not accept the sketch: ${out.message}` } });
       return null;
     }
-    this.close({ finished: f });
+    this.finishedLog.push(f);
+    this.close({ finished: f, finishedNote: { note: out.note ?? null, warning: out.warning ?? null } });
     return f;
   }
 

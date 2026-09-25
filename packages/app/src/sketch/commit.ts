@@ -37,11 +37,18 @@ export interface SketchFinish {
    * (`regions`, queries on `side:<member>`) must be rewritten in the same transaction.
    */
   conversion: { renames: Array<[string, string]>; notes: string[] } | null;
-  /** The evaluation of record and IR validation of the feature. */
-  check: Pick<FinishResult, "ok" | "error" | "regions" | "status" | "dof" | "warnings" | "validation">;
+  /**
+   * The evaluation of record and IR validation of the feature, plus the regions' areas (the
+   * sink compares them with the document's own evaluation of what it stored).
+   */
+  check: Pick<FinishResult, "ok" | "error" | "regions" | "status" | "dof" | "warnings" | "validation"> & { areas?: number[] };
 }
 
-export type CommitOutcome = { ok: true } | { ok: false; message: string };
+/**
+ * The sink's answer. `note`: what the model now holds, for the Finish toast; `warning`: the
+ * sketch is in the model but something needs a look (e.g. the document evaluates it differently).
+ */
+export type CommitOutcome = { ok: true; note?: string; warning?: string } | { ok: false; message: string };
 
 export interface SketchCommitSink {
   commit(f: SketchFinish): Promise<CommitOutcome>;
