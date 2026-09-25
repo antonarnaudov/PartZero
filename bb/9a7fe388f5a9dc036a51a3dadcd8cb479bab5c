@@ -1,0 +1,63 @@
+packages/cadscript/src/v1/compile.ts
+  s_59c0dd2af30db2::t_5ca34142ba7547 1602-1624,1626-1630
+  s_59c0dd2af30db2::t_060800c471b87f 1076-1078
+  s_59c0dd2af30db2::t_981311b4b10504 1517-1526
+  s_59c0dd2af30db2::t_7608cd7a95ee39 1547-1563
+  s_59c0dd2af30db2::t_305a45e00b1d6a 1625
+  s_59c0dd2af30db2::t_94fba1161e3247 1631-1633
+packages/ir-types/src/generated/ir-v1.ts
+  s_59c0dd2af30db2::t_c27653f3cb2115 1700-1715,1778-1784,1827-1828,3190
+  s_59c0dd2af30db2::t_53e671738bf544 1699,2792-2894,2896,2898,3084,3229-3230
+packages/cadscript/src/v1/json.ts
+  s_59c0dd2af30db2::t_acb54bcce17da8 427-430
+  s_59c0dd2af30db2::t_066535aede34a0 444-448
+  s_59c0dd2af30db2::t_d2d9deee26d5b2 449
+packages/cadscript/test/v1/roundtrip.test.ts
+  s_59c0dd2af30db2::t_527366becdcc3d 146-168
+packages/cadscript/test/v1/diagnostics.test.ts
+  s_59c0dd2af30db2::t_e034d136355ac4 62
+packages/cadscript/src/v1/diagnostics.ts
+  s_59c0dd2af30db2::t_ed9bdaa5f83da6 128
+packages/cadscript/src/v1/print.ts
+  s_59c0dd2af30db2::t_80ca53843e91f7 520-527
+  s_59c0dd2af30db2::t_6b2d09a786efda 468-473
+packages/cadscript/src/v1/syntax.ts
+  s_59c0dd2af30db2::t_12ef2d87e934f0 63
+  s_59c0dd2af30db2::t_65064548c9f6bd 42
+packages/cadscript/src/v1/validate.ts
+  s_59c0dd2af30db2::t_6e4a626539b9ce 370-371
+  s_59c0dd2af30db2::t_4dbfe9ab1bf321 964-974
+  s_59c0dd2af30db2::t_a0d39be9d878ac 997-1006
+  s_59c0dd2af30db2::t_76f358006b18a9 387-395
+  s_59c0dd2af30db2::t_02d35666e9a400 1399-1400
+packages/ir-types/src/generated/constants-v1.ts
+  s_59c0dd2af30db2::t_9ef17c2dddfa75 1899-1900,2019-2020
+  s_59c0dd2af30db2::t_c27653f3cb2115 346-370
+  s_59c0dd2af30db2::t_53e671738bf544 1145-1146,1188-1189
+  s_59c0dd2af30db2::t_ecfd01793e47d3 1190
+packages/cadscript/std/v1/index.d.ts
+  s_59c0dd2af30db2::t_b9d45342eebf29 763,765,767
+  s_59c0dd2af30db2::t_8d64162de7c3fe 998-999,1001-1006,1009-1013
+  s_59c0dd2af30db2::t_439e5d15d63318 463
+  s_59c0dd2af30db2::t_8462949d3f27cf 1000
+  s_59c0dd2af30db2::t_bc3c5597467639 762,764,766,1007-1008
+  s_59c0dd2af30db2::t_fc602bd8906e2e 1014
+packages/cadscript/src/generated/std-v1-dts.ts
+  s_59c0dd2af30db2::t_394d291d90fd11 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bb9a7fe388f5a9dc036a51a3dadcd8cb479bab5c",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
