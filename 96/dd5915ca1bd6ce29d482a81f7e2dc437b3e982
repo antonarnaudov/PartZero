@@ -1,0 +1,59 @@
+packages/app/src/commands/commands.ts
+  s_59c0dd2af30db2::t_eef6ca490662e2 661-663,668-711
+  s_59c0dd2af30db2::t_4d8ff0c3eaca9e 712
+packages/app/src/agent/agent-service.ts
+  s_59c0dd2af30db2::t_c287171f063e99 84,88-96
+  s_59c0dd2af30db2::t_802696c9ee4e70 452-489
+  s_59c0dd2af30db2::t_114884fe0d10b5 6-16,20,24,27,31-32,35,41
+  s_59c0dd2af30db2::t_874c99ecb6e0df 349-350
+  s_59c0dd2af30db2::t_043f8729b9b6e3 427
+  s_59c0dd2af30db2::t_f6fb2d0ef7f1e1 291,296-348,351-397
+  s_59c0dd2af30db2::t_790848ac80296c 207-208,211-221
+  s_59c0dd2af30db2::t_960efb1a5a9d3e 186-190
+  s_59c0dd2af30db2::t_a661f05f3df143 248
+  s_59c0dd2af30db2::t_605e6f8d123844 524-528
+  s_59c0dd2af30db2::t_0addc5f11338f1 502-503
+packages/app/test/agent-live.test.ts
+  s_59c0dd2af30db2::t_505b7d4de4ea77 1-287
+packages/app/src/ui/styles.css
+  s_59c0dd2af30db2::t_5440f84d0a5d2b 1803-1897
+packages/app/src/doc/v1/ir-doc-store.ts
+  s_59c0dd2af30db2::t_a46716bd010194 412
+  s_59c0dd2af30db2::t_4add40cfc38e6c 189
+  s_59c0dd2af30db2::t_ee2e7b67ffbf50 298-302
+  s_59c0dd2af30db2::t_dd8451d484f38f 447-459
+  s_59c0dd2af30db2::t_c352a7212865a0 46
+packages/app/src/agent/live-session.ts
+  s_59c0dd2af30db2::t_5f5ca515c87912 1-138
+packages/app/src/ui/ChatPanel.tsx
+  s_59c0dd2af30db2::t_09dcc710bddeac 7
+  s_59c0dd2af30db2::t_9db961fc5d2fec 241-372,374
+  s_59c0dd2af30db2::t_f41163101d9a2c 535
+  s_59c0dd2af30db2::t_e38ce9f852c213 624
+  s_59c0dd2af30db2::t_44b98edc50c595 204,207-239
+  s_59c0dd2af30db2::t_47095d4e12dceb 85-136
+  s_59c0dd2af30db2::t_58b3580c3c0bb6 495-509
+  s_59c0dd2af30db2::t_339a963aee1c94 240
+packages/app/src/bootstrap.ts
+  s_59c0dd2af30db2::t_883b2d98f0a12f 242-243
+packages/app/test/agent.test.ts
+  s_59c0dd2af30db2::t_da6ac8d91c8b97 178
+packages/app/test/helpers.ts
+  s_59c0dd2af30db2::t_6428fd83d4110b 185-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "96dd5915ca1bd6ce29d482a81f7e2dc437b3e982",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
