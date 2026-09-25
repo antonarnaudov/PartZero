@@ -541,11 +541,12 @@ impl<'a> Validator<'a> {
             Feature::Extrude(e) => {
                 self.sketch_ref(&e.sketch, &format!("{fp}/sketch"), ctx);
                 self.regions(&e.regions, &e.sketch, fp, ctx);
-                if let Some(d) = e.distance.literal()
+                if let Some(d) = e.distance.as_ref().and_then(Scalar::literal)
                     && d <= LINEAR_TOLERANCE
                 {
                     self.range("INVALID_DISTANCE", fp, "distance", d, &tol());
                 }
+                self.extrude_extent(e, fp, ctx);
                 self.body_op(e.op, e.targets.as_ref(), fp, ctx);
             }
             Feature::Revolve(r) => {
@@ -607,6 +608,62 @@ impl<'a> Validator<'a> {
             Feature::DatumPlane(d) => self.datum_plane(d, fp, ctx),
             Feature::DatumAxis(d) => self.datum_axis(d, fp, ctx),
             Feature::Tag(t) => self.check_ref(&t.target, &format!("{fp}/target"), ANY_SOME, ctx),
+            Feature::Transform(t) => {
+                self.check_ref(&t.bodies, &format!("{fp}/bodies"), BODY_SOME, ctx);
+                if let Some(r) = &t.rotate {
+                    self.axis(&r.axis, &format!("{fp}/rotate/axis"), ctx);
+                    if let Some(a) = r.angle.literal()
+                        && !(a.is_finite() && a.abs() <= 360.0)
+                    {
+                        self.range("INVALID_ANGLE", fp, "rotate/angle", a, "in [-360, 360]");
+                    }
+                }
+            }
+        }
+    }
+
+    /// Amendment set F (§6.2): exactly one of `distance` and `extent`; `through_all` cuts or
+    /// intersects; `up_to` is one-sided (not `symmetric`) and names a plane.
+    fn extrude_extent(&mut self, e: &ExtrudeFeature, fp: &str, ctx: &PartCtx) {
+        let conflict = |me: &mut Self, why: &str, fields: Value| {
+            me.err(
+                "EXTRUDE_EXTENT_CONFLICT",
+                format!("{fp}/extent"),
+                why.to_string(),
+                json!({ "field": "extent", "fields": fields }),
+            );
+        };
+        match (&e.distance, &e.extent) {
+            (None, None) => conflict(
+                self,
+                "an extrude needs a distance or an extent",
+                json!(["distance", "extent"]),
+            ),
+            (Some(_), Some(_)) => conflict(
+                self,
+                "an extrude has a distance or an extent, not both",
+                json!(["distance", "extent"]),
+            ),
+            (None, Some(ExtrudeExtent::ThroughAll)) => {
+                if !matches!(e.op, BodyOp::Cut | BodyOp::Intersect) {
+                    conflict(
+                        self,
+                        "through_all cuts or intersects (op cut or intersect)",
+                        json!(["extent", "op"]),
+                    );
+                }
+            }
+            (None, Some(ExtrudeExtent::UpTo(p))) => {
+                if e.direction == crate::SweepDirection::Symmetric {
+                    conflict(
+                        self,
+                        "up_to goes one way: not with direction symmetric",
+                        json!(["extent", "direction"]),
+                    );
+                }
+                self.plane(p, &format!("{fp}/extent/up_to"), ctx);
+            }
+            (Some(_), None) => {}
         }
     }
 
@@ -1235,10 +1292,18 @@ impl<'a> Validator<'a> {
     fn query(&mut self, q: &Query, path: &str, ctx: &PartCtx) -> Option<EntityKind> {
         use EntityKind::*;
         const SWEEPS: &[&str] = &["extrude", "revolve"];
-        const BODY_ORIGINS: &[&str] = &["extrude", "revolve", "pattern"];
+        const BODY_ORIGINS: &[&str] = &["extrude", "revolve", "pattern", "transform"];
         const CREATORS: &[&str] = &[
-            "extrude", "revolve", "boolean", "hole", "fillet", "chamfer", "shell", "draft",
+            "extrude",
+            "revolve",
+            "boolean",
+            "hole",
+            "fillet",
+            "chamfer",
+            "shell",
+            "draft",
             "pattern",
+            "transform",
         ];
         match q {
             Query::Body { feature, member } => {
@@ -2620,7 +2685,10 @@ impl<'a> Walker<'a> {
                 }
             }
             Feature::Extrude(e) => {
-                self.s(format!("{fp}/distance"), &e.distance, Length);
+                self.opt(format!("{fp}/distance"), &e.distance, Length);
+                if let Some(ExtrudeExtent::UpTo(p)) = &e.extent {
+                    self.plane(&format!("{fp}/extent/up_to"), p);
+                }
                 self.targets(&format!("{fp}/targets"), &e.targets);
             }
             Feature::Revolve(r) => {
@@ -2771,6 +2839,15 @@ impl<'a> Walker<'a> {
                 if let Some(x) = &d.x_dir {
                     self.p3(&format!("{fp}/x_dir"), x, Ratio);
                 }
+            }
+            Feature::Transform(t) => {
+                self.r(&format!("{fp}/bodies"), &t.bodies);
+                self.p3(&format!("{fp}/translate"), &t.translate, Length);
+                if let Some(r) = &t.rotate {
+                    self.axis(&format!("{fp}/rotate/axis"), &r.axis);
+                    self.s(format!("{fp}/rotate/angle"), &r.angle, Angle);
+                }
+                self.b(format!("{fp}/copy"), &t.copy);
             }
             Feature::DatumAxis(d) => {
                 if let Some(e) = &d.edge {

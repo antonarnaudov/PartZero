@@ -1,0 +1,42 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": { "name": "extents", "description": "SPEC-v1 §6.2 extents (amendment set F): a bore cut through all from the top cap, a slot cut through all both ways from a mid datum, a boss up to a datum roof, a pocket up to a face, and the two evaluation errors" },
+  "params": [
+    { "name": "roof", "unit": "mm", "value": 14 }
+  ],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        { "type": "sketch", "id": "s1", "name": "base", "plane": "XY",
+          "curves": [{ "kind": "rect", "id": "r", "center": [0, 0], "w": 60, "h": 30, "r": 4 }] },
+        { "type": "extrude", "id": "e1", "name": "plate", "sketch": "s1", "distance": 8 },
+        { "type": "sketch", "id": "s2", "name": "boreSk",
+          "plane": { "face": { "kind": "face", "q": { "op": "cap", "feature": "e1", "end": "end" } } },
+          "curves": [{ "kind": "circle", "id": "c", "center": [18, 0], "radius": 3.2 }] },
+        { "type": "extrude", "id": "e2", "name": "bore", "sketch": "s2", "extent": "through_all",
+          "direction": "reverse", "op": "cut", "targets": "all" },
+        { "type": "datum_plane", "id": "d1", "name": "mid", "mode": "offset", "from": "XY", "distance": 4 },
+        { "type": "sketch", "id": "s3", "name": "slotSk", "plane": { "datum": "d1" },
+          "curves": [{ "kind": "slot", "id": "k", "a": [-20, -5], "b": [-20, 5], "w": 4 }] },
+        { "type": "extrude", "id": "e3", "name": "slotCut", "sketch": "s3", "extent": "through_all",
+          "direction": "symmetric", "op": "cut", "targets": "all" },
+        { "type": "datum_plane", "id": "d2", "name": "roofPlane", "mode": "offset", "from": "XY", "distance": "roof" },
+        { "type": "sketch", "id": "s4", "name": "bossSk",
+          "plane": { "face": { "kind": "face", "q": { "op": "cap", "feature": "e1", "end": "end" } } },
+          "curves": [{ "kind": "circle", "id": "b", "center": [0, 0], "radius": 6 }] },
+        { "type": "extrude", "id": "e4", "name": "boss", "sketch": "s4", "extent": { "up_to": { "datum": "d2" } },
+          "op": "join", "targets": "all" },
+        { "type": "sketch", "id": "s5", "name": "pocketSk",
+          "plane": { "face": { "kind": "face", "q": { "op": "cap", "feature": "e4", "end": "end" } } },
+          "curves": [{ "kind": "circle", "id": "p", "center": [0, 0], "radius": 2.5 }] },
+        { "type": "extrude", "id": "e5", "name": "pocket", "sketch": "s5", "direction": "reverse",
+          "extent": { "up_to": { "face": { "kind": "face", "q": { "op": "cap", "feature": "e1", "end": "end" } } } },
+          "op": "cut", "targets": "all" },
+        { "type": "extrude", "id": "e6", "name": "tilted", "sketch": "s4", "extent": { "up_to": "YZ" } },
+        { "type": "extrude", "id": "e7", "name": "behind", "sketch": "s4", "extent": { "up_to": "XY" } }
+      ]
+    }
+  ]
+}

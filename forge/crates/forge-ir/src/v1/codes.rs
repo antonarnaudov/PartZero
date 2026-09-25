@@ -53,6 +53,10 @@ pub const CATALOGUE: &[CodeInfo] = &[
     c("DEGENERATE_CURVE", "R/E", "§4.2", &["curve", "reason"], "v0"),
     c("INCONSISTENT_ARC", "R/E", "§4.2", &["curve", "r_start", "r_end"], "v0"),
     c("INVALID_DISTANCE", "R/E", "§6.2", &["field", "value", "expected"], "v0"),
+    // Amendment set F (extrude extents, §6.2).
+    c("EXTRUDE_EXTENT_CONFLICT", "R", "§6.2", &["field", "fields"], "v1"),
+    c("EXTRUDE_UP_TO_NOT_PARALLEL", "E", "§6.2", &["angle"], "v1"),
+    c("EXTRUDE_UP_TO_BEHIND", "E", "§6.2", &["distance"], "v1"),
     c("INVALID_ANGLE", "R/E", "§6.3", &["field", "value", "expected"], "v0"),
     c("INVALID_AXIS", "R/E", "§6.3", &["field", "value", "expected"], "v0"),
     c("INVALID_PLANE", "R/E", "§3.1", &["field", "reason"], "v0"),

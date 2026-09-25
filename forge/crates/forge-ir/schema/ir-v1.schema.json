@@ -1241,6 +1241,29 @@
       ],
       "type": "string"
     },
+    "ExtrudeExtent": {
+      "description": "How far an extrude goes when not by a `distance` (§6.2, amendment set F):\n`\"through_all\"` (a cut or intersect through every target) or `{ \"up_to\": PlaneRef }` (to a\nplane parallel to the sketch plane: a planar face, a datum plane or an origin plane).",
+      "oneOf": [
+        {
+          "enum": [
+            "through_all"
+          ],
+          "type": "string"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "up_to": {
+              "$ref": "#/$defs/PlaneRef"
+            }
+          },
+          "required": [
+            "up_to"
+          ],
+          "type": "object"
+        }
+      ]
+    },
     "FacePlane": {
       "additionalProperties": false,
       "description": "`{ \"face\": Ref }`: the face frame of §3.1 (kind `face`, card `one`).",
@@ -1397,7 +1420,11 @@
             },
             "distance": {
               "$ref": "#/$defs/Scalar",
-              "description": "Length, > tol (`INVALID_DISTANCE`)."
+              "description": "Length, > tol (`INVALID_DISTANCE`). Required unless `extent` is given, and not with\nit (`EXTRUDE_EXTENT_CONFLICT`)."
+            },
+            "extent": {
+              "$ref": "#/$defs/ExtrudeExtent",
+              "description": "Amendment set F: through all, or up to a parallel plane, instead of a distance."
             },
             "id": {
               "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
@@ -1454,8 +1481,7 @@
             "type",
             "id",
             "name",
-            "sketch",
-            "distance"
+            "sketch"
           ],
           "type": "object"
         },
@@ -2499,6 +2525,100 @@
             "id",
             "name",
             "target"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Transform (§6.13, set F): move, or copy, bodies by a rigid motion — the rotation first,\nthen the translation. Moved bodies keep their origin and keys; copies are new bodies.",
+          "properties": {
+            "assumptions": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "author": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "bodies": {
+              "$ref": "#/$defs/Ref",
+              "description": "Body, default `some`."
+            },
+            "copy": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Keep the originals and add moved copies (origin: this feature, the source member,\ninstance `[1]`; keys `T/copy:{K}@1`, as a one-instance body pattern)."
+            },
+            "decision_ids": {
+              "default": [],
+              "description": "Not semantic (§6.0.1).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "id": {
+              "description": "Non-empty, unique across the document (`INVALID_ID`, `DUPLICATE_ID`).",
+              "type": "string"
+            },
+            "intent": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "name": {
+              "description": "The CadScript `const` name; shares one namespace with parameters (§0.3).",
+              "type": "string"
+            },
+            "note": {
+              "default": "",
+              "description": "Not semantic (§6.0.1).",
+              "type": "string"
+            },
+            "rotate": {
+              "$ref": "#/$defs/TransformRotation"
+            },
+            "suppressed": {
+              "$ref": "#/$defs/BoolScalar",
+              "default": false,
+              "description": "Suppressed features are skipped and produce no report entry. Accepts a Bool\nexpression ([W0-3])."
+            },
+            "translate": {
+              "default": [
+                0,
+                0,
+                0
+              ],
+              "description": "Lengths; applied after the rotation.",
+              "items": {
+                "$ref": "#/$defs/Scalar"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            "type": {
+              "const": "transform",
+              "type": "string"
+            },
+            "v": {
+              "default": 1,
+              "description": "Behavior version (§0.2): a feature type's semantics never change for a given `v`.",
+              "format": "uint32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "name",
+            "bodies"
           ],
           "type": "object"
         }
@@ -4411,6 +4531,24 @@
           "$ref": "#/$defs/Scalar"
         }
       },
+      "type": "object"
+    },
+    "TransformRotation": {
+      "additionalProperties": false,
+      "description": "The rotation of a `transform` (§6.13): `angle` degrees about an axis line (right-hand rule).",
+      "properties": {
+        "angle": {
+          "$ref": "#/$defs/Scalar",
+          "description": "Angle, degrees (any sign; `|angle| ≤ 360`, `INVALID_ANGLE`)."
+        },
+        "axis": {
+          "$ref": "#/$defs/AxisRef"
+        }
+      },
+      "required": [
+        "axis",
+        "angle"
+      ],
       "type": "object"
     },
     "Units": {

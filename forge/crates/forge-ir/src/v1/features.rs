@@ -88,10 +88,11 @@ pub enum Feature {
     DatumPlane(DatumPlaneFeature),
     DatumAxis(DatumAxisFeature),
     Tag(TagFeature),
+    Transform(TransformFeature),
 }
 
 /// Every feature `type` of IR v1, in declaration order.
-pub const FEATURE_TYPES: [&str; 13] = [
+pub const FEATURE_TYPES: [&str; 14] = [
     "sketch",
     "extrude",
     "revolve",
@@ -105,6 +106,7 @@ pub const FEATURE_TYPES: [&str; 13] = [
     "datum_plane",
     "datum_axis",
     "tag",
+    "transform",
 ];
 
 /// The behavior versions this revision of the contract defines, per feature type (§0.2).
@@ -132,6 +134,7 @@ macro_rules! each_feature {
             Feature::DatumPlane($f) => $e,
             Feature::DatumAxis($f) => $e,
             Feature::Tag($f) => $e,
+            Feature::Transform($f) => $e,
         }
     };
 }
@@ -164,6 +167,7 @@ impl Feature {
             Feature::DatumPlane(_) => "datum_plane",
             Feature::DatumAxis(_) => "datum_axis",
             Feature::Tag(_) => "tag",
+            Feature::Transform(_) => "transform",
         }
     }
 }
@@ -227,6 +231,18 @@ pub enum Targets {
     Ref(Ref),
 }
 
+/// How far an extrude goes when not by a `distance` (§6.2, amendment set F):
+/// `"through_all"` (a cut or intersect through every target) or `{ "up_to": PlaneRef }` (to a
+/// plane parallel to the sketch plane: a planar face, a datum plane or an origin plane).
+// Plain data mirrored 1:1 by the JSON Schema, as `Feature`; boxing would only add friction.
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum ExtrudeExtent {
+    ThroughAll,
+    UpTo(PlaneRef),
+}
+
 feature_struct! {
     /// Extrude (§6.2 [D-39]).
     ExtrudeFeature {
@@ -235,8 +251,13 @@ feature_struct! {
         #[serde(default, skip_serializing_if = "is_default")]
         #[schemars(extend("default" = "all"))]
         regions: RegionSelection,
-        /// Length, > tol (`INVALID_DISTANCE`).
-        distance: Scalar,
+        /// Length, > tol (`INVALID_DISTANCE`). Required unless `extent` is given, and not with
+        /// it (`EXTRUDE_EXTENT_CONFLICT`).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        distance: Option<Scalar>,
+        /// Amendment set F: through all, or up to a parallel plane, instead of a distance.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        extent: Option<ExtrudeExtent>,
         #[serde(default, skip_serializing_if = "is_default")]
         #[schemars(extend("default" = "normal"))]
         direction: SweepDirection,
@@ -867,5 +888,44 @@ feature_struct! {
     TagFeature {
         /// Any kind; default card `some`.
         target: Ref,
+    }
+}
+
+// ---- transform ------------------------------------------------------------------------------
+
+/// The rotation of a `transform` (§6.13): `angle` degrees about an axis line (right-hand rule).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TransformRotation {
+    pub axis: AxisRef,
+    /// Angle, degrees (any sign; `|angle| ≤ 360`, `INVALID_ANGLE`).
+    pub angle: Scalar,
+}
+
+fn zero3() -> SP3 {
+    [Scalar::Num(0.0), Scalar::Num(0.0), Scalar::Num(0.0)]
+}
+
+fn is_zero3(p: &SP3) -> bool {
+    p.iter().all(Scalar::is_zero)
+}
+
+feature_struct! {
+    /// Transform (§6.13, set F): move, or copy, bodies by a rigid motion — the rotation first,
+    /// then the translation. Moved bodies keep their origin and keys; copies are new bodies.
+    TransformFeature {
+        /// Body, default `some`.
+        bodies: Ref,
+        /// Lengths; applied after the rotation.
+        #[serde(default = "zero3", skip_serializing_if = "is_zero3")]
+        #[schemars(extend("default" = [0, 0, 0]))]
+        translate: SP3,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        rotate: Option<TransformRotation>,
+        /// Keep the originals and add moved copies (origin: this feature, the source member,
+        /// instance `[1]`; keys `T/copy:{K}@1`, as a one-instance body pattern).
+        #[serde(default = "BoolScalar::r#false", skip_serializing_if = "BoolScalar::is_false")]
+        #[schemars(extend("default" = false))]
+        copy: BoolScalar,
     }
 }

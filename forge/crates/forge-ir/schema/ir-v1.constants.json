@@ -335,6 +335,31 @@
       "since": "v1",
       "stage": "R"
     },
+    "EXTRUDE_EXTENT_CONFLICT": {
+      "details": [
+        "field",
+        "fields"
+      ],
+      "section": "§6.2",
+      "since": "v1",
+      "stage": "R"
+    },
+    "EXTRUDE_UP_TO_BEHIND": {
+      "details": [
+        "distance"
+      ],
+      "section": "§6.2",
+      "since": "v1",
+      "stage": "E"
+    },
+    "EXTRUDE_UP_TO_NOT_PARALLEL": {
+      "details": [
+        "angle"
+      ],
+      "section": "§6.2",
+      "since": "v1",
+      "stage": "E"
+    },
     "FILLET_EDGE_UNSUPPORTED": {
       "details": [
         "edges"
@@ -1108,7 +1133,8 @@
     "pattern",
     "datum_plane",
     "datum_axis",
-    "tag"
+    "tag",
+    "transform"
   ],
   "FEATURE_VERSIONS": {
     "boolean": [
@@ -1148,6 +1174,9 @@
       1
     ],
     "tag": [
+      1
+    ],
+    "transform": [
       1
     ]
   },
@@ -1832,7 +1861,8 @@
     "X",
     "Y",
     "Z",
-    "C"
+    "C",
+    "transform"
   ],
   "RESERVED_NAMES_V0": [
     "break",
@@ -1949,7 +1979,8 @@
     "X",
     "Y",
     "Z",
-    "C"
+    "C",
+    "transform"
   ],
   "SOLVE_CHECK_TOLERANCE": 1e-9,
   "SOLVE_TOLERANCE": 1e-10,

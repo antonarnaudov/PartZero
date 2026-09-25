@@ -143,9 +143,18 @@ struct Checker<'a> {
 }
 
 const SWEEPS: &[&str] = &["extrude", "revolve"];
-const BODY_ORIGINS: &[&str] = &["extrude", "revolve", "pattern"];
+const BODY_ORIGINS: &[&str] = &["extrude", "revolve", "pattern", "transform"];
 const CREATORS: &[&str] = &[
-    "extrude", "revolve", "boolean", "hole", "fillet", "chamfer", "shell", "draft", "pattern",
+    "extrude",
+    "revolve",
+    "boolean",
+    "hole",
+    "fillet",
+    "chamfer",
+    "shell",
+    "draft",
+    "pattern",
+    "transform",
 ];
 
 fn lit3(v: &SP3) -> Option<[f64; 3]> {

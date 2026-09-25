@@ -934,6 +934,11 @@ fn the_oracle_comparison_programs_evaluate_as_documented() {
                 ("b1", "BOOLEAN_TOOL_IS_TARGET"),
                 ("e4", "BOOLEAN_NO_INTERSECTION"),
             ],
+            // Amendment set F: an up_to plane at an angle, and one behind the sketch.
+            "extents" => &[
+                ("e6", "EXTRUDE_UP_TO_NOT_PARALLEL"),
+                ("e7", "EXTRUDE_UP_TO_BEHIND"),
+            ],
             _ => &[],
         };
         assert_eq!(failed, expected, "{name}");

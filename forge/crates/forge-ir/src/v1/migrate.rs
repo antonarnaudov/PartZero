@@ -222,7 +222,8 @@ fn migrate_part(
                 suppressed: BoolScalar::Bool(e.suppressed),
                 sketch: resolve(&e.sketch),
                 regions: RegionSelection::default(),
-                distance: Scalar::Num(e.distance),
+                distance: Some(Scalar::Num(e.distance)),
+                extent: None,
                 direction: e.direction,
                 op: BodyOp::NewBody,
                 targets: None,
@@ -415,13 +416,22 @@ pub fn downgrade_to_v0(doc: &Document) -> Result<crate::Document, NotV0Surface> 
                     if e.regions != RegionSelection::default() {
                         return Err(no(format!("{fp}/regions"), "a region list"));
                     }
+                    if e.extent.is_some() {
+                        return Err(no(format!("{fp}/extent"), "an extent"));
+                    }
+                    let Some(distance) = &e.distance else {
+                        return Err(no(
+                            format!("{fp}/distance"),
+                            "an extrude without a distance",
+                        ));
+                    };
                     crate::Feature::Extrude(crate::ExtrudeFeature {
                         id: e.id.clone(),
                         name: e.name.clone(),
                         suppressed: supp(&e.suppressed, format!("{fp}/suppressed"))?,
                         sketch: sketch_name(&e.sketch),
                         regions: crate::RegionSelection::All,
-                        distance: lit(&e.distance, format!("{fp}/distance"))?,
+                        distance: lit(distance, format!("{fp}/distance"))?,
                         direction: e.direction,
                         op: crate::BodyOp::NewBody,
                     })

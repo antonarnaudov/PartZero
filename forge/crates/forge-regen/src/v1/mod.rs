@@ -65,6 +65,7 @@ mod error;
 mod hole;
 mod part;
 mod pattern;
+mod transform;
 
 use forge_ir::v1::metrics::{EvalReport, ParamReport, PartReport, ReportError, Status};
 use forge_ir::v1::{

@@ -46,6 +46,9 @@ pub(crate) fn by_id(f: &Feature) -> Vec<(String, ByIdKind)> {
         Feature::Sketch(s) => w.plane(&s.plane),
         Feature::Extrude(e) => {
             w.push(&e.sketch, ByIdKind::Sketch);
+            if let Some(forge_ir::v1::ExtrudeExtent::UpTo(p)) = &e.extent {
+                w.plane(p);
+            }
             w.targets(e.targets.as_ref());
         }
         Feature::Revolve(r) => {
@@ -55,6 +58,12 @@ pub(crate) fn by_id(f: &Feature) -> Vec<(String, ByIdKind)> {
         Feature::Boolean(b) => {
             w.r(&b.targets);
             w.r(&b.tools);
+        }
+        Feature::Transform(t) => {
+            w.r(&t.bodies);
+            if let Some(r) = &t.rotate {
+                w.axis(&r.axis);
+            }
         }
         Feature::Hole(h) => {
             w.plane(&h.on);

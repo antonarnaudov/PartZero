@@ -254,7 +254,11 @@ fn parameters_evaluate_in_dependency_order_and_report() {
     let v1::Feature::Extrude(e) = &d.parts[0].features[1] else {
         unreachable!()
     };
-    assert_eq!(pv.scalar(0, &e.distance, FieldType::Length).unwrap(), 8.25);
+    assert_eq!(
+        pv.scalar(0, e.distance.as_ref().unwrap(), FieldType::Length)
+            .unwrap(),
+        8.25
+    );
     assert!(pv.feature_failure(&d, 0, 1).is_none());
     assert!(
         pv.boolean(0, &v1::BoolScalar::Expr("no_lid || tilt > 10 deg".into()))
@@ -342,7 +346,7 @@ fn failures_propagate_as_param_failed_with_the_root_cause() {
         unreachable!()
     };
     assert_eq!(
-        pv.scalar(0, &x.distance, FieldType::Length)
+        pv.scalar(0, x.distance.as_ref().unwrap(), FieldType::Length)
             .unwrap_err()
             .code,
         "PARAM_FAILED"
@@ -365,7 +369,11 @@ fn feature_expressions_fail_with_domain_and_integrality_errors() {
     let v1::Feature::Extrude(x) = &d.parts[0].features[1] else {
         unreachable!()
     };
-    assert_eq!(pv.scalar(0, &x.distance, FieldType::Length).unwrap(), -2.0);
+    assert_eq!(
+        pv.scalar(0, x.distance.as_ref().unwrap(), FieldType::Length)
+            .unwrap(),
+        -2.0
+    );
     assert_eq!(
         pv.eval_expr(ExprScope::Part(0), "t / (t / t - 1)", FieldType::Length)
             .unwrap_err()

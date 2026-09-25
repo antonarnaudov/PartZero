@@ -1,0 +1,37 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": { "name": "transforms", "description": "SPEC-v1 §6.13 (amendment set F): a bracket moved and turned (keys kept: a later hole on its moved cap), a rotated copy joined back, a peg copied twice about a datum-free edge axis" },
+  "params": [
+    { "name": "turn", "unit": "deg", "value": 30 },
+    { "name": "shift", "unit": "mm", "value": 12.5 }
+  ],
+  "parts": [
+    {
+      "id": "p1",
+      "name": "part",
+      "features": [
+        { "type": "sketch", "id": "s1", "name": "base", "plane": "XY",
+          "curves": [{ "kind": "rect", "id": "r", "center": [0, 0], "w": 40, "h": 20, "r": 3 }] },
+        { "type": "extrude", "id": "e1", "name": "bracket", "sketch": "s1", "distance": 6 },
+        { "type": "transform", "id": "t1", "name": "placed",
+          "bodies": { "kind": "body", "q": { "op": "body", "feature": "e1" } },
+          "rotate": { "axis": "Z", "angle": "turn" }, "translate": ["shift", 0, 2] },
+        { "type": "hole", "id": "h1", "name": "bore",
+          "on": { "face": { "kind": "face", "q": { "op": "cap", "feature": "e1", "end": "end" } } },
+          "at": { "list": [{ "id": "a", "at": ["shift", 0] }] }, "size": "M4", "depth": "through" },
+        { "type": "transform", "id": "t2", "name": "twin",
+          "bodies": { "kind": "body", "q": { "op": "body", "feature": "e1" } },
+          "rotate": { "axis": { "line": { "origin": ["shift", 0, 0], "direction": [0, 0, 1] } }, "angle": 90 }, "copy": true },
+        { "type": "boolean", "id": "b1", "name": "cross", "op": "join",
+          "targets": { "kind": "body", "q": { "op": "body", "feature": "e1" } },
+          "tools": { "kind": "body", "q": { "op": "body", "feature": "t2" } } },
+        { "type": "sketch", "id": "s2", "name": "pegSk", "plane": "XZ",
+          "curves": [{ "kind": "circle", "id": "c", "center": [60, 10], "radius": 4 }] },
+        { "type": "extrude", "id": "e2", "name": "peg", "sketch": "s2", "distance": 10, "direction": "symmetric" },
+        { "type": "transform", "id": "t3", "name": "pegCopy",
+          "bodies": { "kind": "body", "q": { "op": "body", "feature": "e2" } },
+          "rotate": { "axis": "X", "angle": -45 }, "translate": [0, 0, 20], "copy": true }
+      ]
+    }
+  ]
+}

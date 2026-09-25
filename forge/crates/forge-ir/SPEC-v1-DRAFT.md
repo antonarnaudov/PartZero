@@ -1654,6 +1654,21 @@ See §4. Ref fields: `plane.face` (face, `one`).
 Tools: one body per selected region, swept as in v0 §4.2 and named per §5.2. With `new_body` they
 are the result (v0 behaviour). Otherwise §6.0.3 applies.
 
+**Extents (amendment set F, 2026-09-25).** Instead of `distance`, an extrude may give an
+`extent` (field order: after `distance`); exactly one of the two is required
+(`EXTRUDE_EXTENT_CONFLICT`, rejected, details `{ "field", "fields" }`):
+
+| `extent` | Meaning | Rules |
+|---|---|---|
+| `"through_all"` | the tool passes every target: the distance is the farthest corner of the targets' bounding boxes along the sweep direction (both ways, doubled, for `symmetric`) plus the targets' scale `s` (§5.4) | `op` is `cut` or `intersect` (`EXTRUDE_EXTENT_CONFLICT`); the result does not depend on the margin (the tool's far cap never reaches a target), so engines may differ in it |
+| `{ "up_to": PlaneRef }` | the tool ends on a plane parallel to the sketch plane: a planar face (`{ "face": Ref }`, face `one`), a datum plane or an origin plane; the distance is the plane's signed distance along the sweep direction | not with `direction: "symmetric"` (`EXTRUDE_EXTENT_CONFLICT`); a plane at an angle above `QUERY_ANGLE_TOLERANCE` is `EXTRUDE_UP_TO_NOT_PARALLEL` (`{ "angle" }`, degrees), one on or behind the sketch plane `EXTRUDE_UP_TO_BEHIND` (`{ "distance" }`, signed): evaluation errors |
+
+The `up_to` plane is a reference in field order (`refs` field `/extent/up_to/face` for a face):
+it is resolved after the sketch and before `targets`. The extent follows the plane: moving the face
+or the datum moves the extrude's end. CadScript: `extrude(sk, { throughAll: true, op: "cut",
+targets: "all" })`, `extrude(sk, { upTo: roof })`. Oracle case:
+`forge-regen/tests/v1_programs/extents.json`.
+
 ```json
 { "type": "extrude", "id": "e2", "name": "boss", "sketch": "s2", "distance": 12, "op": "join",
   "targets": { "kind": "body", "q": { "op": "body", "feature": "e1" } } }
@@ -2024,6 +2039,53 @@ it. A tag is a stable, named handle for a selection (the agent's "mount_face").
 const mountFace = tag(slab.faces().planes().normal("-Z").one());
 const inserts   = hole(mountFace, { at: { a: [10, 10], b: [-10, 10] }, size: "M3", insert: "std" });
 ```
+
+### 6.13 `transform` (amendment set F, 2026-09-25)
+
+Moves bodies, or copies them, by a rigid motion: the rotation first, then the translation
+(FULL-MODELING-PLAN T0 item 11, the Move / Copy tool).
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `bodies` | Ref (body, `some`) | — | the bodies moved or copied |
+| `translate` | P3 of lengths | `[0, 0, 0]` | applied after the rotation |
+| `rotate` | `{ "axis": AxisRef, "angle": angle }` | — | `angle` degrees about the axis line (right-hand rule about its direction), `|angle| ≤ 360` (`INVALID_ANGLE`: rejected for a literal, an evaluation error for an expression); exact degree trigonometry (§2.7) |
+| `copy` | bool (expression allowed, as `keep_tools`) | `false` | keep the originals and add moved copies |
+
+- **Move** (`copy: false`): every resolved body is replaced by the moved body. Moving only
+  **modifies** entities, so every face, edge and vertex keeps its key and every body its origin
+  (§5.2 rule 3): references to them keep resolving after the move (a hole on a moved cap still
+  finds the cap). The feature's `bodies` report lists them with `change: "modified"`.
+- **Copy** (`copy: true`): exactly a one-instance body-seed pattern (§6.10) with the motion as
+  its instance `[1]`: new bodies with the origin `{ "feature": <transform id>, "member": <the
+  source body's member>, "instance": [1] }` and keys `T/copy:{K}@1`; `change: "created"`. The
+  copies are bodies of the transform (`{ "op": "body", "feature": "<transform id>" }`), and
+  `created` finds their faces. The originals are untouched.
+- The motion of a copy or a move is applied to the exact geometry (no re-tessellation, no
+  re-fit): volumes, areas and face types are unchanged, and the centroid and box move with it.
+- Canonical form: `translate` `[0, 0, 0]` and `copy: false` are omitted; `bodies` is written
+  without its default card.
+- Static checks (rejections): `bodies` is a body Ref; `rotate.axis` is an AxisRef;
+  `transform` joins `body`'s origin types (`extrude`, `revolve`, `pattern`, `transform`) and
+  `created`'s creators (§5.3 [W0-14]). CadScript: `transform` is a builtin (§9.3).
+
+```json
+{ "type": "transform", "id": "t1", "name": "placed",
+  "bodies": { "kind": "body", "q": { "op": "body", "feature": "e1" } },
+  "rotate": { "axis": "Z", "angle": 30 }, "translate": [12.5, 0, 2] }
+{ "type": "transform", "id": "t2", "name": "twin",
+  "bodies": { "kind": "body", "q": { "op": "body", "feature": "e1" } },
+  "rotate": { "axis": { "line": { "origin": [12.5, 0, 0], "direction": [0, 0, 1] } }, "angle": 90 }, "copy": true }
+```
+```ts
+const placed = transform(bracket, { rotate: { axis: Z, angle: 30 }, translate: [12.5, 0, 2] });
+const twin   = transform(bracket, { rotate: { axis: { line: { origin: [12.5, 0, 0], direction: [0, 0, 1] } }, angle: 90 }, copy: true });
+```
+
+Oracle: `oracle/src/aicad_oracle/v1/patterns.py` `transform_feature` (OCCT `BRepBuilderAPI_Transform`
+with the same exact-degree rotation); the case `forge-regen/tests/v1_programs/transforms.json`
+matches. Forge: `forge-regen/src/v1/transform.rs` (`forge_ops::pattern::move_body` and
+`apply_seed` with `Instance::single`).
 
 ## 7. Evaluation and report (`aicad.metrics/1`)
 
@@ -2527,7 +2589,7 @@ v1 adds these CadScript builtins to `RESERVED_NAMES`: `param`, `measure`, `point
 `linearPattern`, `circularPattern`, `mirror`, `datumPlane`, `datumAxis`, `tag`, `edgesBetween`,
 `faceOf`, `body`, `bodies`, `min`, `max`, `abs`, `sqrt`, `floor`, `ceil`, `round`, `clamp`, `hypot`,
 `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `PI`, `mm`, `cm`, `inch`, `deg`, `X`, `Y`, `Z`,
-`C`. A v0 document that uses one of them as a feature name is still valid IR v1 at the IR level,
+`C`, and (amendment set F) `transform`. A v0 document that uses one of them as a feature name is still valid IR v1 at the IR level,
 because migration does not rename; the CadScript printer then reports `CS_RESERVED_NAME` for it,
 and the command layer offers `renameFeature` (safe, because references use ids). [W0-2] IR
 validation therefore checks feature names against `RESERVED_NAMES_V0` and parameter names (new in
@@ -2791,3 +2853,16 @@ tolerance of §8.3 rule 4 (blend surface recognition), the flaw [W0-43] removed 
 lacks (two cones sharing an apex; two extrusions with parallel directions: lines) — `bspline`
 in both engines until an amendment lists them, with data (W4/W7b); the residue of §8.3 rule
 1.3(b) at tangencies where two branches cross (W7b measures it).
+
+### 11.2 Amendment set F (2026-09-25): extrude extents and `transform`
+
+Additive (a document valid before stays valid and evaluates the same; the golden hash of the
+earlier programs is unchanged). Asked for by the create tools (FULL-MODELING-PLAN T0 items 1 and
+11: Extrude through all / up to, Move / Copy body).
+
+| What | Where | Codes | Fixtures and cases |
+|---|---|---|---|
+| `extent`: `"through_all"` or `{ "up_to": PlaneRef }` instead of `distance` | §6.2 | `EXTRUDE_EXTENT_CONFLICT` (R), `EXTRUDE_UP_TO_NOT_PARALLEL`, `EXTRUDE_UP_TO_BEHIND` (E) | `invalid/documents.json` `extrude-neither-distance-nor-extent`, `…-distance-and-extent`, `…-through-all-new-body`, `…-up-to-symmetric`; `forge-regen/tests/v1_programs/extents.json` (oracle MATCH); `forge-regen/tests/v1_extents.rs` |
+| `transform` (move / copy bodies) | §6.13, §9.3 | `INVALID_ANGLE` (existing) | `forge-regen/tests/v1_programs/transforms.json` (oracle MATCH); `forge-regen/tests/v1_transform.rs` (incl. a property test: a rigid motion keeps volume, area and face count and moves the centroid exactly) |
+
+`migrate` never writes either; a v1 → v0 downgrade refuses an extrude with an `extent`.

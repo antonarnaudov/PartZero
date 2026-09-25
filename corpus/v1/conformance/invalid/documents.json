@@ -13874,6 +13874,195 @@
      }
     }
    ]
+  },
+  {
+   "id": "extrude-neither-distance-nor-extent",
+   "document": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1"
+       }
+      ]
+     }
+    ]
+   },
+   "note": "amendment set F (\u00a76.2): exactly one of distance and extent",
+   "expected": [
+    {
+     "code": "EXTRUDE_EXTENT_CONFLICT",
+     "path": "/parts/0/features/1/extent"
+    }
+   ]
+  },
+  {
+   "id": "extrude-distance-and-extent",
+   "document": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "distance": 10,
+        "extent": {
+         "up_to": "XY"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "note": "amendment set F (\u00a76.2): a distance or an extent, not both",
+   "expected": [
+    {
+     "code": "EXTRUDE_EXTENT_CONFLICT",
+     "path": "/parts/0/features/1/extent"
+    }
+   ]
+  },
+  {
+   "id": "extrude-through-all-new-body",
+   "document": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "extent": "through_all"
+       }
+      ]
+     }
+    ]
+   },
+   "note": "amendment set F (\u00a76.2): through_all cuts or intersects",
+   "expected": [
+    {
+     "code": "EXTRUDE_EXTENT_CONFLICT",
+     "path": "/parts/0/features/1/extent"
+    }
+   ]
+  },
+  {
+   "id": "extrude-up-to-symmetric",
+   "document": {
+    "schema": "aicad.ir/1",
+    "parts": [
+     {
+      "id": "p1",
+      "name": "part",
+      "features": [
+       {
+        "type": "sketch",
+        "id": "s1",
+        "name": "base",
+        "plane": "XY",
+        "curves": [
+         {
+          "kind": "rect",
+          "id": "outline",
+          "center": [
+           0,
+           0
+          ],
+          "w": 80,
+          "h": 50
+         }
+        ]
+       },
+       {
+        "type": "extrude",
+        "id": "e1",
+        "name": "slab",
+        "sketch": "s1",
+        "extent": {
+         "up_to": "XY"
+        },
+        "direction": "symmetric"
+       }
+      ]
+     }
+    ]
+   },
+   "note": "amendment set F (\u00a76.2): up_to goes one way",
+   "expected": [
+    {
+     "code": "EXTRUDE_EXTENT_CONFLICT",
+     "path": "/parts/0/features/1/extent"
+    }
+   ]
   }
  ]
 }

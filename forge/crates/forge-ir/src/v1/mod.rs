@@ -104,6 +104,8 @@ pub const RESERVED_NAMES_V1_BUILTINS: &[&str] = &[
     "mirror", "datumPlane", "datumAxis", "tag", "edgesBetween", "faceOf", "body", "bodies",
     "min", "max", "abs", "sqrt", "floor", "ceil", "round", "clamp", "hypot", "sin", "cos", "tan",
     "asin", "acos", "atan", "atan2", "PI", "mm", "cm", "inch", "deg", "X", "Y", "Z", "C",
+    // Amendment set F (feature tools).
+    "transform",
 ];
 
 /// The full v1 `RESERVED_NAMES` list: v0's list followed by [`RESERVED_NAMES_V1_BUILTINS`].

@@ -97,7 +97,12 @@ fn query(q: &mut Query) {
 fn feature(f: &mut Feature) {
     match f {
         Feature::Sketch(s) => plane(&mut s.plane),
-        Feature::Extrude(e) => targets(&mut e.targets),
+        Feature::Extrude(e) => {
+            if let Some(ExtrudeExtent::UpTo(p)) = &mut e.extent {
+                plane(p);
+            }
+            targets(&mut e.targets);
+        }
         Feature::Revolve(r) => targets(&mut r.targets),
         Feature::Boolean(b) => {
             card(&mut b.targets, Cardinality::SOME);
@@ -158,6 +163,12 @@ fn feature(f: &mut Feature) {
             }
             if let Some(pts) = &mut d.points {
                 pts.iter_mut().for_each(point);
+            }
+        }
+        Feature::Transform(t) => {
+            card(&mut t.bodies, Cardinality::SOME);
+            if let Some(r) = &mut t.rotate {
+                axis(&mut r.axis);
             }
         }
         Feature::DatumAxis(d) => {

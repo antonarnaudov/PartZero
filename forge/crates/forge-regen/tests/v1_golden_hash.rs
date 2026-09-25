@@ -29,7 +29,7 @@ macro_rules! programs {
     };
 }
 
-const PROGRAMS: [(&str, &str); 36] = programs![
+const PROGRAMS: [(&str, &str); 38] = programs![
     "../../../../corpus/v1/programs/" / "constrained_plate",
     "../../../../corpus/v1/programs/" / "knob_queries",
     "../../../../corpus/v1/programs/" / "params_plate",
@@ -66,6 +66,8 @@ const PROGRAMS: [(&str, &str); 36] = programs![
     "v1_programs/" / "split_then_pocket",
     "v1_programs/" / "tiny_sliver_cut",
     "v1_programs/" / "torus_pocket_spiric_edges",
+    "v1_programs/" / "transforms",
+    "v1_programs/" / "extents",
 ];
 
 /// Programs this engine rejects (their rejected report is hashed): `shell_box` uses the
@@ -96,7 +98,10 @@ fn fnv(h: &mut u64, b: &[u8]) {
 ///   (`blends_box`, `fillet_then_chamfer_keys`, `holes_kinds`, `patterns_mixed`). Every other
 ///   program's hash is unchanged (the [W0-40] `removed` fix of forge-regen changes none of
 ///   them).
-const PINNED: u64 = 0xaf34_a471_1876_8a6f;
+/// - → `0xc0a1_01f4_0697_a26b` (amendment set F, 2026-09-25): the oracle cases `transforms`
+///   (`transform`, SPEC-v1 §6.13; 0x47f7283c17d8d30a) and `extents` (extrude `through_all` /
+///   `up_to`, §6.2; 0x907093596b2191e0) were added; no other program changed.
+const PINNED: u64 = 0xc0a1_01f4_0697_a26b;
 
 #[test]
 fn v1_reports_are_bit_identical_to_the_recorded_hash() {

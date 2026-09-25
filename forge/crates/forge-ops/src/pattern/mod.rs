@@ -203,6 +203,16 @@ pub struct Instance {
 }
 
 impl Instance {
+    /// The one instance `[1]` of a single motion (a mirror's reflection, a `transform` copy):
+    /// its copies are keyed `F/copy:{K}@1` and take the origin instance `[1]`.
+    pub fn single(motion: Motion) -> Self {
+        Instance {
+            index: [1, 0],
+            arity: 1,
+            motion,
+        }
+    }
+
     /// The instance index, `[i]` or `[i, j]`.
     pub fn index(&self) -> Vec<u32> {
         self.index[..usize::from(self.arity)].to_vec()

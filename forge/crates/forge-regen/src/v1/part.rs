@@ -10,8 +10,9 @@ use forge_ir::v1::metrics::{
     BodyChange, DatumReport, FeatureReport, Origin, Severity, Status, Warning,
 };
 use forge_ir::v1::{
-    BodyOp as IrBodyOp, BooleanFeature, BooleanOp, Cardinality, Document, Feature, FieldType,
-    LINEAR_TOLERANCE, PartStudio, PlaneRef, Ref, SP2, SP3, Scalar, SketchFeature, Targets,
+    BodyOp as IrBodyOp, BooleanFeature, BooleanOp, Cardinality, Document, ExtrudeExtent, Feature,
+    FieldType, LINEAR_TOLERANCE, PartStudio, PlaneRef, QUERY_ANGLE_TOLERANCE, Ref, SP2, SP3,
+    Scalar, SketchFeature, Targets,
 };
 use forge_ops::{BodyOp, OpBody, Region, check_revolve_profile, extrude, revolve, sketch_frame};
 use forge_params::ParamValues;
@@ -31,7 +32,7 @@ use crate::checked;
 /// IR v1 type (§0.2 rule 3): the optional ones of [`super::REJECTED_FEATURE_TYPES`] with
 /// `UNSUPPORTED_FEATURE`, the mandatory ones of [`super::UNIMPLEMENTED_FEATURE_TYPES`] (none
 /// since Phase C) with `UNSUPPORTED_FEATURE_VERSION`.
-pub const SUPPORTED_FEATURE_TYPES: [&str; 12] = [
+pub const SUPPORTED_FEATURE_TYPES: [&str; 13] = [
     "sketch",
     "extrude",
     "revolve",
@@ -44,6 +45,7 @@ pub const SUPPORTED_FEATURE_TYPES: [&str; 12] = [
     "datum_plane",
     "datum_axis",
     "tag",
+    "transform",
 ];
 
 /// Defensive, engine-internal feature error (SPEC-v1 §7.5 "engine-internal failures keep the
@@ -381,6 +383,7 @@ impl<'d> PartEval<'d> {
             Feature::Fillet(x) => self.fillet(fi, x, entry),
             Feature::Chamfer(x) => self.chamfer(fi, x, entry),
             Feature::Shell(x) => self.shell(fi, x, entry),
+            Feature::Transform(t) => self.transform(fi, t, entry),
             // Unreachable: failed above with FORGE_UNSUPPORTED_FEATURE (the optional `draft`,
             // §6.9, is rejected by `load`).
             Feature::Draft(_) => Err(FeatureError::new(
@@ -694,17 +697,21 @@ impl<'d> PartEval<'d> {
         let fid = f.id();
         // Range checks on the evaluated values (§0.5 rule 2: the literal codes and paths).
         let kind = match f {
-            Feature::Extrude(e) => {
-                let d = self.scalar(&e.distance, FieldType::Length)?;
-                if d.is_nan() || d <= LINEAR_TOLERANCE {
-                    return Err(FeatureError::new(
-                        "INVALID_DISTANCE",
-                        format!("distance = {d}: must be > 1e-6"),
-                        json!({ "field": "distance", "value": finite(d), "expected": "> 1e-6" }),
-                    ));
+            Feature::Extrude(e) => match &e.distance {
+                Some(distance) => {
+                    let d = self.scalar(distance, FieldType::Length)?;
+                    if d.is_nan() || d <= LINEAR_TOLERANCE {
+                        return Err(FeatureError::new(
+                            "INVALID_DISTANCE",
+                            format!("distance = {d}: must be > 1e-6"),
+                            json!({ "field": "distance", "value": finite(d), "expected": "> 1e-6" }),
+                        ));
+                    }
+                    Sweep::Extrude(d)
                 }
-                Sweep::Extrude(d)
-            }
+                // Amendment set F: the extent decides it, once its plane or the targets are known.
+                None => Sweep::Extrude(f64::NAN),
+            },
             Feature::Revolve(r) => {
                 let a = self.scalar(&r.angle, FieldType::Angle)?;
                 if a.is_nan() || a <= 0.0 || a > 360.0 {
@@ -754,6 +761,18 @@ impl<'d> PartEval<'d> {
                 json!({ "sketch": sketch_id }),
             ));
         }
+        // Amendment set F: an `up_to` plane is a reference in field order (before the targets).
+        let extent = match f {
+            Feature::Extrude(e) => e.extent.as_ref(),
+            _ => None,
+        };
+        let up_to = match extent {
+            Some(ExtrudeExtent::UpTo(p)) => {
+                let pf = self.plane(fi, p, "/extent/up_to", entry)?;
+                Some(up_to_distance(&frame, &pf, direction)?)
+            }
+            _ => None,
+        };
         // References (§6.0.2): the targets, before the operation.
         let targets = match op {
             IrBodyOp::NewBody => None,
@@ -768,6 +787,21 @@ impl<'d> PartEval<'d> {
                     ));
                 }
             }),
+        };
+        let kind = match (kind, extent) {
+            (Sweep::Extrude(_), Some(ExtrudeExtent::UpTo(_))) => {
+                Sweep::Extrude(up_to.unwrap_or(f64::NAN))
+            }
+            (Sweep::Extrude(_), Some(ExtrudeExtent::ThroughAll)) => {
+                let boxes: Vec<&forge_ir::v1::metrics::BodyReport> = targets
+                    .as_deref()
+                    .unwrap_or_default()
+                    .iter()
+                    .map(|&i| &self.bodies[i].metrics)
+                    .collect();
+                Sweep::Extrude(through_all_distance(&frame, direction, &boxes))
+            }
+            (k, _) => k,
         };
         // The operation: one tool body per region, in canonical region order (v0 §4).
         if let Sweep::Revolve(axis, _) = &kind {
@@ -1150,6 +1184,99 @@ fn before_plane(e: &SketchError, constrained: bool) -> bool {
 
 /// An expression-driven explicit frame (§3.1, v0 §2): `INVALID_PLANE` for zero or
 /// non-perpendicular vectors, the test validation applies to literals ([W0-8]).
+/// The unit direction an extrude sweeps towards (v0 §4.2): the sketch normal, flipped for
+/// `reverse` (for `symmetric`, the normal: the sweep spans both sides).
+fn sweep_dir(frame: &Frame, direction: forge_ir::SweepDirection) -> Vec3 {
+    let n = frame.z();
+    match direction {
+        forge_ir::SweepDirection::Reverse => Vec3::new(-n.x, -n.y, -n.z),
+        _ => n,
+    }
+}
+
+/// `extent: { up_to }` (§6.2, amendment set F): the distance from the sketch plane to a plane
+/// parallel to it, along the sweep direction. A plane at an angle is `EXTRUDE_UP_TO_NOT_PARALLEL`
+/// (`{ angle }`, degrees); one on or behind the sketch plane is `EXTRUDE_UP_TO_BEHIND`
+/// (`{ distance }`, signed).
+pub(super) fn up_to_distance(
+    frame: &Frame,
+    plane: &Frame,
+    direction: forge_ir::SweepDirection,
+) -> Result<f64, FeatureError> {
+    let n = frame.z();
+    let m = plane.z();
+    let c = n.dot(m).abs().min(1.0);
+    let angle = forge_core::math::acos(c);
+    if angle > QUERY_ANGLE_TOLERANCE {
+        return Err(FeatureError::new(
+            "EXTRUDE_UP_TO_NOT_PARALLEL",
+            format!(
+                "the up_to plane is at {:.4}° to the sketch plane; it must be parallel",
+                angle.to_degrees()
+            ),
+            json!({ "angle": finite(angle.to_degrees()) }),
+        ));
+    }
+    let d = (plane.origin() - frame.origin()).dot(sweep_dir(frame, direction));
+    if d.is_nan() || d <= LINEAR_TOLERANCE {
+        return Err(FeatureError::new(
+            "EXTRUDE_UP_TO_BEHIND",
+            format!(
+                "the up_to plane is {d} mm along the extrude direction; it must lie ahead of the sketch plane"
+            ),
+            json!({ "distance": finite(d) }),
+        ));
+    }
+    Ok(d)
+}
+
+/// `extent: "through_all"` (§6.2, amendment set F): a distance that carries the tool past every
+/// target — the farthest corner of the targets' boxes along the sweep direction (both ways for
+/// `symmetric`), plus the targets' scale `s` (§5.4) as a margin. Cut and intersect results do not
+/// depend on the value beyond that (the tool's far cap never reaches a target).
+pub(super) fn through_all_distance(
+    frame: &Frame,
+    direction: forge_ir::SweepDirection,
+    boxes: &[&forge_ir::v1::metrics::BodyReport],
+) -> f64 {
+    let dir = sweep_dir(frame, direction);
+    let o = frame.origin();
+    let mut far = 0.0_f64;
+    for b in boxes {
+        for i in 0..8 {
+            let c = Vec3::new(
+                if i & 1 == 0 {
+                    b.bbox_min[0]
+                } else {
+                    b.bbox_max[0]
+                },
+                if i & 2 == 0 {
+                    b.bbox_min[1]
+                } else {
+                    b.bbox_max[1]
+                },
+                if i & 4 == 0 {
+                    b.bbox_min[2]
+                } else {
+                    b.bbox_max[2]
+                },
+            );
+            let p = (c - o).dot(dir);
+            far = far.max(if direction == forge_ir::SweepDirection::Symmetric {
+                p.abs()
+            } else {
+                p
+            });
+        }
+    }
+    let margin = scale_of(boxes.iter().copied());
+    if direction == forge_ir::SweepDirection::Symmetric {
+        2.0 * (far + margin)
+    } else {
+        far + margin
+    }
+}
+
 fn check_frame(n: [f64; 3], x: [f64; 3], path: &str) -> Result<(), FeatureError> {
     let len = |v: [f64; 3]| (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
     let (ln, lx) = (len(n), len(x));
