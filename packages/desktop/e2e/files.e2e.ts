@@ -309,6 +309,33 @@ test("closing a window with unsaved changes asks Save / Don't Save / Cancel", as
   }
 });
 
+test("quitting with two unsaved windows asks for each, then quits cleanly", async () => {
+  const userData = freshDir("profile-quit");
+  const { app, page } = await launch(userData);
+  await setCode(page, `${CODE}// first window\n`);
+  const next = app.waitForEvent("window");
+  expect(await exec(page, "file.new")).toMatchObject({ ok: true, value: { placement: "new" } });
+  const page2 = await next;
+  await ready(page2);
+  await setCode(page2, `${CODE}// second window\n`);
+  // Answer "Don't Save", and log every prompt to a file (the app is gone when the test reads it).
+  const log = join(userData, "prompts.log");
+  await app.evaluate(({ dialog }, file) => {
+    const fs = process.getBuiltinModule("node:fs");
+    dialog.showMessageBox = ((_w: unknown, o: { message: string }) => {
+      fs.appendFileSync(file, `${o.message}\n`);
+      return Promise.resolve({ response: 1, checkboxChecked: false });
+    }) as unknown as typeof dialog.showMessageBox;
+  }, log);
+  // Playwright's close() quits the app: it returns only once both prompts were answered and the app exited.
+  await app.close();
+  const asked = readFileSync(log, "utf8").trim().split("\n");
+  expect(asked).toHaveLength(2);
+  for (const m of asked) expect(m).toMatch(/Do you want to save the changes you made to “untitled”\?/);
+  expect(existsSync(join(userData, "Recovery", "session.json"))).toBe(false);
+  expect(readdirSync(join(userData, "Recovery")).filter((n) => n.endsWith(".partzero"))).toEqual([]);
+});
+
 test("several windows: New opens another window; opening a document that is open focuses its window; Finder double-click", async () => {
   const userData = freshDir("profile-windows");
   const docs = mkdtempSync(join(root, "docs-"));
