@@ -118,7 +118,14 @@ The e2e tests cover:
 - one Undo across the timeline, browser and parameters (⌘Z, ⇧⌘Z, the title bar, the history list) and inside sketch mode;
 - a live agent turn as one AI-marked step.
 
-The existing suites run unchanged: 110 passed, 1 skipped (the live agent), before the last three commits. After them, the model-panels, sketch-mode, v1-model and shell suites were re-run and pass.
+Final runs on this branch:
+
+- **Desktop e2e (every suite):** 111 passed, 1 skipped (the live agent, which is not run so it doesn't spend the plan). That is the 102 existing tests, unchanged, plus these 9.
+- **App vitest:** 475 passed (460 before plus 15 new).
+- **Desktop vitest:** 222 passed, 6 skipped.
+- **Typecheck:** app and desktop are clean.
+
+The hover-card test retries its rest, because the machine's real cursor, when it sits over the test window, sends its own mouse events.
 
 ## Deviations and gaps
 
