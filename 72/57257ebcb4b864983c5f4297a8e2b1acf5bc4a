@@ -1,0 +1,53 @@
+packages/app/src/viewport/runtime.ts
+  s_59c0dd2af30db2::t_6c76c7a4fb88ac 198,203-205
+packages/app/src/ui/shell/PropertyPanel.tsx
+  s_59c0dd2af30db2::t_94052f07667671 134-136,144,157
+packages/desktop/e2e/feature-tools.e2e.ts
+  s_59c0dd2af30db2::t_3b0257313e0e0b 186
+  s_59c0dd2af30db2::t_c455b23ca29df5 77,254,257,260-262
+  s_59c0dd2af30db2::t_10c51b93c78081 89-92,180-185,189,216-218,220
+  s_59c0dd2af30db2::t_8b43b0cfa28243 1-76,78-88,93-179,187-188,190-199,201-215,219,221-253,255-256,258-259,263-269,271-286,288-320
+  s_59c0dd2af30db2::t_0e5780c58ad120 287
+  s_59c0dd2af30db2::t_1211046be95b07 200,270
+packages/app/src/tools/builtin/feature-kit.ts
+  s_59c0dd2af30db2::t_7092a7f5580443 30
+  s_59c0dd2af30db2::t_a8eb5cb9545017 315-320,322-328
+packages/app/test/model-selection.test.ts
+  s_59c0dd2af30db2::t_6a9fb2d80b920c 99
+packages/app/src/tools/builtin/modify.ts
+  s_59c0dd2af30db2::t_d8dbc582e62a9c 135-162,339-341,481,488-489
+packages/app/src/tools/framework/handles.ts
+  s_59c0dd2af30db2::t_1287a10a9c4a70 35-36,132-133,141-143
+packages/app/src/tools/builtin/pattern.ts
+  s_59c0dd2af30db2::t_6c76c7a4fb88ac 300
+packages/app/src/tools/model-selection.ts
+  s_59c0dd2af30db2::t_6c76c7a4fb88ac 236-242
+  s_59c0dd2af30db2::t_0b30c2a2ee75d4 213-217
+  s_59c0dd2af30db2::t_9ce83a2eb407d8 243-249
+packages/app/src/ui/Viewport.tsx
+  s_59c0dd2af30db2::t_6c76c7a4fb88ac 203,209
+packages/app/test/viewport-tools.test.ts
+  s_59c0dd2af30db2::t_662ee215149d04 180-199
+packages/app/src/ui/shell/install.ts
+  s_59c0dd2af30db2::t_1287a10a9c4a70 83-84
+packages/app/src/viewport/manipulators/host.ts
+  s_59c0dd2af30db2::t_4fcf094f5a4dd4 62-77
+packages/app/test/feature-tools.test.ts
+  s_59c0dd2af30db2::t_2502ffc91f9b67 242-256
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7257257ebcb4b864983c5f4297a8e2b1acf5bc4a",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
