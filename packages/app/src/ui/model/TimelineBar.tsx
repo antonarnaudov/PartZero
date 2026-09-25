@@ -340,12 +340,20 @@ export function TimelineBar(): ReactElement {
     track.current.querySelector<HTMLElement>(`[data-feature-id="${CSS.escape(selectedId)}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [selectedId]);
 
+  /** The chip the pointer is over (its card shows after a short rest there). */
+  const hoverFeature = useRef<string | null>(null);
   const showCard = (f: TimelineFeature, el: HTMLElement): void => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    hoverTimer.current = setTimeout(() => setHover({ f, rect: el.getBoundingClientRect() }), 380);
+    hoverFeature.current = f.id;
+    hoverTimer.current = setTimeout(() => {
+      hoverTimer.current = null;
+      if (hoverFeature.current === f.id && el.isConnected) setHover({ f, rect: el.getBoundingClientRect() });
+    }, 380);
   };
   const hideCard = (): void => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = null;
+    hoverFeature.current = null;
     setHover(null);
   };
 
@@ -482,6 +490,10 @@ export function TimelineBar(): ReactElement {
                           setMenu({ f, part, x: e.clientX, y: e.clientY });
                         }}
                         onMouseEnter={(e) => showCard(f, e.currentTarget)}
+                        onMouseMove={(e) => {
+                          // A chip that moved under a resting pointer never got its enter.
+                          if (hoverFeature.current !== f.id) showCard(f, e.currentTarget);
+                        }}
                         onMouseLeave={hideCard}
                       >
                         <span className={`ptl-icon type-${f.type}`}>

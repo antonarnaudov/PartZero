@@ -120,12 +120,18 @@ test("the timeline under the viewport shows the history: icons, status, a card o
   expect(tl.y).toBeGreaterThanOrEqual(vp.y + vp.height - 1);
   expect(Math.abs(tl.width - vp.width)).toBeLessThan(2);
   await expect(page.getByTestId("timeline-count")).toHaveText("5 features");
-  await chip("extrude1").hover();
+  // Rest the pointer on the chip (moving onto it, as a hand does). The real cursor, when it sits
+  // over the test window, sends its own mouse events and can take the hover away: retry the rest.
+  const e1 = await center(chip("extrude1"));
   const card = page.getByTestId("timeline-card");
-  await expect(card).toBeVisible();
-  await expect(card).toContainText("extrude1");
-  await expect(card).toContainText("8 mm");
-  await expect(card).toContainText("Built");
+  await expect(async () => {
+    await page.mouse.move(e1.x - 24, e1.y, { steps: 2 });
+    await page.mouse.move(e1.x, e1.y, { steps: 4 });
+    await expect(card).toBeVisible({ timeout: 1500 });
+    await expect(card).toContainText("extrude1", { timeout: 500 });
+    await expect(card).toContainText("8 mm", { timeout: 500 });
+    await expect(card).toContainText("Built", { timeout: 500 });
+  }).toPass({ timeout: 20_000 });
   await page.mouse.move(700, 400);
   await expect(card).toBeHidden();
   // The left dock is the Browser and Parameters: no second timeline there.
