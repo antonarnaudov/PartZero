@@ -4,6 +4,8 @@ This doc covers how the Assistant panel runs `@aicad/agent` on the open document
 
 Everything up to [Planned: approved North Star changes](#planned-approved-north-star-changes) describes what runs today. That section lists the agent and hands-on UX changes the owner approved on 2026-09-24 ([NORTH-STAR.md](NORTH-STAR.md)). None of them is built yet.
 
+> **Live edits (2026-09-25, [ADR 0022](adr/0022-live-agent-edits.md), [docs/fm/agent-live.md](fm/agent-live.md)).** On an IR v1 model — every new document — the agent no longer drafts CadScript for review. It is the **live operator**: it operates the same modeling tools you use (the op catalogue's commands) on the open model, and each step appears at once in the viewport and the timeline, narrated in one line in the chat. Stop keeps what was built; the turn is one undo step; **Keep** makes its features yours; the autonomy dial in the Assistant header (Ask each step / Review turn / Auto) and approvals for changes to your own work follow ADR 0015 as ADR 0022 amends it. The process layout below still holds; the agent process reaches the document through a new ops channel (`agent:ops` / `agent:opsReply`). The proposal flow described in the rest of this doc is the fallback (`agent.setSurface { surface: "code" }`, or a document that is not an IR v1 model). Scripted demo: `AICAD_AGENT_TRANSPORT=scripted AICAD_AGENT_SCRIPT=$PWD/packages/desktop/e2e/fixtures/live-cube.script.json pnpm --filter @aicad/desktop dev`, then type any request in the Assistant.
+
 ![A proposal under review: the per-feature change list, the CadScript diff and the proposal preview in the viewport](spikes/assets/agent-proposal.png)
 
 ## Quick start

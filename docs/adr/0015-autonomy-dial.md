@@ -1,6 +1,6 @@
 # ADR 0015: The autonomy dial
 
-- **Status:** Accepted
+- **Status:** Accepted; amended by [ADR 0022](0022-live-agent-edits.md) (2026-09-25: the in-app agent edits live, one undo group per turn; §1 and §4 as ADR 0022 restates them)
 - **Date:** 2026-09-24
 - **Deciders:** owner (approved docs/NORTH-STAR.md)
 - **Plan reference:** [NORTH-STAR.md](../NORTH-STAR.md) §2 ("The autonomy dial", "Ways to work with the agent") and §8 B5; related rows B3 (Tab, ⌘K on canvas) and B4 (checkpoints); §7 gate "Silent changes to user features"
@@ -182,3 +182,7 @@ ADRs stay immutable. This ADR amends the texts below and supersedes none of them
 | Session-only authorship (every feature becomes yours when the document closes) | Simpler and cannot be forged, but closing a file would count as acceptance without you saying so. That contradicts "until you accept it or edit it" |
 | Auto-apply whole DESIGN tasks, not just quick edits | A full design touches many features, runs the spec and milestone checks, and is exactly what per-feature review is for. NORTH-STAR approved quick edits only |
 | Use the CLI's own approval or permission modes as the dial | They gate tool calls, not design commits. They differ per CLI, and ADR 0014's lockdown fixes them for non-interactive runs. The dial has to be ours and the same for every provider |
+
+## Addendum (2026-09-25): live edits
+
+[ADR 0022](0022-live-agent-edits.md) amends this ADR for the in-app agent on IR v1 models, per the owner's binding feedback: the agent operates the modeling tools on the open model **live** (no draft branch, no CadScript), every step visible and narrated; one undo group per turn; Stop keeps what was built. The settings become *Ask at each step* (Keep or Undo after every step), *Review the turn* (default: keep or undo the whole turn at the end) and *Auto* (a notice). §3 is unchanged and enforced at every setting: the user's work changes only with their approval, which the host records for that turn only. See [docs/fm/agent-live.md](../fm/agent-live.md).

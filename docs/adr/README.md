@@ -33,6 +33,7 @@ ADRs are immutable once accepted. To change a decision, write a new ADR that sup
 | [0018](0018-design-context-in-the-ir.md) | Design context in the IR (IR v1.1) | Accepted | 2026-09-24 | [NORTH-STAR](../NORTH-STAR.md) §8 B7 |
 | [0019](0019-local-face-operations.md) | Local face operations are parametric features | Accepted | 2026-09-24 | [NORTH-STAR](../NORTH-STAR.md) §8 B16 |
 | [0020](0020-funded-eval-keys-fallback.md) | Funded eval API keys as a fallback | Accepted | 2026-09-24 | [NORTH-STAR](../NORTH-STAR.md) §8 B18 |
+| [0022](0022-live-agent-edits.md) | The agent edits the open model live, with the modeling tools | Accepted | 2026-09-25 | [FULL-MODELING-PLAN](../FULL-MODELING-PLAN.md) §2.1, §2.10 (owner feedback) |
 
 Plan refs that start with § point to [PLAN-2026-09-23.md](../PLAN-2026-09-23.md). NORTH-STAR refs point to rows of [NORTH-STAR.md](../NORTH-STAR.md) §8, which the owner approved on 2026-09-24.
 
@@ -45,7 +46,8 @@ Plan refs that start with § point to [PLAN-2026-09-23.md](../PLAN-2026-09-23.md
 | 0009 | 0017 (data handling) |
 | 0010 | 0017 (data handling) |
 | 0013 | 0018 (IR v1.1 design context), 0019 (naming rules for local face operations). These edits wait for Phase C ([NORTH-STAR-DEFERRED.md](../NORTH-STAR-DEFERRED.md)) |
-| 0014 | 0015 (after the PROPOSE gate), 0020 (funded eval keys, eval runs only) |
+| 0014 | 0015 (after the PROPOSE gate), 0020 (funded eval keys, eval runs only), 0022 (live edits: no draft branch for the in-app agent on IR v1 models) |
+| 0015 | 0022 (how agent work lands: live, one undo group per turn; the three settings for live edits) |
 
 ## Writing a new ADR
 
