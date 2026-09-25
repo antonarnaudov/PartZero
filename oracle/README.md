@@ -410,7 +410,14 @@ with OCCT's `STEPControl_Reader` and compares each body with Forge's exact metri
 summary: `BRepCheck_Analyzer` validity and closed shells; volume, area and tight box within 1e-6
 relative (fixed-order integrators first, the adaptive ones when those disagree); the face count; and
 the edge count after seam normalization, which must account exactly for the seams and split pieces
-the writer reports. Code: `src/aicad_oracle/step_check.py`; tests: `tests/test_step_check.py`.
+the writer reports. It also checks that every face keeps the orientation the file gives it:
+OCCT's healing silently turns an inside-out face (a `same_sense` that disagrees with its loops) or a
+whole inside-out shell back round, after which volume, area and `BRepCheck` all pass. So each face's
+orientation in OCCT's healed solid is compared with the file's (`same_sense` composed with a void's
+`ORIENTED_CLOSED_SHELL`), and healing's orientation warnings are reported; other healing messages
+are kept in the JSON report (`healing`). Healing cannot just be switched off: OCCT's raw
+`StepToTopoDS` translation leaves periodic faces unorientable even in correct files. Code:
+`src/aicad_oracle/step_check.py`; tests: `tests/test_step_check.py`.
 
 ```bash
 uv run oracle step-check --programs ../corpus/programs ../corpus/v1/programs   # exports with forge/target/debug/aicad

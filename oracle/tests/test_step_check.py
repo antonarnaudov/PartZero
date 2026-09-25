@@ -49,6 +49,74 @@ def test_occt_reads_the_golden_cylinder_exactly(tmp_path):
     assert occt["seams"] == 1 and occt["edges"] == 2 and occt["faces"] == 3
 
 
+def _golden_pair(tmp_path, text: str, name: str = "cyl"):
+    step = tmp_path / f"{name}.step"
+    step.write_text(text)
+    exact_v = math.pi * 100 * 30
+    exact_a = 2 * math.pi * 100 + 2 * math.pi * 10 * 30
+    summary = tmp_path / f"{name}.summary.json"
+    summary.write_text(json.dumps(_summary(exact_v, exact_a, [-10, -10, 0], [10, 10, 30], 3, 2, CYL_STEP)))
+    return step, summary
+
+
+def _flip_face(text: str, face: str) -> str:
+    """Toggle one ADVANCED_FACE's same_sense (its loops stay as they are)."""
+    line = next(l for l in text.splitlines() if f"ADVANCED_FACE('{face}'" in l)
+    flipped = line.replace(",.T.);", ",.F.);") if line.endswith(",.T.);") else line.replace(",.F.);", ",.T.);")
+    assert flipped != line
+    return text.replace(line, flipped)
+
+
+@pytest.mark.parametrize("face", ["cyl/side:c", "cyl/cap:end", "cyl/cap:start"])
+def test_a_face_whose_same_sense_is_flipped_is_caught_although_healing_repairs_it(tmp_path, face):
+    """OCCT's healing turns such a face back round (volume, area and BRepCheck then pass), so
+    only the orientation comparison sees it."""
+    step, summary = _golden_pair(tmp_path, _flip_face(GOLDEN.read_text(), face))
+    r = step_check.check_pair(step, summary, 1e-9)
+    assert r.status == "mismatch"
+    body = r.bodies[0]
+    assert body.occt["valid"] and abs(body.occt["volume"] - math.pi * 100 * 30) < 1e-6, "healing hid it"
+    problems = " ".join(body.problems)
+    assert "turned 1 of 3 faces round" in problems, problems
+    assert any(step_check.is_orientation_repair(m) for m in r.healing), r.healing
+
+
+def test_a_whole_inside_out_shell_is_caught_although_healing_is_silent(tmp_path):
+    """Every face's same_sense and every oriented edge flipped: a consistent, inside-out shell.
+    OCCT turns it round without a warning; the per-face comparison still sees it."""
+    text = GOLDEN.read_text()
+    swap = {".T.);": ".F.);", ".F.);": ".T.);"}
+    lines = []
+    for line in text.splitlines():
+        if "=ADVANCED_FACE(" in line or "=ORIENTED_EDGE(" in line:
+            line = line[:-5] + swap[line[-5:]]
+        lines.append(line)
+    step, summary = _golden_pair(tmp_path, "\n".join(lines) + "\n")
+    r = step_check.check_pair(step, summary, 1e-9)
+    assert r.status == "mismatch"
+    assert not any(step_check.is_orientation_repair(m) for m in r.healing), "no warning to rely on"
+    assert "turned 3 of 3 faces round" in " ".join(r.bodies[0].problems)
+
+
+def test_file_face_orientations_compose_same_sense_with_void_shells():
+    text = """ISO-10303-21;
+HEADER;
+ENDSEC;
+DATA;
+#1=ADVANCED_FACE('a;#9',(#90),#91,.T.);
+#2=ADVANCED_FACE('b',(#90),#91,.F.);
+#3=ADVANCED_FACE('c',(#90),#91,.T.);
+#4=CLOSED_SHELL('',(#1,#2));
+#5=CLOSED_SHELL('',(#3));
+#6=ORIENTED_CLOSED_SHELL('',*,#5,.F.);
+#7=BREP_WITH_VOIDS('it''s #4',#4,(#6));
+#8=MANIFOLD_SOLID_BREP('lump',#5);
+ENDSEC;
+END-ISO-10303-21;
+"""
+    assert step_check.file_face_orientations(text) == [[False, True, True], [False]]
+
+
 def test_a_wrong_forge_metric_is_reported_not_hidden(tmp_path):
     step = tmp_path / "cyl.step"
     shutil.copy(GOLDEN, step)

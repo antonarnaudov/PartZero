@@ -10,6 +10,16 @@ pair written by ``aicad export --format step --summary``:
 
 OCCT (``STEPControl_Reader``, default healing) reads the file, and every body is checked:
 
+* **orientation** — every face keeps the orientation the file gives it. Healing would
+  otherwise hide an inside-out face: ``ShapeFix`` silently turns a face whose ``same_sense``
+  disagrees with its loops back round (volume, area and ``BRepCheck`` then all pass), and a
+  whole inside-out shell is turned round without even a warning. So the check compares, per
+  solid and in order, whether each face is reversed in OCCT's healed solid with what the file
+  says (``ADVANCED_FACE.same_sense`` composed with the ``ORIENTED_CLOSED_SHELL`` orientation of
+  a void), and reports healing's own orientation warnings. Healing cannot simply be turned
+  off: OCCT's raw translation (``StepToTopoDS``) leaves every periodic face unorientable even
+  for correct files, and the OCP binding cannot pass ``SetShapeProcessFlags`` its bitset. Other
+  healing messages are kept in the report (``healing``) without failing the body;
 * **valid** — ``BRepCheck_Analyzer`` passes on every solid, and each solid is closed;
 * **volume, area** — OCCT's exact-geometry mass properties equal Forge's within ``--rel``
   (default 1e-6 relative, FULL-MODELING-PLAN IO-5); the fast fixed-order integrator first, and
@@ -34,6 +44,7 @@ import argparse
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -62,14 +73,22 @@ class FileResult:
     status: str  # "match", "mismatch", "export-error", "read-error", "skipped"
     detail: str = ""
     bodies: list[BodyResult] = field(default_factory=list)
+    # Messages OCCT's healing left on the transfer (warnings and fails), deduplicated.
+    healing: list[str] = field(default_factory=list)
 
 
 def _rel(a: float, b: float) -> float:
     return abs(a - b) / max(abs(a), abs(b), 1e-300)
 
 
+def is_orientation_repair(message: str) -> bool:
+    """Whether a healing message says OCCT turned faces or shells round."""
+    return "orient" in message.lower()
+
+
 def read_step(path: Path):
-    """The solids of a STEP file, in file order (OCCT's default reader with healing)."""
+    """The solids of a STEP file, in file order (OCCT's default reader with healing), and
+    the messages healing left on the transfer (see the module docs)."""
     from OCP.IFSelect import IFSelect_RetDone
     from OCP.STEPControl import STEPControl_Reader
     from OCP.TopAbs import TopAbs_SOLID
@@ -87,7 +106,98 @@ def read_step(path: Path):
     while ex.More():
         solids.append(TopoDS.Solid_s(ex.Current()))
         ex.Next()
-    return solids
+    messages: list[str] = []
+    checks = reader.WS().TransferReader().TransientProcess().CheckList(False)
+    checks.Start()
+    while checks.More():
+        c = checks.Value()
+        for text in [c.CWarning(i) for i in range(1, c.NbWarnings() + 1)] + [
+            c.CFail(i) for i in range(1, c.NbFails() + 1)
+        ]:
+            if text not in messages:
+                messages.append(text)
+        checks.Next()
+    return solids, messages
+
+
+_P21_STRING = re.compile(r"'(?:[^']|'')*'")
+_P21_SIMPLE = re.compile(r"#(\d+)\s*=\s*([A-Z_][A-Z_0-9]*)\s*\((.*)\)\s*$", re.S)
+_P21_REF = re.compile(r"#(\d+)")
+
+
+def file_face_orientations(text: str) -> list[list[bool]]:
+    """Per solid of a Part 21 file (``MANIFOLD_SOLID_BREP`` / ``BREP_WITH_VOIDS``, in entity
+    order, as OCCT lists them), whether each face is reversed against its surface as the file
+    writes it: ``ADVANCED_FACE.same_sense`` composed with the orientation of the shell that
+    holds it (``.F.`` for a void's ``ORIENTED_CLOSED_SHELL``), outer shell first, faces in
+    shell order."""
+    data = text.split("DATA;", 1)[-1].split("ENDSEC;", 1)[0]
+    # Strings may hold '#', ';' or parentheses; only references and flags are needed.
+    data = _P21_STRING.sub("''", data)
+    ents: dict[int, tuple[str, str]] = {}
+    for stmt in data.split(";"):
+        m = _P21_SIMPLE.match(stmt.strip())
+        if m:
+            ents[int(m.group(1))] = (m.group(2), m.group(3))
+
+    def refs(args: str) -> list[int]:
+        return [int(x) for x in _P21_REF.findall(args)]
+
+    def flag(args: str) -> bool:
+        tail = args.strip()
+        if tail.endswith(".T."):
+            return True
+        if tail.endswith(".F."):
+            return False
+        raise ValueError(f"expected a trailing .T./.F. in {args!r}")
+
+    out = []
+    for eid in sorted(ents):
+        name, args = ents[eid]
+        if name not in ("MANIFOLD_SOLID_BREP", "BREP_WITH_VOIDS"):
+            continue
+        r = refs(args)
+        shells = [(r[0], True)]
+        for void in r[1:]:
+            vname, vargs = ents[void]
+            if vname != "ORIENTED_CLOSED_SHELL":
+                raise ValueError(f"#{void} is {vname}, expected ORIENTED_CLOSED_SHELL")
+            shells.append((refs(vargs)[0], flag(vargs)))
+        reversed_faces = []
+        for shell, shell_sense in shells:
+            for face in refs(ents[shell][1]):
+                reversed_faces.append(flag(ents[face][1]) != shell_sense)
+        out.append(reversed_faces)
+    return out
+
+
+def occt_face_orientations(solid) -> list[bool]:
+    """Whether each face of an OCCT solid is reversed (composed orientation, explorer order)."""
+    from OCP.TopAbs import TopAbs_FACE, TopAbs_REVERSED
+    from OCP.TopExp import TopExp_Explorer
+
+    out = []
+    ex = TopExp_Explorer(solid, TopAbs_FACE)
+    while ex.More():
+        out.append(ex.Current().Orientation() == TopAbs_REVERSED)
+        ex.Next()
+    return out
+
+
+def orientation_problems(file_faces: list[list[bool]], occt_faces: list[list[bool]]) -> list[str]:
+    """Compare the file's face orientations with OCCT's, solid by solid (see the module docs)."""
+    p = []
+    for k, (want, got) in enumerate(zip(file_faces, occt_faces, strict=True)):
+        if len(want) != len(got):
+            p.append(f"solid {k}: OCCT has {len(got)} faces where the file has {len(want)}")
+        elif want != got:
+            turned = [i for i, (a, b) in enumerate(zip(want, got)) if a != b]
+            p.append(
+                f"solid {k}: OCCT's healing turned {len(turned)} of {len(want)} faces round "
+                f"(face {', '.join(map(str, turned[:8]))}{'…' if len(turned) > 8 else ''} in shell "
+                "order): the file's same_sense disagrees with its loops, or a shell is inside out"
+            )
+    return p
 
 
 def occt_metrics(solids) -> dict:
@@ -213,14 +323,20 @@ def check_pair(step_path: Path, summary_path: Path, rel: float) -> FileResult:
         e = summary["error"]
         return FileResult(name, "export-error", f"{e['code']}: {e['message']}")
     try:
-        solids = read_step(step_path)
-    except Exception as e:  # noqa: BLE001 - any OCCT failure is a result
+        solids, healing = read_step(step_path)
+        file_faces = file_face_orientations(step_path.read_text(encoding="utf-8", errors="replace"))
+    except Exception as e:  # noqa: BLE001 - any OCCT or parse failure is a result
         return FileResult(name, "read-error", str(e))
     bodies = summary["bodies"]
     want = sum(b["step"]["solids"] for b in bodies)
-    if len(solids) != want:
-        return FileResult(name, "mismatch", f"OCCT read {len(solids)} solids, {want} written")
-    out = FileResult(name, "match")
+    if len(solids) != want or len(file_faces) != want:
+        return FileResult(
+            name, "mismatch",
+            f"OCCT read {len(solids)} solids, the file holds {len(file_faces)}, {want} written",
+            healing=healing,
+        )
+    out = FileResult(name, "match", healing=healing)
+    repairs = [m for m in healing if is_orientation_repair(m)]
     k = 0
     for b in bodies:
         n = b["step"]["solids"]
@@ -228,11 +344,20 @@ def check_pair(step_path: Path, summary_path: Path, rel: float) -> FileResult:
         if _rel(occt["volume"], b["forge"]["volume"]) > rel or _rel(occt["area"], b["forge"]["area"]) > rel:
             occt["fixedOrder"] = {"volume": occt["volume"], "area": occt["area"]}
             occt["volume"], occt["area"] = accurate_mass(solids[k : k + n])
+        turned = orientation_problems(file_faces[k : k + n], [occt_face_orientations(s) for s in solids[k : k + n]])
+        occt["reversedFaces"] = sum(occt_face_orientations(s).count(True) for s in solids[k : k + n])
         k += n
         r = compare_body(b["name"], occt, b["forge"], b["step"], rel)
+        if turned:
+            r.problems.extend(turned + [f"OCCT healing: {m}" for m in repairs])
+            r.ok = False
         out.bodies.append(r)
         if not r.ok:
             out.status = "mismatch"
+    if repairs and out.status == "match":
+        # Healing reoriented something the per-face comparison did not see: still a failure.
+        out.status = "mismatch"
+        out.detail = "OCCT healing: " + "; ".join(repairs)
     return out
 
 
@@ -323,6 +448,7 @@ def run(argv: list[str] | None = None) -> int:
                     "name": r.name,
                     "status": r.status,
                     "detail": r.detail,
+                    "healing": r.healing,
                     "bodies": [
                         {"name": b.name, "ok": b.ok, "problems": b.problems, "occt": b.occt, "forge": b.forge}
                         for b in r.bodies
