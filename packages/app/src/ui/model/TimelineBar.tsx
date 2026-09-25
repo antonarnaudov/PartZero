@@ -20,7 +20,7 @@
  * `ir.setSuppressed`, `ir.renameFeature`, `ir.deleteFeature`, `ir.setAuthor`, `feature.edit`):
  * one undo step each, and the same commands the assistant and MCP call.
  */
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement } from "react";
 import type { TimelineFeature, TimelinePart } from "../../doc/timeline";
 import { moveSlots, slotForGap, type MoveSlot, type OrderFeature } from "../../doc/v1/feature-order";
 import { useApp, useStore } from "../context";
@@ -44,6 +44,8 @@ const STATUS_TEXT: Record<TimelineFeature["status"], string> = {
 };
 
 type Json = Record<string, unknown>;
+
+const NO_SUBSCRIBE = (): (() => void) => () => undefined;
 
 /** A drag of a chip (reorder) in progress. */
 interface ChipDrag {
@@ -143,6 +145,11 @@ export function TimelineBar(): ReactElement {
   const [markerGap, setMarkerGap] = useState<number | null>(null);
   // While a sketch is open the history waits (Finish or Cancel first), as in Fusion.
   const sketching = useStore(sketchMode, (s) => s.phase !== "off");
+  // An agent turn in progress (one undo group): its steps land live; yours wait until it ends.
+  const agentGroup = useSyncExternalStore(services.ir ? services.ir.subscribe : NO_SUBSCRIBE, () => {
+    const g = services.ir?.getState().group ?? null;
+    return g && g.origin !== "user" && g.origin !== "command" ? g.label : null;
+  });
 
   const flat = useMemo(() => timeline.parts.flatMap((p) => p.features.map((f) => ({ f, part: p }))), [timeline]);
   const multiPart = timeline.parts.length > 1;
@@ -515,6 +522,12 @@ export function TimelineBar(): ReactElement {
         )}
       </div>
       <div className="ptl-status">
+        {agentGroup && (
+          <span className="ptl-pill agent live" data-testid="timeline-agent-live" title={`${agentGroup}: the assistant's steps appear here as it makes them; your edits wait until it finishes (one undo step)`}>
+            <span className="ptl-live-dot" aria-hidden="true" />
+            Assistant editing
+          </span>
+        )}
         {timeline.stale && (
           <span className="ptl-pill warn" data-testid="timeline-stale" title="The code has errors: the timeline shows the last model that compiled">
             Code has errors

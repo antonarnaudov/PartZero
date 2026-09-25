@@ -42,7 +42,12 @@ export interface AutomationApi {
    * The live document as an op host (`@aicad/model-ops` `OpsHost`), as the agent's op tools see it:
    * `ops.apply([{ op: "addFeature", … }])` runs through the command layer as the agent.
    */
-  ops: { document(): Promise<string>; apply(ops: unknown[], options?: { label?: string; ack?: string[] }): Promise<unknown> };
+  ops: {
+    document(): Promise<string>;
+    apply(ops: unknown[], options?: { label?: string; ack?: string[]; group?: string }): Promise<unknown>;
+    /** Run a command as the agent does (source `agent`): `ir.openGroup` / `ir.sealGroup` of an agent turn. */
+    execute(cmd: unknown): Promise<CommandResult<unknown>>;
+  };
 }
 
 export interface AgentSummary {
@@ -283,7 +288,11 @@ export async function bootstrap(): Promise<Bootstrapped> {
       agent: () => summarizeAgent(services),
       ops: (() => {
         const host = appOpsHost(services, commands, "agent");
-        return { document: () => host.document(), apply: (ops, options) => host.apply(ops as IrOp[], options) };
+        return {
+          document: () => host.document(),
+          apply: (ops, options) => host.apply(ops as IrOp[], options),
+          execute: (cmd) => commands.executeUnknown(cmd as { id: string; args?: unknown }, { source: "agent" }),
+        };
       })(),
     };
   }

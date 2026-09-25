@@ -29,7 +29,11 @@ interface Summary {
 }
 
 type AW = {
-  __aicad: { execute(cmd: unknown): Promise<Result>; idle(): Promise<Summary> };
+  __aicad: {
+    execute(cmd: unknown): Promise<Result>;
+    idle(): Promise<Summary>;
+    ops: { apply(ops: unknown[], options?: { label?: string; group?: string }): Promise<unknown>; execute(cmd: unknown): Promise<Result> };
+  };
   __pzView: { view(): { bodies: Record<string, { visible: boolean }>; sketchVisibility: Record<string, boolean>; origin: boolean }; selection(): { items: Array<Record<string, unknown>> } };
   __pzSketch: { state(): { phase: string; tool: string; snapshot: { curves: unknown[]; canUndo: boolean } | null }; client(u: number, v: number): [number, number] };
 };
@@ -461,5 +465,42 @@ test("one Undo/Redo across everything: the title bar and ⌘Z / ⇧⌘Z; in sket
   await expect(page.getByTestId("timeline")).not.toHaveAttribute("aria-disabled", "true");
   // Back on the model, Undo is the document's again.
   await expect(page.getByTestId("tb-undo")).not.toHaveAttribute("title", /in sketch/);
+  expect(pageErrors).toEqual([]);
+});
+
+test("an agent turn lands live in the timeline, marked AI, and is one undo step; your edits wait until it ends", async () => {
+  const asAgent = (id: string, args: Record<string, unknown>): Promise<Result> => page.evaluate(([i, a]) => (window as unknown as AW).__aicad.ops.execute({ id: i, args: a }), [id, args] as const);
+  const before = await names();
+  const open = await asAgent("ir.openGroup", { label: "Agent: add a lip" });
+  expect(open.ok, open.error?.message).toBe(true);
+  const token = (open.value as { token: string }).token;
+  await expect(page.getByTestId("timeline-agent-live")).toBeVisible();
+  // Each step shows at once, marked as the assistant's.
+  await page.evaluate(
+    ([t]) =>
+      (window as unknown as AW).__aicad.ops.apply([{ op: "addFeature", feature: { type: "extrude", name: "lip", sketch: "sketch2", distance: 2, direction: "reverse", op: "join", targets: "all" } }], {
+        label: "lip",
+        group: t!,
+      }),
+    [token],
+  );
+  await expect(chip("lip")).toHaveAttribute("data-author", "agent");
+  await expect(chip("lip").getByTestId("timeline-agent-badge")).toBeVisible();
+  // Your edit waits: refused while the turn is open, and nothing of yours is sealed into it.
+  await chip("extrude1").click({ button: "right" });
+  await page.getByTestId("timeline-menu-suppress").click();
+  await expect(page.getByText(/is editing the model as one undo step/)).toBeVisible();
+  await expect(chip("extrude1")).toHaveAttribute("data-status", "ok");
+  const sealed = await asAgent("ir.sealGroup", { group: token });
+  expect(sealed.ok, sealed.error?.message).toBe(true);
+  await expect(page.getByTestId("timeline-agent-live")).toHaveCount(0);
+  // The whole turn is one step in the history list, marked AI.
+  await page.getByTestId("tb-history").click();
+  const top = page.getByTestId("history-list").getByTestId("history-undo").first();
+  await expect(top).toContainText("Agent: add a lip");
+  await expect(top.locator(".pzb-ai")).toBeVisible();
+  await page.keyboard.press("Escape");
+  expect((await exec("edit.undo")).value).toMatchObject({ undone: true, label: "Agent: add a lip" });
+  await expect.poll(names).toEqual(before);
   expect(pageErrors).toEqual([]);
 });

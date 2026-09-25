@@ -440,6 +440,23 @@ button.ptl-pill:hover {
   border-color: color-mix(in srgb, var(--ai) 40%, transparent);
   background: var(--ai-weak);
 }
+.ptl-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ai);
+  animation: ptl-pulse 1.2s ease-in-out infinite;
+}
+@keyframes ptl-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ptl-live-dot {
+    animation: none;
+  }
+}
 .ptl-pill .err {
   color: var(--err);
 }
