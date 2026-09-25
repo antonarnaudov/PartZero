@@ -1,0 +1,51 @@
+forge/crates/forge-io/src/step/verify.rs
+  s_59c0dd2af30db2::t_6c5c71d12c8008 917
+  s_59c0dd2af30db2::t_0051d4877eaeee 875-878,881-885
+  s_59c0dd2af30db2::t_f0261d555d56ab 13-19,35,68-71,640-649,710,714,720,729-734,744,774,786,789,791,813,841,872-874,879-880,886-916,918-924
+  s_59c0dd2af30db2::t_58bf1106965290 925
+forge/crates/forge-io/tests/common/step_mutate.rs
+  s_59c0dd2af30db2::t_ff16b3b1703ebc 1-49
+forge/crates/forge-io/src/step/parse.rs
+  s_59c0dd2af30db2::t_1df331f2b7aa34 4
+forge/crates/forge-io/src/step/mod.rs
+  s_59c0dd2af30db2::t_a666310b08caa0 33-34,51-52
+  s_59c0dd2af30db2::t_1df331f2b7aa34 15,22
+  s_59c0dd2af30db2::t_dcd107c25de191 35
+  s_59c0dd2af30db2::t_f0261d555d56ab 62
+forge/crates/forge-io/tests/step_corpus.rs
+  s_59c0dd2af30db2::t_ff16b3b1703ebc 10,14,126-170,174-180
+  s_59c0dd2af30db2::t_de37f8a6cb67b1 17-32,61-65,71,181
+  s_59c0dd2af30db2::t_0051d4877eaeee 66-70,171-173
+forge/crates/forge-io/tests/step_samples.rs
+  s_59c0dd2af30db2::t_aba71b01e23b75 226-247,256-287
+  s_59c0dd2af30db2::t_ff16b3b1703ebc 4-8
+  s_59c0dd2af30db2::t_dcd107c25de191 291-293,305-307,311-313
+  s_59c0dd2af30db2::t_0051d4877eaeee 248-255
+forge/crates/forge-io/src/step/orient.rs
+  s_59c0dd2af30db2::t_0084f6c1957481 1-30,33-39,42-49,51-136,139-140,150-289,295-300,303-319,322,333-335,339-340,344-345,349,351-352,354,356-357,360,380,393,395,399,425,427-429,431-434,439-447,455,459,476-489,493-496,498
+  s_59c0dd2af30db2::t_117fab6bea3a6e 320-321,323-332,336-338,341-343,346-348,350,353,355,358-359,361-363,367,373-379,381-392,394,396-398,400,408-424,426,430,438,448-454,460-461,465,471-475,490-492,497
+  s_59c0dd2af30db2::t_dcd107c25de191 470,499-508,513-514,519-529
+  s_59c0dd2af30db2::t_be4b6f7af5feec 50,137-138,147-149
+  s_59c0dd2af30db2::t_1df331f2b7aa34 509-512,515-518
+  s_59c0dd2af30db2::t_6c5c71d12c8008 31-32,301-302
+  s_59c0dd2af30db2::t_0051d4877eaeee 141-146,290-294,364-366,368-372,401-407
+  s_59c0dd2af30db2::t_2a07842c71df9a 40-41,435-437,456-458,462-464,466-469
+oracle/tests/test_step_check.py
+  s_59c0dd2af30db2::t_60e288afba5700 85-86,91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1fe0661c73b2dc2ac938af94f9b4f26cc7ab1418",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
