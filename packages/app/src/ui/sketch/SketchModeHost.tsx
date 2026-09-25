@@ -19,6 +19,7 @@ import { PlaneView } from "../../sketch/view";
 import { SKETCH_TOOLS, type ToolId } from "../../tools/sketch";
 import { useApp, useStore } from "../context";
 import { SketchCanvas } from "./SketchCanvas";
+import { ConstructionIcon, GridIcon, ToolIcon } from "./tool-icons";
 import "./sketch.css";
 
 const PLANES: Array<{ plane: NamedPlane; label: string; hint: string }> = [
@@ -100,17 +101,17 @@ function Palette({ mode, state }: { mode: SketchMode; state: SketchModeState }):
               data-testid={`sketch-tool-${t.id}`}
               onClick={() => mode.setTool(t.id as ToolId)}
             >
-              <span aria-hidden="true">{t.glyph}</span>
+              <ToolIcon id={t.id} />
             </button>
           ))}
         </div>
       ))}
       <div className="sk-palette-group">
         <button type="button" className={`sk-tool${state.construction ? " active" : ""}`} title="Construction (X)" aria-label="Construction" aria-pressed={state.construction} data-testid="sketch-construction" onClick={() => mode.toggleConstruction()}>
-          <span aria-hidden="true">┄</span>
+          <ConstructionIcon />
         </button>
         <button type="button" className={`sk-tool${state.gridSnap ? " active" : ""}`} title="Snap to grid (G)" aria-label="Snap to grid" aria-pressed={state.gridSnap} data-testid="sketch-grid-snap" onClick={() => mode.toggleGrid()}>
-          <span aria-hidden="true">#</span>
+          <GridIcon />
         </button>
       </div>
     </div>
