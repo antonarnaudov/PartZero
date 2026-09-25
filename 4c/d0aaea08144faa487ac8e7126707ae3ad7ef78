@@ -1,0 +1,19 @@
+forge/crates/forge-ir/SPEC-v1-DRAFT.md
+  s_0fb337d450b5f3::t_63f2a562b71bee 2095-2096
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4cd0aaea08144faa487ac8e7126707ae3ad7ef78",
+  "prompts": {},
+  "sessions": {
+    "s_0fb337d450b5f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9ec1506543f31e80",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
