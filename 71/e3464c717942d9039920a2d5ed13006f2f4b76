@@ -1,0 +1,31 @@
+packages/app/src/ui/shell/Welcome.tsx
+  s_59c0dd2af30db2::t_824c4948866cf8 308-309,314
+  s_59c0dd2af30db2::t_4c4d6f59a99335 210,212-227,232-236,239,247,250,258-276
+  s_59c0dd2af30db2::t_fdde1be21721b3 361-365
+  s_59c0dd2af30db2::t_72ea518ccc7ba3 7,16-17,297
+  s_59c0dd2af30db2::t_46a45e780b6085 335-339
+  s_59c0dd2af30db2::t_94e727dc5d36ce 277-278
+packages/app/src/ui/shell/starter-art.tsx
+  s_59c0dd2af30db2::t_392939e8075ac9 73,85,181
+  s_59c0dd2af30db2::t_20650607ec1a4a 9-10,12,15,17-43,45,48-62,67,69-72,74-84,86-108,111-118,120-121,126-127,131,133-139,141-142,147,149-150,152-161,164,166-167,174-180,182,184-190,197-198,200,202-206,209-216,223,225-234,251,253-254
+  s_59c0dd2af30db2::t_d06a711c4dedb1 1-8,11,13-14,16,44,46-47,63-66,68,109-110,119,122-125,128-130,132,140,143-146,148,151,162-163,165,168-173,183,191-196,199,201,207-208,217-222,224,235-250,252,255-257
+packages/app/src/ui/shell/starter-thumbnail.ts
+  s_59c0dd2af30db2::t_5da8ce5bbc99ef 1-14,16-36,38-56
+  s_59c0dd2af30db2::t_2deb85f795c491 15,37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "71e3464c717942d9039920a2d5ed13006f2f4b76",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
