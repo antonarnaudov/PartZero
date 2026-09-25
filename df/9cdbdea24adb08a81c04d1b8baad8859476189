@@ -1,0 +1,75 @@
+packages/desktop/electron-builder.alpha-local.cjs
+  s_59c0dd2af30db2::t_61b6d275f53ac7 29-31
+  s_59c0dd2af30db2::t_e4ac7e7f789160 43-44
+  s_59c0dd2af30db2::t_ed68539c5977ea 57
+packages/desktop/electron-builder.config.cjs
+  s_59c0dd2af30db2::t_ec70d408a918db 22-24
+  s_59c0dd2af30db2::t_9a73059d6ef130 77
+  s_59c0dd2af30db2::t_793298c1c24b7f 48-49
+packages/desktop/src/recovery.ts
+  s_59c0dd2af30db2::t_1b5139a3b348af 1-85,87-120
+  s_59c0dd2af30db2::t_8b9469af896f26 86
+packages/desktop/src/menu.ts
+  s_59c0dd2af30db2::t_2cff5a54909daa 45
+  s_59c0dd2af30db2::t_9eecf689b3bb46 88
+  s_59c0dd2af30db2::t_127e5e193a310b 82,85-86,89,91,93,99
+packages/app/src/file/bridge-types.ts
+  s_59c0dd2af30db2::t_1cbb7a190dcead 1-9,11-145
+  s_59c0dd2af30db2::t_27c04b9fb462a5 10
+packages/desktop/file-associations.cjs
+  s_59c0dd2af30db2::t_f12b6b8326b236 1-6,10-42
+  s_59c0dd2af30db2::t_5a50aa28752382 7-9
+packages/desktop/src/files.ts
+  s_59c0dd2af30db2::t_424f1213e46379 154,156
+  s_59c0dd2af30db2::t_ea2c1c3b439889 220-400
+  s_59c0dd2af30db2::t_1212aa0dd9ab5f 17-20
+packages/app/src/bridge.ts
+  s_59c0dd2af30db2::t_5de7fcbfd80df9 31,34,281-282,286,315,322
+packages/desktop/test/packaging.test.ts
+  s_59c0dd2af30db2::t_db61e3bcddea15 64-66
+packages/desktop/src/ipc/files.ts
+  s_59c0dd2af30db2::t_2c02d333c0020e 7,13-14
+  s_59c0dd2af30db2::t_2c18064b480233 1-6,8-12,15-167
+packages/desktop/test/documents.test.ts
+  s_59c0dd2af30db2::t_0b331dc2761b04 425
+  s_59c0dd2af30db2::t_2614b8c8a5b471 1-6,8,10-389,412-424,426-540
+  s_59c0dd2af30db2::t_ac283e8aaf3c22 390-411
+  s_59c0dd2af30db2::t_1826679c09f76b 7,9
+packages/desktop/src/ipc.ts
+  s_59c0dd2af30db2::t_d79dd54897bcf8 42-45
+  s_59c0dd2af30db2::t_0ed58b926cd384 176-179
+  s_59c0dd2af30db2::t_79dd7ed4b14d0a 222
+packages/desktop/src/main.ts
+  s_59c0dd2af30db2::t_426c515bb19aef 388-416,419-426
+  s_59c0dd2af30db2::t_6917115c7c2bc2 28
+  s_59c0dd2af30db2::t_d3dbf2a656deb5 427,499-500,507-532,538-539,545-551,553,557-561
+  s_59c0dd2af30db2::t_0f6e48655a52c4 37,40-42
+  s_59c0dd2af30db2::t_56a0ccb77fb40e 301-302,304-305,307-312
+  s_59c0dd2af30db2::t_16317dd675cbfe 10-12
+  s_59c0dd2af30db2::t_91b349d593667b 203,205-206,210-237
+  s_59c0dd2af30db2::t_80635275f2a023 114-135
+  s_59c0dd2af30db2::t_c3f491db894475 255-259,263,265-267,277
+  s_59c0dd2af30db2::t_c4a548aac68277 324,326-330
+packages/desktop/src/windows.ts
+  s_59c0dd2af30db2::t_dcbec2a0408247 1-327
+packages/desktop/src/preload.cts
+  s_59c0dd2af30db2::t_fec2885e8d3934 29
+  s_59c0dd2af30db2::t_23d847e4be6478 79-106
+  s_59c0dd2af30db2::t_f9cef52c0daafb 10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "df9cdbdea24adb08a81c04d1b8baad8859476189",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
