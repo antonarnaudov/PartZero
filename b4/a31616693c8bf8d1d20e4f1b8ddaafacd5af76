@@ -1,0 +1,27 @@
+packages/app/src/host/browser-host.ts
+  s_59c0dd2af30db2::t_c553dfde2c2c67 19,82
+packages/app/index.html
+  s_59c0dd2af30db2::t_5d99f233ea8b42 7
+packages/app/src/ui/About.tsx
+  s_59c0dd2af30db2::t_c5097db10d1b7a 74-75
+  s_59c0dd2af30db2::t_c1286b7f592093 4,12,17,70,83-85,88-95,105,109-111,138
+  s_59c0dd2af30db2::t_7fad8bfc3cb7f2 73
+packages/desktop/e2e/smoke.e2e.ts
+  s_59c0dd2af30db2::t_db88920588e91f 196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b4a31616693c8bf8d1d20e4f1b8ddaafacd5af76",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
