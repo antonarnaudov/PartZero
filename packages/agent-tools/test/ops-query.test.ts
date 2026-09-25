@@ -127,6 +127,19 @@ describe("JSON-text arguments", () => {
     expect(r.isError, r.text).toBeFalsy();
     expect(parseDoc(await host.document()).parts[0]!.features.map((f) => f.id)).toContain("top_sk");
   });
+
+  it_("inside apply_ops, an op written the single-tool way (feature_json, as text or object) is taken inline", async () => {
+    const { call, host } = await cube();
+    const r = await call("apply_ops", {
+      ops_json: j([
+        { op: "addParam", name: "bore_r", unit: "mm", value: 3 },
+        { op: "addFeature", feature_json: j({ type: "sketch", id: "b_sk", name: "b_sk", plane: "XY", curves: [{ kind: "circle", id: "c", center: [0, 0], radius: "bore_r" }] }) },
+        { op: "setField", feature: "cube", path: "/distance", value_json: { expr: "40" } },
+      ]),
+    });
+    expect(r.isError, r.text).toBeFalsy();
+    expect(parseDoc(await host.document()).parts[0]!.features.map((f) => f.id)).toContain("b_sk");
+  });
 });
 
 describe("the op playbooks", () => {

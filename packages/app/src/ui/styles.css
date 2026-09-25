@@ -1833,8 +1833,27 @@ button.sb-item:hover {
 .run-steps.live .step-done {
   color: var(--text);
 }
-.run-steps.live .step-done:last-of-type {
+/* Runs once, when a step's line is added (not again when a later line goes away). */
+.run-steps.live .step-done {
   animation: step-land 0.35s ease-out;
+}
+/* The chat never widens its column: long model names and plan-usage lines wrap inside it. */
+.panel.chat {
+  contain: inline-size;
+}
+.chat .panel-header {
+  min-width: 0;
+}
+.run-meta {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.run-model {
+  flex: 1 1 120px;
+  min-width: 0;
+}
+.run-headline {
+  overflow-wrap: anywhere;
 }
 @keyframes step-land {
   from {
@@ -1882,6 +1901,9 @@ button.sb-item:hover {
   white-space: nowrap;
 }
 .autonomy-dial {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 140px;
   height: 22px;
   margin-left: auto;
   padding: 0 6px;

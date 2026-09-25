@@ -198,6 +198,25 @@ function opTool(op: IrOpName, toolName: string, description: string): AgentTool<
   });
 }
 
+/**
+ * An op inside `apply_ops` carries its JSON values inline (`feature`, `value`, `set`); a model that
+ * writes them the single-tool way (`feature_json`, as text or as the object) means the same thing.
+ */
+function inlineJsonArgs(item: unknown): unknown {
+  if (typeof item !== "object" || item === null || Array.isArray(item)) return item;
+  const o = item as Record<string, unknown>;
+  let out: Record<string, unknown> | null = null;
+  for (const base of ["feature", "value", "set"]) {
+    const k = `${base}_json`;
+    if (!(k in o) || base in o) continue;
+    out ??= { ...o };
+    const v = o[k];
+    out[base] = typeof v === "string" ? parseJsonArg(k, v) : v;
+    delete out[k];
+  }
+  return out ?? item;
+}
+
 /** `apply_ops`: several ops as ONE transaction (atomic), e.g. a parameter and the feature that uses it. */
 const applyOpsTool = defineTool<OpsToolContext, z.ZodObject>({
   name: "apply_ops",
@@ -221,7 +240,13 @@ const applyOpsTool = defineTool<OpsToolContext, z.ZodObject>({
       return { text: "ops_json must be a JSON array of 1 to 100 ops. Nothing was changed.", isError: true, data: { kind: "invalid_input" } };
     }
     const ops: IrOp[] = [];
-    for (const [i, raw] of list.entries()) {
+    for (const [i, item] of list.entries()) {
+      let raw: unknown = item;
+      try {
+        raw = inlineJsonArgs(item);
+      } catch (e) {
+        return { text: `Op ${i + 1}: ${errorText(e)}`, isError: true, data: { kind: "ops_refused", code: "COMMAND_BAD_JSON" } };
+      }
       const p = IrOpSchema.safeParse(raw);
       if (!p.success) {
         const issues = p.error.issues.slice(0, 3).map((x) => `${x.path.join(".") || "(op)"}: ${x.message}`);
