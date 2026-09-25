@@ -9,6 +9,7 @@
 import { blankDocument } from "@aicad/model-ops";
 import { beforeAll, describe, expect, it } from "vitest";
 import { appOpsHost } from "../src/agent/ops-host";
+import { downgradeToV0 } from "../src/agent/v0-surface";
 import { InlineCadScriptService } from "../src/cadscript/inline-service";
 import { DocStore } from "../src/doc/doc-store";
 import { buildTimeline } from "../src/doc/timeline";
@@ -209,6 +210,29 @@ describe("IR v1 as the document model", () => {
     const r2 = await h.commands.execute({ id: "ir.apply", args: { ops: edit } }, { source: "ui" });
     expect(r2.ok).toBe(true);
     expect((JSON.parse(ir.document) as { parts: Array<{ features: Array<{ curves: Array<{ h: number }> }> }> }).parts[0]!.features[0]!.curves[0]!.h).toBe(12);
+  });
+
+  it_("hands a v0-expressible model to the designer as its v0 document (downgrade ∘ migrate = identity)", async () => {
+    const v0 = {
+      schema: "aicad.ir/0",
+      parts: [
+        {
+          id: "p1",
+          name: "part",
+          features: [
+            { type: "sketch", id: "outline", name: "outline", plane: "XY", curves: [{ kind: "circle", id: "c", center: [0, 0], radius: 5 }] },
+            { type: "extrude", id: "plate", name: "plate", sketch: "outline", distance: 3 },
+          ],
+        },
+      ],
+    };
+    const v1 = (await commands.canonicalize(JSON.stringify(v0))).document;
+    const back = downgradeToV0(v1);
+    expect(back).toEqual(v0);
+    // A parameter (or any v1-only feature) is not v0: the designer gets the v1 print instead.
+    const withParam = JSON.parse(v1) as { params?: unknown[] };
+    withParam.params = [{ name: "t", unit: "mm", value: 3 }];
+    expect(downgradeToV0(JSON.stringify(withParam))).toBeNull();
   });
 
   it_("opens a starter example (CadScript v1) as an IR v1 model", async () => {

@@ -31,6 +31,7 @@ import { Store } from "../store";
 import type { SelectionChip, UiStore } from "../ui-store";
 import { buildVariant, checkVariant, diffProposal, type DependencyWarning, type FeatureChange } from "./proposal";
 import { describeSelection } from "./selection";
+import { downgradeToV0 } from "./v0-surface";
 
 export type RunStatus = "running" | "question" | "done" | "failed";
 
@@ -282,7 +283,8 @@ export class AgentService extends Store<AgentState> {
     let source = s.source;
     if (s.format === "ir-v1") {
       const empty = (ir?.parts ?? []).every((p) => p.features.length === 0);
-      source = empty ? "" : ((await this.#deps.cadscript.printV1(s.source)) ?? "");
+      const v0 = empty ? null : downgradeToV0(s.source);
+      source = empty ? "" : v0 ? await this.#deps.cadscript.print(v0) : ((await this.#deps.cadscript.printV1(s.source)) ?? "");
     }
     const res = await bridge.start({ v: 1, prompt: input.prompt, source, documentName: s.name, selection });
     if (!res.ok) {

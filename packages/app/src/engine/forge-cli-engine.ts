@@ -6,7 +6,7 @@
  * renderer. This is the working fallback until `@aicad/forge-web` lands, and stays useful as a
  * cross-check of the WASM build.
  */
-import { parseEvalReport } from "@aicad/ir-types";
+import { metricsV1, parseEvalReport } from "@aicad/ir-types";
 import type { AicadBridge, ForgeCliInfo } from "../bridge";
 import { parseObj } from "./obj";
 import { EngineError, type EvalResult, type ForgeEngine, type MeshFormat, type TessellationOptions } from "./types";
@@ -32,9 +32,11 @@ export class ForgeCliEngine implements ForgeEngine {
     }
     let report;
     try {
-      report = parseEvalReport(r.reportJson);
+      const raw = JSON.parse(r.reportJson) as { schema?: unknown };
+      // An IR v1 document gets the aicad.metrics/1 report (the app's document model); v0 keeps v0's.
+      report = raw.schema === "aicad.metrics/1" ? (metricsV1.EvalReportSchema.parse(raw) as unknown as EvalResult["report"]) : parseEvalReport(raw);
     } catch (e) {
-      throw new EngineError("ENGINE_BAD_OUTPUT", `aicad eval: not an aicad.metrics/0 report: ${(e as Error).message}`);
+      throw new EngineError("ENGINE_BAD_OUTPUT", `aicad eval: not an aicad.metrics report: ${(e as Error).message}`);
     }
     let bodies: EvalResult["bodies"] = [];
     if (r.objText !== null) {

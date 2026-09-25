@@ -8,8 +8,15 @@
   streams. In the PartZero shell (`ui/shell/AppShell.tsx`) `SketchModeHost` is mounted in the
   viewport column, the welcome makes way while sketch mode is open, and the old toolbar button is the
   ribbon's **Sketch** tool (`tools/builtin/sketch.ts`, id `sketch.new`, ⇧S; e2e clicks
-  `tool-sketch.new`). Finish still goes through the CadScript bridge: the IR v1 wiring below (it
-  needs C1 part 1's `addParam` / `addFeature` / `setField`) and `commands/sketch.ts` are not done.
+  `tool-sketch.new`).
+- **IR v1 wiring (C1, 2026-09-25):** done in `sketch/v1-app.ts` (see [command-layer.md](command-layer.md)).
+  On an IR v1 model (the app's document model) Finish commits `addParam` + `addFeature` (new) or
+  `updateFeature` of the curves and constraints (edit) as one `ir.apply` transaction, so the model
+  keeps constraints, dimensions, construction geometry and parameters; new sketches see the model's
+  parameters and rollback marker; the timeline's double-click reopens a sketch with its constraints;
+  the Finish extrude offer is `ir.addFeature`. The CadScript bridge stays for IR v0 documents (hosts
+  without the IR v1 engine). Not done: `commands/sketch.ts`, the convert renames of wiring 1, faces
+  as planes (wiring 6), one wheel classifier (wiring 8).
 
 ## What works
 
