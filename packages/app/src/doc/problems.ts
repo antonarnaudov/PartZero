@@ -24,7 +24,15 @@ export interface Problem {
   spanMode?: "exact" | "first-line";
   featureId?: string;
   featureName?: string;
+  /** A parameter's own failure. */
+  param?: string;
 }
+
+/**
+ * Warnings that are information, not a problem to look at: an under-constrained sketch is normal
+ * while you design (Fusion and Shapr3D show it in the sketch, not in the timeline).
+ */
+export const INFORMATIONAL_WARNINGS: ReadonlySet<string> = new Set(["SKETCH_UNDER_CONSTRAINED"]);
 
 const SEVERITY_RANK: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
 
@@ -39,6 +47,22 @@ export function collectProblems(state: Pick<DocState, "compile" | "model" | "rep
   const model = state.model;
   if (state.report && compile?.ok && model?.ir) {
     for (const f of state.report.features) {
+      // Warnings worth a look (IR v1 §7.3): not the informational ones (an under-constrained sketch while you design).
+      for (const [wi, w] of ((f as { warnings?: Array<{ code: string; severity: string; message: string }> }).warnings ?? []).entries()) {
+        if (INFORMATIONAL_WARNINGS.has(w.code)) continue;
+        const loc = findFeature(model.ir, f.feature);
+        const hint = kernelHint(w.code);
+        out.push({
+          key: `forge:${f.part}/${f.feature}:w${wi}:${w.code}`,
+          severity: w.severity === "info" ? "info" : "warning",
+          code: w.code,
+          message: w.message,
+          source: "forge",
+          featureName: f.feature,
+          ...(hint ? { hint } : {}),
+          ...(loc ? { featureId: loc.feature.id } : {}),
+        });
+      }
       if (f.status !== "error" || !f.error) continue;
       const loc = findFeature(model.ir, f.feature);
       const span = loc ? model.spans[loc.feature.id] : undefined;
@@ -53,6 +77,20 @@ export function collectProblems(state: Pick<DocState, "compile" | "model" | "rep
         ...(hint ? { hint } : {}),
         ...(span ? { span, spanMode: "first-line" as const } : {}),
         ...(loc ? { featureId: loc.feature.id } : {}),
+      });
+    }
+    // A parameter that fails (PARAM_FAILED, EXPR_*): every feature using it fails too, but the cause is here.
+    for (const p of (state.report as { params?: Array<{ name: string; error?: { code: string; message: string } }> }).params ?? []) {
+      if (!p.error) continue;
+      const hint = kernelHint(p.error.code);
+      out.push({
+        key: `forge:param:${p.name}:${p.error.code}`,
+        severity: "error",
+        code: p.error.code,
+        message: `parameter ${p.name}: ${p.error.message}`,
+        source: "forge",
+        param: p.name,
+        ...(hint ? { hint } : {}),
       });
     }
     if (state.report.error) {

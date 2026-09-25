@@ -7,7 +7,7 @@
 import type { FeatureReport } from "@aicad/ir-types";
 import { rolledBackFeatures } from "@aicad/model-ops";
 import type { DocState } from "./doc-store";
-import { problemsByFeature, type Problem } from "./problems";
+import { INFORMATIONAL_WARNINGS, problemsByFeature, type Problem } from "./problems";
 
 export type FeatureStatus = "ok" | "warning" | "error" | "suppressed" | "pending" | "rolled-back";
 
@@ -132,11 +132,6 @@ function summarize(f: Json, r: FeatureReport | undefined): string {
   return parts.join(" · ");
 }
 
-/**
- * Warnings that are information, not a problem to look at: an under-constrained sketch is normal
- * while you design (Fusion and Shapr3D show it in the sketch, not in the timeline).
- */
-const INFORMATIONAL_WARNINGS: ReadonlySet<string> = new Set(["SKETCH_UNDER_CONSTRAINED"]);
 
 /** Whether a report entry carries a warning worth a timeline badge. */
 function notable(r: FeatureReport | undefined): boolean {
