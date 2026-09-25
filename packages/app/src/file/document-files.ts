@@ -10,7 +10,7 @@
 import type { DocumentStateMessage, RecentDocument, RecoveryEntry } from "../bridge";
 import type { ForgeEngine, RenderBody } from "../engine/types";
 import { Store } from "../store";
-import type { DocumentAdapter, LoadRequest } from "./adapter";
+import type { DocumentAdapter, LoadRequest, SaveCapture } from "./adapter";
 import { documentName } from "./adapter";
 import { exportFormat } from "./export-formats";
 import type { FileHost } from "./host";
@@ -148,6 +148,8 @@ export class DocumentFiles extends Store<FilesState> {
   private hasSnapshot = false;
   private unsubscribers: Array<() => void> = [];
   private refSeq = 0;
+  /** Saves run one after another, so they mark the document saved in the order their files were written. */
+  private saving: Promise<unknown> = Promise.resolve();
 
   constructor(deps: DocumentFilesDeps) {
     super({ recoveryId: (deps.newRecoveryId ?? randomId)(), references: [], extraDirty: false, dialog: null, autosave: { at: null, error: null }, warnings: [] });
@@ -159,8 +161,8 @@ export class DocumentFiles extends Store<FilesState> {
   }
 
   /** The store's revision plus the references (which are not in the store). */
-  private changeKey(revision: number): string {
-    const refs = this.getState().references.map((r) => `${r.entry.id}:${r.entry.visible ? 1 : 0}`).join(",");
+  private changeKey(revision: number, references: readonly ReferenceMesh[] = this.getState().references): string {
+    const refs = references.map((r) => `${r.entry.id}:${r.entry.visible ? 1 : 0}`).join(",");
     return `${revision}|${refs}`;
   }
 
@@ -276,10 +278,19 @@ export class DocumentFiles extends Store<FilesState> {
     const info = this.deps.adapter.info();
     this.autosaveFirstPending = null;
     try {
-      const { bytes } = await this.encode(false);
-      await rec.write({ id: this.getState().recoveryId, title: info.name, path: info.path, data: bytes });
+      const { bytes, capture, references } = await this.encode(false);
+      const id = this.getState().recoveryId;
+      await rec.write({ id, title: info.name, path: info.path, data: bytes });
+      // The key of what was captured, not of what the store holds now: edits made while writing still get autosaved.
+      this.snapshotKey = this.changeKey(capture.revision, references);
+      if (!this.isDirty()) {
+        // Saved while this snapshot was being written: it would only offer the saved file back after the next crash.
+        this.hasSnapshot = false;
+        this.snapshotKey = null;
+        await rec.discard(id);
+        return { written: false };
+      }
       this.hasSnapshot = true;
-      this.snapshotKey = this.changeKey(info.revision);
       this.setState({ autosave: { at: this.now(), error: null } });
       return { written: true };
     } catch (e) {
@@ -511,26 +522,43 @@ export class DocumentFiles extends Store<FilesState> {
     return this.saveTo(target);
   }
 
-  /** Save to `path` in the format its extension names. */
-  async saveTo(path: string): Promise<{ saved: true; path: string; format: SaveFormat; bytes: number }> {
+  /**
+   * Save to `path` in the format its extension names. Saves are queued one after another. What is written is what
+   * the save captured when it started: edits (or reference changes) made while it runs stay unsaved, so the title,
+   * close prompt and autosave keep protecting them (`upToDate: false`).
+   */
+  saveTo(path: string): Promise<{ saved: true; path: string; format: SaveFormat; bytes: number; upToDate: boolean }> {
+    const run = this.saving.then(() => this.saveNow(path));
+    this.saving = run.catch(() => undefined);
+    return run;
+  }
+
+  private async saveNow(path: string): Promise<{ saved: true; path: string; format: SaveFormat; bytes: number; upToDate: boolean }> {
     const format = saveFormatOf(path);
     const name = documentName(path);
     let written: number;
+    let capture: SaveCapture;
+    let references: readonly ReferenceMesh[];
     if (format === "partzero") {
-      const { bytes, thumbnail } = await this.encode(true);
-      const r = await this.deps.host.writeDocument(path, bytes, thumbnail);
+      const e = await this.encode(true);
+      ({ capture, references } = e);
+      const r = await this.deps.host.writeDocument(path, e.bytes, e.thumbnail);
       written = r.bytes;
     } else {
-      const text = await this.deps.adapter.textFor(format);
-      const r = await this.deps.host.writeDocument(path, text, null);
+      references = this.getState().references;
+      const t = await this.deps.adapter.textFor(format);
+      capture = t.capture;
+      const r = await this.deps.host.writeDocument(path, t.text, null);
       written = r.bytes;
-      if (this.getState().references.length > 0) this.deps.toast("info", `Reference meshes are kept only in .partzero files; ${baseName(path)} has the model and its code.`);
+      if (references.length > 0) this.deps.toast("info", `Reference meshes are kept only in .partzero files; ${baseName(path)} has the model and its code.`);
     }
-    this.deps.adapter.markSaved(path, name);
-    this.setState({ extraDirty: false });
+    const result = this.deps.adapter.markSaved(path, name, capture);
+    // References are immutable arrays: a different one means they changed while the file was being written.
+    if (result !== "replaced") this.setState({ extraDirty: this.getState().references !== references });
     this.onDocumentChange();
-    this.deps.toast("success", `Saved ${baseName(path)} (${formatBytes(written)})`);
-    return { saved: true, path, format, bytes: written };
+    const upToDate = result === "clean" && !this.isDirty();
+    this.deps.toast("success", `Saved ${baseName(path)} (${formatBytes(written)})${upToDate ? "" : "; changes made while saving are not in it yet"}`);
+    return { saved: true, path, format, bytes: written, upToDate };
   }
 
   /** Reload the document from its file, dropping unsaved changes (after a prompt). */
@@ -550,8 +578,8 @@ export class DocumentFiles extends Store<FilesState> {
     return { closing: true };
   }
 
-  /** The document as a `.partzero` file, with a thumbnail when `withThumbnail`. */
-  async encode(withThumbnail: boolean): Promise<{ bytes: Uint8Array; thumbnail: Uint8Array | null }> {
+  /** The document as a `.partzero` file, with a thumbnail when `withThumbnail`, and what it captured. */
+  async encode(withThumbnail: boolean): Promise<{ bytes: Uint8Array; thumbnail: Uint8Array | null; capture: SaveCapture; references: readonly ReferenceMesh[] }> {
     const snap = await this.deps.adapter.snapshot();
     const refs = this.getState().references;
     const visibleRefs = refs.filter((r) => r.entry.visible).map((r) => r.body);
@@ -570,7 +598,7 @@ export class DocumentFiles extends Store<FilesState> {
       view: this.carry.view,
       references: refs.map((r) => r.entry),
     };
-    return { bytes: encodePartZero(contents), thumbnail: thumb?.png ?? null };
+    return { bytes: encodePartZero(contents), thumbnail: thumb?.png ?? null, capture: snap.capture, references: refs };
   }
 
   // ─── Reference meshes ──────────────────────────────────────────────────────────────────────

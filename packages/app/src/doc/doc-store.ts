@@ -193,9 +193,16 @@ export class DocStore extends Store<DocState> {
     return true;
   }
 
-  /** After a successful save: the current source is the saved one. */
-  markSaved(update: { path: string; name: string; format: DocFormat }): void {
-    this.setState((s) => ({ ...update, savedSource: s.source, dirty: false }));
+  /**
+   * After a successful save: `savedSource` (default: the current source) is what the file holds. A save that captured
+   * the source before an edit landed passes the captured source, so the document stays dirty with that edit.
+   */
+  markSaved(update: { path: string; name: string; format: DocFormat; savedSource?: string }): void {
+    const { savedSource, ...rest } = update;
+    this.setState((s) => {
+      const saved = savedSource ?? s.source;
+      return { ...rest, savedSource: saved, dirty: s.source !== saved };
+    });
   }
 
   select(selection: Partial<Selection> & { origin: SelectionOrigin }): void {

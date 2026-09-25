@@ -6,7 +6,7 @@
  */
 import { IR_SCHEMA, safeParseIrDocument, type IrDocument } from "@aicad/ir-types";
 import type { CadScriptService } from "../cadscript/service";
-import type { DocFormat, DocStore } from "../doc/doc-store";
+import type { DocFormat, DocState, DocStore } from "../doc/doc-store";
 import type { RenderBody } from "../engine/types";
 import { BLANK_SOURCE } from "../host/templates";
 import { canonicalJson, type DocumentValidator } from "./partzero";
@@ -21,6 +21,22 @@ export interface DocumentInfo {
   revision: number;
 }
 
+/**
+ * Exactly what a save (or an autosave) captured, so `markSaved` records that as the saved state and not whatever the
+ * store holds by the time the file is written: an edit that lands while a save is in flight stays unsaved.
+ */
+export interface SaveCapture {
+  /** The document the capture was taken from ({@link DocumentInfo.docId}). */
+  readonly docId: number;
+  /** Its revision at the capture ({@link DocumentInfo.revision}). */
+  readonly revision: number;
+  /** The captured content, in the adapter's own terms (the CadScript source for {@link DocStoreAdapter}). */
+  readonly content: string;
+}
+
+/** What `markSaved` did: `clean` (the file holds the document), `changed` (edits landed during the save and are still unsaved), `replaced` (another document was loaded meanwhile; the store was left alone). */
+export type MarkSavedResult = "clean" | "changed" | "replaced";
+
 /** What a save needs from the store. */
 export interface DocumentSnapshot {
   /** The canonical IR (the normative content), JSON text. */
@@ -31,6 +47,7 @@ export interface DocumentSnapshot {
   code: { source: string; matchesDocument: boolean } | null;
   /** Display bodies (for the thumbnail). */
   bodies: readonly RenderBody[];
+  capture: SaveCapture;
 }
 
 /** What a file holds, for the store to load. */
@@ -59,9 +76,10 @@ export interface DocumentAdapter {
   loadText(path: string, name: string, text: string): Promise<void>;
   /** A new untitled document. */
   loadBlank(name?: string): void;
-  /** The text a plain `.cad.ts` or `.json` save writes (IR JSON needs code without errors). */
-  textFor(format: "cadscript" | "ir-json"): Promise<string>;
-  markSaved(path: string, name: string): void;
+  /** The text a plain `.cad.ts` or `.json` save writes (IR JSON needs code without errors), and what it captured. */
+  textFor(format: "cadscript" | "ir-json"): Promise<{ text: string; capture: SaveCapture }>;
+  /** After `path` was written with `capture`'s content: that content is the saved state (see {@link MarkSavedResult}). */
+  markSaved(path: string, name: string, capture: SaveCapture): MarkSavedResult;
   /** Validates `document.json` when a `.partzero` is opened. */
   readonly validateDocument: DocumentValidator;
   /** The IR JSON to export (throws when the code has errors). */
@@ -83,6 +101,10 @@ function formatOf(path: string | null): DocFormat {
 
 function irText(ir: IrDocument): string {
   return `${JSON.stringify(ir, null, 2)}\n`;
+}
+
+function captureOf(s: DocState): SaveCapture {
+  return { docId: s.docId, revision: s.revision, content: s.source };
 }
 
 function parseIr(json: string): IrDocument {
@@ -121,11 +143,13 @@ export class DocStoreAdapter implements DocumentAdapter {
   }
 
   async snapshot(): Promise<DocumentSnapshot> {
+    // Everything below comes from this one settled state, so the capture describes exactly what is written.
     const s = await this.doc.idle();
+    const capture = captureOf(s);
     const c = s.compile;
-    if (c?.ok && c.ir) return { documentJson: irText(c.ir), irSchema: IR_SCHEMA, code: { source: s.source, matchesDocument: true }, bodies: s.bodies };
+    if (c?.ok && c.ir) return { documentJson: irText(c.ir), irSchema: IR_SCHEMA, code: { source: s.source, matchesDocument: true }, bodies: s.bodies, capture };
     // The code has errors: the model is the last version that compiled (or empty), and the code is kept as typed.
-    return { documentJson: irText(s.model?.ir ?? EMPTY_IR), irSchema: IR_SCHEMA, code: { source: s.source, matchesDocument: false }, bodies: s.bodies };
+    return { documentJson: irText(s.model?.ir ?? EMPTY_IR), irSchema: IR_SCHEMA, code: { source: s.source, matchesDocument: false }, bodies: s.bodies, capture };
   }
 
   private async sourceFor(request: LoadRequest): Promise<{ source: string; baseIr: IrDocument | null; warnings: string[] }> {
@@ -191,22 +215,33 @@ export class DocStoreAdapter implements DocumentAdapter {
     this.doc.load({ path: null, name, format: "cadscript", source: BLANK_SOURCE });
   }
 
-  async textFor(format: "cadscript" | "ir-json"): Promise<string> {
-    if (format === "cadscript") return this.doc.getState().source;
-    return irText(JSON.parse(await this.exportIrJson("save as IR JSON")) as IrDocument);
+  async textFor(format: "cadscript" | "ir-json"): Promise<{ text: string; capture: SaveCapture }> {
+    if (format === "cadscript") {
+      const s = this.doc.getState();
+      return { text: s.source, capture: captureOf(s) };
+    }
+    const { s, ir } = await this.compiled("save as IR JSON");
+    return { text: irText(ir), capture: captureOf(s) };
   }
 
-  markSaved(path: string, name: string): void {
-    this.doc.markSaved({ path, name, format: formatOf(path) });
+  markSaved(path: string, name: string, capture: SaveCapture): MarkSavedResult {
+    if (this.doc.getState().docId !== capture.docId) return "replaced";
+    this.doc.markSaved({ path, name, format: formatOf(path), savedSource: capture.content });
+    return this.doc.getState().dirty ? "changed" : "clean";
   }
 
   async exportIrJson(action: string): Promise<string> {
+    return JSON.stringify((await this.compiled(action)).ir);
+  }
+
+  /** The settled state and its compiled IR (throws when the code has errors). */
+  private async compiled(action: string): Promise<{ s: DocState; ir: IrDocument }> {
     const s = await this.doc.idle();
     const c = s.compile;
     if (!c?.ok || !c.ir) {
       const n = c?.diagnostics.filter((d) => d.severity === "error").length ?? 0;
       throw new Error(`Cannot ${action}: the code has ${n} error${n === 1 ? "" : "s"}. Fix them first.`);
     }
-    return JSON.stringify(c.ir);
+    return { s, ir: c.ir };
   }
 }

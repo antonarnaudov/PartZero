@@ -216,4 +216,16 @@ describe("DocStore pipeline", () => {
     expect(store.getState()).toMatchObject({ dirty: false, path: "/tmp/box.cad.ts" });
     await store.idle();
   });
+
+  it("markSaved with the source a save captured keeps later edits unsaved", async () => {
+    const { store } = makeStore();
+    store.load({ path: null, name: "box", format: "cadscript", source: BOX });
+    store.setSource(`${BOX}// saved\n`);
+    store.setSource(`${BOX}// typed while saving\n`);
+    store.markSaved({ path: "/tmp/box.cad.ts", name: "box", format: "cadscript", savedSource: `${BOX}// saved\n` });
+    expect(store.getState()).toMatchObject({ dirty: true, path: "/tmp/box.cad.ts", savedSource: `${BOX}// saved\n` });
+    store.undo();
+    expect(store.getState().dirty).toBe(false);
+    await store.idle();
+  });
 });

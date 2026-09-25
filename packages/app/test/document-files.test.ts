@@ -17,16 +17,37 @@ import { BOX, makeHarness, type Harness } from "./helpers";
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
+/** Holds the next write until released, so a test can change the document while a save is in flight. */
+class WriteGate {
+  private next: { started: () => void; released: Promise<void> } | null = null;
+  hold(): { started: Promise<void>; release: () => void } {
+    let started!: () => void;
+    let release!: () => void;
+    const startedP = new Promise<void>((r) => (started = r));
+    const released = new Promise<void>((r) => (release = r));
+    this.next = { started, released };
+    return { started: startedP, release };
+  }
+  async pass(): Promise<void> {
+    const n = this.next;
+    this.next = null;
+    if (!n) return;
+    n.started();
+    await n.released;
+  }
+}
+
 class MemoryRecovery {
   entries = new Map<string, { meta: RecoveryEntry; data: Uint8Array }>();
   writes = 0;
+  readonly gate = new WriteGate();
   list(): Promise<RecoveryEntry[]> {
     return Promise.resolve([...this.entries.values()].map((e) => e.meta));
   }
-  write(r: { id: string; title: string; path: string | null; data: Uint8Array }): Promise<void> {
+  async write(r: { id: string; title: string; path: string | null; data: Uint8Array }): Promise<void> {
+    await this.gate.pass();
     this.writes++;
     this.entries.set(r.id, { meta: { id: r.id, title: r.title, path: r.path, savedAt: Date.now(), bytes: r.data.length }, data: r.data });
-    return Promise.resolve();
   }
   read(id: string): Promise<Uint8Array> {
     const e = this.entries.get(id);
@@ -76,6 +97,9 @@ class MemoryFileHost implements FileHost {
   openDialogs: OpenDialogOptions[] = [];
   recentPaths: string[] = [];
   thumbs = new Map<string, Uint8Array>();
+  /** Paths in the order their writes completed. */
+  written: string[] = [];
+  readonly gate = new WriteGate();
   readonly recovery: MemoryRecovery | null;
   readonly windows: MemoryWindows | null;
   private listeners = new Set<(e: FilesEvent) => void>();
@@ -99,13 +123,15 @@ class MemoryFileHost implements FileHost {
   async readText(path: string): Promise<string> {
     return dec.decode(await this.readBytes(path));
   }
-  writeDocument(path: string, data: Uint8Array | string, thumbnail: Uint8Array | null): Promise<{ bytes: number; backup: string | null }> {
+  async writeDocument(path: string, data: Uint8Array | string, thumbnail: Uint8Array | null): Promise<{ bytes: number; backup: string | null }> {
+    await this.gate.pass();
     const bytes = typeof data === "string" ? enc.encode(data) : data;
     const existed = this.files.has(path);
     this.files.set(path, bytes);
+    this.written.push(path);
     if (thumbnail) this.thumbs.set(path, thumbnail);
     this.recentPaths = [path, ...this.recentPaths.filter((p) => p !== path)];
-    return Promise.resolve({ bytes: bytes.length, backup: existed ? `${path}.bak` : null });
+    return { bytes: bytes.length, backup: existed ? `${path}.bak` : null };
   }
   writeExport(path: string, data: Uint8Array | string): Promise<void> {
     this.files.set(path, typeof data === "string" ? enc.encode(data) : data);
@@ -138,7 +164,7 @@ interface Setup {
   toasts: string[];
 }
 
-async function setup(options: { desktop?: boolean; source?: string } = {}): Promise<Setup> {
+async function setup(options: { desktop?: boolean; source?: string; autosaveDelayMs?: number } = {}): Promise<Setup> {
   const h = await makeHarness({ source: options.source ?? BOX });
   const host = new MemoryFileHost(options);
   const states: DocumentStateMessage[] = [];
@@ -152,7 +178,7 @@ async function setup(options: { desktop?: boolean; source?: string } = {}): Prom
     engine: () => h.services.engines.active,
     runCommand: (c) => h.commands.executeUnknown({ id: c.id, args: c.args ?? {} }),
     generator: { app: "PartZero", version: "0.1.0-test" },
-    autosaveDelayMs: 0,
+    autosaveDelayMs: options.autosaveDelayMs ?? 0,
     newRecoveryId: () => "window-0001",
   });
   await files.start();
@@ -560,5 +586,131 @@ describe("file commands in the registry", () => {
     expect(host.files.get("/w/a.partzero")).toEqual(host.files.get("/w/b.partzero"));
     const manifest = dec.decode(readZip(host.files.get("/w/a.partzero")!).find((e) => e.name === ENTRY.manifest)!.data);
     expect(manifest).not.toMatch(/savedAt|createdAt|\/w\//);
+  });
+});
+
+describe("edits made while a save is in flight", () => {
+  const FIRST = `${BOX}// first\n`;
+  const DURING = `${BOX}// typed during the save\n`;
+
+  it("stay unsaved: the file has what the save captured, the window stays dirty and the autosave is kept", async () => {
+    const { h, host, files, states, toasts } = await setup();
+    const rec = host.recovery!;
+    h.services.doc.setSource(FIRST);
+    await h.services.doc.idle();
+    await tick(30);
+    expect(rec.entries.has("window-0001")).toBe(true);
+
+    const held = host.gate.hold();
+    const saving = files.saveAs("/w/race.partzero");
+    await held.started;
+    h.services.doc.setSource(DURING);
+    await h.services.doc.idle();
+    await tick(30); // the edit's autosave
+    held.release();
+    expect(await saving).toMatchObject({ saved: true, path: "/w/race.partzero", upToDate: false });
+
+    expect(decodePartZero(host.files.get("/w/race.partzero")!).contents.code?.source).toBe(FIRST);
+    expect(h.services.doc.getState()).toMatchObject({ path: "/w/race.partzero", name: "race", source: DURING, savedSource: FIRST, dirty: true });
+    expect(files.isDirty()).toBe(true);
+    // The shell's close and quit prompts see it.
+    expect(states.at(-1)).toEqual({ title: "race", path: "/w/race.partzero", dirty: true });
+    expect(toasts.at(-1)).toMatch(/Saved race\.partzero .*changes made while saving are not in it yet/);
+    // The autosave still holds the edit.
+    await tick(30);
+    expect(rec.entries.has("window-0001")).toBe(true);
+    expect(decodePartZero(rec.entries.get("window-0001")!.data).contents.code?.source).toBe(DURING);
+    // Undo returns to exactly what the file holds.
+    h.services.doc.undo();
+    expect(h.services.doc.getState().dirty).toBe(false);
+    await tick(30);
+    expect(rec.entries.has("window-0001")).toBe(false);
+  });
+
+  it("stay unsaved with plain CadScript saves too", async () => {
+    const { h, host, files } = await setup();
+    h.services.doc.setSource(FIRST);
+    const held = host.gate.hold();
+    const saving = files.saveAs("/w/race.cad.ts");
+    await held.started;
+    h.services.doc.setSource(DURING);
+    held.release();
+    expect(await saving).toMatchObject({ saved: true, upToDate: false });
+    expect(dec.decode(host.files.get("/w/race.cad.ts"))).toBe(FIRST);
+    expect(h.services.doc.getState()).toMatchObject({ path: "/w/race.cad.ts", dirty: true });
+    await h.services.doc.idle();
+  });
+
+  it("a reference mesh imported during a save stays unsaved", async () => {
+    const { h, host, files } = await setup();
+    host.files.set("/m/cube.stl", writeBinaryStl(box(10, 10, 10)));
+    const held = host.gate.hold();
+    const saving = files.saveAs("/w/refs.partzero");
+    await held.started;
+    await files.importReference("/m/cube.stl");
+    held.release();
+    expect(await saving).toMatchObject({ saved: true, upToDate: false });
+    expect(decodePartZero(host.files.get("/w/refs.partzero")!).contents.references).toEqual([]);
+    expect(h.services.doc.getState().dirty).toBe(false);
+    expect(files.getState().extraDirty).toBe(true);
+    expect(files.isDirty()).toBe(true);
+    // Saving again writes it and the window is clean.
+    expect(await files.save()).toMatchObject({ saved: true, upToDate: true });
+    expect(decodePartZero(host.files.get("/w/refs.partzero")!).contents.references).toHaveLength(1);
+    expect(files.isDirty()).toBe(false);
+  });
+
+  it("saves run one after another, so the last one started is what the file and the window end with", async () => {
+    const { h, host, files } = await setup();
+    h.services.doc.setSource(FIRST);
+    const held = host.gate.hold();
+    const first = files.saveTo("/w/q.partzero");
+    await held.started;
+    h.services.doc.setSource(DURING);
+    const second = files.saveTo("/w/q.partzero");
+    await tick(30);
+    expect(host.written).toEqual([]); // the second waits for the first
+    held.release();
+    expect(await first).toMatchObject({ upToDate: false });
+    expect(await second).toMatchObject({ upToDate: true });
+    expect(host.written).toEqual(["/w/q.partzero", "/w/q.partzero"]);
+    expect(decodePartZero(host.files.get("/w/q.partzero")!).contents.code?.source).toBe(DURING);
+    expect(h.services.doc.getState()).toMatchObject({ savedSource: DURING, dirty: false });
+    // A failed save does not block the ones after it.
+    const failing = files.saveTo("/w/bad.json");
+    h.services.doc.setSource(`${BOX}\nconst broken = ;\n`);
+    await expect(failing).rejects.toThrow(/Cannot save as IR JSON/);
+    expect(await files.saveTo("/w/ok.cad.ts")).toMatchObject({ saved: true });
+  });
+
+  it("a save that finishes after another document was loaded leaves that document alone", async () => {
+    const { h, host, files } = await setup();
+    h.services.doc.setSource(FIRST);
+    host.files.set("/w/other.cad.ts", enc.encode(BOX));
+    const held = host.gate.hold();
+    const saving = files.saveAs("/w/first.partzero");
+    await held.started;
+    await files.loadFile("/w/other.cad.ts");
+    h.services.doc.setSource(DURING);
+    held.release();
+    expect(await saving).toMatchObject({ saved: true, upToDate: false });
+    expect(decodePartZero(host.files.get("/w/first.partzero")!).contents.code?.source).toBe(FIRST);
+    expect(h.services.doc.getState()).toMatchObject({ path: "/w/other.cad.ts", name: "other", source: DURING, dirty: true });
+    await h.services.doc.idle();
+  });
+
+  it("an autosave that finishes after the document was saved is dropped", async () => {
+    const { h, host, files } = await setup({ autosaveDelayMs: 60_000 });
+    const rec = host.recovery!;
+    h.services.doc.setSource(FIRST);
+    await h.services.doc.idle();
+    const held = rec.gate.hold();
+    const flushing = files.flushRecovery();
+    await held.started;
+    expect(await files.saveAs("/w/s.partzero")).toMatchObject({ upToDate: true });
+    held.release();
+    expect(await flushing).toEqual({ written: false });
+    expect(rec.entries.has("window-0001")).toBe(false);
+    files.dispose();
   });
 });
