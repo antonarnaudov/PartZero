@@ -1,0 +1,19 @@
+packages/desktop/e2e/files.e2e.ts
+  s_26220fcd7a5924::t_a3e361334ab7b1 31,69-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f7baf4db25a59a0c791eb7732b00626cd9656a94",
+  "prompts": {},
+  "sessions": {
+    "s_26220fcd7a5924": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad28cd05d161c6458",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
