@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { countBySeverity, type Problem } from "../doc/problems";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
+import { ShellStatus } from "./shell/ShellStatus";
 
 function fmtMs(ms: number | null): string {
   if (ms === null) return "—";
@@ -46,6 +47,7 @@ export function StatusBar({ problems }: { problems: readonly Problem[] }): React
       <span className="sb-item" data-testid="body-count">
         {bodies} {bodies === 1 ? "body" : "bodies"}
       </span>
+      <ShellStatus />
       <span className="spacer" />
       <button type="button" className="sb-item" onClick={() => run({ id: "view.togglePanel", args: { panel: "problems" } })} title="Toggle problems (⌘J)">
         <span className={`sb-count err${counts.error ? " on" : ""}`}>

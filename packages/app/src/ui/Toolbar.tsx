@@ -10,7 +10,7 @@ import { Icon } from "./icons";
  * user's Bambu Studio. Desktop only. It calls `openInSlicer` directly until `file.openInSlicer`
  * (with ⌘P) is registered in the command layer; failures surface as toasts like other commands.
  */
-function OpenInSlicerButton(): ReactElement | null {
+export function OpenInSlicerButton(): ReactElement | null {
   const { services } = useApp();
   const [busy, setBusy] = useState(false);
   if (!services.host.print) return null;
