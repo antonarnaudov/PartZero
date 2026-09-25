@@ -1,0 +1,82 @@
+forge/crates/forge-sketch/src/lib.rs
+  s_59c0dd2af30db2::t_da1fc2010706e5 78
+packages/app/test/sketch/controller.test.ts
+  s_59c0dd2af30db2::t_b16529353f0bc5 355-382
+forge/crates/forge-sketch/tests/session.rs
+  s_59c0dd2af30db2::t_bcec456fabcce1 30
+  s_59c0dd2af30db2::t_5e72efdc42ec5f 667,682
+  s_59c0dd2af30db2::t_d311c48b184d82 659-664,668-670,672,675
+  s_59c0dd2af30db2::t_f77d916779d521 665-666
+forge/crates/forge-sketch/tests/convert.rs
+  s_59c0dd2af30db2::t_ece0e0ef52b11c 1-20,22-23,35-64,66-128,130-136,138-155,157-162,171-235
+  s_59c0dd2af30db2::t_25837b5365a5ad 21,24-29,31-34
+  s_59c0dd2af30db2::t_aec6be2803cf6d 156,163-168,170
+  s_59c0dd2af30db2::t_0668d14fc4405b 30,65,129,137,169
+packages/app/src/sketch/engine-types.ts
+  s_59c0dd2af30db2::t_f852f651a3dcd8 165-167,176-177
+packages/app/src/sketch/controller.ts
+  s_59c0dd2af30db2::t_2012ca7b187dcc 326-329
+  s_59c0dd2af30db2::t_f3185a297ec984 354
+forge/crates/forge-sketch/src/convert.rs
+  s_59c0dd2af30db2::t_b80d29db62b7cd 218-220,222-228,230-231,233-239,241-245,247-258,260,265-268,270-277
+  s_59c0dd2af30db2::t_992a8836b1366d 1-11,15-98,100-217,221,232,261-264,278-305,307-311,313-344,346-376,383-388,390-401,403-407,409-428,430-441,443-447,449-479,481,483-508,510-521,523-547,549-553,555-589,591-595,597-613
+  s_59c0dd2af30db2::t_f00ed8e6d7491b 12-14
+  s_59c0dd2af30db2::t_fec2754f61471a 99
+  s_59c0dd2af30db2::t_2fae301d967674 229
+  s_59c0dd2af30db2::t_4a5099b144f784 240
+  s_59c0dd2af30db2::t_c3c0ff4cfc5e2c 246
+  s_59c0dd2af30db2::t_82fdd86936088a 259
+  s_59c0dd2af30db2::t_128d2081078242 269
+  s_59c0dd2af30db2::t_5c7ca3049d78fa 306
+  s_59c0dd2af30db2::t_6e522fa3eae1dc 312
+  s_59c0dd2af30db2::t_75f7eee0ab3e68 345
+  s_59c0dd2af30db2::t_1c99ed599eb23b 377-382
+  s_59c0dd2af30db2::t_4cb0eaf9d5d547 389
+  s_59c0dd2af30db2::t_9474e51f573edb 402
+  s_59c0dd2af30db2::t_def999ffdd3496 408
+  s_59c0dd2af30db2::t_7380b6d05ab71a 429
+  s_59c0dd2af30db2::t_a513c52c384e8e 442
+  s_59c0dd2af30db2::t_b1200d87fbd86e 448
+  s_59c0dd2af30db2::t_bfd2316747302a 480
+  s_59c0dd2af30db2::t_ed192d07af9421 482
+  s_59c0dd2af30db2::t_e415f498ce6140 509
+  s_59c0dd2af30db2::t_22169505c92192 522
+  s_59c0dd2af30db2::t_7eed98b764f734 548
+  s_59c0dd2af30db2::t_1b88d5a0807a57 554
+  s_59c0dd2af30db2::t_3e6c22911c3b0f 590
+  s_59c0dd2af30db2::t_d816784a179fae 596
+packages/forge-web/test/sketch.test.mjs
+  s_59c0dd2af30db2::t_a900e636f7e737 132,134,137-145
+  s_59c0dd2af30db2::t_bd25ae866be0bd 25-42
+packages/forge-web/src/types/sketch.ts
+  s_59c0dd2af30db2::t_f852f651a3dcd8 163-165,174-175
+packages/app/src/sketch/commit.ts
+  s_59c0dd2af30db2::t_93b0b8666b6c9e 34-39
+forge/crates/forge-sketch/src/session.rs
+  s_59c0dd2af30db2::t_52aa6156ed1c54 588
+  s_59c0dd2af30db2::t_da646fcf6a49c5 607
+  s_59c0dd2af30db2::t_1d1bd41e019808 542
+  s_59c0dd2af30db2::t_5d367a47b5c46b 878,882-884
+  s_59c0dd2af30db2::t_13bbfc8235ad3e 553-565
+  s_59c0dd2af30db2::t_ce298101e20c7d 420-422
+  s_59c0dd2af30db2::t_655ef60fd75ecb 437-451
+  s_59c0dd2af30db2::t_9013d4e33a2759 885-886
+forge/crates/forge-sketch/src/session_json.rs
+  s_59c0dd2af30db2::t_5c60352fa40794 209-211,218-226,231-234,245-248
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "12e56d11bcb1e7c486d0f406366977e096460451",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
