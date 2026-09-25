@@ -5,9 +5,9 @@
  * ┌ title bar: brand · file · undo · document · search · theme · settings ────────────────┐
  * ├ tool ribbon: Sketch · Create · Modify · Pattern · Inspect · Construct ··· Print ─────┤
  * │ left dock       │ viewport (+ welcome over an empty document)  │ right dock           │
- * │ Timeline, …     │                                              │ Properties·Code·Prop.│
- * │                 │                                              ├──────────────────────┤
- * │                 │                                              │ Assistant (chat)     │
+ * │ Browser,        │                                              │ Properties·Code·Prop.│
+ * │ Parameters      ├──────────────────────────────────────────────┼──────────────────────┤
+ * │                 │ timeline: ⏮◀▶⏭ ▢▢▢▢▢│▢▢ (the history strip)  │ Assistant (chat)     │
  * ├ Problems ──────────────────────────────────────────────────────────────────────────────┤
  * └ status bar ────────────────────────────────────────────────────────────────────────────┘
  * ```
@@ -25,6 +25,9 @@ import { ProblemsPanel } from "../ProblemsPanel";
 import { SettingsDialog } from "../SettingsDialog";
 import { SketchModeHost } from "../sketch/SketchModeHost";
 import { StatusBar } from "../StatusBar";
+import { ModelDialogs } from "../model/ModelDialogs";
+import { SketchUndoScope } from "../model/SketchUndoScope";
+import { TimelineBar } from "../model/TimelineBar";
 import { Viewport } from "../Viewport";
 import { useShell, useShellState, usePanels } from "./context";
 import { Dock } from "./Dock";
@@ -34,7 +37,7 @@ import { Welcome } from "./Welcome";
 
 type Sizes = { left: number; right: number; chat: number; problems: number };
 const SIZES_KEY = "aicad.layout";
-const DEFAULT_SIZES: Sizes = { left: 264, right: 420, chat: 280, problems: 112 };
+const DEFAULT_SIZES: Sizes = { left: 292, right: 420, chat: 280, problems: 112 };
 const LIMITS: Record<keyof Sizes, [number, number]> = { left: [180, 520], right: [320, 900], chat: [140, 700], problems: [60, 480] };
 
 function loadSizes(): Sizes {
@@ -147,13 +150,16 @@ export function AppShell(): ReactElement {
         )}
         {panels.left && <Splitter axis="x" label="Resize the model panel" onDrag={(d) => resize("left", d)} />}
         <main className="col-center">
-          <Viewport />
-          <SketchModeHost />
-          {welcome && (
-            <div className="welcome-layer">
-              <Welcome />
-            </div>
-          )}
+          <div className="center-stage">
+            <Viewport />
+            <SketchModeHost />
+            {welcome && (
+              <div className="welcome-layer">
+                <Welcome />
+              </div>
+            )}
+          </div>
+          {panels.timeline && <TimelineBar />}
         </main>
         {panels.right && <Splitter axis="x" label="Resize the side panel" onDrag={(d) => resize("right", -d)} />}
         {panels.right && (
@@ -177,6 +183,8 @@ export function AppShell(): ReactElement {
       {dialog === "settings" && <SettingsDialog />}
       {shellDialog === "shortcuts" && <ShortcutsDialog />}
       <FileLayer />
+      <ModelDialogs />
+      <SketchUndoScope />
       <Toasts />
     </div>
   );

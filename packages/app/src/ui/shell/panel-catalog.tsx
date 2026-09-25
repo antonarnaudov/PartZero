@@ -6,23 +6,13 @@
 import type { ReactElement } from "react";
 import { CodeEditor } from "../CodeEditor";
 import { useApp, useStore } from "../context";
-import { useProblems, useTimeline } from "../doc-hooks";
+import { useProblems } from "../doc-hooks";
+import { BrowserPanel } from "../model/BrowserPanel";
+import { ParametersPanel } from "../model/ParametersPanel";
 import { ProposalView } from "../ProposalView";
-import { ParametersPanel, Timeline } from "../Timeline";
 import { useShellState } from "./context";
 import type { PanelRegistry } from "./panels";
 import { PropertyPanel } from "./PropertyPanel";
-
-function TimelinePanel(): ReactElement {
-  const problems = useProblems();
-  const timeline = useTimeline(problems);
-  return (
-    <div className="dock-col">
-      <Timeline timeline={timeline} />
-      <ParametersPanel />
-    </div>
-  );
-}
 
 function PropertiesPanel(): ReactElement {
   const panel = useShellState((s) => s.panel);
@@ -53,7 +43,22 @@ function CodeHeader(): ReactElement {
 }
 
 export function registerBuiltinPanels(panels: PanelRegistry): void {
-  panels.register({ id: "timeline", title: "Timeline", icon: "Timeline", area: "left", order: 10, component: TimelinePanel });
+  // The timeline itself is the strip under the viewport (ui/model/TimelineBar.tsx), as in Fusion.
+  panels.register({ id: "browser", title: "Browser", icon: "Part", area: "left", order: 10, component: BrowserPanel });
+  panels.register({
+    id: "params",
+    title: "Parameters",
+    icon: "Params",
+    area: "left",
+    order: 20,
+    component: ParametersPanel,
+    badge: ({ services }) => {
+      const s = services.doc.getState();
+      if (s.format !== "ir-v1") return null;
+      const n = (services.ir?.getState().params ?? []).length;
+      return n > 0 ? String(n) : null;
+    },
+  });
   panels.register({
     id: "properties",
     title: "Properties",

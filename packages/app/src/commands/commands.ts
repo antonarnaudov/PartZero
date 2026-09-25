@@ -22,7 +22,8 @@ import { selectionChips } from "../selection/chips";
 import type { SelectionChip } from "../ui-store";
 import { VIEWPORT_COMMANDS } from "../viewport/registry";
 import { viewportRuntime } from "../viewport/runtime";
-import { IR_COMMANDS, originOf as irOriginOf, refuseAgentCaller, refuseAgentUndo, runOps } from "./ir-commands";
+import { undoScopes } from "../doc/undo-scope";
+import { IR_COMMANDS, isAgentCaller, originOf as irOriginOf, refuseAgentCaller, refuseAgentUndo, runOps } from "./ir-commands";
 import { CommandRegistry, defineCommand, type ExecuteMeta, type Invocation } from "./registry";
 
 const command = defineCommand<AppServices>();
@@ -30,7 +31,7 @@ const command = defineCommand<AppServices>();
 const NoArgs = z.strictObject({});
 const MeshFormatSchema = z.enum(["3mf", "stl", "obj"]);
 const ThemeSchema = z.enum(["dark", "light", "system"]);
-const PanelSchema = z.enum(["left", "right", "chat", "problems"]);
+const PanelSchema = z.enum(["left", "right", "chat", "problems", "timeline"]);
 const EngineSchema = z.enum(["auto", "forge-web", "forge-cli"]);
 /** API-key providers (keys are optional since ADR 0014). */
 const ProviderSchema = z.enum(["anthropic", "openai", "google", "openai-compat"]);
@@ -295,6 +296,13 @@ export const COMMANDS = {
     args: NoArgs,
     keys: ["Mod+Z"],
     run(_args, ctx, meta) {
+      // An open editing session with its own history (sketch mode) takes the user's Undo.
+      const scope = undoScopes.active;
+      if (scope && !isAgentCaller(meta)) {
+        if (!scope.canUndo) return { undone: false, label: null, scope: scope.id };
+        scope.undo();
+        return { undone: true, label: `${scope.label} edit`, scope: scope.id };
+      }
       if (ctx.doc.isV1) refuseAgentUndo(ctx, meta, "edit.undo");
       const label = ctx.doc.getState().history.undoLabel;
       return { undone: ctx.doc.undo(), label };
@@ -308,6 +316,12 @@ export const COMMANDS = {
     args: NoArgs,
     keys: ["Mod+Shift+Z", "Mod+Y"],
     run(_args, ctx, meta) {
+      const scope = undoScopes.active;
+      if (scope && !isAgentCaller(meta)) {
+        if (!scope.canRedo) return { redone: false, label: null, scope: scope.id };
+        scope.redo();
+        return { redone: true, label: `${scope.label} edit`, scope: scope.id };
+      }
       if (ctx.doc.isV1) refuseAgentUndo(ctx, meta, "edit.redo");
       const label = ctx.doc.getState().history.redoLabel;
       return { redone: ctx.doc.redo(), label };
@@ -503,7 +517,8 @@ export const COMMANDS = {
     category: "View",
     args: z.strictObject({ panel: PanelSchema, visible: z.boolean().optional() }),
     palette: [
-      { title: "View: Toggle Timeline", args: { panel: "left" } },
+      { title: "View: Toggle Browser & Parameters", args: { panel: "left" } },
+      { title: "View: Toggle Timeline", args: { panel: "timeline" } },
       { title: "View: Toggle Side Panel & Assistant", args: { panel: "right" } },
       { title: "View: Toggle Chat", args: { panel: "chat" } },
       { title: "View: Toggle Problems", args: { panel: "problems" } },
@@ -531,16 +546,31 @@ export const COMMANDS = {
     },
   }),
 
-  "view.toggleTimeline": command({
-    id: "view.toggleTimeline",
-    title: "Toggle Timeline",
+  "view.toggleBrowser": command({
+    id: "view.toggleBrowser",
+    title: "Toggle Browser",
     category: "View",
+    description: "Show or hide the left dock: the Browser (bodies, sketches, origin) and Parameters.",
     args: NoArgs,
     keys: ["Mod+B"],
     palette: false,
     run(_args, ctx) {
       const visible = !ctx.ui.getState().panels.left;
       ctx.ui.setPanel("left", visible);
+      return { visible };
+    },
+  }),
+
+  "view.toggleTimeline": command({
+    id: "view.toggleTimeline",
+    title: "Toggle Timeline",
+    category: "View",
+    description: "Show or hide the timeline under the viewport (the feature history).",
+    args: NoArgs,
+    palette: false,
+    run(_args, ctx) {
+      const visible = !ctx.ui.getState().panels.timeline;
+      ctx.ui.setPanel("timeline", visible);
       return { visible };
     },
   }),

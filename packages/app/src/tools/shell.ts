@@ -121,7 +121,7 @@ export class Shell extends Store<ShellState> {
       activeToolId: null,
       lastToolId: null,
       startingToolId: null,
-      leftTab: "timeline",
+      leftTab: "browser",
       rightTab: "code",
       welcome: "auto",
       dialog: null,

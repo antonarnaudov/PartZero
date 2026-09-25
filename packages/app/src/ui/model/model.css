@@ -1,0 +1,701 @@
+/* The model panels: timeline (bottom strip), browser, parameters, problems, their menus and dialogs.
+   Built on the tokens of ../styles.css; both themes redefine the few colours below. */
+
+:root,
+:root[data-theme="dark"] {
+  --ty-sketch: #f08a5d;
+  --ty-create: #6aa0ff;
+  --ty-modify: #3fbfae;
+  --ty-pattern: #b08cff;
+  --ty-construct: #e0b04f;
+  --ty-other: #9aa3af;
+  --ai: #b98cff;
+  --ai-weak: rgba(185, 140, 255, 0.16);
+  --marker: #f0b35a;
+  --ptl-h: 48px;
+}
+:root[data-theme="light"] {
+  --ty-sketch: #d4592b;
+  --ty-create: #2f6fed;
+  --ty-modify: #11897a;
+  --ty-pattern: #7a4fd6;
+  --ty-construct: #b07a12;
+  --ty-other: #6b7380;
+  --ai: #7d4ad6;
+  --ai-weak: rgba(125, 74, 214, 0.1);
+  --marker: #d98a1c;
+}
+
+.pz-sr {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ─── The centre column: viewport over the timeline ───────────────────────────────────────── */
+
+.pz-shell .col-center {
+  display: flex;
+  flex-direction: column;
+}
+.center-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ─── Timeline ─────────────────────────────────────────────────────────────────────────────── */
+
+.ptl {
+  flex: none;
+  height: var(--ptl-h);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 8px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-2);
+  position: relative;
+  z-index: 6;
+}
+.ptl.dragging,
+.ptl.dragging * {
+  cursor: grabbing !important;
+}
+.ptl-transport {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px;
+  border-radius: 7px;
+  background: var(--panel-3);
+  flex: none;
+}
+.ptl-tbtn {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.ptl-tbtn:hover:not(:disabled) {
+  background: var(--panel);
+  color: var(--text);
+}
+.ptl-tbtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.ptl-track {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 6px;
+  outline: none;
+  scrollbar-width: thin;
+}
+.ptl-track::-webkit-scrollbar {
+  height: 6px;
+}
+.ptl-track:focus-visible {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 6px;
+}
+.ptl-empty {
+  color: var(--text-faint);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.ptl-part {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 36px;
+  flex: none;
+}
+.ptl-part + .ptl-part {
+  padding-left: 10px;
+  border-left: 1px solid var(--border-strong);
+}
+.ptl-part-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-right: 4px;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ptl-chip {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  touch-action: none;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    opacity 160ms ease;
+}
+.ptl-chip:hover {
+  background: var(--panel-3);
+  border-color: var(--border-strong);
+}
+.ptl-chip.selected {
+  background: var(--accent-weak);
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.ptl-icon {
+  display: grid;
+  place-items: center;
+  color: var(--ty-other);
+}
+.ptl-icon.type-sketch {
+  color: var(--ty-sketch);
+}
+.ptl-icon.type-extrude,
+.ptl-icon.type-revolve {
+  color: var(--ty-create);
+}
+.ptl-icon.type-hole,
+.ptl-icon.type-fillet,
+.ptl-icon.type-chamfer,
+.ptl-icon.type-shell,
+.ptl-icon.type-draft,
+.ptl-icon.type-boolean {
+  color: var(--ty-modify);
+}
+.ptl-icon.type-pattern {
+  color: var(--ty-pattern);
+}
+.ptl-icon.type-datum_plane,
+.ptl-icon.type-datum_axis {
+  color: var(--ty-construct);
+}
+.ptl-chip.suppressed .ptl-icon {
+  opacity: 0.45;
+}
+.ptl-chip.suppressed::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  top: 50%;
+  height: 1.5px;
+  background: var(--text-muted);
+  transform: rotate(-35deg);
+  border-radius: 1px;
+}
+.ptl-chip.rolled-back {
+  opacity: 0.32;
+}
+.ptl-chip.rolled-back:hover {
+  opacity: 0.7;
+}
+.ptl-chip.drag-source {
+  opacity: 0.25;
+}
+.ptl-chip::before {
+  /* status bar under the icon */
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 2px;
+  background: transparent;
+}
+.ptl-chip.st-error::before {
+  background: var(--err);
+}
+.ptl-chip.st-warning::before {
+  background: var(--warn);
+}
+.ptl-flag {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--panel-2);
+}
+.ptl-flag.error {
+  background: var(--err);
+}
+.ptl-flag.warning {
+  background: var(--warn);
+}
+.ptl-ai {
+  position: absolute;
+  left: -3px;
+  top: -4px;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: var(--ai);
+  color: #fff;
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 12px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0 0 1.5px var(--panel-2);
+}
+.ptl-chip.agent {
+  border-color: color-mix(in srgb, var(--ai) 35%, transparent);
+  background: var(--ai-weak);
+}
+.ptl-draft {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 2px;
+  border-radius: 7px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 13px;
+  text-align: center;
+  color: #fff;
+  background: var(--accent);
+}
+.ptl-draft.kind-removed {
+  background: var(--err);
+}
+.ptl-chip.proposed {
+  border: 1px dashed color-mix(in srgb, var(--ai) 70%, transparent);
+  color: var(--ai);
+  font-weight: 700;
+  cursor: default;
+}
+
+/* The rollback marker: a flag on a line between chips. */
+.ptl-marker {
+  position: relative;
+  width: 12px;
+  height: 40px;
+  flex: none;
+  margin: 0 -2px;
+  cursor: ew-resize;
+  touch-action: none;
+  outline: none;
+}
+.ptl-marker-line {
+  position: absolute;
+  left: 5px;
+  top: 7px;
+  bottom: 1px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--text-faint);
+}
+.ptl-marker-flag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 12px;
+  height: 9px;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background: var(--text-muted);
+}
+.ptl-marker.rolled .ptl-marker-line,
+.ptl-marker.rolled .ptl-marker-flag,
+.ptl-marker.dragging .ptl-marker-line,
+.ptl-marker.dragging .ptl-marker-flag,
+.ptl-marker:hover .ptl-marker-line,
+.ptl-marker:hover .ptl-marker-flag,
+.ptl-marker:focus-visible .ptl-marker-line,
+.ptl-marker:focus-visible .ptl-marker-flag {
+  background: var(--marker);
+}
+
+/* Drop line while reordering. */
+.ptl-drop {
+  position: relative;
+  width: 0;
+  height: 36px;
+  flex: none;
+}
+.ptl-drop-line {
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--ok);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent);
+}
+.ptl-drop.invalid .ptl-drop-line {
+  background: var(--err);
+  box-shadow: 0 0 0 3px var(--err-weak);
+}
+.ptl-drop-reason {
+  position: fixed;
+  transform: translate(-50%, -46px);
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--err);
+  box-shadow: var(--shadow);
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.ptl-ghost {
+  position: fixed;
+  z-index: 60;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  margin: -34px 0 0 -15px;
+  border-radius: 7px;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  box-shadow: var(--shadow);
+  color: var(--accent-text);
+  pointer-events: none;
+}
+.ptl-ghost.invalid {
+  border-color: var(--err);
+  color: var(--err);
+}
+
+.ptl-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.ptl-count {
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.ptl-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 11px;
+  background: var(--panel);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  white-space: nowrap;
+}
+button.ptl-pill {
+  cursor: pointer;
+}
+button.ptl-pill:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+.ptl-pill.warn {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+}
+.ptl-pill.info {
+  color: var(--marker);
+  border-color: color-mix(in srgb, var(--marker) 45%, transparent);
+}
+.ptl-pill.agent {
+  color: var(--ai);
+  border-color: color-mix(in srgb, var(--ai) 40%, transparent);
+  background: var(--ai-weak);
+}
+.ptl-pill .err {
+  color: var(--err);
+}
+.ptl-pill .warn {
+  color: var(--warn);
+}
+
+/* Hover card */
+.ptl-card {
+  position: fixed;
+  z-index: 70;
+  width: 300px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  font-size: 11.5px;
+  pointer-events: none;
+  animation: pz-pop 110ms ease-out;
+}
+@keyframes pz-pop {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+.ptl-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ptl-card-icon {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--panel-3);
+  color: var(--ty-other);
+}
+.ptl-card-icon.type-sketch {
+  color: var(--ty-sketch);
+}
+.ptl-card-icon.type-extrude,
+.ptl-card-icon.type-revolve {
+  color: var(--ty-create);
+}
+.ptl-card-title {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+.ptl-card-title b {
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ptl-card-title .muted {
+  font-size: 10.5px;
+}
+.ptl-ai-tag {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--ai);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+.ptl-card-summary {
+  margin-top: 8px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.ptl-card-status {
+  margin-top: 6px;
+  color: var(--ok);
+  font-size: 11px;
+}
+.ptl-card-status.st-error {
+  color: var(--err);
+}
+.ptl-card-status.st-warning {
+  color: var(--warn);
+}
+.ptl-card-status.st-suppressed,
+.ptl-card-status.st-rolled-back,
+.ptl-card-status.st-pending {
+  color: var(--text-muted);
+}
+.ptl-card-issue {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--err-weak);
+  line-height: 1.4;
+}
+.ptl-card-issue.sev-warning {
+  background: var(--warn-weak);
+}
+.ptl-card-issue code {
+  font-size: 10.5px;
+  color: var(--err);
+}
+.ptl-card-issue.sev-warning code {
+  color: var(--warn);
+}
+.ptl-card-note {
+  margin-top: 6px;
+  color: var(--ai);
+  font-size: 11px;
+}
+.ptl-card-keys {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-size: 10.5px;
+}
+
+/* ─── Context menu ──────────────────────────────────────────────────────────────────────────── */
+
+.cm-menu {
+  position: fixed;
+  z-index: 90;
+  min-width: 200px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  animation: pz-pop 90ms ease-out;
+}
+.cm-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 8px 0 4px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.cm-item:hover:not(:disabled),
+.cm-item:focus-visible {
+  background: var(--accent-weak);
+  outline: none;
+}
+.cm-item:disabled {
+  color: var(--text-faint);
+  cursor: default;
+}
+.cm-item.danger {
+  color: var(--err);
+}
+.cm-check {
+  width: 14px;
+  flex: none;
+  text-align: center;
+  color: var(--accent-text);
+}
+.cm-label {
+  flex: 1;
+}
+.cm-hint {
+  font-size: 10px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+}
+.cm-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
+}
+
+/* ─── Dialogs ───────────────────────────────────────────────────────────────────────────────── */
+
+.dialog.pz-confirm {
+  width: min(440px, 92vw);
+}
+.pz-confirm-body {
+  padding: 12px 16px 4px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.pz-confirm-body p {
+  margin: 0 0 10px;
+}
+.pz-dep-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 4px;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel-2);
+}
+.pz-dep-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 6px;
+}
+.pz-dep-name {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.pz-confirm-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px 14px;
+}
+.pz-rename-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+}
+.pz-rename {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  animation: pz-pop 90ms ease-out;
+}
+.pz-rename-label {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+.pz-field {
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--field-bg, var(--panel-2));
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+  min-width: 0;
+}
+.pz-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-weak);
+}
+.pz-field.invalid {
+  border-color: var(--err);
+}

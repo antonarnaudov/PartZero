@@ -8,8 +8,11 @@ import type { PickResult } from "./engine/types";
 import { Store } from "./store";
 
 export type ThemePreference = "dark" | "light" | "system";
-/** `code`: the read-only code view (View ▸ Show Code), off by default: PartZero is not a code editor. */
-export type PanelId = "left" | "right" | "chat" | "problems" | "code";
+/**
+ * `left`: the Browser and Parameters dock. `timeline`: the history strip under the viewport.
+ * `code`: the read-only code view (View ▸ Show Code), off by default: PartZero is not a code editor.
+ */
+export type PanelId = "left" | "right" | "chat" | "problems" | "code" | "timeline";
 
 export interface SelectionChip {
   kind: "feature" | "face" | "edge" | "body";
@@ -39,7 +42,8 @@ export interface Toast {
   action?: { label: string; run: () => void };
 }
 
-export type DialogId = "palette" | "templates" | "about" | "settings" | null;
+/** `model`: a dialog of the model panels (delete with dependents, rename), `ui/model/actions.ts`. */
+export type DialogId = "palette" | "templates" | "about" | "settings" | "model" | null;
 
 export interface ViewportStatus {
   kind: "placeholder" | "forge-web" | "none";
@@ -92,7 +96,7 @@ function systemTheme(): "dark" | "light" {
   }
 }
 
-const DEFAULT_PANELS: Record<PanelId, boolean> = { left: true, right: true, chat: true, problems: true, code: false };
+const DEFAULT_PANELS: Record<PanelId, boolean> = { left: true, right: true, chat: true, problems: true, code: false, timeline: true };
 
 export const WELCOME_MESSAGE: ChatMessage = {
   id: "welcome",

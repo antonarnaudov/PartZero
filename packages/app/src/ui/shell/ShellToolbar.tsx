@@ -8,6 +8,7 @@ import type { AppInvocation } from "../../commands/commands";
 import { formatKey } from "../../commands/registry";
 import { useFilesState } from "../../file/ui/hooks";
 import { TOOL_GROUPS, type ToolDefinition, type ToolGroupInfo } from "../../tools/framework/types";
+import { undoScopes } from "../../doc/undo-scope";
 import { useApp, useStore } from "../context";
 import { Icon } from "../icons";
 import { OpenInSlicerButton } from "../Toolbar";
@@ -183,10 +184,16 @@ export function TitleBar(): ReactElement {
   const isCadScript = useStore(services.doc, (s) => /\.ts$/i.test(s.path ?? ""));
   // Reference meshes added or removed are unsaved changes too (they are not in the store).
   const refsDirty = useFilesState().extraDirty;
-  const canUndo = useStore(services.doc, (s) => s.history.canUndo);
-  const canRedo = useStore(services.doc, (s) => s.history.canRedo);
-  const undoLabel = useStore(services.doc, (s) => s.history.undoLabel);
-  const redoLabel = useStore(services.doc, (s) => s.history.redoLabel);
+  // Undo goes to an open editing session's own history (sketch mode) first, then the document's.
+  const scope = useStore(undoScopes, (s) => s.scope);
+  const docCanUndo = useStore(services.doc, (s) => s.history.canUndo);
+  const docCanRedo = useStore(services.doc, (s) => s.history.canRedo);
+  const docUndoLabel = useStore(services.doc, (s) => s.history.undoLabel);
+  const docRedoLabel = useStore(services.doc, (s) => s.history.redoLabel);
+  const canUndo = scope ? scope.canUndo : docCanUndo;
+  const canRedo = scope ? scope.canRedo : docCanRedo;
+  const undoLabel = scope ? `in ${scope.label}` : docUndoLabel;
+  const redoLabel = scope ? `in ${scope.label}` : docRedoLabel;
   const theme = useStore(services.ui, (s) => s.resolvedTheme);
   const platform = services.host.platform;
   return (
