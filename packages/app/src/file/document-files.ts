@@ -125,6 +125,33 @@ export function saveFormatOf(path: string): SaveFormat {
   return /\.json$/i.test(path) ? "ir-json" : "cadscript";
 }
 
+/** Error codes of this layer's own refusals (carried in {@link DocumentFilesError.code} and at the end of the message). */
+export type DocumentFilesErrorCode = "FILE_UNSAVABLE_CONTENT";
+
+export class DocumentFilesError extends Error {
+  readonly code: DocumentFilesErrorCode;
+  constructor(code: DocumentFilesErrorCode, message: string) {
+    super(`${message} [${code}]`);
+    this.name = "DocumentFilesError";
+    this.code = code;
+  }
+}
+
+/**
+ * Document content held by a store that this window's {@link DocumentAdapter} does not save: Phase C's IR v1 store
+ * (`services.ir`) until its own adapter replaces {@link DocStoreAdapter}. While a registered source has unsaved
+ * content, the window counts as unsaved (title marker, close and quit prompts, New/Open go to another window) and
+ * Save / Save As refuse with `FILE_UNSAVABLE_CONTENT` instead of writing a file without it. Autosave keeps covering
+ * what the adapter can write.
+ */
+export interface UnsavedContentSource {
+  /** What holds the content, for messages (e.g. `IR v1 model`). */
+  readonly label: string;
+  /** True while it holds changes the adapter would not write. */
+  hasUnsavedContent(): boolean;
+  subscribe(listener: () => void): () => void;
+}
+
 /** What a `.partzero` carries that this layer does not edit, kept from open to save. */
 interface Carry {
   annotations: Record<string, string>;
@@ -148,6 +175,8 @@ export class DocumentFiles extends Store<FilesState> {
   private hasSnapshot = false;
   private unsubscribers: Array<() => void> = [];
   private refSeq = 0;
+  private started = false;
+  private readonly contentSources: UnsavedContentSource[] = [];
   /** Saves run one after another, so they mark the document saved in the order their files were written. */
   private saving: Promise<unknown> = Promise.resolve();
 
@@ -170,6 +199,7 @@ export class DocumentFiles extends Store<FilesState> {
 
   /** Start tracking the document (title, autosave), then do what the window was opened for. */
   async start(): Promise<void> {
+    this.started = true;
     this.lastDocId = this.deps.adapter.info().docId;
     this.unsubscribers.push(this.deps.adapter.subscribe(() => this.onDocumentChange()));
     this.unsubscribers.push(this.subscribe(() => this.onDocumentChange()));
@@ -203,15 +233,44 @@ export class DocumentFiles extends Store<FilesState> {
     this.deps.host.windows?.saveFinished(e.requestId, saved);
   }
 
-  /** Unsaved changes: the store's, or references added or removed. */
-  isDirty(): boolean {
+  /**
+   * Protect `source`'s content (see {@link UnsavedContentSource}). Returns the unregister function. The integrator
+   * registers Phase C's IR v1 store here until an `IrDocumentAdapter` saves it.
+   */
+  registerContentSource(source: UnsavedContentSource): () => void {
+    this.contentSources.push(source);
+    const unsubscribe = source.subscribe(() => {
+      if (this.started) this.onDocumentChange();
+    });
+    this.unsubscribers.push(unsubscribe);
+    if (this.started) this.onDocumentChange();
+    return () => {
+      const i = this.contentSources.indexOf(source);
+      if (i >= 0) this.contentSources.splice(i, 1);
+      unsubscribe();
+      if (this.started) this.onDocumentChange();
+    };
+  }
+
+  /** Labels of the registered sources holding content this layer cannot save. */
+  unsavableContent(): string[] {
+    return this.contentSources.filter((c) => c.hasUnsavedContent()).map((c) => c.label);
+  }
+
+  /** Unsaved changes this layer can write: the store's, or references added or removed. */
+  private writableDirty(): boolean {
     return this.deps.adapter.info().dirty || this.getState().extraDirty;
+  }
+
+  /** Unsaved changes: the store's, references added or removed, or content of a registered source. */
+  isDirty(): boolean {
+    return this.writableDirty() || this.unsavableContent().length > 0;
   }
 
   /** Untitled and unchanged: another document may replace it without asking. */
   isPristine(): boolean {
     const i = this.deps.adapter.info();
-    return i.path === null && !i.dirty && !this.getState().extraDirty && this.getState().references.length === 0;
+    return i.path === null && !this.isDirty() && this.getState().references.length === 0;
   }
 
   private onDocumentChange(): void {
@@ -225,7 +284,7 @@ export class DocumentFiles extends Store<FilesState> {
         return; // setState re-enters
       }
     }
-    const dirty = info.dirty || this.getState().extraDirty;
+    const dirty = this.isDirty();
     const state: DocumentStateMessage = { title: info.name, path: info.path, dirty };
     const key = `${state.title}\u0000${state.path ?? ""}\u0000${dirty}`;
     // Always re-sent after the store's own push (bootstrap), which does not know about references.
@@ -239,7 +298,7 @@ export class DocumentFiles extends Store<FilesState> {
       this.lastInfo = infoKey;
       this.deps.host.windows?.setDocInfo(docInfo);
     }
-    this.scheduleAutosave(dirty, info.revision);
+    this.scheduleAutosave(this.writableDirty(), info.revision);
   }
 
   // ─── Autosave and recovery ─────────────────────────────────────────────────────────────────
@@ -274,7 +333,7 @@ export class DocumentFiles extends Store<FilesState> {
   /** Write this window's autosave now (the timer does it after edits; tests and quitting call it directly). */
   async flushRecovery(): Promise<{ written: boolean }> {
     const rec = this.deps.host.recovery;
-    if (!rec || !this.isDirty()) return { written: false };
+    if (!rec || !this.writableDirty()) return { written: false };
     const info = this.deps.adapter.info();
     this.autosaveFirstPending = null;
     try {
@@ -283,7 +342,7 @@ export class DocumentFiles extends Store<FilesState> {
       await rec.write({ id, title: info.name, path: info.path, data: bytes });
       // The key of what was captured, not of what the store holds now: edits made while writing still get autosaved.
       this.snapshotKey = this.changeKey(capture.revision, references);
-      if (!this.isDirty()) {
+      if (!this.writableDirty()) {
         // Saved while this snapshot was being written: it would only offer the saved file back after the next crash.
         this.hasSnapshot = false;
         this.snapshotKey = null;
@@ -534,6 +593,13 @@ export class DocumentFiles extends Store<FilesState> {
   }
 
   private async saveNow(path: string): Promise<{ saved: true; path: string; format: SaveFormat; bytes: number; upToDate: boolean }> {
+    const unsavable = this.unsavableContent();
+    if (unsavable.length > 0) {
+      throw new DocumentFilesError(
+        "FILE_UNSAVABLE_CONTENT",
+        `Cannot save “${this.deps.adapter.info().name}”: the ${unsavable.join(" and ")} has changes this build cannot write to a file yet, so the file would silently lose them`,
+      );
+    }
     const format = saveFormatOf(path);
     const name = documentName(path);
     let written: number;

@@ -3,13 +3,15 @@
  * open round trips, the plain formats, autosave and restore, one document per window, reference meshes, exports,
  * the close prompt's save, and the `file.*` commands through the registry.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { DocumentStateMessage, FilesBridge, FilesEvent, OpenDialogOptions, RecentDocument, RecoveryEntry, SaveDialogOptions, WindowDocInfo, WindowStartup } from "../src/bridge";
 import { COMMANDS } from "../src/commands/commands";
 import { DocStoreAdapter, documentName } from "../src/file/adapter";
-import { DocumentFiles } from "../src/file/document-files";
+import { DocumentFiles, DocumentFilesError } from "../src/file/document-files";
 import type { FileHost } from "../src/file/host";
-import { documentFiles, installDocumentFiles, replaceCommands } from "../src/file/install";
+import { documentFiles, failClosedSource, installDocumentFiles, replaceCommands, unprotectedDocumentStores } from "../src/file/install";
+import type { AppServices } from "../src/services";
+import { Store } from "../src/store";
 import { writeBinaryStl, type TriangleMesh } from "../src/file/mesh";
 import { decodePartZero, ENTRY, readZip, writeZip } from "../src/file/partzero";
 import { BOX, makeHarness, type Harness } from "./helpers";
@@ -712,5 +714,93 @@ describe("edits made while a save is in flight", () => {
     expect(await flushing).toEqual({ written: false });
     expect(rec.entries.has("window-0001")).toBe(false);
     files.dispose();
+  });
+});
+
+class ChangingStore extends Store<{ n: number }> {
+  constructor() {
+    super({ n: 0 });
+  }
+  bump(): void {
+    this.setState((s) => ({ n: s.n + 1 }));
+  }
+}
+
+describe("content the adapter does not save (IR v1 until its adapter lands)", () => {
+  it("keeps the window unsaved, and Save refuses with FILE_UNSAVABLE_CONTENT instead of writing a file without it", async () => {
+    const { host, files, states } = await setup();
+    let unsaved = false;
+    const store = new ChangingStore();
+    const unregister = files.registerContentSource({ label: "IR v1 model", hasUnsavedContent: () => unsaved, subscribe: (l) => store.subscribe(l) });
+    expect(files.isDirty()).toBe(false);
+    unsaved = true;
+    store.bump();
+    expect(files.isDirty()).toBe(true);
+    expect(files.isPristine()).toBe(false);
+    expect(files.unsavableContent()).toEqual(["IR v1 model"]);
+    expect(states.at(-1)?.dirty).toBe(true);
+    expect(host.windows!.info?.pristine).toBe(false);
+
+    const refused = files.saveAs("/w/v1.partzero");
+    await expect(refused).rejects.toBeInstanceOf(DocumentFilesError);
+    await expect(files.saveAs("/w/v1.partzero")).rejects.toMatchObject({ code: "FILE_UNSAVABLE_CONTENT" });
+    await expect(files.saveAs("/w/v1.cad.ts")).rejects.toThrow(/the IR v1 model has changes this build cannot write .*\[FILE_UNSAVABLE_CONTENT\]$/);
+    expect([...host.files.keys()]).toEqual([]);
+    // The close prompt's Save reports "not saved", so the window stays open.
+    host.emit({ type: "saveBeforeClose", requestId: "save-9" });
+    await tick(20);
+    expect(host.windows!.saved).toEqual([["save-9", false]]);
+    // Autosave covers only what the adapter writes, and that did not change.
+    expect(await files.flushRecovery()).toEqual({ written: false });
+
+    unregister();
+    expect(files.isDirty()).toBe(false);
+    expect(states.at(-1)?.dirty).toBe(false);
+    expect(await files.saveAs("/w/v0.partzero")).toMatchObject({ saved: true });
+  });
+
+  it("install guards a document store it cannot save: saves work until the store changes, then refuse", async () => {
+    const h = await makeHarness({ source: BOX });
+    const ir = new ChangingStore();
+    const services = { ...h.services, ir } as AppServices;
+    const errors: string[] = [];
+    const spy = vi.spyOn(console, "error").mockImplementation((...a: unknown[]) => void errors.push(a.join(" ")));
+    try {
+      const files = installDocumentFiles({ services, commands: h.commands }, { host: new MemoryFileHost() as unknown as FileHost, autosaveDelayMs: 0 });
+      expect(errors.join("\n")).toMatch(/services\.ir \(IR v1 model\) is neither saved nor guarded/);
+      expect(await files.saveAs("/w/before.partzero")).toMatchObject({ saved: true });
+      ir.bump();
+      expect(files.isDirty()).toBe(true);
+      const r = await h.commands.executeUnknown({ id: "file.saveAs", args: { path: "/w/after.partzero" } });
+      expect(r).toMatchObject({ ok: false });
+      expect(JSON.stringify(r)).toMatch(/FILE_UNSAVABLE_CONTENT/);
+      files.dispose();
+
+      // Declared protected (its adapter or guard is wired): no stopgap.
+      errors.length = 0;
+      const wired = installDocumentFiles({ services, commands: h.commands }, { host: new MemoryFileHost() as unknown as FileHost, autosaveDelayMs: 0, protects: ["ir"] });
+      ir.bump();
+      expect(errors).toEqual([]);
+      expect(wired.isDirty()).toBe(false);
+      wired.dispose();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("the stopgap guard fails closed for a store it cannot watch", () => {
+    expect(failClosedSource("IR v1 model", {}).hasUnsavedContent()).toBe(true);
+    expect(unprotectedDocumentStores({ doc: 1, ir: 2 }, [])).toEqual(["ir"]);
+    expect(unprotectedDocumentStores({ doc: 1, ir: 2 }, ["ir"])).toEqual([]);
+  });
+
+  it("every document store in AppServices is saved or guarded (merge gate for Phase C's services.ir)", async () => {
+    const h = await makeHarness({ source: BOX });
+    expect(
+      unprotectedDocumentStores(h.services, []),
+      "AppServices has an IR v1 store but main.tsx installs the document layer with DocStoreAdapter (IR v0 only). Wire an IrDocumentAdapter " +
+        "(installDocumentFiles options: adapter + protects: ['ir']) or a real UnsavedContentSource (contentSources + protects), then pass the same " +
+        "protects here. See packages/app/src/file/install.ts.",
+    ).toEqual([]);
   });
 });
