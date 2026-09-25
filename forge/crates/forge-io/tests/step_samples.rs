@@ -60,7 +60,7 @@ fn a_sphere_gets_a_pole_to_pole_seam() {
 #[test]
 fn the_cylinder_file_matches_its_golden_bytes() {
     let (text, _) = export("cylinder", &samples::cylinder(10.0, 30.0));
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/cylinder.step");
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/cylinder.p21");
     if std::env::var_os("STEP_GOLDEN_UPDATE").is_some() {
         std::fs::create_dir_all(path.parent().expect("dir")).expect("mkdir");
         std::fs::write(&path, &text).expect("write golden");
