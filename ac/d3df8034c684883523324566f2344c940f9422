@@ -1,0 +1,24 @@
+packages/app/src/ui/sketch/SketchModeHost.tsx
+  s_59c0dd2af30db2::t_8b7f1e1dd44823 114
+  s_59c0dd2af30db2::t_88d1f43abc8ab2 111
+  s_59c0dd2af30db2::t_6369a1a3503eb8 104
+  s_59c0dd2af30db2::t_78fba30a657557 22
+packages/app/src/ui/sketch/tool-icons.tsx
+  s_59c0dd2af30db2::t_918c7255c7f492 1-141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "acd3df8034c684883523324566f2344c940f9422",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
