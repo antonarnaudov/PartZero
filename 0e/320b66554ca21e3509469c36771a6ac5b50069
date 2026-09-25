@@ -1,0 +1,55 @@
+forge/crates/forge-io/src/step/geometry.rs
+  s_59c0dd2af30db2::t_9015b2d97f1495 230-243
+  s_59c0dd2af30db2::t_506ced04d48612 33
+  s_59c0dd2af30db2::t_93e3009205f4df 227-229,244-314,377,478-511
+forge/crates/forge-io/tests/common/step_corpus.rs
+  s_59c0dd2af30db2::t_4d489ca2b2be37 15-18,51,56,64,254,256,261-268
+  s_59c0dd2af30db2::t_59c3e7480cdf93 198-208,215-243
+  s_59c0dd2af30db2::t_e9dcee37a5fd2c 1-14,19-50,52-55,57-63,65-78
+  s_59c0dd2af30db2::t_22ddf07b4a9d9b 85-88,99-100,114
+  s_59c0dd2af30db2::t_4ff37cdba1d813 79-84,89-98,101-113,115-197,209-214,244-253,255,257-260,269-270
+forge/crates/forge-io/src/step/brep.rs
+  s_59c0dd2af30db2::t_6971604ec0ed00 67-69,1380,1393,1481
+  s_59c0dd2af30db2::t_74905b379e2255 799-803,823,826,832-839
+  s_59c0dd2af30db2::t_4933341b3785c1 840,1780-1803,1807
+  s_59c0dd2af30db2::t_f53ed4e600ee6a 32,47-49,111-115,289,336,368-374,1038-1041,1078,1101-1102,1126,1133,1664,1778-1779,1804-1806,1808-1812
+forge/crates/forge-io/examples/step_corpus.rs
+  s_59c0dd2af30db2::t_10f4f85aee3fe7 1-33,35,46-47,52-115
+  s_59c0dd2af30db2::t_3cf87fdafe5f62 34,36-39
+  s_59c0dd2af30db2::t_4d489ca2b2be37 40-45,48-51
+forge/crates/forge-io/tests/step_samples.rs
+  s_59c0dd2af30db2::t_d664c73c2ef0a7 192-193,195-197
+  s_59c0dd2af30db2::t_581093152384d4 1-2,5-7,57-191,194,198-228
+forge/crates/forge-io/src/step/verify.rs
+  s_59c0dd2af30db2::t_4933341b3785c1 641-645
+  s_59c0dd2af30db2::t_a88e673a7aa37f 630-640
+forge/crates/forge-io/src/step/mod.rs
+  s_59c0dd2af30db2::t_9015b2d97f1495 537
+  s_59c0dd2af30db2::t_ae51e8b39b4251 533-536,538-542,571-574
+forge/crates/forge-io/tests/step_corpus.rs
+  s_59c0dd2af30db2::t_594cd72fba604a 3-6
+  s_59c0dd2af30db2::t_192dcf3b26f038 1-2,7-11,13-68,78-96
+  s_59c0dd2af30db2::t_3cf87fdafe5f62 12,69-77
+forge/crates/forge-io/Cargo.toml
+  s_59c0dd2af30db2::t_edc641d46dba09 19-24
+forge/Cargo.lock
+  s_59c0dd2af30db2::t_16f1f5ad695bc9 363,365,367,370
+forge/crates/forge-io/src/step/p21.rs
+  s_59c0dd2af30db2::t_f65365c3b163c1 243,292-309
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0e320b66554ca21e3509469c36771a6ac5b50069",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
