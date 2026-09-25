@@ -62,6 +62,7 @@ mod geometry;
 mod orient;
 mod p21;
 pub mod parse;
+mod threads;
 mod verify;
 
 pub use verify::{SolidSummary, StepSummary, verify_step};
@@ -104,8 +105,7 @@ pub enum StepError {
         /// Why.
         detail: String,
     },
-    /// A body carries geometry STEP export cannot write yet (modelled-thread helicoids
-    /// and helices before their B-spline conversion exists).
+    /// A body's modelled-thread geometry could not be converted to B-splines.
     #[error("body {body:?}: {detail}")]
     UnsupportedGeometry {
         /// The body's name.
@@ -290,23 +290,32 @@ pub fn write_step(
             });
         }
     }
-    for b in bodies {
-        let threaded = b
-            .body
-            .faces()
-            .values()
-            .any(|f| matches!(f.surface, forge_core::geom::Surface::Helicoid(_)))
-            || b.body
-                .edges()
-                .values()
-                .any(|e| matches!(e.curve, forge_core::geom::Curve3::Helix(_)));
-        if threaded {
-            return Err(StepError::UnsupportedGeometry {
-                body: b.name.to_string(),
-                detail: "modelled threads (helicoid faces, helix edges) are not written yet".into(),
-            });
-        }
-    }
+    // Modelled threads have no STEP entity: certified B-splines stand in (`threads`).
+    let converted: Vec<Option<Body>> = bodies
+        .iter()
+        .map(|b| {
+            if threads::has_threads(b.body) {
+                threads::to_bsplines(b.body).map(Some).map_err(|detail| {
+                    StepError::UnsupportedGeometry {
+                        body: b.name.to_string(),
+                        detail,
+                    }
+                })
+            } else {
+                Ok(None)
+            }
+        })
+        .collect::<Result<_, _>>()?;
+    let bodies: Vec<StepBody<'_>> = bodies
+        .iter()
+        .zip(&converted)
+        .map(|(b, c)| StepBody {
+            name: b.name,
+            body: c.as_ref().unwrap_or(b.body),
+            color: b.color,
+        })
+        .collect();
+    let bodies = bodies.as_slice();
     let topos: Vec<brep::Topo> = bodies
         .iter()
         .map(|b| brep::build(b.body, b.name))

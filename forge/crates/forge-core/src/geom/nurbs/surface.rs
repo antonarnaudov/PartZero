@@ -344,6 +344,18 @@ impl NurbsSurface {
         (best.0, best.1, best.2.sqrt())
     }
 
+    /// The local foot of `p` from the parameters `near` (damped Newton within the domain):
+    /// `(u, v, distance)`. A local search: a caller that walks along a curve on the surface
+    /// passes the previous foot and falls back to [`Self::project`] when the distance is not
+    /// small (Newton may stop at a local minimum of a far sheet).
+    pub fn project_near(&self, p: Point3, near: (f64, f64)) -> (f64, f64, f64) {
+        let ((u0, u1), (v0, v1)) = self.domain();
+        let (u, v) = (near.0.clamp(u0, u1), near.1.clamp(v0, v1));
+        let d = self.eval(u, v).distance_squared(p);
+        let (u, v, d) = self.newton_refine(p, (u, v, d), (u0, u1), (v0, v1));
+        (u, v, d.sqrt())
+    }
+
     fn newton_refine(
         &self,
         p: Point3,

@@ -292,6 +292,25 @@ impl Helix3 {
         let pieces = ((span / (math::PI / 8.0)).ceil() as usize).max(1);
         quadrature::integrate(|t| self.derivs2(t)[1].norm(), lo, hi, pieces)
     }
+    /// A degree-5 B-spline within `eps` (mm) of the curve over `[t0, t1]`, sharing its
+    /// parameter (`|B(t) − C(t)| ≤ eps` for every `t`): quintic Hermite interpolation
+    /// (module `hermite`), with `|C⁽⁶⁾| ≤ max|ρ| + 6|a|` (the axial part is linear, hence
+    /// exact). For exchange formats without helices (STEP).
+    pub fn to_nurbs(
+        &self,
+        t0: f64,
+        t1: f64,
+        eps: f64,
+    ) -> Result<super::nurbs::NurbsCurve3, GeomError> {
+        let rho = self.radius_at(t0).abs().max(self.radius_at(t1).abs());
+        // Vector bound, times √3 for the component-wise Hermite bound.
+        let m6 = (rho + 6.0 * self.radius_rate.abs()) * math::sqrt(3.0);
+        let breaks = super::hermite::hermite_breaks(t0, t1, m6, eps);
+        Ok(super::hermite::quintic_hermite::<3>(&breaks, |t| {
+            let [p, d1, d2] = self.derivs2(t);
+            [p.to_array(), d1.to_array(), d2.to_array()]
+        })?)
+    }
     /// The curve moved by a rigid transform.
     pub fn transformed(&self, t: &Transform) -> Self {
         Self {
@@ -530,6 +549,29 @@ mod tests {
             acc += s.eval(a).distance(s.eval(b));
         }
         assert!((s.arc_length(0.0, 10.0) - acc).abs() < 1e-6);
+    }
+
+    #[test]
+    fn to_nurbs_stays_within_the_bound_on_its_own_parametrization() {
+        let eps = 1e-7;
+        for h in [
+            Helix3::new(tilted(), 4.0, 0.0, 1.25 / math::TAU).unwrap(),
+            Helix3::new(tilted(), 3.0, -0.05, 0.2).unwrap(),
+            Helix3::new(tilted(), 6.35, 0.0, -1.27 / math::TAU).unwrap(),
+            Helix3::new(tilted(), 2.0, 0.1, 0.0).unwrap(),
+        ] {
+            let (t0, t1) = (-1.3, 3.0 * math::TAU + 0.4);
+            let n = h.to_nurbs(t0, t1, eps).expect("nurbs");
+            assert_eq!(n.domain(), (t0, t1));
+            let mut worst: f64 = 0.0;
+            for k in 0..=4000 {
+                let t = t0 + (t1 - t0) * f64::from(k) / 4000.0;
+                worst = worst.max(n.eval(t).distance(h.eval(t)));
+            }
+            assert!(worst <= eps, "{h:?}: {worst:e}");
+            // Not wastefully fine: within three decades of the bound.
+            assert!(worst > eps * 1e-3, "{h:?}: {worst:e}");
+        }
     }
 
     #[test]

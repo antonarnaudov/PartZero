@@ -386,6 +386,50 @@ impl Helicoid {
         Ok(out)
     }
 
+    /// A B-spline surface within `eps` (mm) of the helicoid over `u_range × v_range`, sharing
+    /// its parametrization (`|B(u, v) − S(u, v)| ≤ eps`): degree 5 in `u`, 1 in `v`
+    /// (`S` is linear in `v`). `S = o + v·E(u) + (p·u + k·v)·z` with `E(u) = (cos u, sin u)`
+    /// approximated by quintic Hermite pieces within `eps / max|v|` (module `hermite`); the
+    /// linear `p·u` is exact. For exchange formats without helicoids (STEP).
+    pub fn to_nurbs(
+        &self,
+        u_range: (f64, f64),
+        v_range: (f64, f64),
+        eps: f64,
+    ) -> Result<crate::geom::NurbsSurface, GeomError> {
+        let vmax = v_range.0.abs().max(v_range.1.abs()).max(1e-300);
+        // (cos, sin, u): the sixth derivative of (cos, sin) has norm 1, u is exact; √2 for
+        // the component-wise Hermite bound.
+        let breaks =
+            crate::geom::hermite::hermite_breaks(u_range.0, u_range.1, math::sqrt(2.0), eps / vmax);
+        let e = crate::geom::hermite::quintic_hermite::<3>(&breaks, |u| {
+            let (s, c) = math::sin_cos(u);
+            [[c, s, u], [-s, c, 1.0], [-c, -s, 0.0]]
+        })?;
+        let (v0, v1) = v_range;
+        let mut pts = Vec::with_capacity(2 * e.control_points().len());
+        for q in e.control_points() {
+            for v in [v0, v1] {
+                pts.push(self.frame.eval_point(Vec3::new(
+                    v * q[0],
+                    v * q[1],
+                    self.rise * q[2] + self.slope * v,
+                )));
+            }
+        }
+        let n_u = e.control_points().len();
+        Ok(crate::geom::NurbsSurface::new(
+            5,
+            1,
+            e.knots().to_vec(),
+            vec![v0, v0, v1, v1],
+            n_u,
+            2,
+            pts,
+            None,
+        )?)
+    }
+
     /// The surface moved by a rigid transform (parametrization preserved).
     pub fn transformed(&self, t: &Transform) -> Self {
         Self {
@@ -535,6 +579,24 @@ mod tests {
         assert!(some.len() < all.len());
         assert!(some.iter().all(|x| x.u >= -1e-9 && x.u <= 20.0 + 1e-9));
         assert_eq!(some.len(), 4, "{some:?}"); // sheets u = 0, 2π, 4π, 6π
+    }
+
+    #[test]
+    fn to_nurbs_stays_within_the_bound_on_its_own_parametrization() {
+        let eps = 1e-7;
+        let h = flank();
+        let (u, v) = ((-2.0, 5.0 * math::TAU + 1.0), (3.2, 4.0));
+        let n = h.to_nurbs(u, v, eps).expect("nurbs");
+        assert_eq!(n.domain(), (u, v));
+        let mut worst: f64 = 0.0;
+        for i in 0..=2000 {
+            let uu = u.0 + (u.1 - u.0) * f64::from(i) / 2000.0;
+            for j in 0..=4 {
+                let vv = v.0 + (v.1 - v.0) * f64::from(j) / 4.0;
+                worst = worst.max(n.eval(uu, vv).distance(h.eval(uu, vv)));
+            }
+        }
+        assert!(worst <= eps && worst > eps * 1e-3, "{worst:e}");
     }
 
     #[test]

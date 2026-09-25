@@ -27,6 +27,7 @@ mod curve3;
 mod ellipse_proj;
 mod error;
 mod helix;
+pub(crate) mod hermite;
 pub mod nurbs;
 pub mod quadrature;
 mod surface;

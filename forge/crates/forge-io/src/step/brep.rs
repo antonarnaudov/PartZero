@@ -239,6 +239,31 @@ struct Cross {
     other: f64,
 }
 
+/// The crossings of one seam line with every loop (`all[i]` for loop `i`, `other` the
+/// parameter along the line): the segment inside the face that joins winding loops `a` and
+/// `b`, as `[crossing on a, crossing on b]`. The line starts outside the face (a band is
+/// bounded along it), so sorted by `other` its crossings alternate entering and leaving:
+/// segments `(0, 1)`, `(2, 3)`, … are inside. The lowest such segment whose ends lie on `a`
+/// and `b` (one each) is the seam: cutting a band along a segment that joins its two
+/// boundary loops leaves one disc. `None` when no segment does, or when two crossings
+/// coincide.
+fn band_segment(all: &[Vec<Cross>], a: usize, b: usize) -> Option<[Cross; 2]> {
+    let mut xs: Vec<(f64, usize, Cross)> = all
+        .iter()
+        .enumerate()
+        .flat_map(|(i, cr)| cr.iter().map(move |x| (x.other, i, *x)))
+        .collect();
+    xs.sort_by(|p, q| p.0.total_cmp(&q.0).then(p.1.cmp(&q.1)));
+    if xs.windows(2).any(|w| w[0].0.to_bits() == w[1].0.to_bits()) || !xs.len().is_multiple_of(2) {
+        return None;
+    }
+    xs.chunks_exact(2).find_map(|w| match (w[0].1, w[1].1) {
+        (i, j) if i == a && j == b => Some([w[0].2, w[1].2]),
+        (i, j) if i == b && j == a => Some([w[1].2, w[0].2]),
+        _ => None,
+    })
+}
+
 /// A seam end.
 #[derive(Clone, Copy, Debug)]
 enum SeamEnd {
@@ -956,40 +981,52 @@ impl<'a> Builder<'a> {
     }
 
     /// The best seam position: every winding loop crossed exactly once, no other loop
-    /// crossed; fewest edge splits, then the earliest candidate.
+    /// crossed; fewest edge splits, then the earliest candidate. With `segment` (a band
+    /// between two winding loops), a line that crosses the loops more often is accepted when
+    /// one of its segments inside the face joins the two winding loops ([`band_segment`]):
+    /// the seam is that segment (a modelled thread's crest winds between its grooves, so no
+    /// line across it meets each loop once).
     fn choose(
         &self,
         ch: &Chart<'_>,
         loops: &[LoopInfo],
         wind: &[usize],
         along_u: bool,
+        segment: bool,
     ) -> Option<(f64, Vec<Cross>)> {
         let mut best: Option<(usize, f64, Vec<Cross>)> = None;
         'cand: for c in self.candidates(loops, wind, along_u) {
-            let mut crosses = Vec::with_capacity(wind.len());
-            let mut cost = 0usize;
-            for (i, li) in loops.iter().enumerate() {
+            let mut all: Vec<Vec<Cross>> = Vec::with_capacity(loops.len());
+            for li in loops {
                 let Some(cr) = self.crossings(ch, li, c, along_u) else {
                     continue 'cand;
                 };
-                if wind.contains(&i) {
-                    if cr.len() != 1 {
-                        continue 'cand;
-                    }
-                    let x = cr[0];
-                    if x.at.is_none() {
-                        let eid = li.edges[x.coedge];
-                        let ring_free = self.body.edge(eid).is_some_and(|e| {
-                            e.is_ring() && self.pts.get(&eid).is_none_or(Vec::is_empty)
-                        });
-                        if !ring_free {
-                            cost += 1;
-                        }
-                    }
-                    crosses.push(x);
-                } else if !cr.is_empty() {
-                    continue 'cand;
+                all.push(cr);
+            }
+            let simple = (0..loops.len()).all(|i| all[i].len() == usize::from(wind.contains(&i)));
+            let chosen: Vec<Cross> = if simple {
+                wind.iter().map(|&i| all[i][0]).collect()
+            } else if segment && wind.len() == 2 {
+                match band_segment(&all, wind[0], wind[1]) {
+                    Some(x) => x.to_vec(),
+                    None => continue 'cand,
                 }
+            } else {
+                continue 'cand;
+            };
+            let mut crosses = Vec::with_capacity(wind.len());
+            let mut cost = 0usize;
+            for (&i, x) in wind.iter().zip(chosen) {
+                if x.at.is_none() {
+                    let eid = loops[i].edges[x.coedge];
+                    let ring_free = self.body.edge(eid).is_some_and(|e| {
+                        e.is_ring() && self.pts.get(&eid).is_none_or(Vec::is_empty)
+                    });
+                    if !ring_free {
+                        cost += 1;
+                    }
+                }
+                crosses.push(x);
             }
             if best.as_ref().is_none_or(|(bc, _, _)| cost < *bc) {
                 let done = cost == 0;
@@ -1078,7 +1115,7 @@ impl<'a> Builder<'a> {
                 return Err(self.seam_err(fid, "a torus face needs exactly two winding loops"));
             }
             let (c, xs) = self
-                .choose(&ch, &loops, &wind, along_u)
+                .choose(&ch, &loops, &wind, along_u, false)
                 .ok_or_else(|| self.seam_err(fid, "no seam position avoids the face's holes"))?;
             // Lower = the loop the face lies after, going along the seam direction.
             let w_of = |i: usize| (if along_u { loops[i].wu } else { -loops[i].wv }) * sign;
@@ -1128,7 +1165,7 @@ impl<'a> Builder<'a> {
             return Ok(());
         }
         let (c, xs) = self
-            .choose(&ch, &loops, &wind_u, true)
+            .choose(&ch, &loops, &wind_u, true, true)
             .ok_or_else(|| self.seam_err(fid, "no seam position avoids the face's holes"))?;
         let curve = self.band_seam(fid, surface, c)?;
         self.u_origin.insert(fid, c);

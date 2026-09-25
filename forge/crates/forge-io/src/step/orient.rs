@@ -125,12 +125,30 @@ struct Ctx<'a> {
     u_knots: Vec<f64>,
     /// `|S_u|` at or below which a vertex is a singular point of a periodic `u`.
     singular: f64,
+    /// A local projection from the previous sample is kept when its foot is this close (the
+    /// file's distance tolerance): the edges lie on their faces within it.
+    near: f64,
 }
 
 impl Ctx<'_> {
     fn project(&self, p: Point3) -> Uv {
         let (u, v, _) = self.s.project(p);
         Uv { u, v }
+    }
+
+    /// [`Self::project`] for a point next to the sample `from` along a curve: on a B-spline
+    /// surface a local Newton step from `from` (a global search samples every knot span, the
+    /// cost of long thread flanks), kept when its foot lies on the surface within the file's
+    /// tolerance — a point on a surface that does not overlap itself has one foot there — else
+    /// the global projection.
+    fn project_near(&self, p: Point3, from: Uv) -> Uv {
+        if let Surface::BSpline(n) = self.s {
+            let (u, v, d) = n.project_near(p, (from.u, from.v));
+            if d <= self.near {
+                return Uv { u, v };
+            }
+        }
+        self.project(p)
     }
 
     /// Unwrap `raw` (at curve parameter `t1`) next to `prev` (at `t0`), subdividing while a
@@ -153,7 +171,14 @@ impl Ctx<'_> {
             };
         }
         let tm = 0.5 * (t0 + t1);
-        let mid = self.track(c, t0, prev, tm, self.project(c.eval(tm)), depth + 1);
+        let mid = self.track(
+            c,
+            t0,
+            prev,
+            tm,
+            self.project_near(c.eval(tm), prev),
+            depth + 1,
+        );
         self.track(c, tm, mid, t1, raw, depth + 1)
     }
 
@@ -188,7 +213,7 @@ impl Ctx<'_> {
             for &(x, wt) in &self.rule {
                 let t = mid + half * x;
                 let [p, ct, _] = c.derivs2(t);
-                let uv = self.track(c, prev.0, prev.1, t, self.project(p), 0);
+                let uv = self.track(c, prev.0, prev.1, t, self.project_near(p, prev.1), 0);
                 prev = (t, uv);
                 nodes.push(Node {
                     uv,
@@ -196,7 +221,14 @@ impl Ctx<'_> {
                 });
             }
         }
-        let end = self.track(c, prev.0, prev.1, tb, self.project(c.eval(tb)), 0);
+        let end = self.track(
+            c,
+            prev.0,
+            prev.1,
+            tb,
+            self.project_near(c.eval(tb), prev.1),
+            0,
+        );
         Trace { start, nodes, end }
     }
 
@@ -284,6 +316,7 @@ pub(super) fn face_mass(
         join_rule: gauss_legendre(JOIN_ORDER),
         u_knots,
         singular: 16.0 * tol,
+        near: tol,
     };
     let mut total = FaceMass::default();
     for (bi, bound) in bounds.iter().enumerate() {
