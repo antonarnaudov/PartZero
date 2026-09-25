@@ -68,4 +68,9 @@ export function installSketchKeys(target: Window = window): () => void {
   };
 }
 
-if (typeof window !== "undefined") installSketchKeys();
+// Once per window (a hot reload re-evaluates this module: replace the old handler).
+if (typeof window !== "undefined") {
+  const w = window as Window & { __pzSketchKeys?: () => void };
+  w.__pzSketchKeys?.();
+  w.__pzSketchKeys = installSketchKeys();
+}

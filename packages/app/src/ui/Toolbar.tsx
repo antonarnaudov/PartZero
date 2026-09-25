@@ -4,6 +4,7 @@ import { formatKey } from "../commands/registry";
 import { openInSlicer } from "../print/open-in-slicer";
 import { useApp, useStore } from "./context";
 import { Icon } from "./icons";
+import { SketchButton } from "./sketch/SketchModeHost";
 
 /**
  * The primary handoff button (ALPHA-0-PLAN W3/W5): check, export for the printer and open in the
@@ -88,6 +89,7 @@ export function Toolbar(): ReactElement {
           <Icon.Redo />
         </ToolButton>
       </div>
+      <SketchButton />
       <div className="tb-group">
         <ToolButton cmd={{ id: "file.exportMesh", args: { format: "3mf" } }} title="Export 3MF" keyHint="Mod+E">
           <Icon.Export />

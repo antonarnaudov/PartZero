@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * Drive sketch mode in tests with the real WASM session (`@aicad/forge-web/sketch`, built) and
  * pointer events at sketch coordinates.

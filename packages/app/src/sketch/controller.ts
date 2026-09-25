@@ -246,6 +246,11 @@ export class SketchMode extends Store<SketchModeState> {
     this.sink = sink;
   }
 
+  /** No command-layer sink is installed yet: finished sketches stay in memory. */
+  get usingMemorySink(): boolean {
+    return this.sink === this.memory;
+  }
+
   get active(): boolean {
     return this.getState().phase === "active";
   }
