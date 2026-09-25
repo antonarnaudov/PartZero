@@ -1,0 +1,39 @@
+packages/app/src/doc/v1/ir-doc-store.ts
+  s_59c0dd2af30db2::t_953597860e3eac 2-5,8-21,23-33,36-45,47-48,50-55,60-62,71-72,80-81,87-88,91-94,99-100,107,109,111-113,115,130-155,161-163,168,174,178,181-186,190-193,201-221,224-227,229,233-236,249-251,256-268,271,273,276,281,283,285,289,295-301,303-316,325,327,332-339,341-350,355-402,407-409,412,414,422-436
+  s_59c0dd2af30db2::t_1ea5ba1bbe3c10 438-439
+packages/app/src/commands/ir-commands.ts
+  s_59c0dd2af30db2::t_794c8455d33255 2-6,8-16,19,23,25,34-40,50-51,66-68,84,88-94,96-123,126-157,167,184,187,195-197,208-209,222-223,236-237,240-241,245,247-249,252-253,256-262,266-268,271-272,275-279,283-285,287-288,291-294,298-300,302-303,306-309,313-318,321-323,327-331,334-335,339,346-347
+  s_59c0dd2af30db2::t_a683b307580851 340-343
+packages/app/test/ir-store.test.ts
+  s_59c0dd2af30db2::t_d437b618d69b4e 1-129
+packages/app/package.json
+  s_59c0dd2af30db2::t_2bf91968a2194f 32
+packages/app/src/doc/history.ts
+  s_59c0dd2af30db2::t_d51934a550c52b 8-12
+packages/app/src/doc/v1/command-engine.ts
+  s_59c0dd2af30db2::t_6dbdf085a70ca4 2-3,5-28
+packages/app/src/doc/v1/ops.ts
+  s_59c0dd2af30db2::t_7e4558d1d63bc0 2-5,7,10-24,27-36,38-48
+packages/app/test/ir-v1-ops.test.ts
+  s_59c0dd2af30db2::t_e30df48d795394 240-241,390-391,432-433,699-703,714,743,746-747,750-752,755-757,761-765,767-768,771,883,919
+packages/app/vitest.config.ts
+  s_59c0dd2af30db2::t_eedb0877e27a25 10
+pnpm-lock.yaml
+  s_59c0dd2af30db2::t_d769b1bf369b21 97-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "66f4abbc7626f26a3dcf5086bc06078b6f288e13",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
