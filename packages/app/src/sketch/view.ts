@@ -1,12 +1,13 @@
 /**
  * The sketch view: the sketch plane seen along its normal (orthographic, "look at"), in CSS
- * pixels. Sketch u runs right and v up. Navigation follows FD3 — trackpad and mouse at once:
+ * pixels. Sketch u runs right and v up. Navigation follows FD3 — trackpad and mouse at once
+ * (the wheel device is told apart in `wheel.ts`):
  *
  * | Input | Action |
  * |---|---|
- * | Mouse wheel | zoom at the cursor |
+ * | Mouse wheel | zoom at the cursor (a fixed step per notch) |
  * | Trackpad pinch (ctrl + wheel) | zoom at the cursor |
- * | Trackpad two-finger scroll, or Shift + scroll | pan (there is no orbit in the sketch view) |
+ * | Trackpad two-finger scroll, with or without Shift | pan (the flat sketch view has no orbit) |
  * | Middle drag, right drag, Space + drag | pan |
  *
  * `SketchView` is the contract the sketch overlay needs from any camera: when the viewport
@@ -82,15 +83,6 @@ export function fitBox(s: ViewState, box: { min: P2; max: P2 } | null, margin = 
   const h = Math.max(box.max[1] - box.min[1], 1e-6);
   const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.min((s.width * (1 - 2 * margin)) / w, (s.height * (1 - 2 * margin)) / h)));
   return { ...s, cx: (box.min[0] + box.max[0]) / 2, cy: (box.min[1] + box.max[1]) / 2, scale };
-}
-
-/** Whether a wheel event is a trackpad pan (two fingers) rather than a mouse wheel click. */
-export function isTrackpadPan(e: { deltaX: number; deltaY: number; deltaMode: number; ctrlKey: boolean; shiftKey: boolean }): boolean {
-  if (e.ctrlKey) return false; // pinch
-  if (e.shiftKey) return true;
-  if (e.deltaMode !== 0) return false; // lines/pages: a mouse wheel
-  // Trackpads report sub-pixel or horizontal deltas; mouse wheels report whole vertical steps.
-  return e.deltaX !== 0 || !Number.isInteger(e.deltaY) || Math.abs(e.deltaY) < 4;
 }
 
 /** A readable grid step (1, 2, 5 × 10^k mm) of at least `minPx` CSS pixels. */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { faceFrame, namedFrame, toPlane, toWorld } from "../../src/sketch/frames";
 import { arcParams, arcThrough, circleThrough, intersect, nearestOnCurve, tangentArc, type LiteralCurve, type P2 } from "../../src/sketch/geom";
-import { fitBox, initialView, isTrackpadPan, PlaneView, zoomAt } from "../../src/sketch/view";
+import { fitBox, initialView, PlaneView, zoomAt } from "../../src/sketch/view";
 
 const close = (a: P2, b: P2, eps = 1e-9): void => {
   expect(Math.abs(a[0] - b[0])).toBeLessThan(eps);
@@ -98,15 +98,5 @@ describe("sketch view", () => {
     expect(x1).toBeLessThan(800);
     expect(y1).toBeGreaterThan(0);
     expect(y0).toBeLessThan(600);
-  });
-
-  it("tells trackpad pans from mouse wheels (FD3)", () => {
-    const base = { deltaX: 0, deltaY: 0, deltaMode: 0, ctrlKey: false, shiftKey: false };
-    expect(isTrackpadPan({ ...base, deltaY: 100 })).toBe(false);
-    expect(isTrackpadPan({ ...base, deltaY: 3.25 })).toBe(true);
-    expect(isTrackpadPan({ ...base, deltaX: 2, deltaY: 10 })).toBe(true);
-    expect(isTrackpadPan({ ...base, deltaY: 10, ctrlKey: true })).toBe(false);
-    expect(isTrackpadPan({ ...base, deltaY: 100, shiftKey: true })).toBe(true);
-    expect(isTrackpadPan({ ...base, deltaY: 3, deltaMode: 1 })).toBe(false);
   });
 });

@@ -340,7 +340,19 @@ export function SketchCanvas({ mode, state }: { mode: SketchMode; state: SketchM
     const onWheel = (e: WheelEvent): void => {
       e.preventDefault();
       const r = el.getBoundingClientRect();
-      mode.wheel({ px: [e.clientX - r.left, e.clientY - r.top], deltaX: e.deltaX, deltaY: e.deltaY, deltaMode: e.deltaMode, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey });
+      // Chromium's legacy wheelDeltaX/Y (not in the DOM typings) help tell a notched wheel apart.
+      const legacy = e as WheelEvent & { wheelDeltaX?: number; wheelDeltaY?: number };
+      mode.wheel({
+        px: [e.clientX - r.left, e.clientY - r.top],
+        deltaX: e.deltaX,
+        deltaY: e.deltaY,
+        deltaMode: e.deltaMode,
+        ctrlKey: e.ctrlKey,
+        shiftKey: e.shiftKey,
+        ...(typeof legacy.wheelDeltaX === "number" ? { wheelDeltaX: legacy.wheelDeltaX } : {}),
+        ...(typeof legacy.wheelDeltaY === "number" ? { wheelDeltaY: legacy.wheelDeltaY } : {}),
+        timeStamp: e.timeStamp,
+      });
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);

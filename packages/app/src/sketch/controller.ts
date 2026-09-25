@@ -36,7 +36,8 @@ import { bounds, curvePoint, dist, fmt, nearestOnCurve, type P2 } from "./geom";
 import { IdAllocator, isId } from "./ids";
 import { namesIn, nextSketchName } from "./names";
 import { snap } from "./snap";
-import { fitBox, initialView, isTrackpadPan, pan, PlaneView, zoomAt, type ViewState } from "./view";
+import { fitBox, initialView, pan, PlaneView, zoomAt, type ViewState } from "./view";
+import { newWheelMemory, sketchWheel, type WheelLike } from "./wheel";
 
 /** The subset of `@aicad/forge-web/sketch`'s `SketchSession` sketch mode uses. */
 export interface SketchEngine {
@@ -186,13 +187,9 @@ export interface KeyIn {
   editable: boolean;
 }
 
-export interface WheelIn {
+/** A wheel event over the sketch (see `wheel.ts` for how the device is told apart). */
+export interface WheelIn extends WheelLike {
   px: P2;
-  deltaX: number;
-  deltaY: number;
-  deltaMode: number;
-  ctrlKey: boolean;
-  shiftKey: boolean;
 }
 
 /** Human text for a rejected edit. */
@@ -233,6 +230,7 @@ export class SketchMode extends Store<SketchModeState> {
   private dragTarget: string | null = null;
   private after: string | null = null;
   private part: string | null = null;
+  private readonly wheelMemory = newWheelMemory();
   readonly memory = new MemorySink();
 
   constructor(engines: SketchEngineFactory | null = null, sink?: SketchCommitSink) {
@@ -617,15 +615,13 @@ export class SketchMode extends Store<SketchModeState> {
     this.setState({ view: fitBox(s.view, box) });
   }
 
+  /** FD3: mouse wheel and pinch zoom at the cursor; trackpad scrolls (with or without Shift) pan. */
   wheel(e: WheelIn): void {
     const s = this.getState();
-    if (isTrackpadPan(e)) {
-      this.setState({ view: pan(s.view, -e.deltaX, -e.deltaY) });
-      return;
-    }
-    const k = e.ctrlKey ? 0.01 : 0.0015;
-    const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
-    this.setState({ view: zoomAt(s.view, e.px, Math.exp(-dy * k)) });
+    const a = sketchWheel(e, this.wheelMemory);
+    if (!a) return;
+    if (a.type === "pan") this.setState({ view: pan(s.view, a.dx, a.dy) });
+    else this.setState({ view: zoomAt(s.view, e.px, a.factor) });
   }
 
   // ── Pointer ──────────────────────────────────────────────────────────────────────────────
