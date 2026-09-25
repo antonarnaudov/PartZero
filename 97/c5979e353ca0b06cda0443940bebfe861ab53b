@@ -1,0 +1,21 @@
+packages/agent-tools/test/v1/playbooks-v1.test.ts
+  s_59c0dd2af30db2::t_65f6e37c9ca09c 406-408,410,422
+packages/app/test/document-files.test.ts
+  s_59c0dd2af30db2::t_fb3ebafc5abf7c 765
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "97c5979e353ca0b06cda0443940bebfe861ab53b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
