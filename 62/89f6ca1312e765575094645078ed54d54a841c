@@ -1,0 +1,39 @@
+forge/crates/forge-blend/src/error.rs
+  s_59c0dd2af30db2::t_a5abaec20b3d87 136-159,268-298,374-375,417,482-483
+  s_59c0dd2af30db2::t_060dba84dde123 418-420
+forge/crates/forge-blend/src/draft.rs
+  s_59c0dd2af30db2::t_060dba84dde123 108-109,190-191,195,213-215,226-227,243-246,252-256,345-348,400-402,434-435,488-491
+  s_59c0dd2af30db2::t_6d8a5804996024 476-478
+  s_59c0dd2af30db2::t_a5abaec20b3d87 209
+  s_59c0dd2af30db2::t_8871461aeeeee6 114
+  s_59c0dd2af30db2::t_664d403bedceeb 465-475,480-487,492-497
+  s_59c0dd2af30db2::t_737526d844b240 351-372
+  s_59c0dd2af30db2::t_ea44d0696af606 436-459
+  s_59c0dd2af30db2::t_cff985dbaf567a 21-22
+  s_59c0dd2af30db2::t_ba9df6aba6145e 28-30
+  s_59c0dd2af30db2::t_082e2703135460 479
+  s_59c0dd2af30db2::t_3ffb626443eb05 1-20,23-27,31-107,110-113,115-189,192-194,196-208,210-212,216-225,228-242,247-251,257-344,349-350,373-399,403-433,460-464
+forge/crates/forge-blend/tests/drafts.rs
+  s_59c0dd2af30db2::t_9cc1a48a5aca68 1-45,52-57,65-67,73-90,95-106,112-118,124-133,139-143,152-154,158-162,168-184,188-190,198-218,224-230,240-276
+  s_59c0dd2af30db2::t_060dba84dde123 46-51,58-64,68-72,91-94,107-111,119-123,134-138,144-151,155-157,163-167,185-187,191-197,219-223
+  s_59c0dd2af30db2::t_02eac6953cfc72 231-239
+forge/crates/forge-blend/src/lib.rs
+  s_59c0dd2af30db2::t_a5abaec20b3d87 105-106,111,133,135-137
+  s_59c0dd2af30db2::t_35ee0ba37e99f9 91-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6289f6ca1312e765575094645078ed54d54a841c",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
