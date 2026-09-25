@@ -217,7 +217,7 @@ describe("API keys: encrypted store, env and .env", () => {
 
 describe("agent settings", () => {
   const registry = profileRegistry();
-  const stored = (models: StoredSettings["models"] = {}): StoredSettings => ({ v: 1, models, budgetUsd: 1, compatBaseUrl: null, cliPaths: {}, cliMode: "auto", ollamaBaseUrl: null, cliBlocks: [] });
+  const stored = (models: StoredSettings["models"] = {}): StoredSettings => ({ v: 1, models, budgetUsd: 1, compatBaseUrl: null, cliPaths: {}, cliMode: "auto", ollamaBaseUrl: null, autonomy: "review", cliBlocks: [] });
 
   it("follows the designer's provider for unset roles (one key per run)", () => {
     expect(effectiveModels(stored(), registry)).toEqual({ designer: "claude-opus-5-5", spec_writer: "claude-opus-5-5", triage: "claude-haiku-4-5", judge: "claude-fable-5-1" });

@@ -34,6 +34,7 @@
     "@aicad/ir-types": "workspace:*",
     "@aicad/llm-gateway": "workspace:*",
     "@aicad/mcp-server": "workspace:*",
+    "@aicad/model-ops": "workspace:*",
     "@electron/fuses": "^1.8.0",
     "@playwright/test": "^1.63.0",
     "@types/node": "^24.9.0",

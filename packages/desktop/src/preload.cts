@@ -6,6 +6,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 import type {
   AgentEvent,
+  AgentOpsRequest,
   AicadBridge,
   FilesEvent as FileEvent,
   IpcChannel,
@@ -26,6 +27,7 @@ function send<C extends IpcSendChannel>(channel: C, ...args: IpcSendContract[C])
 
 const MENU_COMMAND: keyof IpcEventContract = "menu:command";
 const AGENT_EVENT: keyof IpcEventContract = "agent:event";
+const AGENT_OPS: keyof IpcEventContract = "agent:ops";
 const FILES_EVENT: keyof IpcEventContract = "files:event";
 
 const bridge: AicadBridge = {
@@ -62,6 +64,14 @@ const bridge: AicadBridge = {
         ipcRenderer.removeListener(AGENT_EVENT, handler);
       };
     },
+    onOpsRequest(listener) {
+      const handler = (_event: IpcRendererEvent, r: AgentOpsRequest): void => listener(r);
+      ipcRenderer.on(AGENT_OPS, handler);
+      return () => {
+        ipcRenderer.removeListener(AGENT_OPS, handler);
+      };
+    },
+    opsReply: (reply) => invoke("agent:opsReply", reply),
   },
   settings: {
     get: () => invoke("settings:get"),

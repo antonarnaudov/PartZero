@@ -1,0 +1,168 @@
+{
+ "$comment": "Scripted transport for the live-operator e2e (AICAD_AGENT_TRANSPORT=scripted): 'a 40 mm cube with a 10 mm hole through the top and 2 mm fillets on the vertical edges' on a new document. The designer operates the op tools (no code); each change lands live in the open document. Offline: no network, no keys.",
+ "paceMs": 250,
+ "designer": [
+  {
+   "text": "A 40 mm cube, a Ø10 bore through the top, 2 mm rounds on the vertical edges. Plan first.",
+   "tools": [
+    {
+     "name": "plan",
+     "input": {
+      "steps": [
+       "Add a size parameter (40 mm)",
+       "Sketch the base square on XY",
+       "Extrude it to a cube",
+       "Round the four vertical edges 2 mm",
+       "Drill the Ø10 bore through the top",
+       "Check the part"
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "input": 9800,
+    "output": 160,
+    "cacheWrite": 9000
+   }
+  },
+  {
+   "text": "The edge length is a parameter so the cube can be resized.",
+   "tools": [
+    {
+     "name": "add_param",
+     "input": {
+      "name": "size",
+      "unit": "mm",
+      "value": 40,
+      "min": 10,
+      "note": "Add the 40 mm size parameter"
+     }
+    }
+   ],
+   "usage": {
+    "input": 900,
+    "output": 140,
+    "cacheRead": 9000
+   }
+  },
+  {
+   "text": "Base square on XY, centred on the origin.",
+   "tools": [
+    {
+     "name": "add_feature",
+     "input": {
+      "feature_json": "{\"type\":\"sketch\",\"id\":\"base\",\"name\":\"base\",\"plane\":\"XY\",\"curves\":[{\"kind\":\"rect\",\"id\":\"outline\",\"center\":[0,0],\"w\":\"size\",\"h\":\"size\"}]}",
+      "note": "Sketch the 40 mm base square on XY"
+     }
+    }
+   ],
+   "usage": {
+    "input": 900,
+    "output": 140,
+    "cacheRead": 9000
+   }
+  },
+  {
+   "text": "Extrude by the same size.",
+   "tools": [
+    {
+     "name": "add_feature",
+     "input": {
+      "feature_json": "{\"type\":\"extrude\",\"id\":\"cube\",\"name\":\"cube\",\"sketch\":\"base\",\"distance\":\"size\"}",
+      "note": "Extrude it into a 40 mm cube"
+     }
+    }
+   ],
+   "usage": {
+    "input": 900,
+    "output": 140,
+    "cacheRead": 9000
+   }
+  },
+  {
+   "text": "Aim the fillet at the vertical edges first.",
+   "tools": [
+    {
+     "name": "find_entities",
+     "input": {
+      "ref_json": "{\"kind\":\"edge\",\"q\":{\"op\":\"filter\",\"where\":{\"parallel\":\"Z\"},\"of\":{\"op\":\"edges\",\"of\":{\"op\":\"sides\",\"feature\":\"cube\"}}}}"
+     }
+    }
+   ],
+   "usage": {
+    "input": 900,
+    "output": 140,
+    "cacheRead": 9000
+   }
+  },
+  {
+   "text": "Four vertical edges, as expected.",
+   "tools": [
+    {
+     "name": "add_feature",
+     "input": {
+      "feature_json": "{\"type\":\"fillet\",\"id\":\"rounds\",\"name\":\"rounds\",\"r\":2,\"edges\":{\"kind\":\"edge\",\"q\":{\"op\":\"filter\",\"where\":{\"parallel\":\"Z\"},\"of\":{\"op\":\"edges\",\"of\":{\"op\":\"sides\",\"feature\":\"cube\"}}}}}",
+      "note": "Round the four vertical edges (2 mm)"
+     }
+    }
+   ],
+   "usage": {
+    "input": 900,
+    "output": 140,
+    "cacheRead": 9000
+   }
+  },
+  {
+   "text": "The bore goes through from the top cap.",
+   "tools": [
+    {
+     "name": "add_feature",
+     "input": {
+      "feature_json": "{\"type\":\"hole\",\"id\":\"bore\",\"name\":\"bore\",\"on\":{\"face\":{\"kind\":\"face\",\"q\":{\"op\":\"cap\",\"feature\":\"cube\",\"end\":\"end\"}}},\"at\":{\"list\":[{\"id\":\"c\",\"at\":[0,0]}]},\"d\":10,\"depth\":\"through\"}",
+      "note": "Drill the Ø10 bore through the top"
+     }
+    }
+   ],
+   "usage": {
+    "input": 900,
+    "output": 140,
+    "cacheRead": 9000
+   }
+  },
+  {
+   "text": "Final check.",
+   "tools": [
+    {
+     "name": "check_model",
+     "input": {}
+    }
+   ],
+   "usage": {
+    "input": 900,
+    "output": 140,
+    "cacheRead": 9000
+   }
+  },
+  {
+   "text": "Done.",
+   "tools": [
+    {
+     "name": "finish",
+     "input": {
+      "summary": "A 40 mm cube (size parameter) with a Ø10 mm bore through the top and 2 mm fillets on the four vertical edges.",
+      "assumptions": [
+       "The bore is centred on the top face",
+       "Fillets only on the vertical edges, as asked"
+      ],
+      "known_issues": []
+     }
+    }
+   ],
+   "usage": {
+    "input": 900,
+    "output": 140,
+    "cacheRead": 9000
+   }
+  }
+ ]
+}

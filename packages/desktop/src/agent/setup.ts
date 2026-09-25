@@ -14,7 +14,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { AgentEvent, CliProviderId } from "@aicad/app/bridge";
+import type { AgentEvent, AgentOpsRequest, CliProviderId } from "@aicad/app/bridge";
 import { CLI_PROVIDERS, defaultWorkspaceRoot, probeOllama, setDefaultWorkspaceRoot, unsafeAncestor } from "@aicad/llm-gateway/cli";
 import { CliDetector } from "./cli-detect.js";
 import { AgentHost, type CliRunSetup, type WorkerHandle } from "./host.js";
@@ -134,6 +134,8 @@ export interface AgentSetupOptions {
   cipher: Cipher;
   spawnWorker(): WorkerHandle;
   send(event: AgentEvent): void;
+  /** (live operator) Deliver an op on the open document to the window that started the run. */
+  sendOps?(request: AgentOpsRequest): void;
   log(level: "info" | "warn" | "error", message: string): void;
   /** The environment detection probes run with (`env.ts` `cliDetectEnv`). */
   detectEnv: Record<string, string>;
@@ -229,6 +231,7 @@ export function setupAgent(o: AgentSetupOptions): AgentSetup {
     transport,
     forgeBin: o.forgeBin,
     send: o.send,
+    ...(o.sendOps ? { sendOps: o.sendOps } : {}),
     log: o.log,
     cli,
     local,

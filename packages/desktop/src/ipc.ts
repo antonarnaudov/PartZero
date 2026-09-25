@@ -44,6 +44,8 @@ export interface IpcDeps {
   onDocState: (state: DocumentStateMessage, senderId: number) => void;
   /** A window started an agent run: its events go to that window (windows.ts). */
   onAgentStart?: (senderId: number) => void;
+  /** Whether `senderId` is the window that started the running agent run (its op replies are the only ones accepted). */
+  isAgentWindow?: (senderId: number) => boolean;
   /** The in-app design agent (host, keys, settings). */
   agent: AgentSetup;
   /** Printer profile and "Open in Bambu Studio" (absent: the channels are not registered). */
@@ -195,6 +197,8 @@ export function registerIpc(deps: IpcDeps): void {
   });
   handle("agent:answer", (_e, req) => host.answer(req));
   handle("agent:stop", (_e, req) => host.stop(req));
+  // The live operator's op results: only the window that started the run holds its document.
+  handle("agent:opsReply", (e, req) => (deps.isAgentWindow && !deps.isAgentWindow(e.sender.id) ? { ok: false } : host.opsReply(req)));
   handle("settings:get", () => host.settingsView());
   handle("settings:update", (_e, req) => host.updateSettings(req));
   handle("settings:setApiKey", (_e, req) => {

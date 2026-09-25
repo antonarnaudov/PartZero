@@ -17,6 +17,7 @@ import type {
   AgentAnswerRequest,
   AgentEvent,
   AgentEventBody,
+  AgentOpsRequest,
   AgentRoleId,
   AgentSettingsView,
   AgentStartErrorCode,
@@ -38,6 +39,7 @@ import {
   isCliProviderId,
   isTerminalEvent,
   parseAnswerRequest,
+  parseOpsReply,
   parseProbeProvidersRequest,
   parseSettingsUpdate,
   parseStartRequest,
@@ -100,6 +102,11 @@ export interface AgentHostDeps {
   forgeBin: string;
   /** Deliver an event to the renderer. */
   send(event: AgentEvent): void;
+  /**
+   * (live operator) Deliver an op on the open document to the renderer that started the run (the
+   * same window as its events). Absent: `ops` runs cannot reach a document and fail their ops.
+   */
+  sendOps?(request: AgentOpsRequest): void;
   log?(level: "info" | "warn" | "error", message: string): void;
   /** How long a stopped run may take to wind down before the process is killed (default 8 s). */
   stopGraceMs?: number;
@@ -327,6 +334,8 @@ export class AgentHost {
     if (notes.length > 0) config.notes = notes;
     const defaults = this.#defaults();
     if (defaults.conventions) config.conventions = defaults.conventions;
+    // Only the user sets the dial (ADR 0015 §1): from Settings, never from the request.
+    if (request.surface === "ops") config.autonomy = stored.autonomy ?? "review";
     const withDefaults = request.process === undefined && defaults.process ? { ...request, process: defaults.process } : request;
     worker.postMessage({ type: "start", v: PROTOCOL_VERSION, runId, request: withDefaults, config, secrets });
     return { ok: true, runId };
@@ -381,6 +390,14 @@ export class AgentHost {
   stop(raw: unknown): { ok: boolean } {
     const req: AgentStopRequest = parseStopRequest(raw);
     return this.#stopRun(req.runId);
+  }
+
+  /** The renderer's answer to a live operator op: forwarded to the worker when it belongs to the running run. */
+  opsReply(raw: unknown): { ok: boolean } {
+    const reply = parseOpsReply(raw);
+    if (!this.#run || this.#run.runId !== reply.runId || !this.#worker) return { ok: false };
+    this.#worker.postMessage({ type: "opsReply", v: PROTOCOL_VERSION, reply });
+    return { ok: true };
   }
 
   /** Stop whatever runs (window closed, renderer crashed, app quitting). */
@@ -466,6 +483,11 @@ export class AgentHost {
     if (m.type === "cli") {
       // Local log line without the payload (§5.6 step 5); the binary stays blocked until Re-check passes.
       this.#deps.cli?.markBlocked(m.provider, m.realPath, m.detail.slice(0, 120));
+      return;
+    }
+    if (m.type === "ops") {
+      // Only the running run reaches the document, and only through the window that started it.
+      if (this.#run && m.request.runId === this.#run.runId) this.#deps.sendOps?.(m.request);
       return;
     }
     if (m.type !== "event") return;

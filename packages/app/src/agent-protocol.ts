@@ -53,12 +53,26 @@ export interface AgentSelectionItem {
   description?: string;
 }
 
+/**
+ * (additive) How the agent changes the model:
+ * - `ops` (the live operator): it operates the command layer's op tools on the open document, step
+ *   by step; every op arrives as an {@link AgentOpsRequest} that the renderer applies to its store (one
+ *   undo group per run) and answers;
+ * - `code` (default, the CadScript designer): it edits a draft copy of `source` and hands back a proposal.
+ */
+export type AgentSurface = "ops" | "code";
+
+/** The autonomy dial (ADR 0015) for live edits: `ask` pauses after every step, `review` (default) reviews the turn, `auto` notices only. */
+export type AutonomySetting = "ask" | "review" | "auto";
+
 export interface AgentStartRequest {
   v: AgentProtocolVersion;
   /** The user's message. */
   prompt: string;
-  /** CadScript of the open document (the draft branch starts from it). */
+  /** CadScript of the open document (the draft branch starts from it); empty for the `ops` surface. */
   source: string;
+  /** (additive) Default `code`. */
+  surface?: AgentSurface;
   documentName: string;
   selection: AgentSelectionItem[];
   /** Manufacturing process hint. */
@@ -92,6 +106,58 @@ export interface AgentStopRequest {
   v: AgentProtocolVersion;
   runId: string;
 }
+
+/** One live step of an `ops` run (`@aicad/agent` `OperatorStep`). */
+export interface AgentStepView {
+  /** Committed steps so far (a refused attempt carries the count it did not raise). */
+  index: number;
+  tool: string;
+  ok: boolean;
+  /** The one-line narration shown in the chat. */
+  note: string;
+  /** The undo label. */
+  label: string;
+  revision?: number;
+  features?: string[];
+  /** Forge's check of the whole model after the step. */
+  check?: string;
+  checkOk?: boolean;
+  /** A refused attempt's code. */
+  code?: string;
+  /** The user undid it (Ask at each step). */
+  undone?: boolean;
+}
+
+/** The agent asks the user to allow a change to their own work (ADR 0015 §3). */
+export interface AgentApprovalRequest {
+  features: string[];
+  params: string[];
+  rollback: boolean;
+  reason: string;
+}
+
+/** Question kinds: a clarifying question, the budget checkpoint, a step to keep or undo (Ask at each step), an approval. */
+export type AgentQuestionKind = "clarify" | "budget" | "step" | "approval";
+
+/**
+ * Main → renderer: the live operator's call on the open document (`ops` surface). The renderer
+ * applies it through its command layer as the agent (`ir.apply` in the run's undo group) and
+ * answers with {@link AgentOpsReply}. The ops are validated there (the catalogue's zod schema).
+ */
+export interface AgentOpsRequest {
+  v: AgentProtocolVersion;
+  runId: string;
+  /** Per run, increasing. */
+  id: number;
+  method: "document" | "hostState" | "apply" | "undo";
+  /** `apply`: the ops (one transaction). */
+  ops?: unknown[];
+  options?: { label?: string; ack?: string[] };
+}
+
+export type AgentOpsReply =
+  | { v: AgentProtocolVersion; runId: string; id: number; ok: true; value: unknown }
+  | { v: AgentProtocolVersion; runId: string; id: number; ok: false; error: { code: string; message: string; errors?: unknown[]; details?: Record<string, unknown> } };
 
 /** A clarifying question (`@aicad/agent-tools` `UserQuestion`). */
 export interface AgentQuestion {
@@ -144,6 +210,10 @@ export interface AgentRunResult {
    * `quota_exhausted` (the plan's usage limit; `resetsAt` from the plan usage the CLI reported) or `rate_limited`.
    */
   quota?: { kind: "quota_exhausted" | "rate_limited"; provider: string | null; resetsAt: string | null };
+  /** (additive) `ops`: the run edited the open document live (no proposal to accept). */
+  surface?: AgentSurface;
+  /** (additive, ops) Committed steps that stayed (undone ones not counted). */
+  steps?: number;
 }
 
 interface AgentEventBase {
@@ -163,6 +233,10 @@ export type AgentEventBody =
       transport: AgentTransportKind;
       /** Engine the agent verifies with (`forge-web (wasm, node)` or `forge CLI`). */
       engine: string;
+      /** (additive) How the run changes the model. */
+      surface?: AgentSurface;
+      /** (additive, ops) The autonomy setting the run follows. */
+      autonomy?: AutonomySetting;
     }
   | { type: "phase"; phase: AgentPhase; detail: string }
   | { type: "tool"; name: string; ok: boolean; summary: string }
@@ -173,7 +247,11 @@ export type AgentEventBody =
   | { type: "plan"; provider: CliProviderId; usage: PlanUsageView }
   | { type: "draft"; source: string; applyIndex: number; verified: boolean; reason: "apply" | "rollback" }
   | { type: "note"; text: string }
-  | { type: "question"; questionId: string; kind: "clarify" | "budget"; questions: AgentQuestion[] }
+  /** (additive, ops) A live step landed (or was refused). */
+  | { type: "step"; step: AgentStepView }
+  /** (additive, ops) The agent's plan, a short checklist. */
+  | { type: "outline"; steps: string[] }
+  | { type: "question"; questionId: string; kind: AgentQuestionKind; questions: AgentQuestion[]; step?: AgentStepView; approval?: AgentApprovalRequest }
   | { type: "answered"; questionId: string; answers: string[] }
   | { type: "result"; result: AgentRunResult }
   | { type: "error"; code: string; message: string };
@@ -287,6 +365,8 @@ export interface AgentSettingsView {
   autoDefault?: { provider: ProviderId; label: string } | null;
   /** The Ollama base URL from Settings (null = http://127.0.0.1:11434). */
   ollamaBaseUrl?: string | null;
+  /** (additive) The autonomy dial (ADR 0015): only the user sets it (Assistant header, Settings). Default `review`. */
+  autonomy?: AutonomySetting;
 }
 
 export interface SettingsUpdate {
@@ -300,6 +380,8 @@ export interface SettingsUpdate {
   cliMode?: CliModeSetting;
   /** https://…, or http:// on loopback; null restores http://127.0.0.1:11434. */
   ollamaBaseUrl?: string | null;
+  /** (additive) The autonomy dial. */
+  autonomy?: AutonomySetting;
 }
 
 export interface SetApiKeyRequest {
@@ -327,6 +409,10 @@ export interface AgentBridge {
   stop(request: AgentStopRequest): Promise<{ ok: boolean }>;
   /** Subscribe to run events; returns an unsubscribe function. */
   onEvent(listener: (event: AgentEvent) => void): () => void;
+  /** (additive) The live operator's ops on the open document (channel `agent:ops`); absent in older shells. */
+  onOpsRequest?(listener: (request: AgentOpsRequest) => void): () => void;
+  /** (additive) The answer to an {@link AgentOpsRequest} (channel `agent:opsReply`). */
+  opsReply?(reply: AgentOpsReply): Promise<{ ok: boolean }>;
 }
 
 /** `window.aicad.settings` */

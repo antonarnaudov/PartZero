@@ -27,7 +27,23 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { AgentEvent, AgentEventBody, AgentModelInfo, AgentQuestion, AgentRoleId, AgentRunResult, ApiProviderId, BillingKind, CliProviderId, ProviderKindId } from "@aicad/app/bridge";
+import type {
+  AgentApprovalRequest,
+  AgentEvent,
+  AgentEventBody,
+  AgentModelInfo,
+  AgentOpsReply,
+  AgentOpsRequest,
+  AgentQuestion,
+  AgentQuestionKind,
+  AgentRoleId,
+  AgentRunResult,
+  AgentStepView,
+  ApiProviderId,
+  BillingKind,
+  CliProviderId,
+  ProviderKindId,
+} from "@aicad/app/bridge";
 import {
   Agent,
   ScriptedTransport,
@@ -71,9 +87,11 @@ import {
   type CliMcpHost,
   type CliTurnOutcome,
 } from "@aicad/llm-gateway/cli";
+import { CommandEngineError, forgeWebCommandEngine, requireCommandEngine, type ForgeWebCommandModule, type HostState, type IrCommandEngine, type IrOp, type OpsApplyOptions, type OpsCommit, type OpsHost } from "@aicad/model-ops";
+import type { metricsV1 } from "@aicad/ir-types";
 import { planResetAt, planUsageView } from "./cli-detect.js";
 import { bundledPromptsDir } from "../bundle-paths.js";
-import { createAgentEngine, type AgentEngine } from "./engine.js";
+import { createAgentEngine, ForgeWebNodeEngine, type AgentEngine } from "./engine.js";
 import { loadCliRuntime, loadMcpServer, mcpShimCommand, type CliRuntimeModule, type McpServerModule } from "./optional-modules.js";
 import {
   baseUrlProblem,
@@ -519,13 +537,16 @@ export function redact<T>(value: T, secrets: readonly string[]): T {
 export function toRunResult(r: AgentResult, baseSource: string, budgetUsd: number, billing?: BillingKind): AgentRunResult {
   const proposedSource = r.status === "answered" || r.cadscript === "" ? baseSource : r.cadscript;
   const passed = r.tests?.filter((t) => t.pass).length;
+  // The live operator changed the open document itself: "changed" is whether any step stayed.
+  const kept = r.surface === "ops" ? (r.steps ?? []).filter((s) => s.ok && !s.undone).length : 0;
   const out: AgentRunResult = {
     status: r.status,
     stopReason: r.stopReason,
     message: r.message,
     baseSource,
     proposedSource,
-    changed: proposedSource !== baseSource,
+    changed: r.surface === "ops" ? kept > 0 : proposedSource !== baseSource,
+    ...(r.surface === "ops" ? { surface: "ops" as const, steps: kept } : {}),
     verified: r.verified,
     summary: r.proposal?.summary ?? r.message,
     assumptions: r.proposal?.assumptions ?? [],
@@ -548,12 +569,69 @@ export function modelInfo(p: ModelProfile): AgentModelInfo {
 
 // ─── One run ───────────────────────────────────────────────────────────────────────────────
 
+/** How long the worker waits for the renderer to answer one op (an evaluation of a large part included). */
+export const OPS_REPLY_TIMEOUT_MS = 120_000;
+
+/**
+ * The renderer's open document as an {@link OpsHost}, for the live operator in this process: every
+ * `apply` / `undo` / read travels to the window that started the run (worker → main → renderer, the
+ * app's `appOpsHost`: its command registry as the agent, in the run's undo group) and back. Reports
+ * and read-only queries run here, on this process's own Forge engine, from the document text.
+ */
+export class RemoteOpsHost implements OpsHost {
+  readonly #call: (method: AgentOpsRequest["method"], ops?: readonly IrOp[], options?: OpsApplyOptions) => Promise<unknown>;
+  readonly #engine: IrCommandEngine | null;
+  #reports = new Map<string, Promise<metricsV1.EvalReport>>();
+
+  constructor(call: (method: AgentOpsRequest["method"], ops?: readonly IrOp[], options?: OpsApplyOptions) => Promise<unknown>, engine: IrCommandEngine | null) {
+    this.#call = call;
+    this.#engine = engine;
+  }
+
+  async document(): Promise<string> {
+    const v = await this.#call("document");
+    if (typeof v !== "string") throw new CommandEngineError("IR_UNAVAILABLE", "the app returned no document");
+    return v;
+  }
+
+  async hostState(): Promise<HostState> {
+    const v = (await this.#call("hostState")) as Partial<HostState> | null;
+    return { rollback: typeof v?.rollback === "string" ? v.rollback : null, appearance: v?.appearance && typeof v.appearance === "object" ? { ...v.appearance } : {} };
+  }
+
+  async apply(ops: readonly IrOp[], options: OpsApplyOptions = {}): Promise<OpsCommit> {
+    const v = (await this.#call("apply", ops, options)) as OpsCommit | null;
+    if (!v || typeof v !== "object" || typeof v.changed !== "boolean") throw new CommandEngineError("IR_UNAVAILABLE", "the app returned no transaction result");
+    return v;
+  }
+
+  async report(): Promise<metricsV1.EvalReport> {
+    const doc = await this.document();
+    const hit = this.#reports.get(doc);
+    if (hit) return hit;
+    const p = this.engine().report(doc);
+    this.#reports.clear();
+    this.#reports.set(doc, p);
+    return p;
+  }
+
+  engine(): IrCommandEngine {
+    return requireCommandEngine(this.#engine, "the agent process has no Forge WASM engine");
+  }
+
+  async undo(): Promise<boolean> {
+    return (await this.#call("undo")) === true;
+  }
+}
+
 class Run {
   readonly id: string;
   readonly controller = new AbortController();
   #seq = 0;
   #questions = 0;
   #pending: { questionId: string; questions: readonly UserQuestion[]; resolve: (answers: string[]) => void } | null = null;
+  #opsSeq = 0;
+  readonly #opsPending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>();
   readonly #t0: number;
   readonly #deps: RunnerDeps;
   readonly #secrets: string[];
@@ -577,14 +655,57 @@ class Run {
   emit(body: AgentEventBody): void {
     if (this.#done) return;
     const event = redact({ v: PROTOCOL_VERSION, runId: this.id, seq: ++this.#seq, t: Math.round(this.#now() - this.#t0), ...body } as AgentEvent, this.#secrets);
-    if (body.type === "result" || body.type === "error") this.#done = true;
+    if (body.type === "result" || body.type === "error") {
+      this.#done = true;
+      this.#failOps("IR_GROUP_CLOSED", "the run has ended");
+    }
     this.#deps.post({ type: "event", v: PROTOCOL_VERSION, event });
   }
 
-  ask(kind: "clarify" | "budget", questions: readonly UserQuestion[]): Promise<string[]> {
+  /** One op call on the renderer's document (the live operator), answered by {@link Run.opsReply}. */
+  ops(method: AgentOpsRequest["method"], ops?: readonly IrOp[], options?: OpsApplyOptions): Promise<unknown> {
+    if (this.#done) return Promise.reject(new CommandEngineError("IR_GROUP_CLOSED", "the run has ended"));
+    const id = ++this.#opsSeq;
+    const request: AgentOpsRequest = {
+      v: PROTOCOL_VERSION,
+      runId: this.id,
+      id,
+      method,
+      ...(ops ? { ops: [...ops] } : {}),
+      ...(options && (options.label || options.ack) ? { options: { ...(options.label ? { label: options.label } : {}), ...(options.ack ? { ack: [...options.ack] } : {}) } } : {}),
+    };
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.#opsPending.delete(id);
+        reject(new CommandEngineError("APP_UNREACHABLE", `the app did not answer the ${method} op in ${Math.round(OPS_REPLY_TIMEOUT_MS / 1000)} s`));
+      }, OPS_REPLY_TIMEOUT_MS);
+      (timer as { unref?: () => void }).unref?.();
+      this.#opsPending.set(id, { resolve, reject, timer });
+      this.#deps.post({ type: "ops", v: PROTOCOL_VERSION, request });
+    });
+  }
+
+  opsReply(reply: AgentOpsReply): void {
+    const p = this.#opsPending.get(reply.id);
+    if (!p) return;
+    this.#opsPending.delete(reply.id);
+    clearTimeout(p.timer);
+    if (reply.ok) p.resolve(reply.value);
+    else p.reject(new CommandEngineError(reply.error.code, reply.error.message, (reply.error.errors ?? []) as never, reply.error.details ?? {}));
+  }
+
+  #failOps(code: string, message: string): void {
+    for (const [id, p] of this.#opsPending) {
+      clearTimeout(p.timer);
+      p.reject(new CommandEngineError(code, message));
+      this.#opsPending.delete(id);
+    }
+  }
+
+  ask(kind: AgentQuestionKind, questions: readonly UserQuestion[], extra: { step?: AgentStepView; approval?: AgentApprovalRequest } = {}): Promise<string[]> {
     const questionId = `q${++this.#questions}`;
     const qs: AgentQuestion[] = questions.map((q) => ({ id: q.id, question: q.question, default: q.default, ...(q.options && q.options.length > 0 ? { options: q.options } : {}) }));
-    this.emit({ type: "question", questionId, kind, questions: qs });
+    this.emit({ type: "question", questionId, kind, questions: qs, ...(extra.step ? { step: extra.step } : {}), ...(extra.approval ? { approval: extra.approval } : {}) });
     return new Promise((resolve) => {
       if (this.controller.signal.aborted) return resolve(questions.map((q) => q.default));
       this.#pending = { questionId, questions, resolve };
@@ -673,6 +794,9 @@ export class AgentRunner {
       case "stop":
         if (this.#run?.id === message.runId) this.#run.stop();
         return;
+      case "opsReply":
+        if (this.#run?.id === message.reply.runId) this.#run.opsReply(message.reply);
+        return;
     }
   }
 
@@ -737,7 +861,9 @@ export class AgentRunner {
       const billingOf = (id: string): BillingKind | undefined => (gateway.registry.has(id) ? ((gateway.profile(id).billing ?? "metered") as BillingKind) : undefined);
       const planRun = !offline && (["designer", "spec_writer", "triage"] as const).some((r) => profiles[r]?.billing === "subscription");
       const budgetUsd = request.settings?.budgetUsd ?? config.budgetUsd;
-      run.emit({ type: "started", models, budgetUsd, transport: config.transport.kind, engine: engine.label });
+      const live = request.surface === "ops";
+      const autonomy = config.autonomy ?? "review";
+      run.emit({ type: "started", models, budgetUsd, transport: config.transport.kind, engine: engine.label, ...(live ? { surface: "ops" as const, autonomy } : {}) });
       if (note) run.emit({ type: "note", text: note });
       for (const text of [...(config.notes ?? []), ...(built.notes ?? [])]) run.emit({ type: "note", text });
       // Local models behind Ollama's /v1 endpoint: warn when the server's context is below what the profile needs.
@@ -795,10 +921,30 @@ export class AgentRunner {
       // A bundled worker ships the role prompts next to it (bundle-paths.ts); unbundled, the agent package's own.
       const promptsDir = this.#deps.promptsDir !== undefined ? this.#deps.promptsDir : bundledPromptsDir(dirname(fileURLToPath(import.meta.url)));
       if (promptsDir !== null) options.promptsDir = promptsDir;
+      if (config.conventions) options.conventions = config.conventions;
+      if (live) {
+        // The live operator: it operates the renderer's open document through the ops channel; reports and
+        // queries run on this process's Forge engine.
+        const commands = engine.engine instanceof ForgeWebNodeEngine ? forgeWebCommandEngine((await engine.engine.module()) as unknown as ForgeWebCommandModule) : null;
+        options.ops = new RemoteOpsHost((method, ops, o) => run.ops(method, ops, o), commands);
+        options.autonomy = autonomy;
+        const hooks = options.hooks!;
+        hooks.onStep = (s) => run.emit({ type: "step", step: { ...s } });
+        hooks.onPlan = (steps) => run.emit({ type: "outline", steps: steps.map((x) => x.slice(0, 200)).slice(0, 12) });
+        hooks.reviewStep = async (s) => {
+          const [a] = await run.ask("step", [{ id: "step", question: `Step ${s.index}: ${s.note}. Keep it?`, options: ["Keep", "Undo"], default: "Keep" }], { step: { ...s } });
+          return a === "Undo" ? "undo" : "keep";
+        };
+        hooks.requestApproval = async (req) => {
+          const what = [...req.features.map((f) => `feature ${f}`), ...req.params.map((p) => `parameter ${p}`), ...(req.rollback ? ["the rollback marker"] : [])].join(", ");
+          const [a] = await run.ask("approval", [{ id: "approval", question: `The agent asks to change your ${what}: ${req.reason}`, options: ["Allow", "Don't allow"], default: "Don't allow" }], { approval: { ...req } });
+          return a === "Allow";
+        };
+      }
       const agent = new Agent(options);
       const result = await agent.run({
         prompt: composePrompt(request.prompt, request.selection),
-        context: request.source.trim() ? request.source : undefined,
+        context: !live && request.source.trim() ? request.source : undefined,
         name: request.documentName || "document",
         process: request.process,
       });

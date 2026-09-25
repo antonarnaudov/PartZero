@@ -36,7 +36,7 @@ const runner = new AgentRunner({ post });
 port.on("message", (e) => {
   const m = e.data as HostToWorker | undefined;
   if (!m || typeof m !== "object" || m.v !== PROTOCOL_VERSION) return;
-  if (m.type === "start" || m.type === "answer" || m.type === "stop") runner.handle(m);
+  if (m.type === "start" || m.type === "answer" || m.type === "stop" || m.type === "opsReply") runner.handle(m);
   if (m.type === "selftest") {
     void workerSelfTest({ mcpShimPath: m.mcpShimPath, mcpServerDir: m.mcpServerDir, exePath: m.exePath, workspaceRoot: m.workspaceRoot }).then(
       (report) => post({ type: "selftest", v: PROTOCOL_VERSION, report }),

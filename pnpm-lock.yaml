@@ -186,6 +186,9 @@ importers:
       '@aicad/mcp-server':
         specifier: workspace:*
         version: link:../mcp-server
+      '@aicad/model-ops':
+        specifier: workspace:*
+        version: link:../model-ops
       '@electron/fuses':
         specifier: ^1.8.0
         version: 1.8.0

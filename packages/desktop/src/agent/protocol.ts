@@ -13,7 +13,11 @@ import { basename, isAbsolute, join } from "node:path";
 import type {
   AgentAnswerRequest,
   AgentEvent,
+  AgentOpsReply,
+  AgentOpsRequest,
   AgentProtocolVersion,
+  AgentSurface,
+  AutonomySetting,
   AgentRoleId,
   AgentSelectionItem,
   AgentStartRequest,
@@ -50,6 +54,11 @@ export const MIN_BUDGET_USD = 0.01;
 export const MAX_BUDGET_USD = 100;
 const SELECTION_KINDS = ["feature", "face", "edge", "body"] as const;
 const PROCESSES = ["fdm", "cnc", "laser", "any"] as const;
+const SURFACES: readonly AgentSurface[] = ["ops", "code"];
+export const AUTONOMY_SETTINGS: readonly AutonomySetting[] = ["ask", "review", "auto"];
+const OPS_METHODS: readonly AgentOpsRequest["method"][] = ["document", "hostState", "apply", "undo"];
+/** The largest ops message either way (a document can be large; ops are small). */
+export const MAX_OPS_MESSAGE_BYTES = 20 * 1024 * 1024;
 
 export class ProtocolError extends Error {
   constructor(message: string) {
@@ -120,6 +129,7 @@ export function parseStartRequest(v: unknown): AgentStartRequest {
     selection: selection.map(selectionItem),
   };
   if (o["process"] !== undefined) out.process = oneOf(o["process"], PROCESSES, "process");
+  if (o["surface"] !== undefined) out.surface = oneOf(o["surface"], SURFACES, "surface");
   if (o["settings"] !== undefined) {
     const s = obj(o["settings"], "settings");
     out.settings = s["budgetUsd"] === undefined ? {} : { budgetUsd: parseBudget(s["budgetUsd"], "settings.budgetUsd") };
@@ -225,6 +235,59 @@ export function parseSettingsUpdate(v: unknown, options: SettingsUpdateOptions =
   }
   if (o["cliMode"] !== undefined) out.cliMode = oneOf(o["cliMode"], CLI_MODES, "cliMode");
   if (o["ollamaBaseUrl"] !== undefined) out.ollamaBaseUrl = o["ollamaBaseUrl"] === null ? null : parseBaseUrl(o["ollamaBaseUrl"], "ollamaBaseUrl");
+  if (o["autonomy"] !== undefined) out.autonomy = oneOf(o["autonomy"], AUTONOMY_SETTINGS, "autonomy");
+  return out;
+}
+
+function jsonBytes(v: unknown): number {
+  try {
+    return Buffer.byteLength(JSON.stringify(v) ?? "", "utf8");
+  } catch {
+    return Number.POSITIVE_INFINITY;
+  }
+}
+
+/**
+ * The renderer's answer to a live operator op (renderer → main): shape, run id, sizes. The value
+ * is data for the worker (the op tools read it with their own schemas); an error keeps only its
+ * machine-readable fields.
+ */
+export function parseOpsReply(v: unknown): AgentOpsReply {
+  const o = obj(v, "ops reply");
+  version(o, "ops reply");
+  const runId = id(o["runId"], "runId");
+  const n = o["id"];
+  if (typeof n !== "number" || !Number.isInteger(n) || n < 1) throw new ProtocolError("id must be a positive integer");
+  if (jsonBytes(o) > MAX_OPS_MESSAGE_BYTES) throw new ProtocolError("ops reply is too large");
+  if (o["ok"] === true) return { v: PROTOCOL_VERSION, runId, id: n, ok: true, value: o["value"] ?? null };
+  const e = obj(o["error"], "error");
+  const error: Extract<AgentOpsReply, { ok: false }>["error"] = { code: str(e["code"], "error.code", 100, 1), message: str(e["message"], "error.message", 4000) };
+  if (Array.isArray(e["errors"])) error.errors = e["errors"].slice(0, 20);
+  if (typeof e["details"] === "object" && e["details"] !== null && !Array.isArray(e["details"])) error.details = e["details"] as Record<string, unknown>;
+  return { v: PROTOCOL_VERSION, runId, id: n, ok: false, error };
+}
+
+/** A worker's ops request (worker → main → renderer): the method is one of four, the ops a bounded array. */
+export function parseOpsRequest(v: unknown): AgentOpsRequest | null {
+  if (typeof v !== "object" || v === null) return null;
+  const o = v as Obj;
+  if (o["v"] !== PROTOCOL_VERSION || typeof o["runId"] !== "string" || typeof o["id"] !== "number" || !Number.isInteger(o["id"])) return null;
+  const method = o["method"];
+  if (typeof method !== "string" || !(OPS_METHODS as readonly string[]).includes(method)) return null;
+  const out: AgentOpsRequest = { v: PROTOCOL_VERSION, runId: o["runId"], id: o["id"], method: method as AgentOpsRequest["method"] };
+  if (method === "apply") {
+    if (!Array.isArray(o["ops"]) || o["ops"].length === 0 || o["ops"].length > 100) return null;
+    out.ops = o["ops"];
+    const opt = o["options"];
+    if (typeof opt === "object" && opt !== null) {
+      const p = opt as Obj;
+      out.options = {
+        ...(typeof p["label"] === "string" ? { label: p["label"].slice(0, 200) } : {}),
+        ...(Array.isArray(p["ack"]) ? { ack: p["ack"].filter((x): x is string => typeof x === "string").slice(0, 1000) } : {}),
+      };
+    }
+  }
+  if (jsonBytes(out) > MAX_OPS_MESSAGE_BYTES) return null;
   return out;
 }
 
@@ -377,6 +440,8 @@ export interface WorkerRunConfig {
    * the Agent's `conventions` option. The runner passes it where it builds the Agent (W4b).
    */
   conventions?: string;
+  /** (additive, `ops` surface) The autonomy dial the user set (ADR 0015); default `review`. */
+  autonomy?: AutonomySetting;
 }
 
 export type HostToWorker =
@@ -391,6 +456,8 @@ export type HostToWorker =
     }
   | { type: "answer"; v: AgentProtocolVersion; runId: string; questionId: string; answers: string[] }
   | { type: "stop"; v: AgentProtocolVersion; runId: string }
+  /** (additive) The renderer's answer to a live operator op. */
+  | { type: "opsReply"; v: AgentProtocolVersion; reply: AgentOpsReply }
   /**
    * `--self-test` only (main.ts): the worker checks its bundle and answers with a `selftest` message. `exePath` and
    * `workspaceRoot` are what a CLI run gets ({@link WorkerCliConfig}): the worker runs the MCP shim through them once.
@@ -406,7 +473,9 @@ export type WorkerToHost =
   /** Process-group ids of the live CLI processes (the main process kills them if the worker dies: §5.8 backstop). */
   | { type: "procs"; v: AgentProtocolVersion; pids: number[] }
   /** The answer to a `selftest` request (`agent/self-test.ts`). */
-  | { type: "selftest"; v: AgentProtocolVersion; report: WorkerSelfTestReport };
+  | { type: "selftest"; v: AgentProtocolVersion; report: WorkerSelfTestReport }
+  /** (additive) A live operator op on the renderer's open document (`ops` surface). */
+  | { type: "ops"; v: AgentProtocolVersion; request: AgentOpsRequest };
 
 const TERMINAL: ReadonlySet<string> = new Set(["result", "error"]);
 
@@ -433,6 +502,10 @@ export function parseWorkerMessage(v: unknown): WorkerToHost | null {
   }
   if (o["type"] === "selftest" && typeof o["report"] === "object" && o["report"] !== null) {
     return { type: "selftest", v: PROTOCOL_VERSION, report: o["report"] as WorkerSelfTestReport };
+  }
+  if (o["type"] === "ops") {
+    const request = parseOpsRequest(o["request"]);
+    return request ? { type: "ops", v: PROTOCOL_VERSION, request } : null;
   }
   if (o["type"] === "procs" && Array.isArray(o["pids"])) {
     const pids = o["pids"].filter((p): p is number => typeof p === "number" && Number.isInteger(p) && p > 1).slice(0, 64);

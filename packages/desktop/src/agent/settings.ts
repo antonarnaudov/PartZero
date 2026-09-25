@@ -18,6 +18,7 @@ import type {
   AgentTransportKind,
   ApiProviderId,
   BillingKind,
+  AutonomySetting,
   CliModeSetting,
   CliProviderId,
   CliProviderStatus,
@@ -42,7 +43,7 @@ import {
 import { CLI_PROVIDERS } from "@aicad/llm-gateway/cli";
 import { cliPathShapeProblem, MAX_CLI_BLOCKS, type CliBlock } from "./cli-detect.js";
 import { PROVIDERS, type KeyResolver } from "./keys.js";
-import { baseUrlProblem, CLI_MODES, CLI_PROVIDER_IDS, isApiProviderId, isCliProviderId, MAX_BUDGET_USD, MIN_BUDGET_USD, PROTOCOL_VERSION, ROLE_IDS } from "./protocol.js";
+import { AUTONOMY_SETTINGS, baseUrlProblem, CLI_MODES, CLI_PROVIDER_IDS, isApiProviderId, isCliProviderId, MAX_BUDGET_USD, MIN_BUDGET_USD, PROTOCOL_VERSION, ROLE_IDS } from "./protocol.js";
 
 export const DEFAULT_BUDGET_USD = 1.0;
 
@@ -56,11 +57,13 @@ export interface StoredSettings {
   cliMode: CliModeSetting;
   /** null = http://127.0.0.1:11434. */
   ollamaBaseUrl: string | null;
+  /** The autonomy dial (ADR 0015): set by the user only (Assistant header, Settings); default `review`. */
+  autonomy: AutonomySetting;
   /** CLI binaries blocked after a lockdown violation (§5.5, §5.6): kept until a forced Re-check passes or the file changes. */
   cliBlocks: CliBlock[];
 }
 
-const DEFAULTS: StoredSettings = { v: 1, models: {}, budgetUsd: DEFAULT_BUDGET_USD, compatBaseUrl: null, cliPaths: {}, cliMode: "auto", ollamaBaseUrl: null, cliBlocks: [] };
+const DEFAULTS: StoredSettings = { v: 1, models: {}, budgetUsd: DEFAULT_BUDGET_USD, compatBaseUrl: null, cliPaths: {}, cliMode: "auto", ollamaBaseUrl: null, autonomy: "review", cliBlocks: [] };
 const PROVIDER_LABELS: Record<ProviderId, string> = {
   anthropic: "Anthropic",
   openai: "OpenAI",
@@ -289,6 +292,7 @@ function sanitize(v: unknown): StoredSettings {
     cliPaths,
     cliMode: typeof mode === "string" && (CLI_MODES as readonly string[]).includes(mode) ? (mode as CliModeSetting) : "auto",
     ollamaBaseUrl: url(o["ollamaBaseUrl"]),
+    autonomy: typeof o["autonomy"] === "string" && (AUTONOMY_SETTINGS as readonly string[]).includes(o["autonomy"]) ? (o["autonomy"] as AutonomySetting) : "review",
     cliBlocks: sanitizeBlocks(o["cliBlocks"]),
   };
 }
@@ -349,6 +353,7 @@ export class SettingsStore {
       cliPaths,
       cliMode: u.cliMode ?? this.#data.cliMode,
       ollamaBaseUrl: u.ollamaBaseUrl === undefined ? this.#data.ollamaBaseUrl : u.ollamaBaseUrl,
+      autonomy: u.autonomy ?? this.#data.autonomy,
       cliBlocks: this.#data.cliBlocks,
     };
     this.#save();
@@ -441,5 +446,6 @@ export function buildSettingsView(input: SettingsViewInput): AgentSettingsView {
     cliMode: stored.cliMode,
     autoDefault: auto.provider === null ? null : { provider: auto.provider, label: providerLabel(auto.provider) },
     ollamaBaseUrl: stored.ollamaBaseUrl,
+    autonomy: stored.autonomy,
   };
 }

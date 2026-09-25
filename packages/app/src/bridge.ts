@@ -18,6 +18,8 @@ import type {
   AgentAnswerRequest,
   AgentBridge,
   AgentEvent,
+  AgentOpsReply,
+  AgentOpsRequest,
   AgentSettingsView,
   AgentStartRequest,
   AgentStartResponse,
@@ -328,6 +330,8 @@ export interface IpcContract extends FilesIpcContract {
   "agent:start": { args: [AgentStartRequest]; result: AgentStartResponse };
   "agent:answer": { args: [AgentAnswerRequest]; result: { ok: boolean } };
   "agent:stop": { args: [AgentStopRequest]; result: { ok: boolean } };
+  /** (additive) The renderer answers a live operator op (`agent:ops`). */
+  "agent:opsReply": { args: [AgentOpsReply]; result: { ok: boolean } };
   "settings:get": { args: []; result: AgentSettingsView };
   "settings:update": { args: [SettingsUpdate]; result: AgentSettingsView };
   "settings:setApiKey": { args: [SetApiKeyRequest]; result: AgentSettingsView };
@@ -353,6 +357,8 @@ export type IpcSendChannel = keyof IpcSendContract;
 export interface IpcEventContract extends FilesEventContract {
   "menu:command": [MenuCommandMessage];
   "agent:event": [AgentEvent];
+  /** (additive) The live operator's op on the open document, to the window that started the run. */
+  "agent:ops": [AgentOpsRequest];
 }
 
 export type IpcEventChannel = keyof IpcEventContract;

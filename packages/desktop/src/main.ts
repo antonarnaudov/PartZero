@@ -25,7 +25,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { app, BrowserWindow, dialog, Menu, safeStorage, screen, session, shell, utilityProcess } from "electron";
-import type { AgentEvent, AppInfo, MenuCommandMessage } from "@aicad/app/bridge";
+import type { AgentEvent, AgentOpsRequest, AppInfo, MenuCommandMessage } from "@aicad/app/bridge";
 import type { WorkerHandle } from "./agent/host.js";
 import { applyDevDockIcon } from "./app-icon.js";
 import type { Cipher } from "./agent/keys.js";
@@ -211,6 +211,12 @@ function spawnAgentWorker(): WorkerHandle {
 function sendAgentEvent(event: AgentEvent): void {
   const target = (agentContentsId !== null ? windows.windowOf(agentContentsId) : null) ?? windows.current();
   if (target && !target.isDestroyed()) target.webContents.send("agent:event", event);
+}
+
+/** The live operator's ops go to the window that started the run, and only there (it holds the document). */
+function sendAgentOps(request: AgentOpsRequest): void {
+  const target = agentContentsId !== null ? windows.windowOf(agentContentsId) : null;
+  if (target && !target.isDestroyed()) target.webContents.send("agent:ops", request);
 }
 
 function sendMenuCommand(message: MenuCommandMessage): void {
@@ -464,6 +470,7 @@ function start(): void {
       cipher: safeStorageCipher,
       spawnWorker: spawnAgentWorker,
       send: sendAgentEvent,
+      sendOps: sendAgentOps,
       log: (level, message) => console[level === "info" ? "log" : level](`[aicad-agent] ${message}`),
       detectEnv: cliDetectEnv(withLoginNames(process.env)),
       // An isolated test profile never sees the user's real CLIs or local Ollama unless the test opts in (env.ts).
@@ -516,6 +523,7 @@ function start(): void {
       onAgentStart: (senderId) => {
         agentContentsId = senderId;
       },
+      isAgentWindow: (senderId) => agentContentsId === senderId,
     });
 
     // Documents: autosaves and what a crash left behind, thumbnails for the recent grid, the window protocol.
