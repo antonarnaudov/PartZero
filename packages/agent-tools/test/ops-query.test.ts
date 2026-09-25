@@ -120,6 +120,15 @@ describe("measure, check and the step check", () => {
   });
 });
 
+describe("JSON-text arguments", () => {
+  it_("a *_json argument sent as the object itself is taken as its JSON text", async () => {
+    const { call, host } = await cube();
+    const r = await call("add_feature", { feature_json: { type: "sketch", id: "top_sk", name: "top_sk", plane: "XY", curves: [{ kind: "circle", id: "c", center: [0, 0], radius: 3 }] } });
+    expect(r.isError, r.text).toBeFalsy();
+    expect(parseDoc(await host.document()).parts[0]!.features.map((f) => f.id)).toContain("top_sk");
+  });
+});
+
 describe("the op playbooks", () => {
   it("cover every command-layer refusal code", () => {
     const codes = [

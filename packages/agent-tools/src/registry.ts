@@ -83,6 +83,26 @@ export function toStrictJsonSchema(schema: z.ZodType): Json {
   return strictify(raw) as Json;
 }
 
+/**
+ * Arguments named `*_json` carry JSON as text (strict schemas close every object, so a free-form
+ * object cannot pass through them). A model that sends the object itself instead of its text means
+ * the same thing: it is turned into its JSON text rather than refused.
+ */
+function coerceJsonText(value: unknown, schema: Json | undefined): unknown {
+  if (!isObject(value)) return value;
+  const input = value;
+  const props = isObject(schema?.["properties"]) ? (schema!["properties"] as Json) : {};
+  let out: Json | null = null;
+  for (const [k, v] of Object.entries(input)) {
+    if (!k.endsWith("_json") || typeof v !== "object" || v === null) continue;
+    const p = props[k];
+    if (!isObject(p) || (p["type"] !== "string" && !Array.isArray(p["anyOf"]))) continue;
+    out ??= { ...input };
+    out[k] = JSON.stringify(v);
+  }
+  return out ?? input;
+}
+
 function zodMessage(error: z.ZodError): string {
   return error.issues
     .slice(0, 6)
@@ -162,7 +182,7 @@ export class ToolRegistry<Ctx> {
       };
     }
     // OpenAI strict mode sends null for optional fields; map them back to "absent".
-    const input = stripOptionalNulls(call.input, this.#schemas.get(call.name));
+    const input = coerceJsonText(stripOptionalNulls(call.input, this.#schemas.get(call.name)), this.#schemas.get(call.name));
     const parsed = tool.input.safeParse(input);
     if (!parsed.success) {
       return { text: `Invalid input for ${call.name}: ${zodMessage(parsed.error)}. Nothing was executed; fix the arguments and call again.`, isError: true, data: { kind: "bad_input" } };
