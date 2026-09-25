@@ -331,6 +331,65 @@ describe("sketch mode", () => {
     expect(s.ok).toBe(true);
   });
 
+  it("trims circles into arcs, extends arcs, and dimensions angles", async () => {
+    const d = await start();
+    const m = d.mode;
+    // A circle crossed by a line: trimming the top piece leaves an arc (same id) bound to the line.
+    m.setTool("circleCenter");
+    d.click([0, 0], { alt: true });
+    d.click([10, 0], { alt: true });
+    m.setTool("line");
+    d.click([-20, 4], { alt: true });
+    d.click([20, 4], { alt: true });
+    d.key("Escape");
+    const circle = m.getState().snapshot!.curves.find((c) => c.kind === "circle")!;
+    m.setTool("trim");
+    d.click([0, 10]);
+    let s = m.getState().snapshot!;
+    const arc = s.curves.find((c) => c.id === circle.id)!;
+    expect(arc.kind).toBe("arc");
+    expect(s.constraints.filter((c) => c.type === "point_on_line")).toHaveLength(2);
+    expect(s.ok).toBe(true);
+    // Extend the arc's end back up to... a vertical line on the right side.
+    m.setTool("line");
+    d.click([9, -20], { alt: true });
+    d.click([9, 20], { alt: true });
+    d.key("Escape");
+    s = m.getState().snapshot!;
+    const a0 = s.curves.find((c) => c.id === circle.id) as Extract<LiteralCurve, { kind: "arc" }>;
+    // The arc runs ccw from its right end (y = 4) around the bottom to the left end; extend
+    // the right end (near (9.2, 4)) until it meets x = 9.
+    m.setTool("extend");
+    expect(a0.kind).toBe("arc");
+    // Click on the arc near its right end (at 15°: clear of the line y = 4 that ends it).
+    const a15 = (15 * Math.PI) / 180;
+    d.click([10 * Math.cos(a15), 10 * Math.sin(a15)]);
+    s = m.getState().snapshot!;
+    expect(s.ok).toBe(true);
+    const a1 = s.curves.find((c) => c.id === circle.id) as Extract<LiteralCurve, { kind: "arc" }>;
+    const ends = [a1.start, a1.end];
+    expect(ends.some((p) => Math.abs(p[0] - 9) < 1e-6)).toBe(true);
+
+    // Angle between two lines.
+    m.setTool("line");
+    d.click([100, 0], { alt: true });
+    d.click([140, 0], { alt: true });
+    d.key("Escape");
+    d.click([100, 0], { alt: true });
+    d.click([130, 25], { alt: true });
+    d.key("Escape");
+    m.setTool("dimension");
+    d.click([120, 0]);
+    d.click([115, 12.5]);
+    const p = m.getState().pendingDim;
+    expect(p?.proposal.shape.type).toBe("angle");
+    d.click([150, 10]);
+    m.setDimText("30");
+    expect(m.commitDimension()).toBe(true);
+    const ang = m.getState().snapshot!.constraints.find((c) => c.type === "angle")!;
+    expect(ang.measured).toBeCloseTo(30, 6);
+  });
+
   it("cancels without committing, and Esc unwinds tool → selection → finish", async () => {
     const d = await start();
     const m = d.mode;

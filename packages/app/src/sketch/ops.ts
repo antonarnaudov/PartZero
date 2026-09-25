@@ -320,12 +320,14 @@ export function extend(id: string, at: P2, curves: readonly LiteralCurve[], feat
     const atCcwEnd = dist(at, endPt) <= dist(at, startPt);
     const full: LiteralCurve = { kind: "circle", id: "__full", center: ap.center, radius: ap.r };
     let best: { gap: number; by: LiteralCurve } | null = null;
+    // Intersections at the end itself (the curve that already bounds it) do not count.
+    const minGap = 1e-7 / Math.max(ap.r, EPS);
     for (const o of others) {
       for (const p of intersect(full, o)) {
         const t = wrap(angleOf(sub(p, ap.center)) - ap.a0);
         // Angular distance beyond the end being extended.
         const gap = atCcwEnd ? t - ap.sweep : wrap(-t);
-        const g = atCcwEnd ? (gap > 1e-9 ? gap : Infinity) : gap > 1e-9 && gap < 2 * Math.PI - ap.sweep ? gap : Infinity;
+        const g = atCcwEnd ? (gap > minGap ? gap : Infinity) : gap > minGap && gap < 2 * Math.PI - ap.sweep ? gap : Infinity;
         if (Number.isFinite(g) && g < 2 * Math.PI - ap.sweep && (!best || g < best.gap)) best = { gap: g, by: o };
       }
     }
