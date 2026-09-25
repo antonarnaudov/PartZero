@@ -12,6 +12,7 @@ import {
   datumPlaneModelingTool,
   extrudeModelingTool,
   holeModelingTool,
+  moveModelingTool,
   pushPullModelingTool,
   revolveModelingTool,
   type ModelingTool,
@@ -56,6 +57,7 @@ export const MODEL_COMMANDS = {
   "model.hole": modelCommand("model.hole", holeModelingTool),
   "model.combine": modelCommand("model.combine", booleanModelingTool),
   "model.pushPull": modelCommand("model.pushPull", pushPullModelingTool),
+  "model.move": modelCommand("model.move", moveModelingTool),
   "model.datumPlane": modelCommand("model.datumPlane", datumPlaneModelingTool),
   "model.datumAxis": modelCommand("model.datumAxis", datumAxisModelingTool),
 };

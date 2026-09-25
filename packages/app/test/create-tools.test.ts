@@ -226,6 +226,46 @@ describe("the create tools", () => {
     expect(h.ir.document).toBe(before);
   });
 
+  it_("Extrude: through all needs a cut and has no arrow; up to a plane follows the plane; re-editing keeps the extent", async () => {
+    const withRoof = JSON.parse(PLATE) as { parts: Array<{ features: unknown[] }> };
+    withRoof.parts[0]!.features.push({ type: "datum_plane", id: "d1", name: "roof", mode: "offset", from: "XY", distance: 12 });
+    const h = await harness(JSON.stringify(withRoof));
+    let p = await open(h, "feature.extrude", { sketch: "s2", extent: "through_all", direction: "reverse" });
+    // A new body cannot go "through all": the operation field says so, and nothing previews.
+    expect(p.getState().fields.find((f) => f.key === "operation")!.remoteError?.code).toBe("EXTENT_NEEDS_CUT");
+    p.set("operation", "cut");
+    await settle(p);
+    expect(p.getState().state).toBe("ready");
+    expect(p.getState().handles).toEqual([]);
+    expect(p.getState().fields.find((f) => f.key === "distance")!.visible).toBe(false);
+    expect((await p.commit("test")).ok).toBe(true);
+    expect(feature(h, "extrude1")).toMatchObject({ extent: "through_all", op: "cut", targets: "all", direction: "reverse" });
+    expect(feature(h, "extrude1")["distance"]).toBeUndefined();
+    await h.doc.idle();
+    let report = await h.ir.report();
+    expect(report.parts![0]!.bodies[0]!.volume).toBeCloseTo(40 * 20 * 5 - Math.PI * 9 * 5, 6);
+
+    // Up to the datum plane 12 above XY: the outline, joined, now ends on it (the plate grows to it).
+    p = await open(h, "feature.extrude", { sketch: "s1", extent: "up_to", operation: "join" });
+    expect(p.getState().state).not.toBe("ready");
+    p.set("upTo", [{ kind: "datum", feature: "d1", label: "roof" }]);
+    await settle(p);
+    expect(p.getState().state).toBe("ready");
+    expect((await p.commit("test")).ok).toBe(true);
+    expect(feature(h, "extrude2")).toMatchObject({ extent: { up_to: { datum: "d1" } }, op: "join" });
+    await h.doc.idle();
+    report = await h.ir.report();
+    expect(report.parts![0]!.bodies[0]!.bbox_max[2]).toBeCloseTo(12, 9);
+
+    // Re-editing from the timeline shows the extent and the plane.
+    const r = await h.shell.editFeature("extrude2", "test");
+    expect(r).toMatchObject({ started: true, tool: "feature.extrude" });
+    p = h.shell.getState().panel!;
+    await settle(p);
+    expect(p.values()).toMatchObject({ extent: "up_to", operation: "join" });
+    expect((p.values()["upTo"] as SelectionItem[])[0]).toMatchObject({ kind: "datum", feature: "d1" });
+  });
+
   it_("Revolve: offers the sketch's construction line as the axis, previews with an angle ring, and commits", async () => {
     const h = await harness();
     h.selection.set([{ kind: "feature", feature: "ringSk" }]);
@@ -347,6 +387,42 @@ describe("the create tools", () => {
     h.selection.set([face("e1/side:r.left")]);
     const q = await open(h, "feature.pushPull", { offset: "1" });
     expect(q.getState().fields.find((f) => f.key === "face")!.remoteError?.code).toBe("MODEL_NO_DRIVER");
+  });
+});
+
+describe("Move/Copy (transform)", () => {
+  it_("moves the picked body with its arrows and a rotate ring; Copy adds a body; re-edit keeps its bodies", async () => {
+    const h = await harness();
+    h.selection.set([face("e1/cap:end")]);
+    const p = await open(h, "feature.move", { dx: "30" });
+    expect(p.getState().state, JSON.stringify(p.getState().errors)).toBe("ready");
+    const hs = p.getState().handles;
+    expect(hs.map((x) => [x.id, x.kind, x.value])).toEqual([
+      ["dx", "linear", 30],
+      ["dy", "linear", 0],
+      ["dz", "linear", 0],
+    ]);
+    expect(hs[0]!.origin).toEqual([0, 0, 2.5]);
+    p.handleChanged("dz", 4, "end");
+    p.set("axis", "Z");
+    p.set("angle", "90");
+    await settle(p);
+    expect(p.getState().handles.find((x) => x.id === "angle")).toMatchObject({ kind: "rotate", axis: [0, 0, 1], value: 90 });
+    expect((await p.commit("test")).ok).toBe(true);
+    expect(feature(h, "transform1")).toMatchObject({ type: "transform", bodies: { kind: "body", q: { op: "body", feature: "e1" } }, translate: [30, 0, 4], rotate: { axis: "Z", angle: 90 } });
+    const report = await h.ir.report();
+    const slab = report.parts![0]!.bodies.find((b) => b.origin.feature === "e1")!;
+    expect(slab.bbox_min).toEqual([20, -20, 4]);
+    await h.doc.idle();
+    await h.shell.editFeature("transform1", "test");
+    const q = h.shell.getState().panel!;
+    await settle(q);
+    expect(q.values()).toMatchObject({ axis: "Z", copy: false });
+    q.set("copy", true);
+    await settle(q);
+    expect((await q.commit("test")).ok).toBe(true);
+    expect(feature(h, "transform1")).toMatchObject({ copy: true });
+    expect((await h.ir.report()).parts![0]!.bodies).toHaveLength(2);
   });
 });
 

@@ -8,8 +8,8 @@ import { extrudeModelingTool, type ExtrudeArgs } from "@aicad/model-ops";
 import type { AppServices } from "../../services";
 import type { ChoiceFieldSpec, FeatureInfo, FieldSpec, PanelHandle, PanelSpec, PanelValues, SummaryRow, ToolContext, ToolDefinition } from "../framework/types";
 import { formatHandleValue } from "../framework/session";
-import { frameOfSketch, itemsOf, modelingPanel, numberOf, PanelArgError, profileCenter, scalarArg, v3, worldOf, type PreviewInfo } from "./kit";
-import { bodiesOfItems, needsV1, selectedSketch, sketchesOf, type ModelFeature } from "./model";
+import { frameOfSketch, itemsOf, modelingPanel, numberOf, PanelArgError, pickName, profileCenter, scalarArg, v3, worldOf, type PreviewInfo } from "./kit";
+import { bodiesOfItems, needsV1, pickItem, selectedSketch, sketchesOf, type ModelFeature } from "./model";
 
 export const DIRECTIONS: ChoiceFieldSpec["options"] = [
   { value: "normal", label: "One side" },
@@ -55,7 +55,19 @@ function fields(sketches: readonly ModelFeature[], edit: boolean): FieldSpec[] {
       ...(sketches.length ? { default: sketches[sketches.length - 1]!.id } : {}),
       hint: "The sketch whose closed regions are extruded",
     },
-    { key: "distance", label: "Distance", kind: "number", quantity: "length", min: 0, minExclusive: true, default: "10 mm" },
+    {
+      key: "extent",
+      label: "Extent",
+      kind: "choice",
+      options: [
+        { value: "distance", label: "Distance" },
+        { value: "through_all", label: "Through all", hint: "Cut through every body, however thick" },
+        { value: "up_to", label: "Up to", hint: "End on a parallel face or plane (it follows it)" },
+      ],
+      default: "distance",
+    },
+    { key: "distance", label: "Distance", kind: "number", quantity: "length", min: 0, minExclusive: true, default: "10 mm", visibleWhen: (v) => v["extent"] === "distance" },
+    { key: "upTo", label: "Up to", kind: "selection", accepts: ["face", "datum", "origin"], min: 0, max: 1, fromSelection: false, hint: "A planar face or plane parallel to the sketch", visibleWhen: (v) => v["extent"] === "up_to" },
     { key: "direction", label: "Direction", kind: "choice", options: DIRECTIONS, default: "normal" },
     { key: "operation", label: "Operation", kind: "choice", options: OPERATIONS, default: "new_body" },
     TARGETS_FIELD,
@@ -66,15 +78,26 @@ function fields(sketches: readonly ModelFeature[], edit: boolean): FieldSpec[] {
 function args(values: PanelValues, feature: string | null): ExtrudeArgs {
   const sketch = String(values["sketch"] ?? "");
   if (!sketch) throw new PanelArgError("sketch", "Draw a sketch first.");
-  const distance = scalarArg(values["distance"]);
-  if (distance === undefined) throw new PanelArgError("distance", "Enter a distance.");
+  const extent = String(values["extent"] ?? "distance") as NonNullable<ExtrudeArgs["extent"]>;
   const operation = String(values["operation"] ?? "new_body") as ExtrudeArgs["operation"];
+  const how: Partial<ExtrudeArgs> = { extent };
+  if (extent === "distance") {
+    const distance = scalarArg(values["distance"]);
+    if (distance === undefined) throw new PanelArgError("distance", "Enter a distance.");
+    how.distance = distance;
+  } else if (extent === "through_all") {
+    if (operation !== "cut" && operation !== "intersect") throw new PanelArgError("operation", "Through all cuts: choose Cut (or Intersect).", "EXTENT_NEEDS_CUT");
+  } else {
+    const plane = itemsOf(values["upTo"])[0];
+    if (plane) how.up_to = pickName(plane);
+    else if (!feature) throw new PanelArgError("upTo", "Pick the face or plane to extrude up to.");
+  }
   const bodies = bodiesOfItems(itemsOf(values["targets"]));
   const name = typeof values["name"] === "string" && values["name"] !== "" ? values["name"] : undefined;
   return {
     ...(feature ? { feature } : {}),
     sketch,
-    distance,
+    ...how,
     direction: String(values["direction"] ?? "normal") as ExtrudeArgs["direction"],
     operation,
     // Empty: every body (a re-edit keeps the targets it has).
@@ -84,7 +107,8 @@ function args(values: PanelValues, feature: string | null): ExtrudeArgs {
 }
 
 /** The distance arrow: from the profile's centre on the sketch plane along the extrude direction. */
-function handles(values: PanelValues, info: PreviewInfo): PanelHandle[] {
+function handles(values: PanelValues, info: PreviewInfo | null): PanelHandle[] {
+  if (!info || (values["extent"] ?? "distance") !== "distance") return [];
   const sketch = String(values["sketch"] ?? "");
   const frame = frameOfSketch(info.ctx, sketch);
   const d = numberOf(values["distance"]);
@@ -127,7 +151,19 @@ function panel(services: AppServices, sketches: readonly ModelFeature[], feature
     ...(initial ? { initial } : {}),
     ...(feature ? {} : { apply: true }),
     args: (values) => args(values, feature?.id ?? null),
-    codeField: { INVALID_DISTANCE: "distance", BOOLEAN_NO_INTERSECTION: "operation", BOOLEAN_EMPTY_RESULT: "operation", BOOLEAN_TARGETS_REQUIRED: "targets", SKETCH_NO_REGIONS: "sketch", UNRESOLVED_SKETCH: "sketch" },
+    argField: { up_to: "upTo" },
+    codeField: {
+      INVALID_DISTANCE: "distance",
+      BOOLEAN_NO_INTERSECTION: "operation",
+      BOOLEAN_EMPTY_RESULT: "operation",
+      BOOLEAN_TARGETS_REQUIRED: "targets",
+      SKETCH_NO_REGIONS: "sketch",
+      UNRESOLVED_SKETCH: "sketch",
+      EXTRUDE_UP_TO_NOT_PARALLEL: "upTo",
+      EXTRUDE_UP_TO_BEHIND: "upTo",
+      PLANE_NOT_PLANAR: "upTo",
+      EXTRUDE_EXTENT_CONFLICT: "extent",
+    },
     handles,
     summary,
   });
@@ -155,9 +191,12 @@ export const extrudeTool: ToolDefinition = {
   },
   fromFeature(feature: FeatureInfo, ctx: ToolContext): PanelSpec {
     const a = extrudeModelingTool.argsOf!(feature.json as never, null as never);
+    const upTo = a.up_to ? pickItem(a.up_to, ctx) : null;
     return panel(ctx.services, sketchesOf(ctx.services), feature, {
       sketch: String(a.sketch),
+      extent: a.extent ?? "distance",
       ...(a.distance !== undefined ? { distance: String(a.distance) } : {}),
+      ...(upTo ? { upTo: [upTo] } : {}),
       direction: a.direction ?? "normal",
       operation: a.operation ?? "new_body",
       name: feature.name ?? feature.id,

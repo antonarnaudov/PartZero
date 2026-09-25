@@ -148,7 +148,8 @@ function args(values: PanelValues, feature: string | null, keepPlacement: boolea
 }
 
 /** The depth arrow of a blind hole, at the first hole, along the drilling direction. */
-function handles(values: PanelValues, info: PreviewInfo): PanelHandle[] {
+function handles(values: PanelValues, info: PreviewInfo | null): PanelHandle[] {
+  if (!info) return [];
   if (values["extent"] !== "blind" || values["kind"] === "insert") return [];
   const h = info.entry?.holes?.[0];
   const depth = numberOf(values["depth"]);

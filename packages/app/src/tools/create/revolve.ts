@@ -81,7 +81,8 @@ function args(values: PanelValues, feature: string | null, keepAxis: boolean): R
 }
 
 /** The angle ring: about the revolve axis, its zero toward the profile. */
-function handles(values: PanelValues, info: PreviewInfo): PanelHandle[] {
+function handles(values: PanelValues, info: PreviewInfo | null): PanelHandle[] {
+  if (!info) return [];
   const sketch = String(values["sketch"] ?? "");
   const frame = frameOfSketch(info.ctx, sketch);
   const angle = numberOf(values["angle"]);

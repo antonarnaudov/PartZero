@@ -100,7 +100,8 @@ function planeArgs(values: PanelValues, feature: string | null): DatumPlaneArgs 
 }
 
 /** The offset arrow: from the plane it starts from, along its normal (the new plane at its tip). */
-function planeHandles(values: PanelValues, info: PreviewInfo): PanelHandle[] {
+function planeHandles(values: PanelValues, info: PreviewInfo | null): PanelHandle[] {
+  if (!info) return [];
   const d = info.entry?.datum as { origin?: number[]; normal?: number[] } | undefined;
   if (values["mode"] !== "offset" || !d?.origin || !d.normal) return [];
   const dist = numberOf(values["distance"]);

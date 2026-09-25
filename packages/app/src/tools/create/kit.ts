@@ -91,7 +91,8 @@ export interface ModelingPanelDef<A extends Record<string, unknown>> {
   codeField?: Readonly<Record<string, string>>;
   /** Where the preview is cut: at the tool's feature (default) or at the rollback marker (the whole part). */
   cut?: "feature" | "marker";
-  handles?(values: PanelValues, info: PreviewInfo): PanelHandle[];
+  /** Handles from the previewed geometry; `info` is null when the command cannot build yet. */
+  handles?(values: PanelValues, info: PreviewInfo | null): PanelHandle[];
   summary?(values: PanelValues, info: PreviewInfo): SummaryRow[];
   /** Cancel / Esc: tidy up (e.g. a temporary selection filter). */
   cancel?(): void;
@@ -196,7 +197,15 @@ export function modelingPanel<A extends Record<string, unknown>>(services: AppSe
       try {
         built = await plan(values);
       } catch (e) {
-        return { ok: false, errors: errorsOf(def, keys, e) };
+        // Handles that need no preview (placed from the displayed model) show even while the
+        // command cannot build yet, e.g. Move's arrows before anything was moved.
+        let handles: PanelHandle[] | undefined;
+        try {
+          handles = def.handles?.(values, null);
+        } catch {
+          handles = undefined;
+        }
+        return { ok: false, errors: errorsOf(def, keys, e), ...(handles?.length ? { handles } : {}) };
       }
       const { ctx, plan: p } = built;
       let candidate = ctx.document;

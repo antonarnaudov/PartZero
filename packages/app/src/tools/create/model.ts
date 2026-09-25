@@ -68,6 +68,15 @@ export function faceItemOf(ref: unknown, services: AppServices): SelectionItem |
   return { kind: "face", part: f?.partName ?? "part", key, label: faceLabel(key, services.doc.getState().model?.ir) };
 }
 
+/** A pick name (`XY`, a datum id, a face key) back as a selection item, for re-editing a feature. */
+export function pickItem(pick: string, ctx: ToolContext): SelectionItem | null {
+  if (["XY", "XZ", "YZ", "X", "Y", "Z"].includes(pick)) return { kind: "origin", feature: pick, label: pick.length === 2 ? `${pick} plane` : `${pick} axis` };
+  const f = modelFeatures(ctx.services).find((x) => x.id === pick || x.name === pick);
+  if (f && (f.type === "datum_plane" || f.type === "datum_axis")) return { kind: "datum", feature: f.id, label: f.name };
+  if (!pick.includes("/")) return null;
+  return { kind: "face", part: modelFeatures(ctx.services)[0]?.partName ?? "part", key: pick, label: faceLabel(pick, ctx.services.doc.getState().model?.ir) };
+}
+
 /** Bodies picked directly, or through one of their faces (click any face of a body). */
 export function bodiesOfItems(items: readonly SelectionItem[]): string[] {
   const out: string[] = [];
