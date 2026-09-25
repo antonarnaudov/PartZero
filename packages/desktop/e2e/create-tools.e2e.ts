@@ -356,3 +356,124 @@ test("Combine: the plate picked by a face, then the tool body; a cut through bot
   expect(await feature("boolean1")).toMatchObject({ op: "cut", targets: { q: { op: "body", feature: "extrude1" } }, tools: { q: { op: "body", feature: "extrude2" } } });
   expect(pageErrors).toEqual([]);
 });
+
+test("Move/Copy (M): the ring body picked by a face; its Z arrow dragged, then typed values and a rotation; Copy adds a body", async () => {
+  await isoFit();
+  // The revolve's ring (r 45…50 around Z), picked by its outer side (selection-first).
+  await setSelection([{ kind: "face", body: "part/revolve1", key: "revolve1/side:p.right" }]);
+  await page.keyboard.press("m");
+  // Nothing moved yet: the panel prompts, and the X/Y/Z arrows are already on the body.
+  await expect.poll(async () => (await handles()).map((h) => h.id)).toEqual(["dx", "dy", "dz"]);
+  let p = (await panel())!;
+  expect(p.toolId).toBe("feature.move");
+  expect((p.values["bodies"] as unknown[]).length).toBe(1);
+  await expect(page.getByTestId("field-error-dx")).toContainText("Drag an arrow");
+  const z = (await handles()).find((h) => h.id === "dz")!;
+  const from = await project(z.origin);
+  const to = await project([z.origin[0], z.origin[1], z.origin[2] + 10]);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(from.x + ((to.x - from.x) * i) / 8, from.y + ((to.y - from.y) * i) / 8);
+  await page.mouse.up();
+  await expect.poll(async () => Number(((await panel())!.values["dz"] as { text: string }).text)).toBeGreaterThan(2);
+  await page.getByTestId("input-dz").fill("20");
+  await page.getByTestId("input-axis").selectOption("Z");
+  await page.getByTestId("input-angle").fill("45");
+  p = await ready();
+  expect(p.summary).toEqual([{ label: "Moved", value: "1 body" }]);
+  await expect.poll(async () => (await handles()).map((h) => [h.id, h.kind])).toEqual([
+    ["dx", "linear"],
+    ["dy", "linear"],
+    ["dz", "linear"],
+    ["angle", "rotate"],
+  ]);
+  await page.screenshot({ path: screenshotPath("create-move-panel.png", "AICAD_E2E_CREATE_SCREENSHOT") });
+  await page.getByTestId("toggle-copy").click();
+  p = await ready();
+  expect(p.summary).toEqual([{ label: "Copies", value: "1 body" }]);
+  await page.getByTestId("panel-ok").click();
+  await expect(row("transform1")).toHaveAttribute("data-status", "ok");
+  expect(await feature("transform1")).toMatchObject({ type: "transform", bodies: { q: { op: "body", feature: "revolve1" } }, translate: [0, 0, 20], rotate: { axis: "Z", angle: 45 }, copy: true });
+  await expect.poll(async () => (await page.evaluate(() => (window as unknown as { __pzView: { topology(): Array<{ body: string }> } }).__pzView.topology())).map((b) => b.body).sort()).toContain("part/transform1");
+  expect(pageErrors).toEqual([]);
+});
+
+async function featureIdByName(name: string): Promise<string> {
+  const f = (await model()).parts.flatMap((p) => p.features).find((x) => x["name"] === name);
+  if (!f) throw new Error(`no feature ${name}`);
+  return String(f["id"]);
+}
+
+const PLATE_TOP = { kind: "face", body: "part/extrude1", key: "extrude1/cap:end" };
+
+async function extrudeOf(sketch: string): Promise<Record<string, unknown>> {
+  const f = (await model()).parts.flatMap((p) => p.features).find((x) => x["type"] === "extrude" && x["sketch"] === sketch);
+  if (!f) throw new Error(`no extrude of ${sketch}`);
+  return f;
+}
+
+test("Extrude extents: a bore cut through all has no arrow; a boss up to the construction plane follows the plane", async () => {
+  // Two circles on XY (inside the 60 × 40 plate, clear of the hole and the peg's cut).
+  const circles: Array<[string, [number, number]]> = [
+    ["boreSk", [0, 0]],
+    ["bossSk", [8, -10]],
+  ];
+  for (const [name, center] of circles) {
+    const r = await exec("ir.addFeature", { feature: { type: "sketch", name, plane: "XY", curves: [{ kind: "circle", id: "c", center, radius: 3 }] } });
+    expect(r.ok, r.error?.message).toBe(true);
+    await expect(row(name)).toHaveAttribute("data-status", "ok");
+  }
+  const bore = await featureIdByName("boreSk");
+  await row("boreSk").click();
+  await page.keyboard.press("e");
+  await expect.poll(async () => (await panel())?.values["sketch"]).toBe(bore);
+  await page.getByTestId("choice-extent-through_all").click();
+  // A new body cannot go through all: the operation says so until it is a cut.
+  await expect(page.getByTestId("field-error-operation")).toContainText("Through all cuts");
+  await expect(page.getByTestId("input-distance")).toBeHidden();
+  await page.getByTestId("choice-operation-cut").click();
+  // The plate only (with every body as the target, the rings left as they were would be noted).
+  await page.getByTestId("selection-targets").click();
+  await setSelection([PLATE_TOP]);
+  await expect.poll(async () => ((await panel())?.values["targets"] as unknown[] | undefined)?.length).toBe(1);
+  await ready();
+  await expect.poll(async () => (await handles()).length).toBe(0);
+  await page.getByTestId("panel-ok").click();
+  await expect(page.getByTestId("property-panel")).toBeHidden();
+  const cut = await extrudeOf(bore);
+  expect(cut).toMatchObject({ extent: "through_all", op: "cut", targets: { q: { op: "body", feature: "extrude1" } } });
+  expect(cut["distance"]).toBeUndefined();
+  await expect(row(String(cut["id"]))).toHaveAttribute("data-status", "ok");
+
+  // Up to the construction plane (5 above the top face): picked into the "Up to" input.
+  const boss = await featureIdByName("bossSk");
+  await row("bossSk").click();
+  await page.keyboard.press("e");
+  await expect.poll(async () => (await panel())?.values["sketch"]).toBe(boss);
+  await page.getByTestId("choice-extent-up_to").click();
+  await page.getByTestId("choice-operation-join").click();
+  await page.getByTestId("selection-targets").click();
+  await setSelection([PLATE_TOP]);
+  await expect.poll(async () => ((await panel())?.values["targets"] as unknown[] | undefined)?.length).toBe(1);
+  await page.getByTestId("selection-upTo").click();
+  await setSelection([{ kind: "datum", feature: "datum_plane1" }]);
+  await expect.poll(async () => ((await panel())?.values["upTo"] as Array<{ feature?: string }> | undefined)?.map((i) => i.feature)).toEqual(["datum_plane1"]);
+  await ready();
+  await page.screenshot({ path: screenshotPath("create-extrude-upto-panel.png", "AICAD_E2E_CREATE_SCREENSHOT") });
+  await page.getByTestId("panel-ok").click();
+  await expect(page.getByTestId("property-panel")).toBeHidden();
+  const up = await extrudeOf(boss);
+  expect(up).toMatchObject({ extent: { up_to: { datum: "datum_plane1" } }, op: "join" });
+  await expect(row(String(up["id"]))).toHaveAttribute("data-status", "ok");
+
+  // The plane moves (re-edited from the timeline): the boss still ends on it.
+  await row("datum_plane1").dblclick();
+  await ready();
+  await page.getByTestId("input-distance").fill("8");
+  await ready();
+  await page.getByTestId("panel-ok").click();
+  await expect(page.getByTestId("property-panel")).toBeHidden();
+  expect(await feature("datum_plane1")).toMatchObject({ distance: 8 });
+  await expect(row(String(up["id"]))).toHaveAttribute("data-status", "ok");
+  expect(pageErrors).toEqual([]);
+});
