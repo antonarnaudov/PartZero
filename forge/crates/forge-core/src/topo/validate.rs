@@ -38,6 +38,14 @@ const PROJECTION_ROUNDOFF_ULPS: f64 = 8.0;
 /// limit to the sketch stage (SPEC §3.1 [R-5]).
 const SKETCH_LOOP_ROUNDOFF_ULPS: f64 = 64.0;
 
+/// Largest parameter step (radians) between the samples of an angle-parametrized edge in a
+/// planar loop's polygon (the orientation and sampled-area checks): a chord of a circle of
+/// radius `r` then stays within `r·(1 − cos(π/128)) ≈ 3·10⁻⁴·r` of it.
+const ORIENTATION_ANGLE_STEP: f64 = math::PI / 64.0;
+
+/// Cap on those samples per edge (a helix edge of many turns).
+const ORIENTATION_MAX_SAMPLES: usize = 4096;
+
 /// How bad an issue is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Severity {
@@ -727,6 +735,38 @@ impl<'a> Validator<'a> {
             .collect()
     }
 
+    /// Samples of an edge for the planar loop polygon: [`Self::sample_params`], refined for
+    /// curves parametrized by an angle (circles, ellipses, helices and spirals) to a step of
+    /// at most [`ORIENTATION_ANGLE_STEP`], so that the polygon's chords stay close to the
+    /// curve. With 9 samples a long arc's chords cut deep into a thin region (the section of
+    /// a thread's groove, bounded by a 315° arc) and the polygon crosses itself.
+    fn orientation_params(&self, e: &Edge) -> Vec<f64> {
+        let (t0, t1) = e.t_range;
+        let angular = matches!(
+            e.curve,
+            Curve3::Circle(_) | Curve3::Ellipse(_) | Curve3::Helix(_)
+        );
+        let by_angle = if angular && (t1 - t0).is_finite() {
+            ((t1 - t0).abs() / ORIENTATION_ANGLE_STEP).ceil() as usize + 1
+        } else {
+            0
+        };
+        let n = self
+            .opts
+            .samples_per_edge
+            .max(2)
+            .max(by_angle.min(ORIENTATION_MAX_SAMPLES));
+        (0..n)
+            .map(|i| {
+                if i + 1 == n {
+                    t1
+                } else {
+                    t0 + (t1 - t0) * (i as f64 / (n - 1) as f64)
+                }
+            })
+            .collect()
+    }
+
     fn check_coedge_geometry(&mut self, fid: FaceId, face: &Face, cid: CoedgeId, e: &Edge) {
         let body = self.body();
         let Some(c) = body.coedge(cid) else { return };
@@ -804,7 +844,7 @@ impl<'a> Validator<'a> {
             };
             tol = math::max(tol, e.tolerance);
             tol_least = math::min(tol_least, e.tolerance);
-            let mut ts = self.sample_params(e);
+            let mut ts = self.orientation_params(e);
             if !c.forward {
                 ts.reverse();
             }

@@ -61,6 +61,11 @@ pub(crate) const SINGULAR_JUMP_MIN: f64 = 1e-9;
 pub(crate) const LOOP_CLOSURE_TOL: f64 = 1e-4;
 /// Spacing of points along singular jump chains (radians).
 const CHAIN_STEP: f64 = math::FRAC_PI_4 / 2.0;
+/// Most periods a band's boundary is shifted by when testing a cut (a modelled thread's
+/// crest boundary winds as many turns as the thread).
+const MAX_BAND_SHIFTS: i32 = 512;
+/// Extreme points of a loop the fallback band cut starts from.
+const FALLBACK_CUT_POINTS: usize = 64;
 /// Seeds closer than this fraction of the local spacing to the boundary are skipped.
 const SEED_CLEARANCE: f64 = 0.5;
 /// Seed grid spacing relative to the curvature-derived step: the staggered grid's
@@ -716,7 +721,26 @@ fn band_domain(
             }
         }
     };
-    let xs: Vec<[f64; 2]> = (-2..=2)
+    // Periods to shift the boundary by: ±2, or more when a loop spans more than a period
+    // along the band (the crest of a modelled thread winds several turns back and forth), so
+    // that a cut is tested against every copy of the boundary it could meet.
+    let reach = {
+        let mut k = 2i32;
+        for l in loops {
+            let (mut lo, mut hi) = (f64::INFINITY, f64::NEG_INFINITY);
+            for p in &l.pts {
+                let x = dom(swap, p.uv)[0];
+                lo = lo.min(x);
+                hi = hi.max(x);
+            }
+            // A ring spans one period: ±2 covers it (and every band meshed before threads).
+            if hi - lo > 1.5 * p_x {
+                k = k.max(((hi - lo) / p_x).ceil() as i32 + 2);
+            }
+        }
+        k.min(MAX_BAND_SHIFTS)
+    };
+    let xs: Vec<[f64; 2]> = (-reach..=reach)
         .map(|k| [sx[0] * f64::from(k), sx[1] * f64::from(k)])
         .collect();
     let mut all_shifts = xs.clone();
@@ -842,6 +866,63 @@ fn band_domain(
                 if valid(&b, None, &t, None) {
                     chosen = Some((b, t, None, None));
                     break;
+                }
+            }
+        }
+    }
+    // Fallback between two loops, when no cut from a bottom point to a top point near it in
+    // `x` is clear (a loop winding several periods back and forth, the crest of a modelled
+    // thread that ends inside its face): cut from the extreme points of one loop — the
+    // lowest of the top loop, the highest of the bottom loop — straight across to the other
+    // loop's point nearest in `x`. Only reached where the search above found nothing, so
+    // every face it meshes is unchanged.
+    if chosen.is_none()
+        && let (Side::Loop(bl), Side::Loop(tl)) = (bside, tside)
+    {
+        let by_y = |li: usize, high_first: bool| -> Vec<usize> {
+            let mut v: Vec<(f64, usize)> = (0..loops[li].pts.len())
+                .map(|j| (dom(swap, loops[li].pts[j].uv)[1], j))
+                .collect();
+            v.sort_by(|a, b| {
+                let o = a.0.total_cmp(&b.0);
+                (if high_first { o.reverse() } else { o }).then(a.1.cmp(&b.1))
+            });
+            v.into_iter()
+                .map(|(_, j)| j)
+                .take(FALLBACK_CUT_POINTS)
+                .collect()
+        };
+        let nearest = |li: usize, x: f64| -> Vec<(usize, [f64; 2])> {
+            let mut v: Vec<(f64, usize, [f64; 2])> = (0..loops[li].pts.len())
+                .map(|i| {
+                    let lift = lift_to(loops[li].pts[i].uv, x);
+                    ((dom(swap, loop_pt(li, i, lift).uv)[0] - x).abs(), i, lift)
+                })
+                .collect();
+            v.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+            v.into_iter().take(4).map(|(_, i, l)| (i, l)).collect()
+        };
+        'low_top: for j in by_y(tl, false) {
+            let t = loop_pt(tl, j, [0.0, 0.0]);
+            let tn = Some(neighbours(tl, j, [0.0, 0.0]));
+            for (i, lift) in nearest(bl, dom(swap, t.uv)[0]) {
+                let b = loop_pt(bl, i, lift);
+                if valid(&b, Some(neighbours(bl, i, lift)), &t, tn) {
+                    chosen = Some((b, t, Some((bl, i, lift)), Some((tl, j, [0.0, 0.0]))));
+                    break 'low_top;
+                }
+            }
+        }
+        if chosen.is_none() {
+            'high_bottom: for i in by_y(bl, true) {
+                let b = loop_pt(bl, i, [0.0, 0.0]);
+                let bn = Some(neighbours(bl, i, [0.0, 0.0]));
+                for (j, lift) in nearest(tl, dom(swap, b.uv)[0]) {
+                    let t = loop_pt(tl, j, lift);
+                    if valid(&b, bn, &t, Some(neighbours(tl, j, lift))) {
+                        chosen = Some((b, t, Some((bl, i, [0.0, 0.0])), Some((tl, j, lift))));
+                        break 'high_bottom;
+                    }
                 }
             }
         }

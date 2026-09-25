@@ -23,10 +23,12 @@ mod error;
 mod extrude;
 pub mod hole;
 pub mod pattern;
+
 mod plan;
 mod plane;
 pub mod revolve;
 pub mod sketch;
+pub mod thread;
 
 pub use boolean::{
     BodyOp, BodyOpResult, BooleanError, OpBody, apply_body_op, apply_body_op_in_scope,
@@ -39,3 +41,4 @@ pub use pattern::{apply_seed, pattern_instances};
 pub use plane::sketch_frame;
 pub use revolve::{AxisSide, check_revolve_profile, revolve};
 pub use sketch::{Junction, Loop, LoopCurve, LoopCurveGeom, Region, regions};
+pub use thread::{ThreadError, ThreadForm, ThreadKind, ThreadRequest, thread_face};

@@ -431,6 +431,7 @@ dependencies = [
  "forge-check",
  "forge-core",
  "forge-ir",
+ "forge-mesh",
  "forge-ssi",
  "proptest",
  "serde",

@@ -20,6 +20,8 @@ forge-check.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+# Modelled-thread tests tessellate their results (watertight, deviation, volume).
+forge-mesh.workspace = true
 
 # proptest (and its process helpers) only on native targets: the boolean determinism golden
 # (tests/boolean_golden.rs) is also built for wasm32-wasip1 to check bit-identical results.
