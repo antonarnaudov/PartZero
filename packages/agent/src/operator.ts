@@ -666,7 +666,7 @@ export class OperatorRun {
     this.#refused++;
     this.#trace.failedApplies++;
     const label = typeof data["label"] === "string" ? data["label"] : tool;
-    const step: OperatorStep = { index: this.#committed, tool, ok: false, note: typeof data["note"] === "string" ? data["note"] : label, label, code: inner ? `${code}/${inner}` : code };
+    const step: OperatorStep = { index: this.#committed, tool, ok: false, note: typeof data["note"] === "string" ? data["note"] : label, label, code: inner && inner !== code ? `${code}/${inner}` : code };
     this.#steps.push(step);
     this.#emitStep(step);
     if (code === "IR_GROUP_CLOSED") {

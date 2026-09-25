@@ -1848,6 +1848,10 @@ button.sb-item:hover {
   flex-wrap: wrap;
   row-gap: 4px;
 }
+.run-meta .cost-meter {
+  flex: 1 1 auto;
+  min-width: auto;
+}
 .run-model {
   flex: 1 1 120px;
   min-width: 0;
