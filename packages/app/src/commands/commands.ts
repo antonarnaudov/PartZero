@@ -500,7 +500,7 @@ export const COMMANDS = {
     args: z.strictObject({ panel: PanelSchema, visible: z.boolean().optional() }),
     palette: [
       { title: "View: Toggle Timeline", args: { panel: "left" } },
-      { title: "View: Toggle Code & Chat", args: { panel: "right" } },
+      { title: "View: Toggle Side Panel & Assistant", args: { panel: "right" } },
       { title: "View: Toggle Chat", args: { panel: "chat" } },
       { title: "View: Toggle Problems", args: { panel: "problems" } },
     ],

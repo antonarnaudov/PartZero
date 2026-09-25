@@ -107,7 +107,8 @@ export function v1DocContext(doc: DocStore): SketchDocContext | null {
   const s = doc.getState();
   const marker = s.v1?.host.rollback ?? null;
   const part = (marker ? d.parts.find((p) => p.features.some((f) => f.id === marker)) : null) ?? d.parts[0];
-  return { document: d, part: part?.id ?? null, after: marker, taken: [] };
+  // `after: null`: at the rollback marker (or the end), and the marker moves past the new sketch.
+  return { document: d, part: part?.id ?? null, after: null, taken: [] };
 }
 
 /**
