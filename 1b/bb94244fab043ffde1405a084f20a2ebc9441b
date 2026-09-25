@@ -1,0 +1,84 @@
+packages/desktop/e2e/viewport/selection.e2e.ts
+  s_59c0dd2af30db2::t_d0c6831f2a64b6 1-99,102-132,134,136-142
+  s_59c0dd2af30db2::t_a926dc752826bc 100-101
+  s_59c0dd2af30db2::t_f5587a9294b210 133,135
+packages/app/src/measure/commands.ts
+  s_59c0dd2af30db2::t_a3eb66de4e75b4 1-61
+packages/app/src/viewport/placeholder.ts
+  s_59c0dd2af30db2::t_296383717cc571 2-3,9-12,14-18,21,24,26-27,29-35,37-39,62,95,139,144-146,150-151,156,167-169,176-179,199,204,212,216-225,228-236,239,243-245,251-256,260-273,284-288,291,305-308,311-317,319,323-332,338,353-358,361-362,364,366-367,373-377,381-387,394,408,414,421-424,427-428,438,440-449,456-457,459-462,468-470,472,476,478-488,494,507,511,514,516-520,534,540-541,543-548,575-577,580,583,590,592-594,614,616,641,715,728-736,751,766,769,772,774-780
+packages/app/src/ui/Viewport.tsx
+  s_59c0dd2af30db2::t_e4d616a59efef9 2-6,8,10-16,18-29,65,68,70,73-74,82,84-86,92-106,113,125,131,135,137,141-143,145-164,173,177,179-180,193,199,201,205-210,214-226,229-253,257,259-260,262-291,294,296,298-302,305,307-311,313-330,340-341,346-372,379,381
+  s_59c0dd2af30db2::t_c32521b076e495 344
+packages/app/src/viewport/ViewCube.tsx
+  s_59c0dd2af30db2::t_ab6f4b33d5cb9d 17
+  s_59c0dd2af30db2::t_148c1613902702 54-55
+  s_59c0dd2af30db2::t_ef51c4d496a2f6 1-16,18-53,56-75
+packages/app/src/viewport/SectionPanel.tsx
+  s_59c0dd2af30db2::t_47bcfdf20d3440 1-62,64-66,68-100
+  s_59c0dd2af30db2::t_04aea65ff41155 63,67
+packages/app/src/viewport/Overlay.tsx
+  s_59c0dd2af30db2::t_dbce87427ffaea 1-9,11-171
+  s_59c0dd2af30db2::t_eb8ae9f5721ebb 10
+packages/app/src/viewport/keyboard.ts
+  s_59c0dd2af30db2::t_cb5b0386a255b6 1-34
+packages/app/src/viewport/navigation.ts
+  s_59c0dd2af30db2::t_eed7c4589129aa 56-64,68-69,71,73,75-80,85-86,88-89
+packages/app/test/provenance.test.ts
+  s_59c0dd2af30db2::t_7f02d7ef66a447 16,108,110-117,119-121,125
+packages/app/src/viewport/runtime.ts
+  s_59c0dd2af30db2::t_78c94a95fddd13 1-108,113-522
+  s_59c0dd2af30db2::t_e02034fa302e44 109-112
+packages/app/src/viewport/commands.ts
+  s_59c0dd2af30db2::t_2fa9e7f233e3a3 234,267
+  s_59c0dd2af30db2::t_30e21a0bdd9676 1-233,235-266,268-374
+packages/app/src/viewport/manipulators/ManipulatorLayer.tsx
+  s_59c0dd2af30db2::t_26f091c46410d4 1-111,124-127,132-176
+  s_59c0dd2af30db2::t_85432b15dfd536 112-123,128-131
+packages/app/src/viewport/registry.ts
+  s_59c0dd2af30db2::t_818cb77cb55504 1-43
+packages/app/src/viewport/viewport.css
+  s_59c0dd2af30db2::t_32526c70d87820 4-7,14-27,87,89,132-133,140,169,172,215,217
+  s_59c0dd2af30db2::t_4d3d39f23f734b 194-195
+  s_59c0dd2af30db2::t_7b843bcaf3c3df 1-3,8-13,28-86,88,90-131,134-139,141-168,170-171,173-193,196-214,216,218-506
+packages/app/src/viewport/forge-web-adapter.ts
+  s_59c0dd2af30db2::t_0d701d792c2cde 1-5,7-36,40-43,45,48-52,59-62,67-70,73-74,77-78,85,94-131,135-136,140-145,151-156
+packages/app/src/viewport/test-hook.ts
+  s_59c0dd2af30db2::t_f84e8addbc3c0a 1-90
+packages/app/test/viewport-commands.test.ts
+  s_59c0dd2af30db2::t_63a18a96fe9bea 1-258,262,264-273
+  s_59c0dd2af30db2::t_a7779999f26124 259-261,263
+packages/app/src/measure/MeasurePanel.tsx
+  s_59c0dd2af30db2::t_587f7ed9b33292 1-49
+packages/app/src/viewport/ViewToolbar.tsx
+  s_59c0dd2af30db2::t_04aea65ff41155 76,79,83,104,108
+  s_59c0dd2af30db2::t_aff66499e46276 1-75,77-78,80-82,84-103,105-107,109-208
+packages/desktop/e2e/viewport/harness.ts
+  s_59c0dd2af30db2::t_34ed53a1542661 10
+  s_59c0dd2af30db2::t_5b20b02acb78a8 99-101
+  s_59c0dd2af30db2::t_3de8f26c3d4b51 1-9,11-98,102-143,230-242
+  s_59c0dd2af30db2::t_1146e5f16cd424 144-229
+packages/app/src/selection/commands.ts
+  s_59c0dd2af30db2::t_1c9f0070bf047f 1-223
+packages/app/src/viewport/adapter.ts
+  s_59c0dd2af30db2::t_1a9bdff3ee5707 2-3,5-6,8-11,14-18,20,34-61,67,70-72,74,77-86,88-89,116
+packages/desktop/e2e/viewport/navigation.e2e.ts
+  s_59c0dd2af30db2::t_0e1e5a75597ff4 122-125
+  s_59c0dd2af30db2::t_81ef2e0c17be91 1-121,126-131,133-151
+  s_59c0dd2af30db2::t_3d4cb3bcd8e4a6 132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1bbb94244fab043ffde1405a084f20a2ebc9441b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
