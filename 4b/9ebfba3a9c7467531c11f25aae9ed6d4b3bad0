@@ -1,0 +1,23 @@
+packages/app/src/tools/builtin/inspect.ts
+  s_59c0dd2af30db2::t_bd0c6106fcb174 1-259
+packages/app/src/tools/catalog.ts
+  s_59c0dd2af30db2::t_5f201d14e0eb59 1-15
+packages/app/test/shell-inspect.test.ts
+  s_59c0dd2af30db2::t_2b2547c3b94c5b 1-134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4b9ebfba3a9c7467531c11f25aae9ed6d4b3bad0",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
