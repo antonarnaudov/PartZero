@@ -1,0 +1,159 @@
+docs/fm/view-sel-followups.md
+  s_59c0dd2af30db2::t_399aca1d92d2f9 1-167
+docs/fm/view-sel-wiring.patch
+  s_59c0dd2af30db2::t_09b3031b8d38fe 1-114
+forge/crates/forge-render/src/display.rs
+  s_59c0dd2af30db2::t_f7d7457d4fdead 1-125
+forge/crates/forge-render/src/lib.rs
+  s_59c0dd2af30db2::t_18c75ffe899470 21-23,42,52
+forge/crates/forge-render/src/shaders/common.wgsl
+  s_59c0dd2af30db2::t_5093aa5af8dda1 17-23,39,59-60
+forge/crates/forge-render/src/shaders/faces.wgsl
+  s_59c0dd2af30db2::t_97300b2439c0ec 62-70,73-88,110
+forge/crates/forge-render/src/viewport.rs
+  s_59c0dd2af30db2::t_b1ed4650cc0047 35,53-55,148-151,166-167,264,607-619,845-846,870,894-900,1395,1402-1403,1465-1466,1537-1540,1581-1583,1586-1598,1617,1626,1706-1708,1746-1748,1763,2161-2162,2164-2166,2171-2180
+forge/crates/forge-render/tests/display_modes.rs
+  s_59c0dd2af30db2::t_e97f17cf594b64 1-254
+forge/crates/forge-wasm/src/web/view_ext.rs
+  s_59c0dd2af30db2::t_2a9c0b1389c23e 1-79
+packages/app/src/measure/MeasurePanel.tsx
+  s_59c0dd2af30db2::t_5f1b8fe2b1a3cd 1-49
+packages/app/src/measure/commands.ts
+  s_59c0dd2af30db2::t_26f3e0ad9fed9b 1-61
+packages/app/src/measure/geometry.ts
+  s_59c0dd2af30db2::t_5be2320551ad6c 1-468
+packages/app/src/measure/measure.ts
+  s_59c0dd2af30db2::t_c604f739932fc5 1-453
+packages/app/src/measure/store.ts
+  s_59c0dd2af30db2::t_36f9a44864901a 1-19
+packages/app/src/selection/box-select.ts
+  s_59c0dd2af30db2::t_df5cf49ff1a0f7 1-281
+packages/app/src/selection/chips.ts
+  s_59c0dd2af30db2::t_0865eaa69f5f53 1-53
+packages/app/src/selection/commands.ts
+  s_59c0dd2af30db2::t_9c9441c7beabd0 1-223
+packages/app/src/selection/labels.ts
+  s_59c0dd2af30db2::t_172aa8af6bef19 1-62
+packages/app/src/selection/picking.ts
+  s_59c0dd2af30db2::t_c77a5e64d73731 1-149
+packages/app/src/selection/raycast.ts
+  s_59c0dd2af30db2::t_7f8c5a0c701795 1-97
+packages/app/src/selection/store.ts
+  s_59c0dd2af30db2::t_827dcf8ab9894c 1-148
+packages/app/src/selection/topology.ts
+  s_59c0dd2af30db2::t_0408e1c4566099 1-208
+packages/app/src/selection/types.ts
+  s_59c0dd2af30db2::t_4e402e48138442 1-108
+packages/app/src/ui/ChatPanel.tsx
+  s_59c0dd2af30db2::t_bcb5bf01f364f4 6,10,15-16
+packages/app/src/ui/CommandPalette.tsx
+  s_59c0dd2af30db2::t_17a27a81cd14b2 7,36,56
+packages/app/src/ui/SettingsDialog.tsx
+  s_59c0dd2af30db2::t_169b42b90fa647 18,585
+packages/app/src/ui/Viewport.tsx
+  s_59c0dd2af30db2::t_7112d99a59252b 2-6,8,10-16,18-30,66,69,71,74-75,83,85-87,93-107,114,126,132,136,138,142-144,146-165,174,178,180-181,194,200,202,206-211,215-227,230-254,258,260-261,263-292,295,297,299-303,306,308-312,314-353,363-364,367,369-401,408,410
+packages/app/src/viewport/NavigationSettings.tsx
+  s_59c0dd2af30db2::t_e48fabc8c1121b 1-111
+packages/app/src/viewport/Overlay.tsx
+  s_59c0dd2af30db2::t_679cd89093464a 1-204
+packages/app/src/viewport/SectionPanel.tsx
+  s_59c0dd2af30db2::t_e8ee5b49f1787a 1-100
+packages/app/src/viewport/ViewCube.tsx
+  s_59c0dd2af30db2::t_836946c2a28f7c 1-75
+packages/app/src/viewport/ViewToolbar.tsx
+  s_59c0dd2af30db2::t_2311dca5fd4e9d 1-253
+packages/app/src/viewport/adapter.ts
+  s_59c0dd2af30db2::t_3494b59c12bcea 2-3,5-6,8-11,14-18,20,34-61,67,70-72,74,77-86,88-89,116
+packages/app/src/viewport/commands.ts
+  s_59c0dd2af30db2::t_f1d744ffe5c0a5 1-398
+packages/app/src/viewport/display.ts
+  s_59c0dd2af30db2::t_b204cb33c9530d 1-107
+packages/app/src/viewport/forge-web-adapter.ts
+  s_59c0dd2af30db2::t_94ffb95a1fca0d 1-5,7-36,40-43,45,48-52,59-62,67-70,73-74,77-78,85,94-131,135-136,140-145,151-156
+packages/app/src/viewport/keyboard.ts
+  s_59c0dd2af30db2::t_df422d68a27d5e 1-41
+packages/app/src/viewport/manipulators/ManipulatorLayer.tsx
+  s_59c0dd2af30db2::t_d36cf9974a19b0 1-176
+packages/app/src/viewport/manipulators/drag-math.ts
+  s_59c0dd2af30db2::t_7eddc8eef8f5c6 1-126
+packages/app/src/viewport/manipulators/host.ts
+  s_59c0dd2af30db2::t_1effcbcbbdc4ad 1-152
+packages/app/src/viewport/manipulators/types.ts
+  s_59c0dd2af30db2::t_1137d9a30ceac7 1-62
+packages/app/src/viewport/navigation.ts
+  s_59c0dd2af30db2::t_51bbfcdacef96c 1-172
+packages/app/src/viewport/placeholder.ts
+  s_59c0dd2af30db2::t_3b6fa34efee973 2-3,9-12,14-18,21,24,26-27,29-35,37-39,62,95,139,144-146,150-151,156,167-169,176-179,199,204,212,216-225,228-236,239,243-245,251-261,265-273,284-288,291,305-308,311-317,319,323-332,338,353-358,361-362,364,366-367,373-377,381-387,394,408,414,421-424,427-428,438,440-449,456-457,459-480,486-488,490,494-495,497-515,520,522,535,539,542,544-548,562,568-569,571-576,603-605,608,611,618,620-622,642,644,669,730-752,766,779-787,802,817,820,823,825-831
+packages/app/src/viewport/raster.ts
+  s_59c0dd2af30db2::t_370bcd4c0050fe 1-60
+packages/app/src/viewport/registry.ts
+  s_59c0dd2af30db2::t_716a313c4f6dae 1-52
+packages/app/src/viewport/runtime.ts
+  s_59c0dd2af30db2::t_755f14594ee5f4 1-569
+packages/app/src/viewport/sketches.ts
+  s_59c0dd2af30db2::t_ea4a31ab72546c 1-118
+packages/app/src/viewport/test-hook.ts
+  s_59c0dd2af30db2::t_5dcb7c6a5e77f7 1-90
+packages/app/src/viewport/view-camera.ts
+  s_59c0dd2af30db2::t_faa264287ca927 2-17,21,23-28,33,37-39,42-48,51,55-56,58,62-97,99-115,118-123,126-147,149-154,157-160,162-164,166-187,189-194,199-292
+packages/app/src/viewport/view-cube-geometry.ts
+  s_59c0dd2af30db2::t_65fcbc39207f69 1-75
+packages/app/src/viewport/view-store.ts
+  s_59c0dd2af30db2::t_03f597519987f5 1-191
+packages/app/src/viewport/viewport.css
+  s_59c0dd2af30db2::t_ae5e5c60a33d71 1-596
+packages/app/test/fixtures/forge-web-meshes.json
+  s_59c0dd2af30db2::t_d551560eda9664 1
+packages/app/test/fixtures/gen-forge-web-meshes.mjs
+  s_59c0dd2af30db2::t_28d2abccca11c7 1-92
+packages/app/test/fixtures/wheel-sequences.ts
+  s_59c0dd2af30db2::t_181c2dde054d7f 1-97
+packages/app/test/forge-web-fixture.ts
+  s_59c0dd2af30db2::t_2ac618fbd7ad60 1-59
+packages/app/test/measure.test.ts
+  s_59c0dd2af30db2::t_c03ebaeae11c7f 1-285
+packages/app/test/provenance.test.ts
+  s_59c0dd2af30db2::t_5e631f2c799c9f 16,108,110-117,119-121,125
+packages/app/test/selection.test.ts
+  s_59c0dd2af30db2::t_1b91969aa756bd 1-224
+packages/app/test/view-camera.test.ts
+  s_59c0dd2af30db2::t_4fbe92ab880d4a 1-161
+packages/app/test/viewport-commands.test.ts
+  s_59c0dd2af30db2::t_18eaf7fa981799 1-327
+packages/app/test/viewport-tools.test.ts
+  s_59c0dd2af30db2::t_da4614ab200773 1-273
+packages/desktop/e2e/viewport/display.e2e.ts
+  s_59c0dd2af30db2::t_f17b13f1223751 1-164
+packages/desktop/e2e/viewport/document-switch.e2e.ts
+  s_59c0dd2af30db2::t_a83e63c1968247 1-70
+packages/desktop/e2e/viewport/harness.ts
+  s_59c0dd2af30db2::t_4cfbacf2c381e3 1-255
+packages/desktop/e2e/viewport/manipulators.e2e.ts
+  s_59c0dd2af30db2::t_1e87e7543eeb28 1-120
+packages/desktop/e2e/viewport/navigation.e2e.ts
+  s_59c0dd2af30db2::t_1a89e11d9c844e 1-220
+packages/desktop/e2e/viewport/section-measure.e2e.ts
+  s_59c0dd2af30db2::t_ae5fab441ccaa1 1-135
+packages/desktop/e2e/viewport/selection.e2e.ts
+  s_59c0dd2af30db2::t_79a918cc54cb2d 1-176
+packages/forge-web/README.md
+  s_59c0dd2af30db2::t_95a1aad51397cd 115
+packages/forge-web/src/viewport.ts
+  s_59c0dd2af30db2::t_13b45672cdf105 30-33,472-507
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8067d65f99a9b4005e5e2629d33ac3aa47d2169e",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
