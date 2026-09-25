@@ -454,6 +454,10 @@ class Evaluator:
                 from .booleans import boolean_feature
 
                 boolean_feature(self, st, fi, f, entry, refs)
+            elif t == "transform":
+                from .patterns import transform_feature
+
+                transform_feature(self, st, fi, f, entry, refs)
             elif t == "hole":
                 from .holes import hole_feature
 
@@ -704,11 +708,14 @@ class Evaluator:
             raise FeatureFailure("SKETCH_SUPPRESSED", f"sketch {f['sketch']!r} is suppressed", {"feature": f["sketch"]})
         self.dep(st, f["sketch"], "SKETCH_SUPPRESSED")
         sk = st.sketches[f["sketch"]]
+        extent = f.get("extent") if t == "extrude" else None
         if t == "extrude":
-            d = self.scalar(st, f["distance"], "length")
-            if not d > TOL:
-                raise FeatureFailure("INVALID_DISTANCE", f"distance = {d}: must be > 0.000001",
-                                     {"value": d, "expected": "> 0.000001"})
+            d = None
+            if extent is None:
+                d = self.scalar(st, f["distance"], "length")
+                if not d > TOL:
+                    raise FeatureFailure("INVALID_DISTANCE", f"distance = {d}: must be > 0.000001",
+                                         {"value": d, "expected": "> 0.000001"})
         else:
             ang = self.scalar(st, f["angle"], "angle")
             if not (0.0 < ang <= 360.0):
@@ -723,12 +730,19 @@ class Evaluator:
         if not regions:
             raise FeatureFailure("SKETCH_NO_REGIONS", f"sketch {f['sketch']!r} yields no regions",
                                  {"sketch": f["sketch"]})
+        direction = f.get("direction", "normal")
+        # Amendment set F (§6.2): the up_to plane is a reference in field order, before the targets.
+        if isinstance(extent, dict) and "up_to" in extent:
+            pl = self.plane_ref(st, extent["up_to"], "/extent/up_to", refs, entry["warnings"])
+            d = _up_to_distance(sk.plane, pl, direction)
         op = f.get("op", "new_body")
         targets = None
         if op != "new_body":
             from .booleans import resolve_targets
 
             targets = resolve_targets(self, st, f["targets"], "/targets", refs, entry["warnings"])
+        if extent == "through_all":
+            d = _through_all_distance(sk.plane, direction, targets or [])
         if t == "revolve":
             check_revolve_profile(sk.profile, regions, ao, ad)
             tools = build_revolve(f["id"], f["name"], fi, sk.profile, regions, sk.plane, ao, ad, ang,
@@ -842,6 +856,53 @@ class Evaluator:
 # ---------------------------------------------------------------------------------------------
 # Geometry helpers
 # ---------------------------------------------------------------------------------------------
+
+def _sweep_dir(plane: ir0.ResolvedPlane, direction: str) -> tuple:
+    n = plane.normal
+    return (-n[0], -n[1], -n[2]) if direction == "reverse" else n
+
+
+def _up_to_distance(sketch: ir0.ResolvedPlane, target: ir0.ResolvedPlane, direction: str) -> float:
+    """`extent: { up_to }` (§6.2, amendment set F): the distance to a parallel plane along the
+    sweep direction; a plane at an angle or not ahead fails."""
+    c = min(1.0, abs(geom.dot(sketch.normal, target.normal)))
+    angle = math.acos(c)
+    if angle > QUERY_ANGLE_TOLERANCE:
+        raise FeatureFailure("EXTRUDE_UP_TO_NOT_PARALLEL",
+                             f"the up_to plane is at {math.degrees(angle):.4f}° to the sketch plane; it must be parallel",
+                             {"angle": math.degrees(angle)})
+    d = geom.dot(geom.sub(target.origin, sketch.origin), _sweep_dir(sketch, direction))
+    if not d > TOL:
+        raise FeatureFailure("EXTRUDE_UP_TO_BEHIND",
+                             f"the up_to plane is {d} mm along the extrude direction; it must lie ahead of the sketch plane",
+                             {"distance": d})
+    return d
+
+
+def _through_all_distance(sketch: ir0.ResolvedPlane, direction: str, targets: list) -> float:
+    """`extent: "through_all"` (§6.2, amendment set F): past the farthest box corner of the targets
+    along the sweep direction (both ways for `symmetric`), plus the targets' scale as a margin. Cut
+    and intersect results do not depend on the value beyond that."""
+    dv = _sweep_dir(sketch, direction)
+    far = 0.0
+    lo = [math.inf] * 3
+    hi = [-math.inf] * 3
+    for b in targets:
+        m = b.body_metrics()
+        bmin, bmax = m["bbox_min"], m["bbox_max"]
+        for k in range(3):
+            lo[k] = min(lo[k], bmin[k])
+            hi[k] = max(hi[k], bmax[k])
+        for i in range(8):
+            c = (bmax[0] if i & 1 else bmin[0], bmax[1] if i & 2 else bmin[1], bmax[2] if i & 4 else bmin[2])
+            p = geom.dot(geom.sub(c, sketch.origin), dv)
+            far = max(far, abs(p) if direction == "symmetric" else p)
+    margin = 1.0
+    if targets:
+        diag = math.sqrt(sum((hi[k] - lo[k]) ** 2 for k in range(3)))
+        margin = max(1.0, diag) if math.isfinite(diag) else 1.0
+    return 2.0 * (far + margin) if direction == "symmetric" else far + margin
+
 
 def check_frame(n, x, path: str) -> None:
     ln, lx = geom.norm(n), geom.norm(x)
@@ -975,10 +1036,18 @@ def by_id_refs(f: dict) -> list[tuple[str, str]]:
         plane(f.get("plane"))
     elif t in ("extrude", "revolve"):
         push(f.get("sketch"), "sketch")
+        ext = f.get("extent")
+        if isinstance(ext, dict) and "up_to" in ext:
+            plane(ext["up_to"])
         targets(f.get("targets"))
     elif t == "boolean":
         r(f.get("targets"))
         r(f.get("tools"))
+    elif t == "transform":
+        r(f.get("bodies"))
+        rot = f.get("rotate")
+        if isinstance(rot, dict):
+            d(rot.get("axis"))
     elif t == "hole":
         plane(f.get("on"))
         at = f.get("at") or {}

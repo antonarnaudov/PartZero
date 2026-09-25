@@ -305,9 +305,10 @@ _META = ["note", "intent", "author", "assumptions", "decision_ids"]
 _COMMON = ["type", "id", "name", "v", "suppressed"]
 FEATURE_ORDER: dict[str, list[str]] = {
     "sketch": _COMMON + ["plane", "curves", "constraints"] + _META,
-    "extrude": _COMMON + ["sketch", "regions", "distance", "direction", "op", "targets"] + _META,
+    "extrude": _COMMON + ["sketch", "regions", "distance", "extent", "direction", "op", "targets"] + _META,
     "revolve": _COMMON + ["sketch", "regions", "axis", "angle", "direction", "op", "targets"] + _META,
     "boolean": _COMMON + ["op", "targets", "tools", "keep_tools"] + _META,
+    "transform": _COMMON + ["bodies", "translate", "rotate", "copy"] + _META,
     "hole": _COMMON + ["on", "flip", "at", "size", "fit", "d", "depth", "tip", "cbore", "csink",
                        "insert", "thread", "targets"] + _META,
     "fillet": _COMMON + ["edges", "r", "tangent_chain"] + _META,
@@ -530,8 +531,16 @@ def _feature(f: dict) -> dict:
     for k, v in f.items():
         if k in ("plane", "on", "neutral", "from", "a", "b") and t != "boolean":
             out[k] = _plane(v)
-        elif k in ("targets", "tools") and isinstance(v, dict):
+        elif k in ("targets", "tools", "bodies") and isinstance(v, dict):
             out[k] = _ref(v)
+        elif k == "extent" and t == "extrude" and isinstance(v, dict) and "up_to" in v:
+            out[k] = {"up_to": _plane(v["up_to"])}
+        elif k == "translate" and t == "transform":
+            out[k] = _nums(v)
+        elif k == "rotate" and t == "transform" and isinstance(v, dict):
+            ax = v.get("axis")
+            out[k] = _ordered({"axis": _axis_object(ax) if isinstance(ax, dict) else ax, "angle": _num(v.get("angle"))},
+                              ["axis", "angle"])
         elif k in ("target", "edges", "faces", "body", "open", "side", "edge", "face"):
             out[k] = _ref(v) if isinstance(v, dict) else v
         elif k == "curves":
@@ -563,6 +572,13 @@ def _feature(f: dict) -> dict:
             del out["plane"]["face"]["card"]
     if t == "tag" and isinstance(out.get("target"), dict) and out["target"].get("card") == "some":
         del out["target"]["card"]
+    if t == "transform":
+        if isinstance(out.get("bodies"), dict) and out["bodies"].get("card") == "some":
+            del out["bodies"]["card"]
+        if out.get("copy") is False:
+            del out["copy"]
+        if isinstance(out.get("translate"), list) and all(x == 0 for x in out["translate"]):
+            del out["translate"]
     return _ordered(out, FEATURE_ORDER.get(t, _COMMON))
 
 

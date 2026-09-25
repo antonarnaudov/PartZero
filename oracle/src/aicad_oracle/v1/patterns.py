@@ -403,4 +403,46 @@ def commit_new(entry: dict, created: list) -> None:
         bodies.append(body_report(b, ch))
 
 
-__all__ = ["pattern_feature", "SweepSeed", "copy_body", "instances"]
+def transform_feature(ev, st, fi: int, f: dict, entry: dict, refs: list) -> None:
+    """`transform` (SPEC-v1 §6.13, amendment set F): the rotation (`rotate.angle` degrees about an
+    AxisRef, right-hand rule) first, then `translate`. A move replaces each body by its moved copy
+    with the same origin and keys; `copy: true` adds moved copies — a one-instance body pattern:
+    origin `{ transform, member, [1] }`, keys `T/copy:{K}@1`."""
+    warns = entry["warnings"]
+    tid = f["id"]
+    translate = tuple(ev.scalar(st, x, "length") for x in f.get("translate", [0, 0, 0]))
+    angle = None
+    if isinstance(f.get("rotate"), dict):
+        angle = ev.scalar(st, f["rotate"]["angle"], "angle")
+        if not (math.isfinite(angle) and abs(angle) <= 360.0):
+            raise FeatureFailure("INVALID_ANGLE", f"rotate/angle = {angle}: must be in [-360, 360]",
+                                 {"field": "rotate/angle", "value": angle if math.isfinite(angle) else None,
+                                  "expected": "in [-360, 360]"})
+    copy = bool(ev.scalar(st, f.get("copy", False), "bool"))
+    bodies = list(ev.resolve(st, f["bodies"], "some", "/bodies", refs, warns))
+    trsf = _translation(translate)
+    if angle is not None:
+        ax = ev.axis_ref(st, f["rotate"]["axis"], "/rotate/axis", refs, warns)
+        trsf.Multiply(_rotation(ax.origin, geom.unit(ax.direction), angle))
+    if copy:
+        inst = Instance((1,), trsf)
+        new = [copy_body(b, trsf, tid, b.member, fi, inst, _key_of(tid, inst)) for b in bodies]
+        st.bodies.extend(new)
+        commit_new(entry, [(b, "created") for b in new])
+        return
+    from .topo import body_report
+
+    moved = []
+    for b in bodies:
+        nb = copy_body(b, trsf, b.feature, b.member, b.order, None, lambda k: k)
+        nb.instance = b.instance
+        st.bodies[next(i for i, x in enumerate(st.bodies) if x is b)] = nb
+        moved.append(nb)
+    order = {x["id"]: i for i, x in enumerate(st.part["features"])}
+    rep = [body_report(b, "modified") for b in moved]
+    rep.sort(key=lambda b: (order.get(b["origin"]["feature"], 0), b["origin"]["member"].encode(),
+                            tuple(b["origin"].get("instance") or ()), tuple(round(c, 9) for c in b["centroid"])))
+    entry["bodies"] = rep
+
+
+__all__ = ["pattern_feature", "transform_feature", "SweepSeed", "copy_body", "instances"]

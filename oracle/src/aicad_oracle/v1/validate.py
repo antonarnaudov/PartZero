@@ -146,7 +146,11 @@ class Walker:
                     self.opt(kp, c, "x", "length")
                     self.opt(kp, c, "y", "length")
         elif t == "extrude":
-            self.s(f"{fp}/distance", f["distance"], "length")
+            if "distance" in f:
+                self.s(f"{fp}/distance", f["distance"], "length")
+            ext = f.get("extent")
+            if isinstance(ext, dict) and "up_to" in ext:
+                self.plane(f"{fp}/extent/up_to", ext["up_to"])
             self.targets(f"{fp}/targets", f.get("targets"))
         elif t == "revolve":
             self.p2(f"{fp}/axis/origin", f["axis"]["origin"], "length")
@@ -158,6 +162,15 @@ class Walker:
             self.r(f"{fp}/tools", f["tools"])
             if "keep_tools" in f:
                 self.b(f"{fp}/keep_tools", f["keep_tools"])
+        elif t == "transform":
+            self.r(f"{fp}/bodies", f["bodies"])
+            if "translate" in f:
+                self.p3(f"{fp}/translate", f["translate"], "length")
+            if isinstance(f.get("rotate"), dict):
+                self.axis(f"{fp}/rotate/axis", f["rotate"]["axis"])
+                self.s(f"{fp}/rotate/angle", f["rotate"]["angle"], "angle")
+            if "copy" in f:
+                self.b(f"{fp}/copy", f["copy"])
         elif t == "hole":
             self.hole(fp, f)
         elif t == "fillet":
@@ -456,8 +469,8 @@ BODY_SOME = (("body",), SOME_)
 ANY_SOME = ((), SOME_)
 
 SWEEPS = ("extrude", "revolve")
-BODY_ORIGINS = ("extrude", "revolve", "pattern")
-CREATORS = ("extrude", "revolve", "boolean", "hole", "fillet", "chamfer", "shell", "draft", "pattern")
+BODY_ORIGINS = ("extrude", "revolve", "pattern", "transform")
+CREATORS = ("extrude", "revolve", "boolean", "hole", "fillet", "chamfer", "shell", "draft", "pattern", "transform")
 
 
 def member_names(kind: str, n: int | None) -> list[str]:
@@ -658,6 +671,27 @@ class Validator:
         self.err(code, f"{fp}/{fld}", f"{fld} = {value}: must be {expected}",
                  {"field": fld, "value": value, "expected": expected})
 
+    def extrude_extent(self, f: dict, fp: str, ctx: PartCtx) -> None:
+        """Amendment set F (§6.2): exactly one of `distance` and `extent`; `through_all` cuts or
+        intersects; `up_to` is one-sided and names a plane."""
+        ext = f.get("extent")
+
+        def conflict(why: str, fields: list) -> None:
+            self.err("EXTRUDE_EXTENT_CONFLICT", f"{fp}/extent", why, {"field": "extent", "fields": fields})
+
+        has_d = "distance" in f
+        if ext is None and not has_d:
+            conflict("an extrude needs a distance or an extent", ["distance", "extent"])
+        elif ext is not None and has_d:
+            conflict("an extrude has a distance or an extent, not both", ["distance", "extent"])
+        elif ext == "through_all":
+            if f.get("op", "new_body") not in ("cut", "intersect"):
+                conflict("through_all cuts or intersects (op cut or intersect)", ["extent", "op"])
+        elif isinstance(ext, dict) and "up_to" in ext:
+            if f.get("direction", "normal") == "symmetric":
+                conflict("up_to goes one way: not with direction symmetric", ["extent", "direction"])
+            self.plane(ext["up_to"], f"{fp}/extent/up_to", ctx)
+
     def feature(self, f: dict, fp: str, ctx: PartCtx) -> None:
         if self.id(f["id"], f"{fp}/id"):
             if f["id"] in self.feature_ids:
@@ -674,9 +708,10 @@ class Validator:
         elif t == "extrude":
             self.sketch_ref(f["sketch"], f"{fp}/sketch", ctx)
             self.regions(f.get("regions", "all"), f["sketch"], fp, ctx)
-            d = lit(f["distance"])
+            d = lit(f["distance"]) if "distance" in f else None
             if d is not None and d <= TOL:
                 self.range("INVALID_DISTANCE", fp, "distance", d, _tol())
+            self.extrude_extent(f, fp, ctx)
             self.body_op(f.get("op", "new_body"), f.get("targets"), fp, ctx)
         elif t == "revolve":
             self.sketch_ref(f["sketch"], f"{fp}/sketch", ctx)
@@ -692,6 +727,13 @@ class Validator:
         elif t == "boolean":
             self.check_ref(f["targets"], f"{fp}/targets", BODY_SOME, ctx)
             self.check_ref(f["tools"], f"{fp}/tools", BODY_SOME, ctx)
+        elif t == "transform":
+            self.check_ref(f["bodies"], f"{fp}/bodies", BODY_SOME, ctx)
+            if isinstance(f.get("rotate"), dict):
+                self.axis(f["rotate"]["axis"], f"{fp}/rotate/axis", ctx)
+                a = lit(f["rotate"]["angle"])
+                if a is not None and not (math.isfinite(a) and abs(a) <= 360.0):
+                    self.range("INVALID_ANGLE", fp, "rotate/angle", a, "in [-360, 360]")
         elif t == "hole":
             self.hole(f, fp, ctx)
         elif t == "fillet":
