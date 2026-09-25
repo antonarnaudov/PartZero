@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { bootstrap } from "./bootstrap";
+import { installDocumentFiles } from "./file/install";
 import type { AppInvocation } from "./commands/commands";
 import type { CommandSource } from "./commands/registry";
 import { App } from "./ui/App";
@@ -14,6 +15,8 @@ const root = createRoot(rootEl);
 
 bootstrap().then(
   ({ services, commands }) => {
+    // Documents and files (.partzero, recovery, windows): before the keyboard reads the command table.
+    installDocumentFiles({ services, commands });
     const isMac = services.host.platform === "darwin" || /Mac/.test(navigator.userAgent);
     document.documentElement.dataset["platform"] = services.host.platform;
     const run = (cmd: AppInvocation, source: CommandSource = "ui"): void => {

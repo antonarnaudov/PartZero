@@ -53,6 +53,7 @@ export function Toolbar(): ReactElement {
   const name = useStore(services.doc, (s) => s.name);
   const dirty = useStore(services.doc, (s) => s.dirty);
   const format = useStore(services.doc, (s) => s.format);
+  const isPartZero = useStore(services.doc, (s) => /\.partzero$/i.test(s.path ?? ""));
   const canUndo = useStore(services.doc, (s) => s.history.canUndo);
   const canRedo = useStore(services.doc, (s) => s.history.canRedo);
   const theme = useStore(services.ui, (s) => s.resolvedTheme);
@@ -96,7 +97,7 @@ export function Toolbar(): ReactElement {
       <OpenInSlicerButton />
       <div className="doc-title" data-testid="doc-title" title={format === "ir-json" ? "IR JSON document (edited as CadScript)" : "CadScript document"}>
         <span className="doc-name">{name}</span>
-        <span className="doc-ext">{format === "ir-json" ? ".json" : ".cad.ts"}</span>
+        <span className="doc-ext">{isPartZero ? ".partzero" : format === "ir-json" ? ".json" : ".cad.ts"}</span>
         {dirty && <span className="dirty-dot" aria-label="Unsaved changes" />}
       </div>
       <button type="button" className="palette-btn" onClick={() => run({ id: "view.commandPalette" })} title="Command palette">

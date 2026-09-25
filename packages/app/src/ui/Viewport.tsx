@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { PREVIEW_TINT } from "../agent/agent-service";
 import { facesOfFeature, findFeature } from "../doc/provenance";
+import { useReferenceBodies } from "../file/ui/hooks";
 import type { Projection, ViewName } from "../engine/forge-web-contract";
 import type { PickResult, RenderBody } from "../engine/types";
 import { createViewportAdapter, type ViewportAdapter, type ViewportColors } from "../viewport/adapter";
@@ -68,7 +69,10 @@ export function Viewport(): ReactElement {
   const review = useStore(services.agent, (s) => s.review);
   const reviewOpen = !!review && review.status === "ready" && review.resolution === null;
   const showPreview = reviewOpen && review.previewEnabled && review.preview.status === "ready";
-  const shown = showPreview ? review.preview.bodies : bodies;
+  // Reference meshes (imported STL/3MF/OBJ) are drawn with the document's bodies, never edited.
+  const refBodies = useReferenceBodies();
+  const docShown = showPreview ? review.preview.bodies : bodies;
+  const shown = useMemo(() => (refBodies.length ? [...docShown, ...refBodies] : docShown), [docShown, refBodies]);
   const extent = useMemo(() => zExtent(shown), [shown]);
 
   // Create the adapter once.
