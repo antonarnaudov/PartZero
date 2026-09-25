@@ -59,6 +59,22 @@ export class ManipulatorHost extends Store<ManipulatorState> {
 
   update(id: string, patch: Partial<Omit<HandleSpec, "id">>): void {
     this.setState((s) => ({ handles: s.handles.map((h) => (h.id === id ? { ...h, ...patch } : h)), revision: s.revision + 1 }));
+    // A feasible range that arrives during the drag (it is asked at drag start) clamps at once.
+    const d = this.drag;
+    const h = this.handle(id);
+    if (!d || d.id !== id || !h || (patch.min === undefined && patch.max === undefined)) return;
+    let v = h.value;
+    let clamped: "min" | "max" | undefined;
+    if (h.max !== undefined && v > h.max) {
+      v = h.max;
+      clamped = "max";
+    } else if (h.min !== undefined && v < h.min) {
+      v = h.min;
+      clamped = "min";
+    }
+    if (!clamped) return;
+    this.setState((s) => ({ handles: s.handles.map((x) => (x.id === id ? { ...x, value: v } : x)), active: { id, value: v, clamped }, revision: s.revision + 1 }));
+    this.emit({ id, value: v, phase: "drag", clamped });
   }
 
   handle(id: string): HandleSpec | undefined {

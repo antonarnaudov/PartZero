@@ -195,12 +195,14 @@ export class ViewportRuntime {
   // ─── Scene ──────────────────────────────────────────────────────────────────────────────
 
   /** The bodies to show (the document's, or a proposal preview's). */
-  setSceneBodies(bodies: readonly RenderBody[]): void {
+  setSceneBodies(bodies: readonly RenderBody[], options: { toolPreview?: boolean } = {}): void {
     if (bodies === this.sceneBodies) return;
     this.sceneBodies = bodies;
     this.topo = buildTopology(bodies);
     this.pushBodies();
-    this.selection.resolve(this.topo);
+    // A tool's preview is transient: what the tool picked stays picked (its entities may be
+    // replaced in the preview, e.g. a filleted edge); the document's bodies re-resolve it.
+    if (!options.toolPreview) this.selection.resolve(this.topo);
     this.syncHighlights();
   }
 

@@ -80,6 +80,8 @@ export function installShell(
           fieldErrors: Object.fromEntries(s.fields.filter((f) => f.error || f.remoteError).map((f) => [f.key, (f.remoteError ?? f.error)!.code ?? "ERROR"])),
           errors: s.errors,
           summary: s.summary,
+          handles: shell.panelHandles?.shown ?? [],
+          feasible: shell.panelHandles?.feasibleLog ?? [],
         };
       },
       tools: () =>

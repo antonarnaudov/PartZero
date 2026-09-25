@@ -239,6 +239,21 @@ describe("Fillet", () => {
     expect(p.getState().state).toBe("ready");
   });
 
+  it_("a radius whose blend runs into the pocket lands on Radius with the largest that builds (Forge's capability gap, bisected)", async () => {
+    const r = await rig(PLATE.replace('"value":5,"min":1', '"value":10,"min":1').replace('"origin":[0,0,5]', '"origin":[0,0,10]'));
+    const p = await openTool(r, "feature.fillet", [entity(r, "edge", "e1/edge:{e1/cap:end|e1/side:r.bottom}")]);
+    p.set("r", "9");
+    await p.settled();
+    const f = p.getState().fields.find((x) => x.key === "r")!;
+    expect(f.remoteError?.code).toBe("FILLET_FAILED");
+    const max = f.remoteError?.feasible?.max ?? 0;
+    expect(max).toBeGreaterThan(7);
+    expect(max).toBeLessThanOrEqual(8.001);
+    p.set("r", String(max));
+    await commit(r, p);
+    expect(features(r).at(-1)).toMatchObject({ type: "fillet", r: max });
+  });
+
   it_("takes a face for all its edges, and the tangent chain can be turned off", async () => {
     const r = await rig();
     const p = await openTool(r, "feature.fillet", [entity(r, "face", "e1/cap:start")]);

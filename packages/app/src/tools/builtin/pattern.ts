@@ -297,7 +297,7 @@ function patternPanel(layout: Layout, ctx: ToolContext, existing: FeatureInfo | 
       default: "features",
     },
     { key: "features", label: "Features", kind: "selection", accepts: ["feature", "face"], min: 1, hint: "Click features in the timeline, or a face they made.", visibleWhen: (v) => v["seedKind"] === "features" },
-    { key: "bodies", label: "Bodies", kind: "selection", accepts: ["body", "face"], min: 1, hint: "Click bodies (or a face of one).", visibleWhen: (v) => v["seedKind"] === "bodies" },
+    { key: "bodies", label: "Bodies", kind: "selection", accepts: ["body"], min: 1, hint: "Click the bodies to copy.", visibleWhen: (v) => v["seedKind"] === "bodies" },
   ];
   const resultField: PanelSpec["fields"][number] = {
     key: "result",

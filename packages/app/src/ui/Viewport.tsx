@@ -200,13 +200,13 @@ export function Viewport(): ReactElement {
   // Bodies (the document's, or the proposal preview's); refit when another document was loaded.
   const lastFitDoc = useRef(0);
   useEffect(() => {
-    runtime.setSceneBodies(shown);
+    runtime.setSceneBodies(shown, { toolPreview: toolPreview !== null });
     if (!adapter) return;
     if (shown.length > 0 && lastFitDoc.current !== docId) {
       lastFitDoc.current = docId;
       adapter.fitView();
     }
-  }, [adapter, runtime, shown, docId]);
+  }, [adapter, runtime, shown, docId, toolPreview]);
 
   // Pointer input on the canvas: navigation (FD3), hover, click, box select.
   useEffect(() => {

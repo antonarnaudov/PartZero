@@ -27,7 +27,7 @@ import {
 import type { RenderBody } from "../../engine/types";
 import type { AppServices } from "../../services";
 import { facesOfEdgeName } from "../../selection/picking";
-import type { BodyInfo, SceneTopology } from "../../selection/topology";
+import { buildTopology, type BodyInfo, type SceneTopology } from "../../selection/topology";
 import { viewportRuntime } from "../../viewport/runtime";
 import type { FieldError, PreviewOutcome, SelectionItem, SummaryRow } from "../framework/types";
 
@@ -312,8 +312,20 @@ export function scalarText(v: unknown, fallback: string): string {
 
 // ─── Handle anchors (the displayed topology) ─────────────────────────────────────────────────
 
+const topologies = new WeakMap<readonly RenderBody[], SceneTopology>();
+
+/**
+ * The document's topology (not the displayed one: while a tool previews, the viewport shows the
+ * preview, where a filleted edge or an opened face no longer exists).
+ */
 function topology(services: AppServices): SceneTopology {
-  return viewportRuntime(services).topo;
+  const bodies = services.doc.getState().bodies;
+  let t = topologies.get(bodies);
+  if (!t) {
+    t = bodies.length ? buildTopology(bodies) : viewportRuntime(services).topo;
+    topologies.set(bodies, t);
+  }
+  return t;
 }
 
 const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];

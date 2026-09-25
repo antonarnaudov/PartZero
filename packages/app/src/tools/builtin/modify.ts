@@ -132,6 +132,34 @@ function shortLimit(reason: string): string {
   return m?.[1] ?? reason;
 }
 
+/**
+ * A `*_FAILED` preview whose cause is the size (a blend or a wall running into another feature,
+ * SPEC-v1 §6.6: a capability gap, not a size limit): when a smaller size builds, the error moves to
+ * the size field with the largest that does, and the panel offers "Use …".
+ */
+async function sizeFailure(
+  outcome: PreviewOutcome,
+  failCode: string,
+  services: AppServices,
+  existing: FeatureInfo | null,
+  part: string,
+  candidate: Json,
+  field: string,
+  value: number | null,
+): Promise<PreviewOutcome> {
+  if (outcome.ok) return outcome;
+  const e = outcome.errors[0];
+  if (!e || e.code !== failCode || value === null) return outcome;
+  let range: { max?: number } | null = null;
+  try {
+    range = await feasibleOf(services, existing, part, candidate, field);
+  } catch {
+    range = null;
+  }
+  if (range?.max === undefined || !(value > range.max)) return outcome;
+  return { ok: false, errors: [{ field, code: e.code, message: e.message, feasible: { min: 0, max: range.max } }] };
+}
+
 function blendSummary(services: AppServices, kind: "fillet" | "chamfer") {
   return (entry: metricsV1.FeatureReport, report: metricsV1.EvalReport): SummaryRow[] => {
     const b = entry[kind];
@@ -308,7 +336,9 @@ function blendPanel(kind: "fillet" | "chamfer", ctx: ToolContext, existing: Feat
       if (io.signal.aborted) return { ok: true };
       if ("errors" in f) return { ok: false, errors: f.errors };
       const text = existing ? withEditedFeature(v.document, v.rollback, existing.id, f.set) : withNewFeature(v.document, v.rollback, part, f.json).text;
-      return checkedPreview(services, text, id, io.signal, map, blendSummary(services, kind));
+      const outcome = await checkedPreview(services, text, id, io.signal, map, blendSummary(services, kind));
+      if (io.signal.aborted) return outcome;
+      return sizeFailure(outcome, kind === "fillet" ? "FILLET_FAILED" : "CHAMFER_FAILED", services, existing, part, f.json, size, (values[size] as NumberValue).value);
     },
     toOps: async (values): Promise<IrOp[]> => {
       const f = await featureOf(values, pidFor());
@@ -448,13 +478,15 @@ function shellPanel(ctx: ToolContext, existing: FeatureInfo | null): PanelSpec {
       if (io.signal.aborted) return { ok: true };
       if ("errors" in f) return { ok: false, errors: f.errors };
       const text = existing ? withEditedFeature(v.document, v.rollback, existing.id, f.set) : withNewFeature(v.document, v.rollback, part, f.json).text;
-      return checkedPreview(services, text, id, io.signal, map, (entry, report) => {
+      const outcome = await checkedPreview(services, text, id, io.signal, map, (entry, report) => {
         const rows: SummaryRow[] = [];
         if (entry.shell) rows.push({ label: "Opened faces", value: entry.shell.closed_void ? "none (inner void)" : String(entry.shell.removed_faces.length), tone: "ok" });
         const vr = volumeRow(services, report);
         if (vr) rows.push(vr);
         return rows;
       });
+      if (io.signal.aborted) return outcome;
+      return sizeFailure(outcome, "SHELL_FAILED", services, existing, part, f.json, "thickness", (values["thickness"] as NumberValue).value);
     },
     toOps: async (values): Promise<IrOp[]> => {
       const f = await featureOf(values, pidFor());

@@ -32,6 +32,8 @@ export class PanelHandles {
   private disposed = false;
   /** The handles shown now (tests). */
   shown: readonly PanelHandleSpec[] = [];
+  /** Every feasible-range answer at drag start, most recent last (tests and debugging). */
+  readonly feasibleLog: Array<{ field: string; min?: number; max?: number; reason?: string; error?: string }> = [];
   /** Resolves when no placement is pending (tests). */
   private pending: Promise<void> = Promise.resolve();
 
@@ -127,6 +129,8 @@ export class PanelHandles {
         if (feasible) {
           void feasible(c.id, this.session.values()).then(
             (r) => {
+              this.feasibleLog.push({ field: c.id, ...(r ? { ...(r.min !== undefined ? { min: r.min } : {}), ...(r.max !== undefined ? { max: r.max } : {}), ...(r.reason ? { reason: r.reason } : {}) } : { error: "no range" }) });
+              if (this.feasibleLog.length > 50) this.feasibleLog.shift();
               if (this.disposed || !r) return;
               this.port.update(c.id, {
                 ...(r.min !== undefined ? { min: r.min } : {}),
@@ -134,7 +138,9 @@ export class PanelHandles {
                 ...(r.reason ? { limitReason: r.reason } : {}),
               });
             },
-            () => undefined,
+            (e: unknown) => {
+              this.feasibleLog.push({ field: c.id, error: e instanceof Error ? e.message : String(e) });
+            },
           );
         }
         return;

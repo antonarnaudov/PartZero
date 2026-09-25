@@ -210,6 +210,11 @@ export function bindToolPicking(shell: Shell, services: AppServices): () => void
     }
     rt.pickForTool = field.spec.max === 1 ? "replace" : "toggle";
     rt.selection.set(items.map((i) => toViewItem(services, i)).filter((i): i is ViewItem => i !== null));
+    // A timeline row already selected must register when clicked again (to take it out).
+    if (services.doc.getState().selection.featureId && !services.doc.getState().selection.entity) {
+      services.doc.clearSelection();
+      lastDocFeature = null;
+    }
     notifyPicking(services);
   };
 
@@ -228,7 +233,20 @@ export function bindToolPicking(shell: Shell, services: AppServices): () => void
     lastDocFeature = id;
     if (!id || services.doc.getState().selection.entity) return;
     const f = v1Parts(services).flatMap((x) => x.features).find((x) => x.id === id || x.name === id);
-    if (f?.type === "sketch") return; // a sketch goes through the viewport selection
+    // The row stays clickable: a second click on it takes it out again.
+    queueMicrotask(() => {
+      if (services.doc.getState().selection.featureId === id && !services.doc.getState().selection.entity) {
+        lastDocFeature = null;
+        services.doc.clearSelection();
+      }
+    });
+    if (f?.type === "sketch") {
+      // A sketch is a viewport item (it is drawn there): it goes through the viewport selection.
+      const it: ViewItem = { kind: "sketch", feature: f.name };
+      if (rt.pickForTool === "replace") rt.selection.set([it]);
+      else rt.selection.toggle(it);
+      return;
+    }
     const item: SelectionItem = { kind: "feature", feature: f?.id ?? id, label: f?.name ?? id };
     const has = p.features.some((x) => x.kind === "feature" && x.feature === item.feature);
     if (rt.pickForTool === "replace") p.features = [item];

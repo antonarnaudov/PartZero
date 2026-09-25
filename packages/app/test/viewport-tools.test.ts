@@ -177,6 +177,26 @@ describe("manipulator drag math", () => {
     off();
     expect(host.getState().handles).toEqual([]);
   });
+
+  it("clamps at once when the feasible range arrives during the drag (it is asked at drag start)", () => {
+    const host = new ManipulatorHost();
+    const seen: string[] = [];
+    host.show([{ id: "r", kind: "radius", origin: [0, 0, 0], axis: [0, 0, 1], value: 2 }], (c) => seen.push(`${c.phase}:${c.value}${c.clamped ? `:${c.clamped}` : ""}`));
+    const [yaw, pitch] = viewAngles("front");
+    const frame = cameraFrame({ ...defaultCamera(), yaw, pitch, distance: 100, target: [0, 0, 0], projection: "orthographic" }, 800, 600);
+    const grip = frame.project([0, 0, 2])!;
+    host.begin("r", frame, grip.x, grip.y);
+    const far = frame.project([0, 0, 30])!;
+    expect(host.move(frame, far.x, far.y, { fine: false, snap: true })).toBe(30);
+    host.update("r", { min: 0.01, max: 7.5, limitReason: "face width 15" });
+    expect(host.handle("r")!.value).toBe(7.5);
+    expect(host.getState().active).toEqual({ id: "r", value: 7.5, clamped: "max" });
+    // A range that does not cut the value, or an update of another field, changes nothing.
+    host.update("r", { max: 20 });
+    expect(host.handle("r")!.value).toBe(7.5);
+    expect(host.end()).toBe(7.5);
+    expect(seen).toEqual(["start:2", "drag:30", "drag:7.5:max", "end:7.5"]);
+  });
 });
 
 describe("sketches in the viewport", () => {

@@ -131,6 +131,9 @@ function SelectionInput({ session, field, active }: { session: PanelSession; fie
   const spec = field.spec as SelectionFieldSpec;
   const items = field.value as readonly SelectionItem[];
   const error = field.remoteError ?? field.error;
+  // "2 edges" when every item is an edge, "3 items" for a mix.
+  const present = [...new Set(items.map((i) => i.kind))];
+  const nounKinds = present.length === 1 ? present : spec.accepts;
   return (
     <FieldRow field={field}>
       <div
@@ -138,7 +141,7 @@ function SelectionInput({ session, field, active }: { session: PanelSession; fie
         role="button"
         tabIndex={0}
         aria-pressed={active}
-        aria-label={`${spec.label}: ${items.length ? selectionNoun(spec.accepts, items.length) : "nothing selected"}${active ? ", picking" : ""}`}
+        aria-label={`${spec.label}: ${items.length ? selectionNoun(nounKinds, items.length) : "nothing selected"}${active ? ", picking" : ""}`}
         data-testid={`selection-${field.key}`}
         onClick={() => session.activateSelectionField(field.key)}
         onKeyDown={(e) => {
@@ -151,7 +154,7 @@ function SelectionInput({ session, field, active }: { session: PanelSession; fie
         {items.length > 0 ? (
           <>
             <span className="pp-count" data-testid={`selection-count-${field.key}`}>
-              {selectionNoun(spec.accepts, items.length)}
+              {selectionNoun(nounKinds, items.length)}
             </span>
             <span className="pp-items mono">{items.slice(0, 3).map(itemLabel).join(", ")}{items.length > 3 ? ` +${items.length - 3}` : ""}</span>
             <button

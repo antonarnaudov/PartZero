@@ -96,7 +96,7 @@ describe("picking for a selection input", () => {
     expect(h.rt.selection.getState().items).toEqual([{ kind: "origin", id: "Z" }]);
     expect(p.values()["axis"]).toEqual([{ kind: "origin", feature: "Z", label: "Z axis" }]);
     h.rt.selectItems([{ kind: "origin", id: "X" }]);
-    expect((p.values()["axis"] as Array<{ feature: string }>)[0]!.feature).toBe("X");
+    expect((p.values()["axis"] as unknown as Array<{ feature: string }>)[0]!.feature).toBe("X");
     p.cancel();
     expect(h.rt.pickForTool).toBe(false);
     expect(h.rt.selection.getState().filter).toEqual(before);
