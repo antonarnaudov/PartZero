@@ -4,7 +4,7 @@
  * ready-made examples where Forge already builds them); the agent's provider and the printer, each
  * with its exact fix when it is not ready; and the build identity.
  */
-import { useCallback, useEffect, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import type { CliProviderStatus, PrintProfileView, SlicerInfo } from "../../bridge";
 import { baseName } from "../../host/host";
 import { isBlankDocument } from "../../tools/shell";
@@ -13,6 +13,8 @@ import { useApp, useStore } from "../context";
 import { Icon } from "../icons";
 import { BrandMark, BRAND_NAME } from "./BrandMark";
 import { useShell } from "./context";
+import { StarterArt } from "./starter-art";
+import { starterThumbnail, type StarterThumbnail } from "./starter-thumbnail";
 
 type Load<T> = { status: "loading" } | { status: "ok"; value: T } | { status: "error"; message: string };
 
@@ -205,16 +207,36 @@ function StarterCard({ starter }: { starter: Starter }): ReactElement {
     });
   };
 
+  const ready = example.status === "ready";
   return (
-    <li className="wl-starter" data-testid="welcome-starter" data-starter={starter.id}>
-      <div className="wl-starter-text">
+    <li className="wl-starter" data-testid="welcome-starter" data-starter={starter.id} data-example={example.status}>
+      <div className="wl-thumb">
+        <StarterPicture starter={starter} ready={ready} />
+        <span className={`wl-badge ${ready ? "ready" : "agent"}`}>
+          {ready ? (
+            <>
+              <Icon.Check size={10} /> Ready-made
+            </>
+          ) : (
+            <>
+              <Icon.Sparkle size={10} /> Agent designs it
+            </>
+          )}
+        </span>
+      </div>
+      <div className="wl-starter-body">
         <span className="wl-starter-title">{starter.title}</span>
         <span className="wl-starter-blurb">{starter.blurb}</span>
       </div>
       <div className="wl-starter-actions">
+        {ready && (
+          <button type="button" className="chip-btn solid" title={starter.exampleNote ?? "Open the ready-made, parametric part"} onClick={open} data-testid="starter-open">
+            <Icon.FolderOpen size={12} /> Open
+          </button>
+        )}
         <button
           type="button"
-          className="chip-btn"
+          className="chip-btn ai"
           title={available ? starter.prompt : "The design agent runs in the desktop app"}
           disabled={busy}
           onClick={ask}
@@ -222,20 +244,36 @@ function StarterCard({ starter }: { starter: Starter }): ReactElement {
         >
           <Icon.Sparkle size={12} /> Ask the agent
         </button>
-        {example.status === "ready" && (
-          <button type="button" className="chip-btn" title={starter.exampleNote ?? "Open the ready-made, parametric part"} onClick={open} data-testid="starter-open">
-            <Icon.FolderOpen size={12} /> Open example
-          </button>
-        )}
-        {example.status === "checking" && <span className="wl-note">Checking example…</span>}
+        {example.status === "checking" && <span className="wl-note">Checking…</span>}
         {example.status === "unavailable" && starter.source && (
           <span className="wl-note" data-testid="starter-example-note" title={`The ready-made example ${example.reason}.`}>
-            Example ready; opens with IR v1
+            Example opens with IR v1
           </span>
         )}
       </div>
     </li>
   );
+}
+
+/** Forge's render of a ready-made example, over its illustration until the render lands (or when there is none). */
+function StarterPicture({ starter, ready }: { starter: Starter; ready: boolean }): ReactElement {
+  const { services } = useApp();
+  const [thumb, setThumb] = useState<StarterThumbnail | null>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (!ready) return;
+    let live = true;
+    void starterThumbnail(services, starter).then((t) => live && setThumb(t));
+    return () => {
+      live = false;
+    };
+  }, [services, starter, ready]);
+  useEffect(() => {
+    const c = canvas.current?.getContext("2d");
+    if (c && thumb) c.putImageData(new ImageData(thumb.rgba, thumb.width, thumb.height), 0, 0);
+  }, [thumb]);
+  if (!thumb) return <StarterArt id={starter.id} />;
+  return <canvas ref={canvas} className="wl-render" width={thumb.width} height={thumb.height} role="img" aria-label={`${starter.title}, as Forge builds it`} data-testid="starter-render" />;
 }
 
 export function Welcome(): ReactElement {
@@ -256,7 +294,7 @@ export function Welcome(): ReactElement {
   return (
     <div className="welcome" role="dialog" aria-label={`Welcome to ${BRAND_NAME}`} data-testid="welcome">
       <header className="wl-head">
-        <BrandMark size={44} />
+        <BrandMark size={40} />
         <div className="wl-title">
           <h1>{BRAND_NAME}</h1>
           <span className="wl-sub">Describe a part, or model it yourself. Forge checks every change.</span>
@@ -267,13 +305,13 @@ export function Welcome(): ReactElement {
         </button>
       </header>
 
-      <div className="wl-grid">
-        <section className="wl-col" aria-label="Start">
+      <div className="wl-body">
+        <section className="wl-side" aria-label="Start">
           <h2>Start</h2>
           <div className="wl-start">
             <button
               type="button"
-              className="wl-action"
+              className="wl-action primary"
               onClick={() => {
                 if (isBlankDocument(services)) {
                   shell.dismissWelcome();
@@ -293,6 +331,11 @@ export function Welcome(): ReactElement {
               <Icon.FolderOpen size={15} />
               <span>Open…</span>
               <kbd>{mod}O</kbd>
+            </button>
+            <button type="button" className="wl-action" onClick={() => run({ id: "file.newFromTemplate" })} data-testid="welcome-template">
+              <Icon.Template size={15} />
+              <span>From a template…</span>
+              <kbd>⇧{mod}N</kbd>
             </button>
           </div>
           <h2>Recent</h2>
@@ -315,9 +358,11 @@ export function Welcome(): ReactElement {
           <PrinterStatus />
         </section>
 
-        <section className="wl-col" aria-label="Starter parts">
-          <h2>Starter parts</h2>
-          <p className="wl-lede">Ask the agent to design one of these, then change it by hand or with its parameters.</p>
+        <section className="wl-main" aria-label="Starter parts">
+          <div className="wl-main-head">
+            <h2>Starter parts</h2>
+            <p className="wl-lede">Open one, or ask the agent to design it. Then change it by hand or with its parameters.</p>
+          </div>
           <ul className="wl-starters">
             {STARTERS.map((s) => (
               <StarterCard key={s.id} starter={s} />
