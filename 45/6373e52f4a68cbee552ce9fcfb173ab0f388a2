@@ -1,0 +1,59 @@
+packages/agent-tools/test/v1/playbooks-v1.test.ts
+  s_59c0dd2af30db2::t_d7389765f217eb 102-104
+packages/model-ops/src/modeling/push-pull.ts
+  s_59c0dd2af30db2::t_585b77d6237583 52
+packages/agent-tools/test/v1/oracle-programs.ts
+  s_59c0dd2af30db2::t_250f98671fac2b 79-81
+packages/agent-tools/test/fixtures/v1-oracle-reports.json
+  s_59c0dd2af30db2::t_18ac10fa6fd35f 18857-19431,19436-19438,19440-19441,19445-19446,19459,19462,19464-19467,21200-21203,21205
+  s_59c0dd2af30db2::t_d7dd11182b6927 19432,19706-19707,21176-21199
+  s_59c0dd2af30db2::t_2c9475efffff4e 19433-19435,19439,19442-19444,19447-19458,19460-19461,19463,19468,21204,21206-21207
+packages/agent-tools/test/fixtures/v1-forge-reports.json
+  s_59c0dd2af30db2::t_c9da43b3ebb160 19319-19893,19899-19900,19902-19903,19907-19908,19912-19913,19925-19930,24447-24449,24451,24453
+  s_59c0dd2af30db2::t_b0508a30c67877 19894,19898,19921,19924,22944-22945,24422-24446
+  s_59c0dd2af30db2::t_b43ebdf4f2799e 19895-19897,19901,19904-19906,19909-19911,19914-19920,19922-19923,24450,24452
+packages/model-ops/test/modeling.test.ts
+  s_59c0dd2af30db2::t_e2e1bfc1745ed6 306-308,311,313,315
+  s_59c0dd2af30db2::t_0bbcb5b491c7f6 304-305,309-310,312,314,316-323
+  s_59c0dd2af30db2::t_e7e93e63294cd7 158-159,161-167
+  s_59c0dd2af30db2::t_82669e0dbaecbc 143-157,160,168-170,324
+  s_59c0dd2af30db2::t_0fad85cc573b97 325-326
+packages/model-ops/src/modeling/index.ts
+  s_59c0dd2af30db2::t_a4b394ecfaedbf 34
+  s_59c0dd2af30db2::t_8f915a4d20b9eb 11
+  s_59c0dd2af30db2::t_4bd66ea216e035 23
+packages/model-ops/src/modeling/extrude.ts
+  s_59c0dd2af30db2::t_86aab0be6d55e4 108-109
+  s_59c0dd2af30db2::t_ebff8dbf9747a3 92
+  s_59c0dd2af30db2::t_fddaa6fddfa186 69-78,80-82
+  s_59c0dd2af30db2::t_25e39ce510ebc3 59
+  s_59c0dd2af30db2::t_16765bed52d12d 44-51
+  s_59c0dd2af30db2::t_50a6bcc2901f4f 32-36
+  s_59c0dd2af30db2::t_285f972184cba3 7-8,17,20
+packages/agent-tools/src/v1/playbooks.ts
+  s_59c0dd2af30db2::t_cc958d44f679fa 147-149
+  s_59c0dd2af30db2::t_d57bb0be41a625 1719,1726-1738
+  s_59c0dd2af30db2::t_0f2c3505f17082 1720-1725
+packages/agent-tools/test/ops.test.ts
+  s_59c0dd2af30db2::t_ebaba9e01274f1 56
+packages/model-ops/src/modeling/move.ts
+  s_59c0dd2af30db2::t_0c71b810da5f37 1-18,20-43,48-64
+  s_59c0dd2af30db2::t_3b59c10ffdb392 44-47
+  s_59c0dd2af30db2::t_440cc11963d02f 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "456373e52f4a68cbee552ce9fcfb173ab0f388a2",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
