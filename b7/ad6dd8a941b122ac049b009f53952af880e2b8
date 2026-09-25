@@ -1,0 +1,25 @@
+packages/app/src/main.tsx
+  s_59c0dd2af30db2::t_917629cdac027b 16
+packages/app/src/ui/styles/design.css
+  s_59c0dd2af30db2::t_daedc50d86c59f 650-651
+  s_59c0dd2af30db2::t_28d765845ffd7a 1-334,338-441,443,446-649,652-962,964-965,968-1009,1013,1017-1283,1285-1333,1337-1343,1347-1356,1358-1390,1392-1503,1514-1567
+  s_59c0dd2af30db2::t_8a98e5d8eac66e 444,1334-1336
+  s_59c0dd2af30db2::t_bd707f76348e6f 335-337,442,445,963,966-967,1010-1012,1014-1016,1284,1344-1346,1357,1391
+  s_59c0dd2af30db2::t_59fe5d86200ce2 1504-1513
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b7ad6dd8a941b122ac049b009f53952af880e2b8",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
