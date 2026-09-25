@@ -5,6 +5,11 @@
  * the bytes and the `aicad.export/1` summary come back. The file is then written through the
  * normal save grant (`fs:write` after a save dialog) — here to a temp path granted by a stubbed
  * dialog — and read back as STEP.
+ *
+ * The last test runs the user's path: File ▸ Export ▸ STEP… (the `file.exportStep` command,
+ * `@aicad/app` `io/step-export-command.ts`) on an IR v1 document. The command layer belongs to the
+ * IR v1 Phase C work, so until the integrator registers the command (one entry in `commands.ts`,
+ * one menu line) that test is skipped and says so; nothing else changes when it lands.
  */
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -15,6 +20,14 @@ import { appDir, desktopRoot } from "./app-dir.js";
 
 const repo = join(desktopRoot, "..", "..");
 const program = (name: string): string => readFileSync(join(repo, "corpus", "programs", name), "utf8");
+const V1_PROGRAM = join(repo, "corpus", "v1", "programs", "params_plate.json");
+
+/** `window.__aicad` as this suite uses it. */
+interface Automation {
+  execute(cmd: unknown): Promise<{ ok: boolean; value?: unknown; error?: { code: string; message: string } }>;
+  describe(): Promise<Array<{ id: string }>> | Array<{ id: string }>;
+  idle(): Promise<unknown>;
+}
 
 interface StepApi {
   exportStep?(r: ForgeStepExportRequest): Promise<ForgeStepExportResponse>;
@@ -110,4 +123,61 @@ test("a malformed request is refused by the main process", async () => {
     }
   });
   expect(message).toContain("invalid STEP schema");
+});
+
+test("an IR v1 document exports through the same channel", async () => {
+  const irJson = readFileSync(V1_PROGRAM, "utf8");
+  expect(JSON.parse(irJson).schema).toBe("aicad.ir/1");
+  const res = await page.evaluate(async (req) => {
+    const forge = (window as unknown as { aicad: { forge: StepApi } }).aicad.forge;
+    const r = await forge.exportStep?.(req);
+    return r
+      ? {
+          exitCode: r.exitCode,
+          stderr: r.stderr,
+          text: r.data ? new TextDecoder().decode(r.data) : "",
+          summary: r.summary as { bodies: Array<{ forge: { volume: number }; step: { solids: number } }> },
+        }
+      : null;
+  }, { irJson, productName: "params plate" });
+  expect(res, "the channel is missing").not.toBeNull();
+  if (!res) return;
+  expect(res.exitCode, res.stderr).toBe(0);
+  expect(res.text).toMatch(/^ISO-10303-21;/);
+  expect(res.text).toContain("MANIFOLD_SOLID_BREP(");
+  expect(res.summary.bodies.length).toBeGreaterThan(0);
+  expect(res.summary.bodies.every((b) => b.forge.volume > 0 && b.step.solids === 1)).toBe(true);
+});
+
+test("File > Export > STEP… exports the open IR v1 document", async () => {
+  const hasCommand = await page.evaluate(async () => {
+    const a = (window as unknown as { __aicad?: Automation }).__aicad;
+    return !!a && (await a.describe()).some((c) => c.id === "file.exportStep");
+  });
+  test.skip(
+    !hasCommand,
+    "file.exportStep is not registered yet: the Phase C integrator adds it to commands.ts (io/step-export-command.ts)",
+  );
+  const opened = await page.evaluate(
+    (path) => (window as unknown as { __aicad: Automation }).__aicad.execute({ id: "file.open", args: { path } }),
+    V1_PROGRAM,
+  );
+  expect(opened.ok, opened.error?.message).toBe(true);
+  await page.evaluate(() => (window as unknown as { __aicad: Automation }).__aicad.idle());
+
+  const target = join(root, "params-plate.step");
+  await app.evaluate(({ dialog }, path) => {
+    (dialog as unknown as { showSaveDialog: unknown }).showSaveDialog = () =>
+      Promise.resolve({ canceled: false, filePath: path });
+  }, target);
+  const clicked = await app.evaluate(({ Menu }) => {
+    const item = Menu.getApplicationMenu()?.getMenuItemById("file.exportStep");
+    item?.click();
+    return !!item;
+  });
+  expect(clicked, "the File ▸ Export submenu has no STEP… item (menu.ts)").toBe(true);
+  await expect(page.getByText(/Exported params-plate\.step/)).toBeVisible();
+  const written = readFileSync(target, "utf8");
+  expect(written).toMatch(/^ISO-10303-21;/);
+  expect(written).toContain("MANIFOLD_SOLID_BREP(");
 });
