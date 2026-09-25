@@ -61,7 +61,7 @@ export interface RuntimePhaseSpec {
   system: string;
   /** First user message. */
   prompt: string;
-  scope: "spec" | "design" | "read";
+  scope: "spec" | "design" | "read" | "ops";
   /** Registry definitions for the scope, with `readOnly` set. */
   tools: readonly ToolDef[];
   limits: CliLimits;

@@ -99,6 +99,8 @@ import {
 } from "./runtime.js";
 import { clarificationsBlock, processLine, runSpecWriter, runSpecWriterRuntime, type Clarification } from "./spec-writer.js";
 import { TraceRecorder, type AgentState, type AgentStopReason, type LlmCallMode, type TraceEvent, type TraceSummary } from "./trace.js";
+import type { OpsHost } from "@aicad/model-ops";
+import { OperatorRun, type AutonomySetting, type OperatorHooks, type OperatorStep } from "./operator.js";
 import { fallbackTriage, runTriage, type TriageKind, type TriageResult } from "./triage.js";
 import { dataBlock, fenceFor, orchestratorTag, runNonce } from "./untrusted.js";
 
@@ -129,7 +131,7 @@ export interface JudgeVerdict {
   findings: string[];
 }
 
-export interface AgentHooks {
+export interface AgentHooks extends OperatorHooks {
   onEvent?(e: TraceEvent): void;
   /** Called with the current CadScript after every apply and rollback (the "draft branch" as it grows). */
   onDraft?(draft: AgentDraft): void;
@@ -193,6 +195,15 @@ export interface AgentOptions {
   cliMode?: CliModeOption;
   /** Per-phase overrides of `CLI_PHASE_LIMITS` (`completion` applies to every completion-mode call). */
   cliLimits?: Partial<Record<"completion" | RuntimePhase, Partial<CliLimits>>>;
+  /**
+   * (additive) The document the agent **operates**: with it the run is the live operator
+   * (`operator.ts`): it edits this document through the command layer's op tools, step by step,
+   * instead of writing CadScript (the app's live document, or a `MemoryOpsHost`). `engine` and
+   * `ir` are then unused; `kind: "ask"` makes the run read-only.
+   */
+  ops?: OpsHost;
+  /** (additive, with `ops`) The autonomy dial (ADR 0015): `ask` pauses after every step; default `review`. */
+  autonomy?: AutonomySetting;
 }
 
 export type AgentStatus = "proposed" | "answered" | "stopped" | "failed";
@@ -229,6 +240,14 @@ export interface AgentResult {
   mode: LlmCallMode;
   /** The last plan usage a CLI reported during the run. */
   planUsage?: PlanUsage;
+  /** (additive) How the run changed the model: `ops` (the live operator: op tools on the document) or `code` (CadScript). */
+  surface?: "ops" | "code";
+  /** (additive, ops) Every step: committed changes and refused attempts, in order. */
+  steps?: OperatorStep[];
+  /** (additive, ops) The plan the agent showed. */
+  plan?: string[];
+  /** (additive, ops) The document after the run (canonical `aicad.ir/1`). */
+  document?: string;
 }
 
 export class Agent {
@@ -239,6 +258,7 @@ export class Agent {
   }
 
   run(request: AgentRequest): Promise<AgentResult> {
+    if (this.options.ops) return new OperatorRun(this.options, request, this.options.ops).execute();
     return new AgentRun(this.options, request).execute();
   }
 }

@@ -52,7 +52,7 @@ function roleOf(payload: Json): ScriptRole {
   const names = ((payload["tools"] as Json[] | undefined) ?? []).map((t) => String(t["name"]));
   if (names.includes("classify")) return "triage";
   if (names.includes("submit_spec")) return "spec_writer";
-  if (names.includes("apply_cadscript")) return "designer";
+  if (names.includes("apply_cadscript") || names.includes("add_feature") || names.includes("finish")) return "designer";
   throw new Error(`ScriptedTransport: cannot tell the role of a call with tools [${names.join(", ")}]`);
 }
 

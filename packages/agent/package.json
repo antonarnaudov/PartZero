@@ -39,6 +39,7 @@
     "@aicad/evals": "workspace:*",
     "@aicad/ir-types": "workspace:*",
     "@aicad/llm-gateway": "workspace:*",
+    "@aicad/model-ops": "workspace:*",
     "typescript": "~5.9.3",
     "zod": "^4.6.0"
   },

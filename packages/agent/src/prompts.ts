@@ -13,7 +13,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export type PromptRole = "designer" | "spec_writer" | "triage";
+export type PromptRole = "designer" | "spec_writer" | "triage" | "operator";
 
 export interface PromptInfo {
   role: PromptRole;

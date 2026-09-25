@@ -243,7 +243,7 @@ class PhaseDriver {
       }
       const cli = spec.profile.cli!;
       const effort = spec.choice.effort === undefined ? null : (cli.effortArg?.[spec.choice.effort] ?? null);
-      const example = this.#tools.find((t) => t.name === "apply_cadscript")?.name ?? this.#tools[0]?.name ?? "apply_cadscript";
+      const example = this.#tools.find((t) => t.name === "apply_cadscript")?.name ?? this.#tools.find((t) => t.name === "add_feature")?.name ?? this.#tools[0]?.name ?? "apply_cadscript";
       inv = {
         runId: randomUUID(),
         mode: "runtime",
@@ -283,7 +283,7 @@ class PhaseDriver {
   /** The scope's tools; `ask_user` leaves the design scope when the CLI's MCP call timeout cannot hold the question wait (§3.3). */
   #scopeTools(): RuntimePhaseSpec["tools"] {
     const spec = this.#spec;
-    if (spec.scope !== "design") return spec.tools;
+    if (spec.scope !== "design" && spec.scope !== "ops") return spec.tools;
     if (this.#provider.capabilities.maxToolCallMs > CLI_QUESTION_WAIT_MS + 30_000) return spec.tools;
     if (!spec.tools.some((t) => t.name === "ask_user")) return spec.tools;
     this.#warn(`ask_user is not offered: ${this.#provider.label}'s MCP call timeout is shorter than the question wait`);

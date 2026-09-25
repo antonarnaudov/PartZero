@@ -16,6 +16,7 @@ export default defineConfig({
       { find: /^@aicad\/llm-gateway$/, replacement: src("llm-gateway") },
       { find: /^@aicad\/llm-gateway\/cli$/, replacement: src("llm-gateway", "cli/index.ts") },
       { find: /^@aicad\/agent-tools$/, replacement: src("agent-tools") },
+      { find: /^@aicad\/model-ops$/, replacement: src("model-ops") },
       { find: /^@aicad\/mcp-server$/, replacement: src("mcp-server") },
     ],
   },
