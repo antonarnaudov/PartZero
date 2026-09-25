@@ -1,0 +1,40 @@
+packages/app/src/ui-store.ts
+  s_59c0dd2af30db2::t_c7c9303eb1f136 101
+packages/app/src/commands/commands.ts
+  s_59c0dd2af30db2::t_f3a54da8f01491 694-707
+packages/desktop/e2e/providers.e2e.ts
+  s_59c0dd2af30db2::t_0c14d30bcd9281 82-83
+packages/app/src/agent/agent-service.ts
+  s_59c0dd2af30db2::t_3d89d3b0b3b036 325,331-339
+  s_59c0dd2af30db2::t_c22fdbf487004b 340-341
+packages/desktop/e2e/runtime.e2e.ts
+  s_59c0dd2af30db2::t_ae4916d66673ee 102-103
+packages/desktop/e2e/agent.e2e.ts
+  s_59c0dd2af30db2::t_3c2a4f8c8da4e6 77-78
+packages/desktop/e2e/cli-quit-cleanup.e2e.ts
+  s_59c0dd2af30db2::t_d16911eda1ac52 95-96
+packages/desktop/e2e/agent-operator.e2e.ts
+  s_59c0dd2af30db2::t_c4b29580b0a0cb 172-176
+  s_59c0dd2af30db2::t_1bba03911ac3d6 1-22,25-69,72-137,139-154,156-171,177-181
+  s_59c0dd2af30db2::t_b82b4900f70e17 70-71
+  s_59c0dd2af30db2::t_d715362752effe 23-24
+  s_59c0dd2af30db2::t_53df1a969a70aa 138,155
+packages/app/src/ui/styles.css
+  s_59c0dd2af30db2::t_f265b3711e7268 1881-1883
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a0e4e06552f12cbc425416a20e88cc33d3428b7d",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
