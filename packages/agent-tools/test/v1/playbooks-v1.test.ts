@@ -403,8 +403,11 @@ describe("v1 playbook coverage (codes read from ir-v1.constants.json)", () => {
     const files = (dir: string): string[] => readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)) : n.endsWith(".rs") ? [join(dir, n)] : []));
     const literals = new Set<string>();
     const envVars = new Set<string>();
+    // The interactive sketch session (contract C5: sketch mode's UI-thread solver, pkg-sketch) answers the sketcher,
+    // never a v1 report: its SESSION_* refusals (and its EXPR_TYPE / IR_PARSE) are not report codes.
+    const reportPath = (f: string): boolean => !/forge-sketch[\\/]src[\\/]session(?:_json)?\.rs$/.test(f);
     for (const d of dirs) {
-      for (const f of files(join(crates, d))) {
+      for (const f of files(join(crates, d)).filter(reportPath)) {
         const text = readFileSync(f, "utf8");
         for (const m of text.matchAll(/"([A-Z][A-Z0-9]+(?:_[A-Z0-9]+)+)"/g)) literals.add(m[1]!);
         // Environment variables (debug switches, the crate version) are not codes.
@@ -416,6 +419,7 @@ describe("v1 playbook coverage (codes read from ir-v1.constants.json)", () => {
     const NOT_REPORT_CODES: Readonly<Record<string, string>> = {
       WRITE_BACK_UNKNOWN_SKETCH: "a command-layer error of writeBackSolution (SPEC-v1 §0.6), never in a report; the agent does not call it",
       SSI_TANGENT_UNRESOLVED: "a detail value (FORGE_BOOLEAN_SSI's ssi_code), not a code",
+      EXPORT_BED_FIT: "an `aicad export --bed` refusal (forge-cli, the part does not fit the printer bed), never in an evaluation report",
     };
     const codes = [...literals].filter((c) => !constants.includes(c) && !envVars.has(c) && NOT_REPORT_CODES[c] === undefined).sort();
     expect(codes.length).toBeGreaterThan(100);

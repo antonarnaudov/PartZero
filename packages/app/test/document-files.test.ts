@@ -762,7 +762,7 @@ describe("content the adapter does not save (IR v1 until its adapter lands)", ()
   it("install guards a document store it cannot save: saves work until the store changes, then refuse", async () => {
     const h = await makeHarness({ source: BOX });
     const ir = new ChangingStore();
-    const services = { ...h.services, ir } as AppServices;
+    const services = { ...h.services, ir } as unknown as AppServices;
     const errors: string[] = [];
     const spy = vi.spyOn(console, "error").mockImplementation((...a: unknown[]) => void errors.push(a.join(" ")));
     try {
