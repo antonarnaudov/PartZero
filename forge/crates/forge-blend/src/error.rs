@@ -415,9 +415,9 @@ impl BlendError {
             BlendError::FaceNotOnBody { faces } => json!({ "faces": faces }),
             BlendError::ShellFailed { reason } => json!({ "reason": reason }),
             BlendError::DraftFaceUnsupported { faces } => json!({ "faces": faces }),
-            BlendError::DraftFailed { faces, reason } => {
-                json!({ "faces": faces, "reason": reason })
-            }
+            // SPEC-v1 §7.5 gives DRAFT_FAILED `faces` only (FILLET_FAILED has `reason` too):
+            // the reason is in the message.
+            BlendError::DraftFailed { faces, .. } => json!({ "faces": faces }),
         };
         match v {
             Value::Object(m) => m,

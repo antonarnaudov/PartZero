@@ -249,10 +249,29 @@ pub fn draft(
         }
     }
     let drafted_set: BTreeSet<usize> = drafted.iter().copied().collect();
+    // Messages name entities by their display names (the key map's), as the other blends do.
+    let face_names: BTreeMap<usize, String> = plan
+        .fmap
+        .iter()
+        .filter_map(|(&fid, &fi)| keys.face(fid).map(|n| (fi, n.name)))
+        .collect();
+    let edge_names: BTreeMap<usize, String> = plan
+        .emap
+        .iter()
+        .filter_map(|(&eid, &ei)| keys.edge(eid).map(|n| (ei, n.name)))
+        .collect();
     let face_name = |plan: &Plan, fi: usize| {
-        plan.fs[fi]
-            .as_ref()
-            .map_or_else(String::new, |f| f.prov.name())
+        face_names.get(&fi).cloned().unwrap_or_else(|| {
+            plan.fs[fi]
+                .as_ref()
+                .map_or_else(String::new, |f| f.prov.name())
+        })
+    };
+    let edge_name = |plan: &Plan, ei: usize| {
+        edge_names
+            .get(&ei)
+            .cloned()
+            .unwrap_or_else(|| plan.es[ei].prov.name())
     };
     let mut moved: BTreeMap<usize, Point3> = BTreeMap::new();
     for &fi in &drafted {
@@ -315,7 +334,7 @@ pub fn draft(
         let Curve3::Line(old) = &e.curve else {
             return Err(failed(format!(
                 "{} runs from a drafted face and is not straight",
-                e.prov.name()
+                edge_name(&plan, ei)
             )));
         };
         let a0 = moved.get(&s).copied().unwrap_or(plan.vs[s].p);
@@ -324,10 +343,11 @@ pub fn draft(
         if dir.norm() <= tol || dir.dot(old.dir()) <= 0.0 {
             return Err(failed(format!(
                 "the draft collapses or turns over {} (a smaller angle, or a taller neutral plane, keeps it)",
-                e.prov.name()
+                edge_name(&plan, ei)
             )));
         }
-        let line = Line3::through(a0, b0).map_err(|x| failed(format!("{}: {x}", e.prov.name())))?;
+        let line =
+            Line3::through(a0, b0).map_err(|x| failed(format!("{}: {x}", edge_name(&plan, ei))))?;
         let len = dir.norm();
         let e = &mut plan.es[ei];
         e.curve = Curve3::Line(line);
@@ -448,7 +468,15 @@ pub fn draft(
             .related
             .iter()
             .find_map(|r| match r {
-                EntityRef::Face(f) => out.face(*f).map(|f| f.provenance.name()),
+                // The output keeps the input's keys: name the face as the input's key map does.
+                EntityRef::Face(f) => out.face(*f).map(|f| {
+                    let key = f.provenance.key();
+                    body.faces()
+                        .iter()
+                        .find(|(_, g)| g.provenance.key() == key)
+                        .and_then(|(gid, _)| keys.face(gid))
+                        .map_or_else(|| f.provenance.name(), |n| n.name)
+                }),
                 _ => None,
             })
             .unwrap_or_else(|| "a face".to_string());
