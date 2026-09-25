@@ -32,6 +32,7 @@ import type { SelectionChip, UiStore } from "../ui-store";
 import { buildVariant, checkVariant, diffProposal, type DependencyWarning, type FeatureChange } from "./proposal";
 import { describeSelection } from "./selection";
 import { downgradeToV0 } from "./v0-surface";
+import { namesAsIds } from "../doc/v1/names-as-ids";
 
 export type RunStatus = "running" | "question" | "done" | "failed";
 
@@ -468,7 +469,7 @@ export class AgentService extends Store<AgentState> {
     const commands = this.#deps.engine().commands;
     if (v0.ok && v0.ir && commands) {
       try {
-        return (await commands.canonicalize(JSON.stringify(v0.ir))).document;
+        return (await commands.canonicalize(JSON.stringify(namesAsIds(v0.ir)))).document;
       } catch {
         // falls through to the v1 compiler
       }

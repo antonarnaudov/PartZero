@@ -130,13 +130,12 @@ test("both engines agree on the template (when forge-web is present)", async () 
   }
 });
 
-test("picking a face in the viewport selects its feature and reveals it in code", async () => {
+test("picking a face in the viewport selects its feature", async () => {
   const canvas = page.locator(".viewport-canvas");
   const box = (await canvas.boundingBox())!;
   // Iso view of the fitted plate: this point is on the top face between the pilot hole and an M3 hole.
   await page.mouse.click(box.x + box.width * 0.66, box.y + box.height * 0.43);
   await expect(page.locator('[data-testid="timeline-feature"][data-feature="plate"]')).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator(".cad-selected-feature").first()).toBeAttached();
   const { selection } = await page.evaluate(() => window.__aicad!.summary());
   expect(selection).toEqual({ feature: "plate", entity: { body: "plate/plate", face: "plate/cap:end" } });
   // The chat composer carries the selection as context chips.
@@ -160,7 +159,7 @@ test("exports 3MF through the command layer", async () => {
   expect(denied.error?.message).toMatch(/access denied/);
 });
 
-test("keyboard-first: command palette, and ⌘Z in the editor undoes through the document history", async () => {
+test("keyboard-first: command palette, and ⌘Z undoes a model edit through the document history", async () => {
   const mod = process.platform === "darwin" ? "Meta" : "Control";
   await page.keyboard.press(`${mod}+K`);
   const palette = page.getByTestId("command-palette");
@@ -171,11 +170,11 @@ test("keyboard-first: command palette, and ⌘Z in the editor undoes through the
   await expect(page.locator(".vp-btn.active")).toHaveText("Top");
   await page.locator(".vp-btn", { hasText: /^Iso$/ }).click();
 
-  // Type into Monaco: the edit becomes a DocStore transaction and recompiles.
-  await page.locator(".monaco-editor .view-lines").click();
-  await page.keyboard.press(`${mod}+End`);
-  await page.keyboard.type("\n// checked by e2e");
+  // An edit of the model (an op of the command layer, one transaction), undone with ⌘Z.
+  const edit = await page.evaluate(() => window.__aicad!.execute({ id: "ir.setField", args: { feature: "plate", path: "/distance", value: 6 } }));
+  expect(edit.ok).toBe(true);
   await expect(page.getByTestId("doc-title").locator(".dirty-dot")).toBeVisible();
+  await page.getByTestId("viewport").click({ position: { x: 5, y: 5 } });
   expect(await page.evaluate(() => window.__aicad!.summary().dirty)).toBe(true);
   await page.keyboard.press(`${mod}+Z`);
   await expect(page.getByTestId("doc-title").locator(".dirty-dot")).toHaveCount(0);

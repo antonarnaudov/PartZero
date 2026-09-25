@@ -224,7 +224,9 @@ test("inspect tools: Forge's exact body properties and the printer fit, in the p
   await expect(page.getByTestId("status-tool")).toContainText("Body properties");
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
-  await expect(page.getByTestId("dock-tab-code")).toHaveAttribute("aria-selected", "true");
+  // No code view by default: with the panel closed the side column is the assistant's.
+  await expect(page.getByTestId("dock-tab-properties")).toHaveCount(0);
+  await expect(page.getByTestId("dock-tab-code")).toHaveCount(0);
 
   await page.getByTestId("tool-inspect.printerFit").click();
   await expect(panel.getByTestId("panel-summary")).toContainText("Bambu Lab P2S");
@@ -392,11 +394,14 @@ test("an edit made while a panel is open is kept by OK, and an open inspect pane
   await page.getByTestId("tool-test.thickness").click();
   await panel.getByTestId("input-d").fill("8");
   await expect(panel).toHaveAttribute("data-state", "ready");
-  // Meanwhile the code changes, as the code editor or an accepted agent proposal would: a smaller pilot hole.
+  // Meanwhile the model changes, as another command or the agent would: a smaller pilot hole (an op on
+  // the IR v1 model, which is the document).
   const edited = await page.evaluate(() => {
     const w = window as unknown as TestWindow;
-    const src = w.__pzThicknessCtx!.services.doc.getState().source;
-    return w.__aicad.execute({ id: "doc.setSource", args: { source: src.replace("radius: 11", "radius: 10"), label: "Smaller pilot" } });
+    const doc = JSON.parse(w.__pzThicknessCtx!.services.doc.getState().source) as { parts: Array<{ features: Array<{ id: string; curves?: Array<{ id: string }> }> }> };
+    const sketch = doc.parts[0]!.features.find((f) => f.curves?.some((c) => c.id === "pilot"))!;
+    const i = sketch.curves!.findIndex((c) => c.id === "pilot");
+    return w.__aicad.execute({ id: "ir.setField", args: { feature: sketch.id, path: `/curves/${i}/radius`, value: 10 } });
   });
   expect(edited.ok).toBe(true);
   // The panel checks again against the changed part; OK then changes only the thickness.
@@ -405,8 +410,8 @@ test("an edit made while a panel is open is kept by OK, and an open inspect pane
   await expect(panel).toBeHidden();
   await expect(summary).toContainText("8 mm");
   const after = await source();
-  expect(after).toContain("radius: 10");
-  expect(after).toContain("distance: 8");
+  expect(after).toMatch(/"id": "pilot",[^}]*"radius": 10(\.0)?\b/);
+  expect(after).toMatch(/"distance": 8(\.0)?\b/);
 
   // Body properties stays open across an undo and shows the part as it is now.
   await page.getByTestId("tool-inspect.bodyProperties").click();
@@ -420,7 +425,7 @@ test("an edit made while a panel is open is kept by OK, and an open inspect pane
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
   await page.evaluate(() => (window as unknown as PW).__aicad.execute({ id: "edit.undo" }));
-  expect(await source()).toContain("radius: 11");
+  expect(await source()).toMatch(/"id": "pilot",[^}]*"radius": 11(\.0)?\b/);
 });
 
 test("keyboard: ⌘K and ⌘⇧P list tools, `?` opens the shortcuts map, the mode picks the tools", async () => {

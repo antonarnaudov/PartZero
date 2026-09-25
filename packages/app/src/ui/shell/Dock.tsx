@@ -66,7 +66,8 @@ export function Dock({ area, label }: { area: PanelArea; label: string }): React
   const [active, select] = useActiveTab(area, visible);
   const activePanel = visible.find((p) => p.id === active);
   const Extra = activePanel?.headerExtra;
-  const strip = visible.length > 1 || !!Extra;
+  // The strip also titles a single panel (Properties while a tool is open).
+  const strip = visible.length > 0;
 
   return (
     <section className={`dock dock-${area}`} aria-label={label} data-testid={`dock-${area}`}>

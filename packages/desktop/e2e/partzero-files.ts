@@ -41,6 +41,8 @@ export interface PartZeroView {
     code: { matchesDocument: boolean } | null;
     references: Array<{ id: string; name: string; format: string; visible: boolean; blob: string }>;
     entries: Record<string, { size: number; sha256: string }>;
+    document: { path: string; irSchema: string; units: string };
+    view: { rollbackMarker: string | null; hidden: string[]; camera: unknown };
   };
   document: { schema: string; parts: Array<{ name: string }> };
   code: string | null;

@@ -8,6 +8,7 @@
  * half-compiled.
  */
 import { z } from "zod";
+import { namesAsIds } from "../doc/v1/names-as-ids";
 import type { AppServices } from "../services";
 
 const StarterSchema = z.object({
@@ -102,7 +103,7 @@ export async function openExample(services: AppServices, starter: Starter): Prom
   if (s.dirty && !(await services.confirm(`Discard unsaved changes to “${s.name}”?`))) return { opened: false, reason: "cancelled" };
   if (services.doc.v1Available) {
     const v1 = await services.cadscript.compileV1(starter.source);
-    const text = v1.ok && v1.irJson ? v1.irJson : await services.cadscript.compile(starter.source).then((c) => (c.ok && c.ir ? JSON.stringify(c.ir) : null));
+    const text = v1.ok && v1.irJson ? v1.irJson : await services.cadscript.compile(starter.source).then((c) => (c.ok && c.ir ? JSON.stringify(namesAsIds(c.ir)) : null));
     if (text === null) return { opened: false, reason: "its code does not compile in this build" };
     services.doc.load({ path: null, name: starter.id, format: "ir-v1", source: text });
     const st = await services.doc.idle();

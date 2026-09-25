@@ -83,6 +83,23 @@ function exec(page: Page, id: string, args: Record<string, unknown> = {}): Promi
   return page.evaluate(([i, a]) => (window as unknown as AW).__aicad.execute({ id: i, args: a }), [id, args] as const);
 }
 
+/** The plate's extrude distance in a saved `.partzero` (the IR v1 model it holds). */
+function plateDistance(bytes: Buffer): number | undefined {
+  const doc = readPartZero(bytes).document as unknown as { parts: Array<{ features: Array<{ name: string; distance?: number }> }> };
+  return doc.parts.flatMap((p) => p.features).find((f) => f.name === "plate")?.distance;
+}
+
+/** The plate's extrude distance in the window's model. */
+async function modelDistance(page: Page): Promise<number | undefined> {
+  const r = await exec(page, "ir.state", { document: true });
+  const doc = JSON.parse((r.value as { document: string }).document) as { parts: Array<{ features: Array<{ name: string; distance?: number }> }> };
+  return doc.parts.flatMap((p) => p.features).find((f) => f.name === "plate")?.distance;
+}
+
+/** CODE with another plate thickness (a model change: comments are not part of the IR v1 model). */
+const withDistance = (d: number): string => CODE.replace("distance: 4", `distance: ${d}`);
+
+/** A code edit: on the IR v1 model (the document) it compiles and replaces the model as one transaction. */
 async function setCode(page: Page, source: string): Promise<void> {
   expect(await exec(page, "doc.setSource", { source })).toMatchObject({ ok: true });
   await page.evaluate(() => (window as unknown as AW).__aicad.idle());
@@ -131,7 +148,7 @@ function freshDir(name: string): string {
   return d;
 }
 
-test("Save As writes a .partzero that reopens with the same code, model and title; a second save keeps a .bak", async () => {
+test("Save As writes a .partzero that reopens with the same model and title; a second save keeps a .bak", async () => {
   const userData = freshDir("profile-roundtrip");
   const docs = mkdtempSync(join(root, "docs-"));
   const file = join(docs, "plate.partzero");
@@ -142,11 +159,12 @@ test("Save As writes a .partzero that reopens with the same code, model and titl
     expect(await exec(page, "file.saveAs")).toMatchObject({ ok: true, value: { saved: true, path: file, format: "partzero" } });
     const bytes = readFileSync(file);
     expect(bytes.subarray(0, 2).toString("latin1")).toBe("PK");
-    // An ordinary zip that another reader opens: manifest, canonical IR, the code with its comment.
+    // An ordinary zip that another reader opens: manifest and the canonical IR v1 model (no code: the model is
+    // the document; CadScript is printed from it on demand).
     const pz = readPartZero(bytes);
-    expect(pz.manifest).toMatchObject({ format: "partzero", formatVersion: 1, code: { matchesDocument: true }, references: [] });
-    expect(pz.code).toBe(CODE);
-    expect(pz.document).toMatchObject({ schema: "aicad.ir/0", parts: [{ name: "plate" }] });
+    expect(pz.manifest).toMatchObject({ format: "partzero", formatVersion: 1, document: { irSchema: "aicad.ir/1" }, references: [] });
+    expect(pz.code).toBeNull();
+    expect(pz.document).toMatchObject({ schema: "aicad.ir/1", parts: [{ name: "plate" }] });
     expect(Object.keys(pz.manifest.entries).sort()).toEqual([...pz.files.keys()].filter((n) => n !== "manifest.json").sort());
     await expect(page.getByTestId("doc-title")).toContainText("plate");
     await expect(page.getByTestId("doc-title")).toContainText(".partzero");
@@ -154,12 +172,12 @@ test("Save As writes a .partzero that reopens with the same code, model and titl
     expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle())).toMatch(/^plate — /);
 
     // Edit: the dirty marker shows in the app and the window title; Save writes in place and keeps the old version.
-    await setCode(page, CODE.replace("distance: 4", "distance: 6"));
+    await setCode(page, withDistance(6));
     await expect(page.getByTestId("doc-title").locator(".dirty-dot")).toBeVisible();
     await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle())).toMatch(/^plate • — /);
     expect(await exec(page, "file.save")).toMatchObject({ ok: true, value: { saved: true, path: file } });
-    expect(readPartZero(readFileSync(file)).code).toContain("distance: 6");
-    expect(readPartZero(readFileSync(`${file}.bak`)).code).toContain("distance: 4");
+    expect(plateDistance(readFileSync(file))).toBe(6);
+    expect(plateDistance(readFileSync(`${file}.bak`))).toBe(4);
     expect(readdirSync(docs).sort()).toEqual(["plate.partzero", "plate.partzero.bak"]);
   } finally {
     await app.close();
@@ -181,9 +199,8 @@ test("Save As writes a .partzero that reopens with the same code, model and titl
     expect(s).toMatchObject({ name: "plate", dirty: false });
     const status = (await exec(second.page, "file.status")).value as { path: string; dirty: boolean };
     expect(status).toMatchObject({ path: file, dirty: false });
-    // The code view shows the saved code, comment included.
-    await expect(second.page.locator(".monaco-editor .view-lines")).toContainText("A comment only the code view keeps.");
-    await expect(second.page.locator(".monaco-editor .view-lines")).toContainText("distance: 6");
+    // The model is the saved one.
+    expect(await modelDistance(second.page)).toBe(6);
     // Clear Recent empties the list and the menu.
     expect(await exec(second.page, "file.clearRecent")).toMatchObject({ ok: true });
     const after = await second.app.evaluate(({ Menu }) => Menu.getApplicationMenu()?.items.find((i) => i.label === "&File" || i.label === "File")?.submenu?.items.find((i) => i.label === "Open Recent")?.submenu?.items.map((i) => i.label) ?? []);
@@ -203,7 +220,7 @@ test("an interrupted save leaves the previous file intact (fault point save:afte
     await answerSave(app, file);
     expect(await exec(page, "file.saveAs")).toMatchObject({ ok: true });
     const good = readFileSync(file);
-    await setCode(page, CODE.replace("distance: 4", "distance: 12"));
+    await setCode(page, withDistance(12));
     await app.evaluate(() => {
       (globalThis as { __pzFaults?: Set<string> }).__pzFaults = new Set(["save:afterTempWrite"]);
     });
@@ -215,7 +232,7 @@ test("an interrupted save leaves the previous file intact (fault point save:afte
     // Still unsaved; the next save succeeds.
     expect((await page.evaluate(() => (window as unknown as AW).__aicad.summary())).dirty).toBe(true);
     expect(await exec(page, "file.save")).toMatchObject({ ok: true, value: { saved: true } });
-    expect(readPartZero(readFileSync(file)).code).toContain("distance: 12");
+    expect(plateDistance(readFileSync(file))).toBe(12);
   } finally {
     await app.close();
   }
@@ -227,7 +244,7 @@ test("an edit made while a save is still being written stays unsaved: dirty mark
   const file = join(docs, "race.partzero");
   const { app, page } = await launch(userData);
   try {
-    await setCode(page, `${CODE}// saved\n`);
+    await setCode(page, withDistance(5));
     await answerSave(app, file);
     // Hold the save in the main process after the temp file is written, before it replaces the target.
     await app.evaluate(() => {
@@ -242,13 +259,13 @@ test("an edit made while a save is still being written stays unsaved: dirty mark
       (window as unknown as { __save?: Promise<Result> }).__save = (window as unknown as AW).__aicad.execute({ id: "file.saveAs", args: {} });
     });
     await expect.poll(() => app.evaluate(() => (globalThis as { __pzHeld?: { reached: boolean } }).__pzHeld?.reached ?? false)).toBe(true);
-    await setCode(page, `${CODE}// typed during the save\n`);
+    await setCode(page, withDistance(7));
     await app.evaluate(() => (globalThis as { __pzRelease?: () => void }).__pzRelease!());
     const r = await page.evaluate(() => (window as unknown as { __save: Promise<Result> }).__save);
     expect(r).toMatchObject({ ok: true, value: { saved: true, path: file, upToDate: false } });
 
     // The file has what the save captured; the window still has the edit, unsaved.
-    expect(readPartZero(readFileSync(file)).code).toBe(`${CODE}// saved\n`);
+    expect(plateDistance(readFileSync(file))).toBe(5);
     expect(await page.evaluate(() => (window as unknown as AW).__aicad.summary())).toMatchObject({ name: "race", path: file, dirty: true });
     await expect(page.getByTestId("doc-title")).toContainText("race");
     if (process.platform === "darwin") {
@@ -258,7 +275,7 @@ test("an edit made while a save is still being written stays unsaved: dirty mark
     expect(await exec(page, "file.flushRecovery")).toMatchObject({ ok: true, value: { written: true } });
     const snapshots = readdirSync(join(userData, "Recovery")).filter((n) => n.endsWith(".partzero"));
     expect(snapshots).toHaveLength(1);
-    expect(readPartZero(readFileSync(join(userData, "Recovery", snapshots[0]!))).code).toContain("// typed during the save");
+    expect(plateDistance(readFileSync(join(userData, "Recovery", snapshots[0]!)))).toBe(7);
     // Closing asks (Cancel keeps the window).
     await answerClosePrompt(app, 2);
     expect(await exec(page, "file.close")).toMatchObject({ ok: true });
@@ -273,9 +290,8 @@ test("an edit made while a save is still being written stays unsaved: dirty mark
 
 test("after a force quit, the next launch offers the unsaved document and restores it", async () => {
   const userData = freshDir("profile-crash");
-  const marker = `// unsaved work ${Date.now()}`;
   const first = await launch(userData);
-  await setCode(first.page, `${CODE}${marker}\n`);
+  await setCode(first.page, withDistance(9));
   expect(await exec(first.page, "file.flushRecovery")).toMatchObject({ ok: true, value: { written: true } });
   const recoveryDir = join(userData, "Recovery");
   expect(readdirSync(recoveryDir).filter((n) => n.endsWith(".partzero"))).toHaveLength(1);
@@ -294,7 +310,7 @@ test("after a force quit, the next launch offers the unsaved document and restor
     await page.getByTestId("recovery-restore").click();
     await expect(dialog).toBeHidden();
     await expect.poll(async () => (await page.evaluate(() => (window as unknown as AW).__aicad.idle())).dirty).toBe(true);
-    await expect(page.locator(".monaco-editor .view-lines")).toContainText(marker.slice(3));
+    expect(await modelDistance(page)).toBe(9);
     // The old snapshot is gone; this window's own autosave takes over.
     expect(await exec(page, "file.flushRecovery")).toMatchObject({ ok: true, value: { written: true } });
     const left = readdirSync(recoveryDir).filter((n) => n.endsWith(".partzero"));
@@ -312,10 +328,9 @@ test("after a force quit, the next launch offers the unsaved document and restor
 
 test("a renderer crash reloads the window and offers its last autosave", async () => {
   const userData = freshDir("profile-renderer-crash");
-  const marker = `// before the renderer crash ${Date.now()}`;
   const { app, page } = await launch(userData, { AICAD_SKIP_CLOSE_PROMPT: "1" });
   try {
-    await setCode(page, `${CODE}${marker}\n`);
+    await setCode(page, withDistance(11));
     expect(await exec(page, "file.flushRecovery")).toMatchObject({ ok: true, value: { written: true } });
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.webContents.forcefullyCrashRenderer());
     // Driven through the main process: Playwright's page object does not survive a renderer crash. A script sent to the
@@ -331,9 +346,8 @@ test("a renderer crash reloads the window and offers its last autosave", async (
     await expect
       .poll(() => inWindow<string>("window.__aicad.execute({ id: 'file.status', args: {} }).then((r) => JSON.stringify(r.value))").catch(() => ""), { timeout: 30_000 })
       .toContain('"dirty":true');
-    // Monaco renders spaces as no-break spaces.
-    const source = await inWindow<string>("window.__aicad.idle().then(() => (document.querySelector('.monaco-editor .view-lines')?.textContent ?? '').replace(/\\u00a0/g, ' '))");
-    expect(source).toContain(marker.slice(3));
+    const model = await inWindow<string>("window.__aicad.idle().then(() => window.__aicad.execute({ id: 'ir.state', args: { document: true } })).then((r) => r.value.document)");
+    expect(model).toMatch(/"name": "plate",[^}]*"distance": 11(\.0)?\b/);
   } finally {
     await app.close();
   }
@@ -344,7 +358,7 @@ test("closing a window with unsaved changes asks Save / Don't Save / Cancel", as
   const docs = mkdtempSync(join(root, "docs-"));
   const { app, page } = await launch(userData);
   try {
-    await setCode(page, `${CODE}// dirty\n`);
+    await setCode(page, withDistance(3));
     // Cancel: the window stays.
     await answerClosePrompt(app, 2);
     expect(await exec(page, "file.close")).toMatchObject({ ok: true });
@@ -361,7 +375,7 @@ test("closing a window with unsaved changes asks Save / Don't Save / Cancel", as
     await exec(page, "file.close").catch(() => undefined);
     expect(await closed).toBe(true);
     expect(existsSync(file)).toBe(true);
-    expect(readPartZero(readFileSync(file)).code).toContain("// dirty");
+    expect(plateDistance(readFileSync(file))).toBe(3);
     // Closing saved documents leaves no autosave behind.
     expect(readdirSync(join(userData, "Recovery")).filter((n) => n.endsWith(".partzero"))).toEqual([]);
   } finally {

@@ -13,6 +13,7 @@ import { IR_SCHEMA, safeParseIrDocument, v1 as irV1, type IrDocument } from "@ai
 import { blankDocument, rolledBack, type HostState } from "@aicad/model-ops";
 import type { CadScriptService } from "../cadscript/service";
 import { v1ContentKey, type DocFormat, type DocState, type DocStore } from "../doc/doc-store";
+import { namesAsIds } from "../doc/v1/names-as-ids";
 import type { RenderBody } from "../engine/types";
 import { BLANK_SOURCE } from "../host/templates";
 import { canonicalJson, type DocumentValidator } from "./partzero";
@@ -200,7 +201,7 @@ export class DocStoreAdapter implements DocumentAdapter {
     // CadScript v0 compiles to IR v0 (feature ids = the const names), migrated on load; CadScript v1
     // (parameters, holes, …) compiles with the v1 compiler.
     const v0 = await this.cadscript.compile(request.code.source);
-    if (v0.ok && v0.ir) return { text: JSON.stringify(v0.ir), warnings: [] };
+    if (v0.ok && v0.ir) return { text: JSON.stringify(namesAsIds(v0.ir)), warnings: [] };
     const v1 = await this.cadscript.compileV1(request.code.source);
     if (v1.ok && v1.irJson) return { text: v1.irJson, warnings: [] };
     return null;

@@ -26,6 +26,7 @@ import { Store } from "../store";
 import { History, type TransactionOrigin } from "./history";
 import { featureNameOfBody } from "./provenance";
 import type { IrDocStore } from "./v1/ir-doc-store";
+import { namesAsIds } from "./v1/names-as-ids";
 
 export type DocFormat = "cadscript" | "ir-json" | "ir-v1";
 
@@ -359,7 +360,7 @@ export class DocStore extends Store<DocState> {
     if (!ir || !this.isV1) throw new Error("applyCode edits IR v1 models; this document is CadScript (use setSource)");
     // CadScript v0 keeps its feature ids (the const names) through the migration; v1 compiles as v1.
     const v0 = await this.deps.cadscript.compile(source);
-    if (v0.ok && v0.ir) return this.applyDocument(JSON.stringify(v0.ir), { label: "Edit code", ...options });
+    if (v0.ok && v0.ir) return this.applyDocument(JSON.stringify(namesAsIds(v0.ir)), { label: "Edit code", ...options });
     const c = await this.deps.cadscript.compileV1(source);
     if (!c.ok || !c.irJson) {
       const first = c.errors[0];
