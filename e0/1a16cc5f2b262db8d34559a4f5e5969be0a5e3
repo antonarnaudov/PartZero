@@ -1,0 +1,29 @@
+packages/agent-tools/test/ops.test.ts
+  s_59c0dd2af30db2::t_012c6dd6af7f62 148-184
+  s_59c0dd2af30db2::t_225cc409a7d185 54
+  s_59c0dd2af30db2::t_e3455528eef3e6 48
+  s_59c0dd2af30db2::t_1b4a6eb121d9e3 185
+packages/agent-tools/src/ops.ts
+  s_59c0dd2af30db2::t_df25f47af7e97b 19,21,27,32,364,368
+  s_59c0dd2af30db2::t_14f35285a7ee0b 274-356
+packages/mcp-server/src/ops.ts
+  s_59c0dd2af30db2::t_11cbfae764dcf8 9
+packages/agent-tools/test/v1/playbooks-v1.test.ts
+  s_59c0dd2af30db2::t_e3455528eef3e6 423-428
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e01a16cc5f2b262db8d34559a4f5e5969be0a5e3",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
