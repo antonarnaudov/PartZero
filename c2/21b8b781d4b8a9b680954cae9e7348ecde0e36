@@ -1,0 +1,25 @@
+packages/app/src/file/partzero/zip.ts
+  s_59c0dd2af30db2::t_2ecf8c50ac3cb2 58-75
+  s_59c0dd2af30db2::t_d3f480b008c87b 98,102-104,106,108-109
+packages/app/test/partzero.test.ts
+  s_59c0dd2af30db2::t_bbbe1646672ef7 139-154
+packages/app/src/file/partzero/codec.ts
+  s_59c0dd2af30db2::t_2e5bcd5062e3cf 140-152
+  s_59c0dd2af30db2::t_7846f1e530f38e 182
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c221b8b781d4b8a9b680954cae9e7348ecde0e36",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
