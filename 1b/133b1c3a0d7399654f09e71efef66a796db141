@@ -1,0 +1,58 @@
+packages/model-ops/src/doc.ts
+  s_59c0dd2af30db2::t_43808f7b49c28f 1-260
+  s_59c0dd2af30db2::t_221ce6b7bfe24e 261-269
+packages/model-ops/src/host.ts
+  s_59c0dd2af30db2::t_3807f70f1389ed 1-169
+packages/model-ops/test/ops.test.ts
+  s_59c0dd2af30db2::t_eb68201cb1bbf9 1-291
+packages/model-ops/src/rules.ts
+  s_59c0dd2af30db2::t_ccf2feff13e44f 1-134
+packages/model-ops/src/transaction.ts
+  s_59c0dd2af30db2::t_79b9980571f2a1 169,172
+  s_59c0dd2af30db2::t_579e32b8fa6494 1-168,170-171,173-255
+packages/model-ops/src/apply.ts
+  s_59c0dd2af30db2::t_0f7dd4e819f1a6 1-817
+  s_59c0dd2af30db2::t_9c916b7050fd5b 818-828
+packages/model-ops/test/engine.ts
+  s_59c0dd2af30db2::t_44e989e608e2ab 1-51
+packages/model-ops/test/transaction.test.ts
+  s_59c0dd2af30db2::t_4a2ed66d5e5e2d 153-154
+  s_59c0dd2af30db2::t_d634cddeca8ba4 1-139,141-152,155-196
+  s_59c0dd2af30db2::t_b5cf76c4eb6447 140
+packages/model-ops/src/catalogue.ts
+  s_59c0dd2af30db2::t_1af004b5b60d5d 1-465
+packages/model-ops/src/queries.ts
+  s_59c0dd2af30db2::t_674a5a4b3b4e30 1-73
+packages/model-ops/src/expr.ts
+  s_59c0dd2af30db2::t_94ebeb88cd3394 1-71
+packages/model-ops/package.json
+  s_59c0dd2af30db2::t_988214dbdc8296 1-37
+packages/model-ops/src/engine.ts
+  s_59c0dd2af30db2::t_a8ea882ba5d4cb 1-298
+packages/model-ops/src/index.ts
+  s_59c0dd2af30db2::t_40dbe92f2aa552 1-17
+packages/model-ops/tsconfig.build.json
+  s_59c0dd2af30db2::t_6537698f800f73 1-9
+packages/model-ops/tsconfig.json
+  s_59c0dd2af30db2::t_6b7ed9dcd3c71a 1-10
+packages/model-ops/vitest.config.ts
+  s_59c0dd2af30db2::t_90f34978672bd9 1-15
+pnpm-lock.yaml
+  s_59c0dd2af30db2::t_e2458abb7d45a7 318-336
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1b133b1c3a0d7399654f09e71efef66a796db141",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
