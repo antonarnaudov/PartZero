@@ -1,0 +1,23 @@
+forge/crates/forge-core/src/topo/validate.rs
+  s_59c0dd2af30db2::t_cbee65b4300abc 213-218,225,866,1218-1220
+forge/crates/forge-check/tests/degenerate_loop.rs
+  s_59c0dd2af30db2::t_d4f1ac80048a03 333-363
+docs/FORGE.md
+  s_59c0dd2af30db2::t_b5b085f2b264a6 158
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "24439aff119936dbdd11cd3575cb6a667de26e6d",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
