@@ -43,6 +43,7 @@
   border: 1px solid var(--border);
 }
 .vp-select {
+  max-width: 150px;
   height: 24px;
   margin: 0 3px;
   padding: 0 4px;
@@ -261,6 +262,21 @@
   font-family: var(--font-ui);
   font-weight: 650;
   letter-spacing: 0.02em;
+}
+/* On forge-render's light background the cube is light too (as in Fusion and Onshape). */
+.viewport[data-renderer="forge-web"] .vp-cube-cell {
+  fill: rgba(250, 251, 253, 0.92);
+  stroke: #a9b1bc;
+}
+.viewport[data-renderer="forge-web"] .vp-cube-cell.center {
+  fill: #eef1f5;
+}
+.viewport[data-renderer="forge-web"] .vp-cube-cell.hover {
+  fill: #cfe0ff;
+  stroke: #2f6fed;
+}
+.viewport[data-renderer="forge-web"] .vp-cube-label {
+  fill: #4a525e;
 }
 .vp-cube-home {
   position: absolute;

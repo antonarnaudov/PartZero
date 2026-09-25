@@ -23,6 +23,7 @@ import { faceGeom } from "../measure/geometry";
 import { ManipulatorHost } from "./manipulators/host";
 import {
   anglesLookingAlong,
+  basis,
   cameraFrame,
   easeInOut,
   fitSphere,
@@ -38,7 +39,7 @@ import {
   type StandardView,
   type Vec3,
 } from "./view-camera";
-import { sectionPlane, ViewStore, PRINCIPAL, type SectionBase, type SectionState } from "./view-store";
+import { sectionPlane, ViewStore, PRINCIPAL, type SectionBase, type SectionState, type ViewState } from "./view-store";
 
 /** Duration of animated camera moves (ms); 0 disables animation (tests, reduced motion). */
 export const DEFAULT_ANIMATION_MS = 280;
@@ -131,7 +132,7 @@ export class ViewportRuntime {
     this.detachFrame = adapter.onFrame(() => this.emitFrame());
     adapter.setProjection(this.view.getState().projection);
     this.applyDisplay();
-    this.pushBodies();
+    this.pushBodies(true);
     this.applySection();
     this.syncHighlights();
     return () => {
@@ -182,14 +183,26 @@ export class ViewportRuntime {
     return this.sceneBodies;
   }
 
-  private pushBodies(): void {
+  /**
+   * Hand the displayed bodies to the renderer — only when what it would receive changed: a new
+   * upload bumps forge-render's scene generation and drops picks in flight (a click's pick
+   * during a display-mode switch would otherwise read as "nothing").
+   */
+  private pushBodies(force = false): void {
     const a = this.adapter;
     if (!a) return;
     const v = this.view.getState();
-    const shown = displayBodies({ bodies: this.sceneBodies, states: new Map(Object.entries(v.bodies)), mode: v.display, nativeModes: a.capabilities().nativeModes });
-    a.setBodies(shown);
+    const native = a.capabilities().nativeModes;
+    const emulatedWire = v.display === "wireframe" && !native.includes("wireframe");
+    const key = { bodies: this.sceneBodies, states: v.bodies, emulatedWire, adapter: a };
+    const last = this.pushed;
+    if (!force && last && last.bodies === key.bodies && last.states === key.states && last.emulatedWire === key.emulatedWire && last.adapter === key.adapter) return;
+    this.pushed = key;
+    a.setBodies(displayBodies({ bodies: this.sceneBodies, states: new Map(Object.entries(v.bodies)), mode: v.display, nativeModes: native }));
     this.syncHighlights();
   }
+
+  private pushed: { bodies: readonly RenderBody[]; states: ViewState["bodies"]; emulatedWire: boolean; adapter: ViewportAdapter } | null = null;
 
   private applyDisplay(): void {
     const a = this.adapter;
@@ -497,7 +510,10 @@ export class ViewportRuntime {
       // Cut just inside the face: the material behind it shows.
       state = { base, origin: g.point, normal: g.normal, offset: 0, flipped: false, face: { body: it.body, face: it.key } };
     } else {
-      const n = PRINCIPAL[base];
+      // Remove the half facing the camera, so the cut (and its cap) faces the viewer.
+      const back = this.adapter ? basis(this.adapter.camera()).back : ([0, -1, 1] as Vec3);
+      const p = PRINCIPAL[base];
+      const n: Vec3 = p[0] * back[0] + p[1] * back[1] + p[2] * back[2] < 0 ? scale(p, -1) : p;
       const c = this.sceneSphere()?.center ?? [0, 0, 0];
       state = { base, origin: [0, 0, 0], normal: n, offset: n[0] * c[0] + n[1] * c[1] + n[2] * c[2], flipped: false };
     }
