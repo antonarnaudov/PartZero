@@ -330,6 +330,37 @@ fn error_corpus_case_inv_s31_degenerate_loop_005_extrudes_to_a_valid_body() {
     assert!((area - (rect - 1.000000001e-12)).abs() < 1e-12, "{area}");
 }
 
+/// A cap loop an operation moved while keeping its keys (forge-blend's draft) is no longer the
+/// sketch's decision: `ValidateOptions::strict_loops` turns the [R-5] relaxation off, so the
+/// hole of area 1.000000001·tol² the sketch decided is not provably above tol² by the body's
+/// own measure — while the default validation leaves it to the sketch.
+#[test]
+fn strict_loops_turn_off_the_sketch_region_relaxation() {
+    let doc = forge_ir::from_json(INV_S31_DEGENERATE_LOOP_005).expect("valid IR v0");
+    let feats = &doc.parts[0].features;
+    let (Feature::Sketch(sk), Feature::Extrude(ex)) = (&feats[0], &feats[1]) else {
+        panic!("sketch + extrude expected");
+    };
+    let Outcome::Ok(bodies, _) = run_extrude(sk, ex.distance, ex.direction) else {
+        panic!("the extrusion is valid");
+    };
+    let body = &bodies[0];
+    assert!(!forge_core::topo::has_errors(&forge_core::topo::validate(
+        body
+    )));
+    let strict = forge_core::topo::ValidateOptions {
+        strict_loops: true,
+        ..Default::default()
+    };
+    let issues = forge_core::topo::validate_with(body, &strict);
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.code == IssueCode::LoopDegenerate && i.severity == Severity::Error),
+        "{issues:?}"
+    );
+}
+
 #[test]
 fn revolved_triangle_hole_just_above_tol_squared_gives_a_valid_body() {
     // The profile lies right of the axis x = −20; a quarter turn gives planar end caps,

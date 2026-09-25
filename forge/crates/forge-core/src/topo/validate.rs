@@ -210,12 +210,19 @@ pub struct ValidateOptions {
     /// Number of parameter samples (including both ends) per edge for the geometric
     /// checks. At least 2.
     pub samples_per_edge: usize,
+    /// Apply the strict degenerate-loop rule to every planar loop, sweep caps included: no
+    /// [R-5] sketch-region relaxation (see `is_sketch_region_loop`). For the result of an
+    /// operation that moved a cap loop's edges while keeping their keys (`draft`, SPEC-v1
+    /// §6.9): the sketch no longer decided that loop, so the body must prove its area itself.
+    /// Default `false`.
+    pub strict_loops: bool,
 }
 
 impl Default for ValidateOptions {
     fn default() -> Self {
         Self {
             samples_per_edge: 9,
+            strict_loops: false,
         }
     }
 }
@@ -856,7 +863,7 @@ impl<'a> Validator<'a> {
                 // Written so that a NaN bound leaves the loop degenerate.
                 if a > min_area + err {
                     (a, err, min_area, false)
-                } else if is_sketch_region_loop(body, face, lp) {
+                } else if !self.opts.strict_loops && is_sketch_region_loop(body, face, lp) {
                     let delta = SKETCH_LOOP_ROUNDOFF_ULPS * f64::EPSILON * self.coordinate_scale();
                     let err_s = x.error(delta, true);
                     let limit = tol_least * tol_least;
@@ -1208,9 +1215,9 @@ impl LoopArea {
 ///
 /// **Assumption:** a cap loop keeps the geometry the sweep gave it as long as its keys
 /// are unchanged. An operation that moves a cap loop's edges while keeping their keys —
-/// SPEC §5.2 `draft` keeps the keys of the faces it tilts (not implemented; optional in
-/// v1) — must not reach this relaxation: it has to re-establish the loop's area itself
-/// or give its edges new keys.
+/// SPEC §5.2 `draft` keeps the keys of the faces it tilts (forge-blend's `draft`) — must
+/// not reach this relaxation: it validates its result with
+/// [`ValidateOptions::strict_loops`], so the moved loop proves its own area.
 fn is_sketch_region_loop(body: &Body, face: &Face, lp: &Loop) -> bool {
     let fp = &face.provenance;
     if !is_sweep_cap_role(&fp.role) {
