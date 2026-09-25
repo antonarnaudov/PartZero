@@ -28,8 +28,10 @@ import type {
   SettingsBridge,
   SettingsUpdate,
 } from "./agent-protocol.js";
+import type { FilesBridge, FilesEventContract, FilesIpcContract, FilesSendContract } from "./file/bridge-types.js";
 
 export type * from "./agent-protocol.js";
+export type * from "./file/bridge-types.js";
 
 export type MeshFormat = "3mf" | "stl" | "obj";
 
@@ -276,10 +278,12 @@ export interface AicadBridge {
   settings: SettingsBridge;
   /** Printer profile and the slicer handoff (optional: an older shell has none). */
   print?: PrintBridge;
+  /** Documents and files: binary reads, atomic saves, recovery, windows (optional: an older shell has none). */
+  files?: FilesBridge;
 }
 
 /** Every `ipcRenderer.invoke` channel with its argument tuple and result. */
-export interface IpcContract {
+export interface IpcContract extends FilesIpcContract {
   "app:info": { args: []; result: AppInfo };
   "dialog:open": { args: [OpenDialogOptions]; result: string | null };
   "dialog:save": { args: [SaveDialogOptions]; result: string | null };
@@ -308,14 +312,14 @@ export interface IpcContract {
 export type IpcChannel = keyof IpcContract;
 
 /** One-way renderer → main messages (`ipcRenderer.send`). */
-export interface IpcSendContract {
+export interface IpcSendContract extends FilesSendContract {
   "doc:state": [DocumentStateMessage];
 }
 
 export type IpcSendChannel = keyof IpcSendContract;
 
 /** Main → renderer events (`webContents.send`). */
-export interface IpcEventContract {
+export interface IpcEventContract extends FilesEventContract {
   "menu:command": [MenuCommandMessage];
   "agent:event": [AgentEvent];
 }

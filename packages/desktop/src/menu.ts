@@ -42,6 +42,7 @@ export function buildMenuTemplate(deps: MenuDeps): MenuItemConstructorOptions[] 
       ? [
           ...deps.recentFiles.map((p) => cmd(baseName(p), "file.openRecent", { path: p }, undefined, { toolTip: p, sublabel: p })),
           sep,
+          cmd("Show All Recent…", "file.showRecent"),
           cmd("Clear Recent", "file.clearRecent"),
         ]
       : [{ label: "No Recent Files", enabled: false }];
@@ -78,20 +79,24 @@ export function buildMenuTemplate(deps: MenuDeps): MenuItemConstructorOptions[] 
         cmd("Open…", "file.open", undefined, "CmdOrCtrl+O"),
         { label: "Open Recent", submenu: recent },
         sep,
+        cmd("Close Window", "file.close", undefined, "CmdOrCtrl+W"),
         cmd("Save", "file.save", undefined, "CmdOrCtrl+S"),
         cmd("Save As…", "file.saveAs", undefined, "CmdOrCtrl+Shift+S"),
+        cmd("Revert to Saved", "file.revert"),
+        cmd("Recover Unsaved Documents…", "file.recover"),
         sep,
-        ...(isMac ? [] : [cmd("Settings…", "settings.open", undefined, "CmdOrCtrl+,"), sep]),
+        cmd("Import Mesh as Reference…", "file.importReference"),
+        cmd("Export…", "file.export", undefined, "CmdOrCtrl+E"),
         {
-          label: "Export",
+          label: "Quick Export",
           submenu: [
-            cmd("3MF…", "file.exportMesh", { format: "3mf" }, "CmdOrCtrl+E"),
+            cmd("3MF…", "file.exportMesh", { format: "3mf" }),
             cmd("STL…", "file.exportMesh", { format: "stl" }),
             cmd("OBJ…", "file.exportMesh", { format: "obj" }),
           ],
         },
         sep,
-        isMac ? { role: "close" } : { role: "quit" },
+        ...(isMac ? [] : [cmd("Settings…", "settings.open", undefined, "CmdOrCtrl+,"), sep, { role: "quit" } as MenuItemConstructorOptions]),
       ],
     },
     {

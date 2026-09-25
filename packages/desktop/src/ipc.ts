@@ -39,7 +39,10 @@ export interface IpcDeps {
   forgeBin: string;
   appInfo: () => Promise<AppInfo>;
   onRecentChanged: () => void;
-  onDocState: (state: DocumentStateMessage) => void;
+  /** `senderId`: the `webContents` id of the window the document is in (one document per window). */
+  onDocState: (state: DocumentStateMessage, senderId: number) => void;
+  /** A window started an agent run: its events go to that window (windows.ts). */
+  onAgentStart?: (senderId: number) => void;
   /** The in-app design agent (host, keys, settings). */
   agent: AgentSetup;
   /** Printer profile and "Open in Bambu Studio" (absent: the channels are not registered). */
@@ -170,7 +173,10 @@ export function registerIpc(deps: IpcDeps): void {
   // every settings handler returns the redacted view. CLI agents are only detected (version,
   // lockdown, login state): their credentials are never read.
   const { host, keys } = deps.agent;
-  handle("agent:start", (_e, req) => host.start(req));
+  handle("agent:start", (e, req) => {
+    deps.onAgentStart?.(e.sender.id);
+    return host.start(req);
+  });
   handle("agent:answer", (_e, req) => host.answer(req));
   handle("agent:stop", (_e, req) => host.stop(req));
   handle("settings:get", () => host.settingsView());
@@ -213,6 +219,6 @@ export function registerIpc(deps: IpcDeps): void {
     const s = (typeof state === "object" && state !== null ? state : {}) as Partial<DocumentStateMessage>;
     if (typeof s.title !== "string" || typeof s.dirty !== "boolean") return;
     // Only a path the user granted may become the window's represented file.
-    deps.onDocState({ title: s.title.slice(0, 200), path: documentStatePath(s.path, deps.grants), dirty: s.dirty });
+    deps.onDocState({ title: s.title.slice(0, 200), path: documentStatePath(s.path, deps.grants), dirty: s.dirty }, event.sender.id);
   });
 }
