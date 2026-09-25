@@ -1,0 +1,118 @@
+forge/crates/forge-ir/src/v1/validate.rs
+  s_59c0dd2af30db2::t_466f63470796b3 625-666
+  s_59c0dd2af30db2::t_48d95c4ded8ce2 1297-1304,1306
+  s_59c0dd2af30db2::t_f12dd0eefcdf85 2843-2851
+  s_59c0dd2af30db2::t_991e4dc8607f65 544,549
+  s_59c0dd2af30db2::t_34aea063e66fdb 611-621
+  s_59c0dd2af30db2::t_93eb8eac81c164 1295
+  s_59c0dd2af30db2::t_9b01f50ff5c4ee 2688-2691
+  s_59c0dd2af30db2::t_3cf7a51a281882 622-624
+forge/crates/forge-regen/src/v1/mod.rs
+  s_59c0dd2af30db2::t_a02949dc80bc8b 68
+forge/crates/forge-ir/src/v1/migrate.rs
+  s_59c0dd2af30db2::t_d54a4677d4ede3 225-226
+  s_59c0dd2af30db2::t_87b0fc9b392670 419-422,427,434
+  s_59c0dd2af30db2::t_48d95c4ded8ce2 423-426
+corpus/v1/conformance/invalid/documents.json
+  s_59c0dd2af30db2::t_bd007e6c332bc4 13956-13958
+  s_59c0dd2af30db2::t_2f07a0af6599e8 13877-13955,13959-14065
+forge/crates/forge-regen/tests/v1_extents.rs
+  s_59c0dd2af30db2::t_fd39957b8cd66a 1-21,27-37,42-72,77,82-84,89-124,129-160,190
+  s_59c0dd2af30db2::t_48d95c4ded8ce2 22-26,38-41,73-76,78-81,85-88,125-128,161-189
+forge/crates/forge-regen/tests/v1.rs
+  s_59c0dd2af30db2::t_fff0be6bd4ab89 937-941
+forge/crates/forge-regen/tests/v1_programs/transforms.json
+  s_59c0dd2af30db2::t_93394e922d4e65 1-37
+forge/crates/forge-params/tests/params.rs
+  s_59c0dd2af30db2::t_0be941d24ad7b1 349
+  s_59c0dd2af30db2::t_48d95c4ded8ce2 257-261,372-376
+forge/crates/forge-ir/src/v1/mod.rs
+  s_59c0dd2af30db2::t_21a5ef141e7558 107-108
+forge/crates/forge-ir/SPEC-v1-DRAFT.md
+  s_59c0dd2af30db2::t_b5e0bf430e5427 2043-2089
+  s_59c0dd2af30db2::t_abacfa0788c58d 1657-1671
+  s_59c0dd2af30db2::t_2eb246034515aa 2592
+  s_59c0dd2af30db2::t_2fb1022a74944d 2866
+  s_59c0dd2af30db2::t_085a5c3c31913c 2856-2865,2867-2868
+forge/crates/forge-regen/src/v1/deps.rs
+  s_59c0dd2af30db2::t_51c47d8a5ba03c 62-67
+  s_59c0dd2af30db2::t_7300e814173783 49-51
+forge/crates/forge-ops/src/pattern/mod.rs
+  s_59c0dd2af30db2::t_b3248234f90419 206-215
+forge/crates/forge-ir/src/v1/canonical.rs
+  s_59c0dd2af30db2::t_f73094c1183634 168-173
+  s_59c0dd2af30db2::t_3dfddc36c9e6c9 100-105
+forge/crates/forge-ir/src/v1/features.rs
+  s_59c0dd2af30db2::t_000f8afeac9584 234-236,239-245,254-260
+  s_59c0dd2af30db2::t_32473d1e5793d9 91,95,109,137,170
+  s_59c0dd2af30db2::t_f830faa11ee66f 237-238
+  s_59c0dd2af30db2::t_824c2f527cb4fa 893-931
+forge/crates/forge-regen/tests/v1_programs/extents.json
+  s_59c0dd2af30db2::t_d8ae58a304d2d4 1-22,24-42
+  s_59c0dd2af30db2::t_f4014083ce7a4b 23
+forge/crates/forge-refs/src/typing.rs
+  s_59c0dd2af30db2::t_8d8847d5f09ce3 146,157
+  s_59c0dd2af30db2::t_48d95c4ded8ce2 148-156
+forge/crates/forge-ir/src/v1/codes.rs
+  s_59c0dd2af30db2::t_710464c20b1159 56-59
+forge/crates/forge-regen/tests/v1_golden_hash.rs
+  s_59c0dd2af30db2::t_2415d7ff85f499 69
+  s_59c0dd2af30db2::t_4cd3cce80cee02 70
+  s_59c0dd2af30db2::t_8e7763655c9903 101-104
+  s_59c0dd2af30db2::t_42f724d3dc0960 32
+forge/crates/forge-ir/schema/ir-v1.constants.json
+  s_59c0dd2af30db2::t_c27653f3cb2115 338-362
+  s_59c0dd2af30db2::t_10a40c8fc09436 1136-1137,1178-1179
+  s_59c0dd2af30db2::t_9ef17c2dddfa75 1864-1865,1982-1983
+  s_59c0dd2af30db2::t_5928fb4f8c9d13 1180
+forge/crates/forge-regen/tests/v1_transform.rs
+  s_59c0dd2af30db2::t_a07d072985b5e8 183
+  s_59c0dd2af30db2::t_e2dc8256685fba 190
+  s_59c0dd2af30db2::t_6b313b790b0dff 7-10
+  s_59c0dd2af30db2::t_c520198df6a283 97-108,113-127
+  s_59c0dd2af30db2::t_48d95c4ded8ce2 132-135,153-156,161-164,166-174,185-189,198-201,204-207,209-212,225-228
+  s_59c0dd2af30db2::t_237bd479eb3010 93
+  s_59c0dd2af30db2::t_3c3f7acece8e53 176
+  s_59c0dd2af30db2::t_8c7d483c8c0f40 230-232
+  s_59c0dd2af30db2::t_12a1482570ae42 236
+  s_59c0dd2af30db2::t_5638ffd817a24d 86
+  s_59c0dd2af30db2::t_b11f6752cdd9a5 109-112
+  s_59c0dd2af30db2::t_0f50d5dff41442 1-6,11-85,87-92,94-96,128-131,136-152,157-160,165,175,177-180,182,184,191-197,202-203,208,213-224,229,233-235,237-277
+  s_59c0dd2af30db2::t_d6f798f7540c9a 181
+forge/crates/forge-regen/src/v1/part.rs
+  s_59c0dd2af30db2::t_4913628407b0b4 1187-1223,1227-1247,1263-1264,1270-1279
+  s_59c0dd2af30db2::t_d972c06f4b3aaa 48
+  s_59c0dd2af30db2::t_d10a7d35f595c5 35
+  s_59c0dd2af30db2::t_12c443e4ea8b09 764-775,791,795-805
+  s_59c0dd2af30db2::t_e68bbd5fb3f88d 13-15
+  s_59c0dd2af30db2::t_ec4a11c64f0404 386
+  s_59c0dd2af30db2::t_48d95c4ded8ce2 792-794,1224-1226,1248-1262,1265-1269
+  s_59c0dd2af30db2::t_cf9c6351454b5d 700-710,712-714
+forge/crates/forge-ir/schema/ir-v1.schema.json
+  s_59c0dd2af30db2::t_c27653f3cb2115 1244-1266,1423-1427,1484,4553
+  s_59c0dd2af30db2::t_10a40c8fc09436 2530-2623,4536-4551
+  s_59c0dd2af30db2::t_320491b40dd2d1 4552
+forge/crates/forge-regen/src/v1/transform.rs
+  s_59c0dd2af30db2::t_48d95c4ded8ce2 121-125
+  s_59c0dd2af30db2::t_b18890eb7dea47 152-164,169-176
+  s_59c0dd2af30db2::t_b11f6752cdd9a5 165-168
+  s_59c0dd2af30db2::t_e3ba4d957a13d0 115-118,120
+  s_59c0dd2af30db2::t_3ed73794927f7a 18,21-23
+  s_59c0dd2af30db2::t_ac0c444c93639a 1-17,19-20,24-114,119,126-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c833834e2002a8c0be9d0471c1955a539dc62cdc",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
