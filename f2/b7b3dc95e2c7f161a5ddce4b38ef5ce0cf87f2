@@ -1,0 +1,144 @@
+forge/crates/forge-ssi/examples/ssi_oracle_batch.rs
+  s_59c0dd2af30db2::t_af3ce7150976a2 37-41
+forge/crates/forge-ssi/src/ssi/exact.rs
+  s_59c0dd2af30db2::t_99d38b2e3891b7 321,385
+forge/crates/forge-blend/src/plan.rs
+  s_59c0dd2af30db2::t_c4882cc3c1f70b 358-366
+forge/crates/forge-io/src/step/orient.rs
+  s_59c0dd2af30db2::t_16a1c98121e734 215
+forge/crates/forge-check/src/bbox.rs
+  s_59c0dd2af30db2::t_c795bfe7483d83 22,483-497,502-519
+  s_59c0dd2af30db2::t_6446897ef9ad0e 101,104-105
+  s_59c0dd2af30db2::t_060d4a33b8619f 102-103,141-150,152,155-165
+  s_59c0dd2af30db2::t_0c5a1f0d523800 168-169,171,174-176,178,255-256,258,262-266,275-276
+  s_59c0dd2af30db2::t_6141dbdb63346a 9-10,14-15,140
+  s_59c0dd2af30db2::t_e1b2cc00cb1503 80,184-185,187-190,257,277,355-358,403,440
+  s_59c0dd2af30db2::t_222f02fa857571 170
+  s_59c0dd2af30db2::t_fd480bedd3d0c5 172-173,177,179-183,201-241,243-254,259-261,267-268,270-274
+  s_59c0dd2af30db2::t_74a2f2282a05dd 151,153-154,186,191-200,242,269
+  s_59c0dd2af30db2::t_0e9bd90c81bb4c 166,447-482,498-501,520-523
+  s_59c0dd2af30db2::t_047fbc0460e8ea 167
+forge/crates/forge-mesh/src/face.rs
+  s_59c0dd2af30db2::t_308d6827b519e1 1232-1238
+forge/crates/forge-core/src/geom/curve2.rs
+  s_59c0dd2af30db2::t_5070928f2f68bf 5,191-192,212-216,230,240,259,271,275,280,284,290
+forge/crates/forge-ssi/src/ssi/march/mod.rs
+  s_59c0dd2af30db2::t_99d38b2e3891b7 185
+forge/crates/forge-ssi/src/ssi/bound.rs
+  s_59c0dd2af30db2::t_235b965f312446 350
+  s_59c0dd2af30db2::t_99d38b2e3891b7 198-199
+forge/crates/forge-refs/src/exact/domain.rs
+  s_59c0dd2af30db2::t_060d4a33b8619f 134
+forge/crates/forge-ssi/src/func.rs
+  s_59c0dd2af30db2::t_30ff24ac493bdf 117-126
+forge/crates/forge-io/src/step/geometry.rs
+  s_59c0dd2af30db2::t_3df0b6506f4f6a 278-279
+  s_59c0dd2af30db2::t_16a1c98121e734 98-99,227-228
+forge/crates/forge-refs/src/geom.rs
+  s_59c0dd2af30db2::t_060d4a33b8619f 102-103,130
+forge/crates/forge-blend/src/geom.rs
+  s_59c0dd2af30db2::t_c4882cc3c1f70b 165-170
+forge/crates/forge-ops/src/hole/face.rs
+  s_59c0dd2af30db2::t_090a0380ca3720 126-133
+forge/crates/forge-check/src/lib.rs
+  s_59c0dd2af30db2::t_060d4a33b8619f 40
+forge/crates/forge-ssi/src/ssi/mod.rs
+  s_59c0dd2af30db2::t_99d38b2e3891b7 37-38,73-82,610
+forge/crates/forge-core/src/geom/mod.rs
+  s_59c0dd2af30db2::t_4a0f49b112edc8 40
+  s_59c0dd2af30db2::t_d164f8687cc1b5 41
+  s_59c0dd2af30db2::t_8f552c1a8027ac 3,5-6,8,29,37
+forge/crates/forge-refs/src/exact/mod.rs
+  s_59c0dd2af30db2::t_3ddb45a30d645a 171,187
+  s_59c0dd2af30db2::t_060d4a33b8619f 275
+forge/crates/forge-ops/src/boolean/geom.rs
+  s_59c0dd2af30db2::t_090a0380ca3720 149-152,155-159,1172-1180
+forge/crates/forge-core/src/geom/curve3.rs
+  s_59c0dd2af30db2::t_136ddefaa8b729 5,188,202-203,223-227,241,251,265-266,272,284,288,293,298-299,310,314-315,321,341
+forge/crates/forge-blend/src/shell.rs
+  s_59c0dd2af30db2::t_2c4c5c77a9087e 272-273
+forge/crates/forge-check/src/mass.rs
+  s_59c0dd2af30db2::t_12053c2dc4ad13 64-65
+forge/crates/forge-check/src/domain.rs
+  s_59c0dd2af30db2::t_020ad8d89b8127 126,131
+forge/crates/forge-ops/tests/hole_faces.rs
+  s_59c0dd2af30db2::t_3d2d2baebcb79e 118
+forge/crates/forge-naming/src/fingerprint.rs
+  s_59c0dd2af30db2::t_f4b4704827cf0a 66-69,86-87,384,411
+forge/crates/forge-core/src/geom/helix.rs
+  s_59c0dd2af30db2::t_c795bfe7483d83 47-52,186,206-210,213-222,488-490,547-548
+  s_59c0dd2af30db2::t_c8d699c04f9c41 241
+  s_59c0dd2af30db2::t_23e6d1c06a061a 244
+  s_59c0dd2af30db2::t_746271ce742f4d 1-46,53-185,187-205,211-212,223-240,242-243,245-487,491-546,549-560
+forge/crates/forge-core/src/topo/validate.rs
+  s_59c0dd2af30db2::t_c8d699c04f9c41 999,1010
+forge/crates/forge-mesh/src/edges.rs
+  s_59c0dd2af30db2::t_308d6827b519e1 8-9,66-71
+  s_59c0dd2af30db2::t_d427579f41ae7c 72-73
+forge/crates/forge-io/src/step/mod.rs
+  s_59c0dd2af30db2::t_16a1c98121e734 107-115,149,293-298,300-305,905-906
+  s_59c0dd2af30db2::t_c795bfe7483d83 299,306
+  s_59c0dd2af30db2::t_a74b612f023f36 307-309
+forge/crates/forge-ops/src/boolean/unify.rs
+  s_59c0dd2af30db2::t_090a0380ca3720 526,652-653
+forge/crates/forge-refs/src/exact/bbox.rs
+  s_59c0dd2af30db2::t_060d4a33b8619f 73,94-98,211-212
+  s_59c0dd2af30db2::t_3ddb45a30d645a 133
+forge/crates/forge-blend/src/blend/region.rs
+  s_59c0dd2af30db2::t_c4882cc3c1f70b 834-843
+forge/crates/forge-blend/src/interfere.rs
+  s_59c0dd2af30db2::t_c4882cc3c1f70b 125-139,292,1358,1885,1915
+  s_59c0dd2af30db2::t_eae84249d391c9 185-197
+forge/crates/forge-ssi/src/corpus.rs
+  s_59c0dd2af30db2::t_99d38b2e3891b7 168
+forge/crates/forge-ops/src/pattern/motion.rs
+  s_59c0dd2af30db2::t_40e07d7b8b3a35 261
+  s_59c0dd2af30db2::t_090a0380ca3720 165-170,225-228
+  s_59c0dd2af30db2::t_369ff04f8bed6b 229
+forge/crates/forge-io/src/step/brep.rs
+  s_59c0dd2af30db2::t_16a1c98121e734 491,1867
+forge/crates/forge-ssi/src/curve_surface.rs
+  s_59c0dd2af30db2::t_1ef9885d7a7c2b 46-47
+  s_59c0dd2af30db2::t_99d38b2e3891b7 328
+  s_59c0dd2af30db2::t_448238bc688701 64-66
+  s_59c0dd2af30db2::t_0dcc68e0841a87 209-281
+forge/crates/forge-refs/src/query.rs
+  s_59c0dd2af30db2::t_060d4a33b8619f 901,909,916
+forge/crates/forge-core/src/geom/surface/helicoid.rs
+  s_59c0dd2af30db2::t_046ae09513e174 473-476
+  s_59c0dd2af30db2::t_498fda62aee10d 1-6,8-10,39-148,154-223,389-450,455-463,541-545
+  s_59c0dd2af30db2::t_389890dcfaf87d 7,11-38
+  s_59c0dd2af30db2::t_c795bfe7483d83 149-153,451-454
+  s_59c0dd2af30db2::t_23e6d1c06a061a 247
+  s_59c0dd2af30db2::t_4d0c3a897fb262 224-246,248-388
+  s_59c0dd2af30db2::t_1daf93718e7e80 464-472,477-540
+forge/crates/forge-core/src/geom/surface/mod.rs
+  s_59c0dd2af30db2::t_edbfaa020ea693 8
+  s_59c0dd2af30db2::t_d0983300b11c20 4,49,69-70,84,101,113,162,170-171,179,186,199,212,220,232
+forge/crates/forge-blend/src/cert2d.rs
+  s_59c0dd2af30db2::t_c4882cc3c1f70b 574-576,597-600
+  s_59c0dd2af30db2::t_526bd11640a53e 601
+forge/crates/forge-check/src/nesting.rs
+  s_59c0dd2af30db2::t_160086958a8202 14-15,140-155,198-200,241
+forge/crates/forge-check/tests/degenerate_loop.rs
+  s_59c0dd2af30db2::t_e406ea01d093d6 1303
+forge/crates/forge-core/src/geom/surface/implicit.rs
+  s_59c0dd2af30db2::t_e641caf0bf157e 199,210-211,222-223,235
+  s_59c0dd2af30db2::t_d0983300b11c20 207,219,231,241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f2b7b3dc95e2c7f161a5ddce4b38ef5ce0cf87f2",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
