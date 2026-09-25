@@ -7,9 +7,11 @@
  * - {@link manipulatorHandlesPort}: the open panel's handles in the viewport's manipulator host; a
  *   drag reports back to the panel, which sets the bound field.
  */
+import type { IrDocument } from "@aicad/ir-types";
 import { findFeature } from "../../doc/provenance";
+import { labelOf } from "../../selection/labels";
 import type { AppServices } from "../../services";
-import type { SelectionItem as ViewItem } from "../../selection/types";
+import { itemId, type SelectionItem as ViewItem } from "../../selection/types";
 import type { ManipulatorHost } from "../../viewport/manipulators/host";
 import type { HandleSpec } from "../../viewport/manipulators/types";
 import { viewportRuntime } from "../../viewport/runtime";
@@ -22,15 +24,15 @@ function partOfBody(body: string): string {
 
 const ORIGIN_LABELS: Record<string, string> = { XY: "XY plane", XZ: "XZ plane", YZ: "YZ plane", X: "X axis", Y: "Y axis", Z: "Z axis", O: "Origin" };
 
-/** A viewport selection item as the tools see it. */
-export function toToolItem(it: ViewItem): SelectionItem {
+/** A viewport selection item as the tools see it (with the label people read: "End cap of slab"). */
+export function toToolItem(it: ViewItem, ir?: IrDocument | null): SelectionItem {
   switch (it.kind) {
     case "face":
     case "edge":
     case "vertex":
-      return { kind: it.kind, part: partOfBody(it.body), key: it.key, body: it.body, ...(it.point ? { point: it.point } : {}) };
+      return { kind: it.kind, part: partOfBody(it.body), key: it.key, body: it.body, ...(it.point ? { point: it.point } : {}), label: labelOf(it, ir) };
     case "body":
-      return { kind: "body", part: partOfBody(it.body), body: it.body };
+      return { kind: "body", part: partOfBody(it.body), body: it.body, label: labelOf(it, ir) };
     case "sketch":
       return { kind: "feature", feature: it.feature, label: it.feature };
     case "datum":
@@ -50,7 +52,8 @@ export function runtimeSelectionPort(services: AppServices): SelectionPort {
   let lastDoc = services.doc.getState().selection;
   let cached: SelectionItem[] = compute();
   function compute(): SelectionItem[] {
-    const items = rt.selection.getState().items.map(toToolItem);
+    const ir = services.doc.getState().model?.ir;
+    const items = rt.selection.getState().items.map((it) => toToolItem(it, ir));
     const docSel = services.doc.getState().selection;
     if (docSel.featureId && !docSel.entity) {
       const loc = findFeature(services.doc.getState().model?.ir, docSel.featureId);
@@ -64,12 +67,17 @@ export function runtimeSelectionPort(services: AppServices): SelectionPort {
     return items;
   }
   const fresh = (): SelectionItem[] => {
-    const sel = rt.selection.getState().items;
+    const st = rt.selection.getState();
+    const sel = st.items;
     const doc = services.doc.getState().selection;
     if (sel !== lastSel || doc !== lastDoc) {
+      // A re-resolution that only dropped items (a tool's preview consumed a picked body, e.g. a
+      // cut's tool) is not the user's pick changing: the panel keeps what was picked.
+      const before = new Set(lastSel.map(itemId));
+      const onlyDropped = doc === lastDoc && st.dropped.length > 0 && sel.length < lastSel.length && sel.every((it) => before.has(itemId(it)));
       lastSel = sel;
       lastDoc = doc;
-      cached = compute();
+      if (!onlyDropped) cached = compute();
     }
     return cached;
   };

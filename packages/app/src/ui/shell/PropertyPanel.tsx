@@ -20,9 +20,9 @@ function itemLabel(item: SelectionItem): string {
     case "face":
     case "edge":
     case "vertex":
-      return item.key;
+      return item.label ?? item.key;
     case "body":
-      return item.body;
+      return item.label ?? item.body;
     case "feature":
     case "datum":
     case "origin":

@@ -3,6 +3,7 @@
  * enablement rules they share.
  */
 import { keyOfFaceQuery } from "@aicad/model-ops";
+import { faceLabel } from "../../selection/labels";
 import type { AppServices } from "../../services";
 import type { Enablement, SelectionItem, ToolContext } from "../framework/types";
 
@@ -64,7 +65,7 @@ export function faceItemOf(ref: unknown, services: AppServices): SelectionItem |
   const key = keyOfFaceQuery(q);
   if (!key) return null;
   const f = modelFeatures(services).find((x) => x.id === (q as { feature?: string }).feature);
-  return { kind: "face", part: f?.partName ?? "part", key };
+  return { kind: "face", part: f?.partName ?? "part", key, label: faceLabel(key, services.doc.getState().model?.ir) };
 }
 
 /** Bodies picked directly, or through one of their faces (click any face of a body). */

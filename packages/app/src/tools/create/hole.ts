@@ -57,7 +57,7 @@ function fields(sketches: readonly ModelFeature[], edit: boolean): FieldSpec[] {
     { key: "start", label: "Start angle", kind: "number", quantity: "angle", default: "0", visibleWhen: is("placement", "circle") },
     { key: "cu", label: "Centre U", kind: "number", quantity: "length", default: "0", visibleWhen: is("placement", "grid", "circle") },
     { key: "cv", label: "Centre V", kind: "number", quantity: "length", default: "0", visibleWhen: is("placement", "grid", "circle") },
-    { key: "kind", label: "Type", kind: "choice", options: KINDS, default: "simple" },
+    { key: "kind", label: "Type", kind: "choice", style: "dropdown", options: KINDS, default: "simple" },
     { key: "size", label: "Size", kind: "choice", style: "dropdown", options: SIZES, default: "M3", hint: "ISO metric screws (clearance from ISO 273)" },
     { key: "diameter", label: "Diameter", kind: "number", quantity: "length", min: 0, minExclusive: true, default: "3", visibleWhen: is("size", "custom") },
     {

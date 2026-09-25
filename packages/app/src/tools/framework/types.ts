@@ -82,8 +82,8 @@ export type ShellMode = "model" | "sketch";
  * Model entities carry their provenance key (`plate/cap:end`), never an engine id.
  */
 export type SelectionItem =
-  | { kind: "face" | "edge" | "vertex"; part: string; key: string; body?: string; point?: readonly [number, number, number] }
-  | { kind: "body"; part: string; body: string }
+  | { kind: "face" | "edge" | "vertex"; part: string; key: string; body?: string; point?: readonly [number, number, number]; label?: string }
+  | { kind: "body"; part: string; body: string; label?: string }
   | { kind: "feature" | "datum" | "origin"; feature: string; label?: string }
   | { kind: "sketchCurve" | "sketchPoint"; sketch: string; id: string; sub?: "start" | "end" | "center" | "mid" }
   | { kind: "constraint" | "dimension"; sketch: string; index: number }
