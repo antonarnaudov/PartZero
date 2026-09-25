@@ -1,4 +1,3 @@
-import { inflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { writeZip } from "../src/file/partzero/zip";
 import { encodePng, renderThumbnail, renderThumbnailRgba } from "../src/file/thumbnail";
@@ -163,7 +162,7 @@ describe("display body and thumbnail", () => {
     expect(Array.from(body.normals.subarray(0, 3))).toEqual([0, 0, -1]);
   });
 
-  it("renders a deterministic PNG that zlib can read", () => {
+  it("renders a deterministic PNG that zlib can read", async () => {
     const body = meshToRenderBody(box(10, 20, 5), "b");
     const a = renderThumbnail([body], { width: 64, height: 48 });
     const b = renderThumbnail([body], { width: 64, height: 48 });
@@ -175,7 +174,8 @@ describe("display body and thumbnail", () => {
     const ihdrLen = view.getUint32(8);
     const idatAt = 8 + 12 + ihdrLen;
     const idatLen = view.getUint32(idatAt);
-    const raw = inflateSync(a!.png.subarray(idatAt + 8, idatAt + 8 + idatLen));
+    const zlibStream = new Blob([a!.png.slice(idatAt + 8, idatAt + 8 + idatLen)]).stream().pipeThrough(new DecompressionStream("deflate"));
+    const raw = new Uint8Array(await new Response(zlibStream).arrayBuffer());
     expect(raw.length).toBe(48 * (1 + 64 * 4));
     const rgba = renderThumbnailRgba([body], 64, 48)!;
     const covered = rgba.filter((_, i) => i % 4 === 3 && rgba[i]! > 0).length;

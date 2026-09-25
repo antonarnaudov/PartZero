@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-import { deflateRawSync, inflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import {
   adler32,
@@ -20,6 +18,17 @@ import {
 } from "../src/file/partzero";
 
 const enc = new TextEncoder();
+
+/** The platform's (zlib's) DEFLATE, through the Compression Streams API: an independent implementation to check against. */
+async function platform(kind: "compress" | "decompress", format: "deflate-raw" | "deflate", data: Uint8Array): Promise<Uint8Array> {
+  const stream = new Blob([new Uint8Array(data)]).stream().pipeThrough(kind === "compress" ? new CompressionStream(format) : new DecompressionStream(format));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function webSha256(data: Uint8Array): Promise<string> {
+  const d = new Uint8Array(await crypto.subtle.digest("SHA-256", new Uint8Array(data)));
+  return [...d].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 /** A deterministic pseudo-random byte stream (xorshift). */
 function noise(n: number, seed = 1): Uint8Array {
@@ -59,12 +68,12 @@ function patchZip(bytes: Uint8Array, name: string, data: Uint8Array | null, extr
 }
 
 describe("checksums", () => {
-  it("match Node's CRC-32, SHA-256 and the Adler-32 reference values", () => {
+  it("match WebCrypto's SHA-256 and the CRC-32 and Adler-32 reference values", async () => {
     expect(crc32(enc.encode("123456789"))).toBe(0xcbf43926);
     expect(adler32(enc.encode("Wikipedia"))).toBe(0x11e60398);
     for (const n of [0, 1, 55, 56, 63, 64, 65, 119, 120, 1000, 100_000]) {
       const d = noise(n, n + 7);
-      expect(sha256Hex(d)).toBe(createHash("sha256").update(d).digest("hex"));
+      expect(sha256Hex(d)).toBe(await webSha256(d));
     }
     expect(sha256Hex(enc.encode("abc"))).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
   });
@@ -80,19 +89,20 @@ describe("DEFLATE", () => {
     ["mixed", new Uint8Array([...noise(5000, 3), ...new Uint8Array(40_000).fill(1), ...enc.encode("abcabcabc".repeat(3000))])],
   ];
 
-  it.each(inputs)("our compressor round-trips through zlib and our decoder (%s)", (_name, data) => {
+  it.each(inputs)("our compressor round-trips through zlib and our decoder (%s)", async (_name, data) => {
     const z = deflateRaw(data);
-    expect(new Uint8Array(inflateRawSync(z))).toEqual(data);
+    expect(await platform("decompress", "deflate-raw", z)).toEqual(data);
     expect(inflateRaw(z)).toEqual(data);
   });
 
-  it("our decoder reads zlib's stored, fixed and dynamic blocks", () => {
+  it("our decoder reads zlib's output (dynamic and fixed blocks) and stored blocks", async () => {
     for (const [, data] of inputs) {
-      for (const level of [0, 1, 6, 9]) {
-        const z = new Uint8Array(deflateRawSync(data, { level }));
-        expect(inflateRaw(z)).toEqual(data);
-      }
+      const z = await platform("compress", "deflate-raw", data);
+      expect(inflateRaw(z)).toEqual(data);
     }
+    // Two stored blocks: BFINAL=0 then BFINAL=1, each LEN, NLEN, bytes.
+    const stored = new Uint8Array([0x00, 3, 0, 0xfc, 0xff, 1, 2, 3, 0x01, 2, 0, 0xfd, 0xff, 4, 5]);
+    expect([...inflateRaw(stored)]).toEqual([1, 2, 3, 4, 5]);
   });
 
   it("is deterministic and compresses text", () => {
@@ -103,7 +113,7 @@ describe("DEFLATE", () => {
   });
 
   it("stops at the output cap and rejects garbage", () => {
-    const bomb = new Uint8Array(deflateRawSync(new Uint8Array(5_000_000)));
+    const bomb = deflateRaw(new Uint8Array(5_000_000));
     expect(() => inflateRaw(bomb, { maxSize: 1_000_000 })).toThrow(/beyond/);
     expect(() => inflateRaw(new Uint8Array([0xff, 0xff, 0xff]))).toThrow();
     expect(() => inflateRaw(new Uint8Array([]))).toThrow(/unexpected end/);
