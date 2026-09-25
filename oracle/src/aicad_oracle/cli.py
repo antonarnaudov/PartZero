@@ -536,10 +536,20 @@ def build_parser() -> argparse.ArgumentParser:
     px.add_argument("--check", help="a cases file with another implementation's answers: exit 1 on any "
                                     "disagreement (reals 1e-12 relative, counts/bools/codes exact)")
     px.set_defaults(func=_cmd_exprs)
+
+    ps = sub.add_parser("step-check", help="read Forge's STEP exports with OCCT and compare them with Forge's "
+                        "metrics (step_check.py; e.g. step-check --programs ../corpus/programs)")
+    ps.add_argument("rest", nargs=argparse.REMAINDER)
+    ps.set_defaults(func=lambda a: __import__("aicad_oracle.step_check", fromlist=["run"]).run(a.rest))
     return p
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["step-check"]:  # its own options (step_check.run); argparse would claim them
+        from .step_check import run
+
+        return run(argv[1:])
     args = build_parser().parse_args(argv)
     return int(args.func(args) or 0)
 

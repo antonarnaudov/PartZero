@@ -402,3 +402,24 @@ Revision 2026-09-23b resolved the 15 points the oracle raised. These remain or a
 4. **"Within tol of the axis ⇒ on the axis" is implied, not stated.** §4.4 speaks of profile vertices and edges "on the axis" without tying that to tol. The oracle snaps points within tol. State this explicitly.
 5. **Class precedence within one program is unspecified.** The oracle uses POTENTIAL_SILENT_WRONG > CODE_MISMATCH > ROBUSTNESS > MATCH.
 6. **Feature-list mismatches are unclassified.** A missing, extra or reordered feature entry in one report falls under no §6 class. The oracle calls it POTENTIAL_SILENT_WRONG.
+
+## STEP export check (`step-check`)
+
+`oracle step-check` reads Forge's **own** STEP files (forge-io's writer, `aicad export --format step`)
+with OCCT's `STEPControl_Reader` and compares each body with Forge's exact metrics from the export
+summary: `BRepCheck_Analyzer` validity and closed shells; volume, area and tight box within 1e-6
+relative (fixed-order integrators first, the adaptive ones when those disagree); the face count; and
+the edge count after seam normalization, which must account exactly for the seams and split pieces
+the writer reports. Code: `src/aicad_oracle/step_check.py`; tests: `tests/test_step_check.py`.
+
+```bash
+uv run oracle step-check --programs ../corpus/programs ../corpus/v1/programs   # exports with forge/target/debug/aicad
+(cd ../forge && cargo run --release -p forge-io --example step_corpus -- /tmp/step 200 1 7)
+uv run oracle step-check --dir /tmp/step --json /tmp/step-check.json          # the boolean corpus + samples
+```
+
+Match rate on 2026-09-25: corpus programs 11/11 bodies; boolean corpus (seeds 1 and 7, 200 cases each,
+every operand and result) plus the hand-built samples 1600/1605 bodies at 1e-6. The five others: four
+revolve-family bodies whose B-spline section curves lie on spheres or tori differ by 1.3e-6 to 9e-6
+relative (OCCT derives their pcurves by projection; writing PCURVEs is the follow-up), and one join whose
+face boundary touches itself at two vertices (valid in Forge, rejected by `BRepCheck`).
