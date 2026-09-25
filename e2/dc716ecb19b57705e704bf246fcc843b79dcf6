@@ -1,0 +1,32 @@
+packages/app/test/viewport-tools.test.ts
+  s_59c0dd2af30db2::t_c69b7fc1004df2 137-148
+packages/app/src/viewport/placeholder.ts
+  s_59c0dd2af30db2::t_6f378a15efd7de 730-752
+  s_59c0dd2af30db2::t_b88324a462b10b 463-480
+  s_59c0dd2af30db2::t_f0626632125b43 495,506-515,520
+packages/desktop/e2e/viewport/section-measure.e2e.ts
+  s_59c0dd2af30db2::t_7d579c78b62493 32-36
+  s_59c0dd2af30db2::t_617104b716ff31 47-48
+  s_59c0dd2af30db2::t_a48fd0257c8e0c 76-78
+packages/desktop/e2e/viewport/display.e2e.ts
+  s_59c0dd2af30db2::t_51117e862ae92b 64,66-68,70-72
+  s_59c0dd2af30db2::t_2765b61c91a277 49-51
+  s_59c0dd2af30db2::t_551126edffba43 31
+  s_59c0dd2af30db2::t_a6719505715024 52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e2dc716ecb19b57705e704bf246fcc843b79dcf6",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
