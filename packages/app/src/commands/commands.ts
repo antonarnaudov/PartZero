@@ -16,7 +16,10 @@ import type { EnginePreference } from "../engine/engine-manager";
 import { baseName, docNameFromPath } from "../host/host";
 import { BLANK_SOURCE, findTemplate } from "../host/templates";
 import type { AppServices } from "../services";
+import { selectionChips } from "../selection/chips";
 import type { SelectionChip } from "../ui-store";
+import { VIEWPORT_COMMANDS } from "../viewport/registry";
+import { viewportRuntime } from "../viewport/runtime";
 import { IR_COMMANDS } from "./ir-commands";
 import { CommandRegistry, defineCommand, type ExecuteMeta, type Invocation } from "./registry";
 
@@ -24,8 +27,6 @@ const command = defineCommand<AppServices>();
 
 const NoArgs = z.strictObject({});
 const MeshFormatSchema = z.enum(["3mf", "stl", "obj"]);
-const ViewSchema = z.enum(["iso", "top", "front", "right"]);
-const ProjectionSchema = z.enum(["perspective", "orthographic"]);
 const ThemeSchema = z.enum(["dark", "light", "system"]);
 const PanelSchema = z.enum(["left", "right", "chat", "problems"]);
 const EngineSchema = z.enum(["auto", "forge-web", "forge-cli"]);
@@ -127,13 +128,7 @@ async function saveAs(ctx: AppServices, path?: string): Promise<{ saved: boolean
 
 function chipsFromSelection(ctx: AppServices): SelectionChip[] {
   const s = ctx.doc.getState();
-  const chips: SelectionChip[] = [];
-  const loc = s.selection.featureId ? findFeature(s.model?.ir, s.selection.featureId) : null;
-  if (loc) chips.push({ kind: "feature", ref: loc.feature.id, label: loc.feature.name });
-  const e = s.selection.entity;
-  if (e?.face) chips.push({ kind: "face", ref: e.face, label: e.face });
-  else if (e?.edge) chips.push({ kind: "edge", ref: e.edge, label: e.edge });
-  return chips;
+  return selectionChips(viewportRuntime(ctx).selection.items, s.selection, s.model?.ir);
 }
 
 const ChipSchema = z.strictObject({
@@ -438,52 +433,6 @@ export const COMMANDS = {
   }),
 
   // ─── View ──────────────────────────────────────────────────────────────────────────────────
-  "view.fit": command({
-    id: "view.fit",
-    title: "Zoom to Fit",
-    category: "View",
-    args: NoArgs,
-    keys: ["F"],
-    run(_args, ctx) {
-      ctx.viewport.fitView();
-      return { fitted: true };
-    },
-  }),
-
-  "view.setView": command({
-    id: "view.setView",
-    title: "Standard View",
-    category: "View",
-    args: z.strictObject({ view: ViewSchema }),
-    palette: [
-      { title: "View: Isometric", args: { view: "iso" } },
-      { title: "View: Top", args: { view: "top" } },
-      { title: "View: Front", args: { view: "front" } },
-      { title: "View: Right", args: { view: "right" } },
-    ],
-    run({ view }, ctx) {
-      ctx.viewport.setView(view);
-      ctx.ui.setViewport({ view });
-      return { view };
-    },
-  }),
-
-  "view.setProjection": command({
-    id: "view.setProjection",
-    title: "Projection",
-    category: "View",
-    args: z.strictObject({ projection: ProjectionSchema }),
-    palette: [
-      { title: "View: Perspective Projection", args: { projection: "perspective" } },
-      { title: "View: Orthographic Projection", args: { projection: "orthographic" } },
-    ],
-    run({ projection }, ctx) {
-      ctx.viewport.setProjection(projection);
-      ctx.ui.setViewport({ projection });
-      return { projection };
-    },
-  }),
-
   "view.setTheme": command({
     id: "view.setTheme",
     title: "Color Theme",
@@ -910,6 +859,10 @@ export const COMMANDS = {
 
   // ─── IR v1 command layer (SPEC-v1 §0.6, §5.9, §9.2) ──────────────────────────────────────
   ...IR_COMMANDS,
+
+  // The viewport stream (docs/fm/view-sel-followups.md step 2): last, so its view.setView (7
+  // views, animated), view.fit and view.setProjection replace the ones above.
+  ...VIEWPORT_COMMANDS,
 };
 
 export type AppCommands = typeof COMMANDS;
