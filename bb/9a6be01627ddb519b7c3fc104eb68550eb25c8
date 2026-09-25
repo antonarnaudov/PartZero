@@ -1,0 +1,23 @@
+packages/app/src/file/install.ts
+  s_59c0dd2af30db2::t_d580884ad9a74b 26-31,35,97-131
+packages/app/src/main.tsx
+  s_59c0dd2af30db2::t_e16f5b0b2bafaa 4-6,24-26
+packages/app/test/document-files.test.ts
+  s_59c0dd2af30db2::t_10be7591f88882 12-13,798-823,826-829,831
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bb9a6be01627ddb519b7c3fc104eb68550eb25c8",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
