@@ -1,6 +1,11 @@
 //! STEP export of the hand-built sample bodies: structure, determinism (golden bytes),
 //! names, colours, schemas, refusals, and the verifier's own negative cases.
 
+mod common {
+    pub mod step_mutate;
+}
+
+use common::step_mutate::{flip_face, invert_shells};
 use forge_core::topo::samples;
 use forge_io::step::parse::{Instance, Value, parse};
 use forge_io::step::{StepBody, StepOptions, StepSchema, verify_step, write_step};
@@ -218,11 +223,74 @@ fn the_verifier_rejects_broken_files() {
     assert!(e.to_string().contains("pcurve"), "{e}");
 }
 
+#[test]
+fn the_verifier_measures_the_volume_and_area_the_faces_bound() {
+    let pi = std::f64::consts::PI;
+    let cases = [
+        ("cube", samples::unit_cube(), 1.0, 6.0),
+        (
+            "cyl",
+            samples::cylinder(10.0, 30.0),
+            pi * 100.0 * 30.0,
+            2.0 * pi * 100.0 + 2.0 * pi * 10.0 * 30.0,
+        ),
+        (
+            "ball",
+            samples::sphere(5.0),
+            4.0 / 3.0 * pi * 125.0,
+            4.0 * pi * 25.0,
+        ),
+    ];
+    for (name, body, volume, area) in cases {
+        let (text, _) = export(name, &body);
+        let s = verify_step(text.as_bytes()).expect("verifies");
+        let solid = &s.solids[0];
+        assert!(
+            (solid.volume - volume).abs() <= 1e-12 * volume,
+            "{name}: {solid:?}"
+        );
+        assert!(
+            (solid.area - area).abs() <= 1e-12 * area,
+            "{name}: {solid:?}"
+        );
+    }
+}
+
+/// An inside-out face keeps every edge used twice in opposite directions, so only the
+/// orientation check sees it (and OCCT's healing would silently repair it): a flipped
+/// `same_sense` on a plane, a cylinder's seamed side, a disc bounded by a ring edge, a whole
+/// sphere (whose seam loop cannot tell its side: the shell's volume does), and whole shells
+/// turned inside out.
+#[test]
+fn the_verifier_rejects_inside_out_faces_and_shells() {
+    for (name, body) in [
+        ("cube", samples::unit_cube()),
+        ("cyl", samples::cylinder(10.0, 30.0)),
+        ("ball", samples::sphere(5.0)),
+    ] {
+        let (text, _) = export(name, &body);
+        let faces = text.matches("=ADVANCED_FACE(").count();
+        for k in 0..faces {
+            let e = verify_step(flip_face(&text, k).as_bytes())
+                .expect_err(&format!("{name}: face {k} flipped"));
+            assert_eq!(e.code(), "STEP_SELF_CHECK", "{e}");
+            let m = e.to_string();
+            assert!(
+                m.contains("inside out") || m.contains("point inwards"),
+                "{name}: face {k}: {m}"
+            );
+        }
+        let e = verify_step(invert_shells(&text).as_bytes()).expect_err(name);
+        assert!(e.to_string().contains("point inwards"), "{name}: {e}");
+    }
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(48))]
 
-    /// Any cylinder or sphere exports, verifies, and keeps Forge's counts plus exactly one
-    /// seam; the bytes are a pure function of the input.
+    /// Any cylinder or sphere exports, verifies (with the volume and area the file bounds),
+    /// and keeps Forge's counts plus exactly one seam; the bytes are a pure function of the
+    /// input.
     #[test]
     fn random_cylinders_and_spheres_export_verify_and_are_deterministic(
         r in 0.01f64..500.0,
@@ -234,10 +302,14 @@ proptest! {
         prop_assert_eq!(&a, &b);
         prop_assert_eq!(ra.bodies[0].seam_edges, 1);
         prop_assert_eq!(ra.bodies[0].edges, 3);
-        verify_step(a.as_bytes()).expect("cylinder verifies");
+        let pi = std::f64::consts::PI;
+        let v = verify_step(a.as_bytes()).expect("cylinder verifies").solids[0].volume;
+        prop_assert!((v - pi * r * r * h).abs() <= 1e-9 * pi * r * r * h, "{} vs {}", v, pi * r * r * h);
         let ball = samples::sphere(r);
         let (s, rs) = export("ball", &ball);
         prop_assert_eq!(rs.bodies[0].seam_edges, 1);
-        verify_step(s.as_bytes()).expect("sphere verifies");
+        let got = &verify_step(s.as_bytes()).expect("sphere verifies").solids[0];
+        let (v, a) = (4.0 / 3.0 * pi * r * r * r, 4.0 * pi * r * r);
+        prop_assert!((got.volume - v).abs() <= 1e-9 * v && (got.area - a).abs() <= 1e-9 * a);
     }
 }

@@ -12,14 +12,14 @@
 //! - **Units:** millimetres, radians, steradians; the distance uncertainty is the largest
 //!   edge/vertex tolerance of the bodies (at least 1e-6 mm, the IR's linear tolerance).
 //! - **Geometry:** every Forge surface and curve with the same parametrization
-//!   (see [`geometry`]): planes, cylinders, cones, spheres, tori (spindle patches as
+//!   (see `step/geometry.rs`): planes, cylinders, cones, spheres, tori (spindle patches as
 //!   `DEGENERATE_TOROIDAL_SURFACE`), (rational) B-spline surfaces; lines, circles,
 //!   ellipses and (rational) B-spline curves. Forge has no surfaces of linear extrusion
 //!   or revolution (they are B-splines), so none are written.
 //! - **Topology:** `CLOSED_SHELL` / `ADVANCED_FACE` / `FACE_(OUTER_)BOUND` / `EDGE_LOOP` /
 //!   `ORIENTED_EDGE` / `EDGE_CURVE` / `VERTEX_POINT`, with the seams, ring vertices and
 //!   singular-point splits that STEP needs and Forge does not have
-//!   (ADR 0012; see [`brep`]).
+//!   (ADR 0012; see `step/brep.rs`).
 //! - **Pcurves:** the edges of non-planar faces carry Forge's own pcurves
 //!   (`SURFACE_CURVE` / `PCURVE`), moved into the written surface's parameter window, so
 //!   readers integrate over exactly Forge's face domains instead of approximating them by
@@ -30,7 +30,9 @@
 //!   target.
 //! - **Never silently wrong:** unsupported cases are [`StepError`]s with stable codes
 //!   (`STEP_UNSUPPORTED_SEAM`, `STEP_UNSUPPORTED_TOPOLOGY`, …), and the writer verifies
-//!   its own output with [`verify_step`] before returning it (`STEP_SELF_CHECK`).
+//!   its own output with [`verify_step`] before returning it (`STEP_SELF_CHECK`),
+//!   including every face's orientation (an inside-out face or shell is refused, not
+//!   left for a reader's healing to guess at; `step/orient.rs`).
 //!
 //! ```
 //! use forge_core::topo::samples;
@@ -46,6 +48,8 @@
 //! assert_eq!(report.bodies[0].seam_edges, 1); // the side face got a seam
 //! let summary = verify_step(&bytes).unwrap();
 //! assert_eq!(summary.solids[0].name, "cylinder");
+//! // The verifier measures what the file bounds: π r² h.
+//! assert!((summary.solids[0].volume - std::f64::consts::PI * 100.0 * 30.0).abs() < 1e-9);
 //! ```
 //!
 //! # Reader (groundwork for import, FM7)
@@ -55,6 +59,7 @@
 
 mod brep;
 mod geometry;
+mod orient;
 mod p21;
 pub mod parse;
 mod verify;

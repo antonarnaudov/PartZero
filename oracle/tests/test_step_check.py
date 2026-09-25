@@ -82,13 +82,13 @@ def test_a_face_whose_same_sense_is_flipped_is_caught_although_healing_repairs_i
 
 
 def test_a_whole_inside_out_shell_is_caught_although_healing_is_silent(tmp_path):
-    """Every face's same_sense and every oriented edge flipped: a consistent, inside-out shell.
-    OCCT turns it round without a warning; the per-face comparison still sees it."""
+    """Every face's same_sense and every bound's orientation flipped: a consistent, inside-out
+    shell. OCCT turns it round without a warning; the per-face comparison still sees it."""
     text = GOLDEN.read_text()
     swap = {".T.);": ".F.);", ".F.);": ".T.);"}
     lines = []
     for line in text.splitlines():
-        if "=ADVANCED_FACE(" in line or "=ORIENTED_EDGE(" in line:
+        if any(f"={e}(" in line for e in ("ADVANCED_FACE", "FACE_OUTER_BOUND", "FACE_BOUND")):
             line = line[:-5] + swap[line[-5:]]
         lines.append(line)
     step, summary = _golden_pair(tmp_path, "\n".join(lines) + "\n")

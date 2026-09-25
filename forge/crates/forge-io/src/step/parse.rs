@@ -1,7 +1,7 @@
 //! A Part 21 (ISO 10303-21) reader: the lexer and parser of exchange structures.
 //!
 //! It reads the header and data sections into [`Record`]s and [`Instance`]s (simple and
-//! complex entity instances) without interpreting any schema. [`super::verify`] builds on
+//! complex entity instances) without interpreting any schema. `step/verify.rs` builds on
 //! it to check files the writer produced; STEP import (FM7) will build on it too.
 //!
 //! Supported: comments, typed parameters, nested lists, enumerations, binaries, `$` and

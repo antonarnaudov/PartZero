@@ -10,7 +10,13 @@
 //!   direction `same_sense` says, and sampled points of every edge lie on the surfaces of
 //!   the faces that use it, all within the file's uncertainty;
 //! - every pcurve (`SURFACE_CURVE`) lies on the surface of a face that uses its edge and
-//!   maps the edge's parameter onto the edge's points.
+//!   maps the edge's parameter onto the edge's points;
+//! - every face is oriented: its loops, mapped into the surface's parameter plane, close and
+//!   bound a region on the side its normal (`same_sense`) points to, and every closed shell
+//!   as written encloses a positive volume ([`super::orient`]). The edge-use check above
+//!   cannot see a flipped `same_sense` or a whole inside-out shell, and OCCT's healing
+//!   silently repairs both, so this is the only check that does. The solid's volume and area
+//!   are reported from the same integrals.
 //!
 //! The writer runs it on its own output ([`super::write_step`] refuses to return a file
 //! that fails it), and tests run it on every exported corpus body. It does not replace
@@ -26,6 +32,7 @@ use forge_core::linalg::{Frame, Point3, Vec3};
 use forge_core::math;
 
 use super::StepError;
+use super::orient::{Bound, Use, face_mass};
 use super::parse::{Instance, P21File, Record, Value, parse};
 
 /// What a verified file contains.
@@ -58,6 +65,10 @@ pub struct SolidSummary {
     pub seam_edges: usize,
     /// Face count per surface entity name.
     pub face_types: BTreeMap<String, usize>,
+    /// Volume enclosed by the faces as written (mm³): the outer shell's less the voids'.
+    pub volume: f64,
+    /// Total face area (mm²).
+    pub area: f64,
 }
 
 fn fail(detail: impl Into<String>) -> StepError {
@@ -626,6 +637,16 @@ struct EdgeData {
     uses: Vec<(usize, bool)>,
 }
 
+/// A face as read, for the orientation and mass pass.
+struct FaceRec {
+    id: u64,
+    /// Index into the solid's surfaces.
+    fi: usize,
+    same_sense: bool,
+    /// Per bound: its orientation and its oriented edges `(EDGE_CURVE, orientation)`.
+    bounds: Vec<(bool, Vec<(u64, bool)>)>,
+}
+
 /// Parse and verify a STEP file (see the module docs).
 pub fn verify_step(bytes: &[u8]) -> Result<StepSummary, StepError> {
     let f = parse(bytes)?;
@@ -686,15 +707,17 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
     let mut surface_ids: Vec<u64> = Vec::new();
     let mut edges: BTreeMap<u64, EdgeData> = BTreeMap::new();
     let mut vertices: BTreeMap<u64, Point3> = BTreeMap::new();
+    let mut shell_faces: Vec<Vec<FaceRec>> = Vec::new();
     for (si, &(shell_id, shell_orient)) in shells.iter().enumerate() {
         let sh = file.rec(shell_id, &["CLOSED_SHELL"])?;
         let mut shell_edges: BTreeMap<u64, Vec<bool>> = BTreeMap::new();
+        let mut recs = Vec::new();
         for face_id in file.refs(sh, 1)? {
             let fr = file.rec(face_id, &["ADVANCED_FACE"])?;
             let surface_id = file.reff(fr, 2)?;
             let (kind, surface) = file.surface(surface_id)?;
             surface_ids.push(surface_id);
-            file.boolean(fr, 3)?;
+            let same_sense = file.boolean(fr, 3)?;
             *summary.face_types.entry(kind).or_default() += 1;
             let fi = surfaces.len();
             surfaces.push(surface);
@@ -703,6 +726,12 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
                 return Err(fail(format!("#{face_id}: a face without bounds")));
             }
             let mut face_uses: BTreeMap<u64, usize> = BTreeMap::new();
+            let mut rec = FaceRec {
+                id: face_id,
+                fi,
+                same_sense,
+                bounds: Vec::new(),
+            };
             for b in bounds {
                 let br = file.rec(b, &["FACE_BOUND", "FACE_OUTER_BOUND"])?;
                 let b_orient = file.boolean(br, 2)?;
@@ -712,6 +741,7 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
                     return Err(fail(format!("#{b}: an empty loop")));
                 }
                 let mut ends: Vec<(u64, u64)> = Vec::new();
+                let mut loop_uses = Vec::new();
                 for oe in oes {
                     let o = file.rec(oe, &["ORIENTED_EDGE"])?;
                     let ec_id = file.reff(o, 3)?;
@@ -741,6 +771,7 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
                     };
                     let dir = fwd == b_orient;
                     let effective = dir == shell_orient;
+                    loop_uses.push((ec_id, fwd));
                     ed.uses.push((fi, effective));
                     shell_edges.entry(ec_id).or_default().push(effective);
                     *face_uses.entry(ec_id).or_default() += 1;
@@ -752,9 +783,12 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
                         return Err(fail(format!("#{b}: the loop is not closed after edge {k}")));
                     }
                 }
+                rec.bounds.push((b_orient, loop_uses));
             }
             summary.seam_edges += face_uses.values().filter(|&&n| n == 2).count();
+            recs.push(rec);
         }
+        shell_faces.push(recs);
         for (e, uses) in &shell_edges {
             let fwd = uses.iter().filter(|&&d| d).count();
             if uses.len() != 2 || fwd != 1 {
@@ -776,6 +810,7 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
         .map(|p| p.x.abs().max(p.y.abs()).max(p.z.abs()))
         .fold(1.0, f64::max);
     let tol = uncertainty * 1.01 + 1e-9 * scale;
+    let mut ranges: BTreeMap<u64, (f64, f64)> = BTreeMap::new();
     for (id, e) in &edges {
         let p1 = vertices[&e.v.0];
         let p2 = vertices[&e.v.1];
@@ -803,6 +838,7 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
                 "#{id}: the edge runs against its curve's direction"
             ))
         })?;
+        ranges.insert(*id, (a, b));
         for k in 0..=8 {
             let p = e.curve.eval(a + (b - a) * f64::from(k) / 8.0);
             for &(fi, _) in &e.uses {
@@ -832,6 +868,60 @@ fn verify_solid(file: &File, id: u64, uncertainty: f64) -> Result<SolidSummary, 
                 }
             }
         }
+    }
+
+    // Orientation and mass properties.
+    let (lo, hi) = vertices.values().fold(
+        (
+            Vec3::new(f64::MAX, f64::MAX, f64::MAX),
+            Vec3::new(f64::MIN, f64::MIN, f64::MIN),
+        ),
+        |(lo, hi), p| (lo.min_components(*p), hi.max_components(*p)),
+    );
+    let centre = if lo.x <= hi.x {
+        (lo + hi) * 0.5
+    } else {
+        Vec3::zero()
+    };
+    for (recs, &(shell_id, shell_orient)) in shell_faces.iter().zip(&shells) {
+        let mut volume = 0.0;
+        for f in recs {
+            let bounds: Vec<Bound<'_>> = f
+                .bounds
+                .iter()
+                .map(|(orientation, uses)| Bound {
+                    orientation: *orientation,
+                    uses: uses
+                        .iter()
+                        .map(|&(ec, fwd)| {
+                            let e = &edges[&ec];
+                            let (a, b) = ranges[&ec];
+                            // Increasing parameter runs from the edge's first vertex to its
+                            // second exactly when `same_sense`.
+                            let (from, to) = if fwd == e.same_sense { (a, b) } else { (b, a) };
+                            Use {
+                                curve: &e.curve,
+                                from,
+                                to,
+                                start: vertices[&if fwd { e.v.0 } else { e.v.1 }],
+                            }
+                        })
+                        .collect(),
+                })
+                .collect();
+            let m = face_mass(&surfaces[f.fi], f.same_sense, &bounds, centre, tol)
+                .map_err(|d| fail(format!("#{}: {d}", f.id)))?;
+            volume += m.volume;
+            summary.area += m.area;
+        }
+        if volume.partial_cmp(&0.0) != Some(std::cmp::Ordering::Greater) {
+            return Err(fail(format!(
+                "#{shell_id}: the closed shell encloses {volume:e} mm³ as written: its faces \
+                 point inwards (a void is written outward and turned round by its \
+                 ORIENTED_CLOSED_SHELL)"
+            )));
+        }
+        summary.volume += if shell_orient { volume } else { -volume };
     }
     Ok(summary)
 }
