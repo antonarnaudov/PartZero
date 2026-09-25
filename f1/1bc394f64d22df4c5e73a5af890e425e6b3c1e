@@ -1,0 +1,36 @@
+packages/desktop/src/windows.ts
+  s_59c0dd2af30db2::t_b006bdb415c37b 237-241
+packages/desktop/e2e/partzero-files.ts
+  s_59c0dd2af30db2::t_2dc1b834f4d138 1-85
+packages/desktop/e2e/files.e2e.ts
+  s_59c0dd2af30db2::t_920d7cb39c3e81 15
+  s_59c0dd2af30db2::t_08d6949a94eb14 202
+  s_59c0dd2af30db2::t_488d503bc38a0a 29-30
+  s_59c0dd2af30db2::t_df705a301157c8 1-14,16-28,31-61,64-66,68-71,73-128,135-144,147-162,165-199,201,203-228,230-267,269-290,292-295,297-307,309-319,321-335,339-372
+  s_59c0dd2af30db2::t_7d20e201cde711 145-146
+  s_59c0dd2af30db2::t_a6542c529e6614 268
+  s_59c0dd2af30db2::t_5476c10eea14a9 336-338
+  s_59c0dd2af30db2::t_ecdf4a2aaf921e 62-63,67,72,163-164,200,229,291,296,308
+  s_59c0dd2af30db2::t_9ca1ffaa6deca1 320
+  s_59c0dd2af30db2::t_f78965ce4f34d5 129-134
+packages/app/src/file/ui/FileLayer.tsx
+  s_59c0dd2af30db2::t_3dc4b48cbf200a 36,45-46
+packages/desktop/src/recovery.ts
+  s_59c0dd2af30db2::t_14087e4830dd90 114,117-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f11bc394f64d22df4c5e73a5af890e425e6b3c1e",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
