@@ -46,10 +46,10 @@ interface ViewApi {
   frames(): number;
 }
 
+// `window.__aicad` is declared by smoke.e2e.ts (the same program when type-checked).
 declare global {
   interface Window {
     __pzView?: ViewApi;
-    __aicad?: { execute(cmd: unknown): Promise<CommandResultLike>; idle(): Promise<{ bodies: Array<{ name: string }>; engine: string }> };
   }
 }
 
