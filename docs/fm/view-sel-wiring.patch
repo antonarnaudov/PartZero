@@ -1,0 +1,114 @@
+diff --git a/forge/crates/forge-wasm/src/web.rs b/forge/crates/forge-wasm/src/web.rs
+index 657f181..5b6a159 100644
+--- a/forge/crates/forge-wasm/src/web.rs
++++ b/forge/crates/forge-wasm/src/web.rs
+@@ -19,6 +19,8 @@ use wasm_bindgen_futures::JsFuture;
+ use crate::engine;
+ use crate::scopes::Scopes;
+ 
++mod view_ext;
++
+ #[wasm_bindgen(start)]
+ pub fn start() {
+     console_error_panic_hook::set_once();
+diff --git a/packages/app/src/commands/commands.ts b/packages/app/src/commands/commands.ts
+index f5ac917..fa5cb01 100644
+--- a/packages/app/src/commands/commands.ts
++++ b/packages/app/src/commands/commands.ts
+@@ -16,15 +16,16 @@ import type { EnginePreference } from "../engine/engine-manager";
+ import { baseName, docNameFromPath } from "../host/host";
+ import { BLANK_SOURCE, findTemplate } from "../host/templates";
+ import type { AppServices } from "../services";
++import { selectionChips } from "../selection/chips";
+ import type { SelectionChip } from "../ui-store";
++import { VIEWPORT_COMMANDS } from "../viewport/registry";
++import { viewportRuntime } from "../viewport/runtime";
+ import { CommandRegistry, defineCommand, type ExecuteMeta, type Invocation } from "./registry";
+ 
+ const command = defineCommand<AppServices>();
+ 
+ const NoArgs = z.strictObject({});
+ const MeshFormatSchema = z.enum(["3mf", "stl", "obj"]);
+-const ViewSchema = z.enum(["iso", "top", "front", "right"]);
+-const ProjectionSchema = z.enum(["perspective", "orthographic"]);
+ const ThemeSchema = z.enum(["dark", "light", "system"]);
+ const PanelSchema = z.enum(["left", "right", "chat", "problems"]);
+ const EngineSchema = z.enum(["auto", "forge-web", "forge-cli"]);
+@@ -126,13 +127,7 @@ async function saveAs(ctx: AppServices, path?: string): Promise<{ saved: boolean
+ 
+ function chipsFromSelection(ctx: AppServices): SelectionChip[] {
+   const s = ctx.doc.getState();
+-  const chips: SelectionChip[] = [];
+-  const loc = s.selection.featureId ? findFeature(s.model?.ir, s.selection.featureId) : null;
+-  if (loc) chips.push({ kind: "feature", ref: loc.feature.id, label: loc.feature.name });
+-  const e = s.selection.entity;
+-  if (e?.face) chips.push({ kind: "face", ref: e.face, label: e.face });
+-  else if (e?.edge) chips.push({ kind: "edge", ref: e.edge, label: e.edge });
+-  return chips;
++  return selectionChips(viewportRuntime(ctx).selection.items, s.selection, s.model?.ir);
+ }
+ 
+ const ChipSchema = z.strictObject({
+@@ -437,52 +432,6 @@ export const COMMANDS = {
+   }),
+ 
+   // ─── View ──────────────────────────────────────────────────────────────────────────────────
+-  "view.fit": command({
+-    id: "view.fit",
+-    title: "Zoom to Fit",
+-    category: "View",
+-    args: NoArgs,
+-    keys: ["F"],
+-    run(_args, ctx) {
+-      ctx.viewport.fitView();
+-      return { fitted: true };
+-    },
+-  }),
+-
+-  "view.setView": command({
+-    id: "view.setView",
+-    title: "Standard View",
+-    category: "View",
+-    args: z.strictObject({ view: ViewSchema }),
+-    palette: [
+-      { title: "View: Isometric", args: { view: "iso" } },
+-      { title: "View: Top", args: { view: "top" } },
+-      { title: "View: Front", args: { view: "front" } },
+-      { title: "View: Right", args: { view: "right" } },
+-    ],
+-    run({ view }, ctx) {
+-      ctx.viewport.setView(view);
+-      ctx.ui.setViewport({ view });
+-      return { view };
+-    },
+-  }),
+-
+-  "view.setProjection": command({
+-    id: "view.setProjection",
+-    title: "Projection",
+-    category: "View",
+-    args: z.strictObject({ projection: ProjectionSchema }),
+-    palette: [
+-      { title: "View: Perspective Projection", args: { projection: "perspective" } },
+-      { title: "View: Orthographic Projection", args: { projection: "orthographic" } },
+-    ],
+-    run({ projection }, ctx) {
+-      ctx.viewport.setProjection(projection);
+-      ctx.ui.setViewport({ projection });
+-      return { projection };
+-    },
+-  }),
+-
+   "view.setTheme": command({
+     id: "view.setTheme",
+     title: "Color Theme",
+@@ -906,6 +855,9 @@ export const COMMANDS = {
+       return { open: true };
+     },
+   }),
++  // The viewport stream (docs/fm/view-sel-followups.md step 2): last, so its view.setView (7
++  // views, animated), view.fit and view.setProjection replace the ones above.
++  ...VIEWPORT_COMMANDS,
+ };
+ 
+ export type AppCommands = typeof COMMANDS;

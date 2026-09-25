@@ -5,12 +5,23 @@
 //! API; it is wired by **one line** in `web.rs` (`mod view_ext;`), which the integrator adds
 //! when merging the viewport stream (docs/fm/view-sel-followups.md). `@aicad/forge-web`
 //! feature-detects these methods, so the app works (with fewer modes) without them.
+//!
+//! What it needs from its parent module, and nothing else (so a split of `web.rs` only has to
+//! keep these reachable from here): the `RawViewport` type and its `inner: Rc<RefCell<Host>>`
+//! field, whose `viewport` is the `forge_render::Viewport`.
 
 use forge_render::DisplayMode;
-use js_sys::Array;
+use js_sys::{Array, Reflect};
 use wasm_bindgen::prelude::*;
 
-use super::{RawViewport, js_error};
+use super::RawViewport;
+
+/// A JS `Error` with a machine-readable `code` (as `web.rs` reports its errors).
+fn coded_error(code: &str, message: &str) -> JsValue {
+    let e = js_sys::Error::new(message);
+    let _ = Reflect::set(&e, &"code".into(), &code.into());
+    e.into()
+}
 
 #[wasm_bindgen]
 impl RawViewport {
@@ -19,7 +30,7 @@ impl RawViewport {
     #[wasm_bindgen(js_name = setDisplayMode)]
     pub fn set_display_mode(&self, mode: &str) -> Result<(), JsValue> {
         let m = DisplayMode::parse(mode).ok_or_else(|| {
-            js_error(
+            coded_error(
                 "RENDER_DISPLAY_MODE",
                 &format!(
                     "unknown display mode {mode:?}; use shaded, shadedEdges, wireframe, hiddenLine or xray"

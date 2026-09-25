@@ -72,6 +72,8 @@ export class ViewportRuntime {
   private readonly frameListeners = new Set<() => void>();
   private detachFrame: (() => void) | null = null;
   private runCommand: RunAppCommand | null = null;
+  /** A standard view asked for before the renderer attached. */
+  private pendingView: StandardView | null = null;
   private readonly unsubs: Array<() => void> = [];
   animationMs = DEFAULT_ANIMATION_MS;
   /** Monotonic count of camera changes (overlays re-render on it). */
@@ -155,6 +157,7 @@ export class ViewportRuntime {
     this.pushBodies(true);
     this.applySection();
     this.syncHighlights();
+    if (this.pendingView) void this.setStandardView(this.pendingView);
     return () => {
       if (this.adapter !== adapter) return;
       this.stopAnimation();
@@ -314,10 +317,18 @@ export class ViewportRuntime {
     return s.width / Math.max(1, s.height);
   }
 
-  /** Standard view (animated), fitted to the visible scene. */
+  /**
+   * Standard view (animated), fitted to the visible scene. Before the viewport is mounted (a menu
+   * or a script at startup) the view is kept and applied when the renderer attaches.
+   */
   async setStandardView(v: StandardView): Promise<void> {
     const a = this.adapter;
-    if (!a) throw new Error("the viewport is not ready");
+    if (!a) {
+      this.pendingView = v;
+      this.view.setView(v);
+      return;
+    }
+    this.pendingView = null;
     const [yaw, pitch] = viewAngles(v);
     const sphere = this.sceneSphere();
     const base = { ...a.camera(), yaw, pitch };

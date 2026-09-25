@@ -221,6 +221,22 @@ describe("view commands", () => {
     expect(rt.view.getState().section).not.toBeNull();
   });
 
+  it("keeps a standard view asked for before the viewport is mounted, and applies it on attach", async () => {
+    const h2 = await makeHarness({ source: BOX });
+    const r2 = viewportRuntime(h2.services);
+    r2.animationMs = 0;
+    const run2 = (id: string, args: Record<string, unknown> = {}) => routedExecute(h2.services, h2.commands, { id, args }, "test");
+    expect(await run2("view.setView", { view: "top" })).toMatchObject({ ok: true, value: { view: "top" } });
+    expect(h2.services.ui.getState().viewport.view).toBe("top");
+    expect(r2.view.getState().view).toBe("top");
+    // Commands that need the canvas still say so.
+    expect(await run2("view.fit")).toMatchObject({ ok: false });
+    const late = new FakeAdapter();
+    r2.attach(late);
+    await Promise.resolve();
+    expect(standardViewOf(late.cam)).toBe("top");
+  });
+
   it("looks at a selected face and zooms to the selection", async () => {
     await exec("selection.set", { items: [{ kind: "face", body: BODY, key: "plate/side:right" }] });
     expect(await exec("view.normalTo")).toMatchObject({ ok: true });

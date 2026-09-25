@@ -4,6 +4,21 @@ Branch: the VIEW/SEL overnight stream (FULL-MODELING-PLAN §2.4, §2.6, T0 items
 Everything below works on the branch as it is; these steps finish the wiring into files this
 stream was not allowed to edit (Phase C's hot paths). Each step is small and independent.
 
+**Do steps 1 and 2 in the same merge as this branch** — until then Hidden Line and X-ray are
+shown as unavailable on WebGPU, and the native menu, `window.__aicad` and anything else on the
+app registry cannot reach `view.*` / `selection.*` / `measure.*`. Both are in
+[`view-sel-wiring.patch`](view-sel-wiring.patch) (`git apply -3 docs/fm/view-sel-wiring.patch`,
+made against this branch): `mod view_ext;` in `web.rs`, and in `commands/commands.ts` the
+`...VIEWPORT_COMMANDS` spread, the removal of the three superseded view commands and their
+schemas, and `chipsFromSelection` delegating to `selectionChips` (step 3's second bullet).
+Verified on this branch with the patch applied, then reverted: app typecheck and 172 unit tests;
+`cargo clippy -p forge-wasm` (native and `--target wasm32-unknown-unknown`, `-D warnings`) and
+`cargo fmt --check`; forge-web rebuilt (it then exports `setDisplayMode` / `displayModes` /
+`setXrayOpacity`); the 24 viewport e2e specs and the smoke spec pass, with forge-render drawing
+all five display modes natively; `window.__aicad.execute` runs `view.setDisplayMode` (hiddenLine)
+and `measure.selection`. After Phase C's split, re-apply by hand where the patch does not apply
+and re-run the same checks.
+
 ## 1. Display modes in forge-wasm (one line) — do this first
 
 `forge/crates/forge-wasm/src/web/view_ext.rs` adds `setDisplayMode`, `displayMode`,
@@ -15,7 +30,10 @@ mod view_ext;
 ```
 
 (After the planned split into `web/mod.rs`, the same line goes into `web/mod.rs`; the file is
-already at `src/web/view_ext.rs`.) Checked on this branch: `cargo clippy -p forge-wasm --target
+already at `src/web/view_ext.rs`. It needs only `RawViewport` and its private
+`inner: Rc<RefCell<Host>>` field with the `viewport: forge_render::Viewport` in it — keep those
+in the parent module of `view_ext`, or give `RawViewport` a `pub(super)` accessor for the
+viewport and use it there.) Checked on this branch: `cargo clippy -p forge-wasm --target
 wasm32-unknown-unknown -- -D warnings` is clean with the line, and the viewport e2e specs pass
 with it (hidden line and X-ray drawn by forge-render) and without it (those two modes are then
 shown as unavailable and `view.setDisplayMode` refuses them). Rebuild `packages/forge-web`
@@ -39,7 +57,11 @@ export const COMMANDS = {
 };
 ```
 
-then delete the app's own `view.fit`, `view.setView` and `view.setProjection` (superseded) and:
+then delete the app's own `view.fit`, `view.setView` and `view.setProjection` (superseded; TS
+rejects the duplicate keys otherwise). The viewport's `view.setView` keeps the old contract of
+working before the viewport is mounted (it applies the view when the renderer attaches), so
+`test/commands.test.ts` passes unchanged. Optional clean-up afterwards (the routing works either
+way, and the viewport keyboard already skips keys the app registry binds):
 - `ui/keyboard.ts` now binds the viewport keys; drop `installViewportKeyboard` from
   `ui/Viewport.tsx` **but keep its canvas-only table** (`⌘A` = select all must not fire inside
   the code editor: register it only when the event target is not editable);
@@ -50,7 +72,8 @@ then delete the app's own `view.fit`, `view.setView` and `view.setProjection` (s
 ## 3. Agent and MCP
 
 - Generate agent/MCP tools for the read-only commands `selection.get`, `measure.selection`,
-  `measure.items`, `view.snapshot` (the agent never moves the camera, §2.1 rule 5).
+  `measure.items`, `view.snapshot` (the agent never moves the camera, §2.1 rule 5), with an
+  agent-tools test that the four are exposed and that no camera or display command is.
 - `chipsFromSelection` in `commands/commands.ts` (used by `chat.send` / `agent.run` without
   explicit chips): return
   `selectionChips(viewportRuntime(ctx).selection.items, ctx.doc.getState().selection, ctx.doc.getState().model?.ir)`
