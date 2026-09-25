@@ -18,11 +18,13 @@ import { IrDocStore } from "../src/doc/v1/ir-doc-store";
 import { PRINT_TESSELLATION, type EvalResult, type ForgeEngine, type MeshFormat, type TessellationOptions } from "../src/engine/types";
 import { exportFormat } from "../src/file/export-formats";
 import { DocStoreAdapter } from "../src/file/adapter";
-import { hostStateOf } from "../src/file/document-files";
+import type { DocumentStateMessage, FilesEvent, RecentDocument, SaveDialogOptions } from "../src/bridge";
+import { DocumentFiles, hostStateOf } from "../src/file/document-files";
+import type { FileHost } from "../src/file/host";
 import { decodePartZero, encodePartZero } from "../src/file/partzero";
 import { sketchFinishOps } from "../src/sketch/v1-app";
 import { exampleAvailability, openExample, STARTERS } from "../src/tools/starters";
-import { makeHarness } from "./helpers";
+import { BOX, makeHarness } from "./helpers";
 
 const nodeFs = "node:fs";
 const fs = (await import(/* @vite-ignore */ nodeFs)) as { existsSync(p: URL): boolean; readFileSync(p: URL): Uint8Array };
@@ -280,5 +282,135 @@ describe("IR v1 as the document model", () => {
     expect(c).toMatchObject({ changed: true, label: "Agent: base sketch" });
     expect(JSON.parse(await host.document()).parts[0].features[0].author).toBe("agent");
     await expect(host.apply([{ op: "deleteFeature", feature: "nope" }])).rejects.toMatchObject({ code: "COMMAND_UNKNOWN_FEATURE" });
+  });
+});
+
+/** An in-memory file host (no recovery, no windows: the web build's shape). */
+class Files implements FileHost {
+  readonly kind = "memory" as const;
+  readonly recovery = null;
+  readonly windows = null;
+  files = new Map<string, Uint8Array>();
+  nextSave: string | null = null;
+  saveDialogs: SaveDialogOptions[] = [];
+  pickOpen(): Promise<string | null> {
+    return Promise.resolve(null);
+  }
+  pickSave(o: SaveDialogOptions): Promise<string | null> {
+    this.saveDialogs.push(o);
+    return Promise.resolve(this.nextSave);
+  }
+  readBytes(path: string): Promise<Uint8Array> {
+    const f = this.files.get(path);
+    return f ? Promise.resolve(f) : Promise.reject(new Error(`ENOENT ${path}`));
+  }
+  async readText(path: string): Promise<string> {
+    return new TextDecoder().decode(await this.readBytes(path));
+  }
+  writeDocument(path: string, data: Uint8Array | string): Promise<{ bytes: number; backup: string | null }> {
+    const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
+    this.files.set(path, bytes);
+    return Promise.resolve({ bytes: bytes.length, backup: null });
+  }
+  writeExport(path: string, data: Uint8Array | string): Promise<void> {
+    this.files.set(path, typeof data === "string" ? new TextEncoder().encode(data) : data);
+    return Promise.resolve();
+  }
+  recent(): Promise<RecentDocument[]> {
+    return Promise.resolve([]);
+  }
+  clearRecent(): Promise<void> {
+    return Promise.resolve();
+  }
+  thumbnail(): Promise<Uint8Array | null> {
+    return Promise.resolve(null);
+  }
+  onEvent(_l: (e: FilesEvent) => void): () => void {
+    return () => undefined;
+  }
+  text(path: string): string {
+    return new TextDecoder().decode(this.files.get(path));
+  }
+}
+
+describe("saving an IR v1 model to the file it came from", () => {
+  async function filesSetup() {
+    const { ir, doc, engine, adapter } = setup();
+    const host = new Files();
+    const toasts: string[] = [];
+    const files = new DocumentFiles({
+      adapter,
+      host,
+      toast: (kind, m) => toasts.push(`${kind}: ${m}`),
+      confirm: () => Promise.resolve(true),
+      setDocumentState: (_s: DocumentStateMessage) => undefined,
+      engine: () => engine,
+      runCommand: () => Promise.resolve(undefined),
+      generator: { app: "PartZero", version: "0-test" },
+      autosaveDelayMs: 1_000_000,
+    });
+    await files.start();
+    return { ir, doc, host, files, toasts };
+  }
+
+  it_("a .cad.ts file opens as a model with a warning, and Save never rewrites the code: it asks where to save the .partzero", async () => {
+    const { doc, host, files, toasts } = await filesSetup();
+    host.files.set("/w/plate.cad.ts", new TextEncoder().encode(BOX));
+    await files.loadFile("/w/plate.cad.ts");
+    expect(doc.getState()).toMatchObject({ format: "ir-v1", path: "/w/plate.cad.ts", dirty: false });
+    expect(toasts.at(-1)).toBe("info: plate.cad.ts opened as a PartZero model. Save writes a new PartZero file; your code in plate.cad.ts stays as it is.");
+    // Save asks where (a .partzero next to it is suggested); a cancelled dialog writes nothing.
+    host.nextSave = null;
+    expect(await files.save()).toEqual({ saved: false });
+    expect(host.saveDialogs.map((d) => d.defaultPath)).toEqual(["plate.partzero"]);
+    expect(toasts.some((t) => t.startsWith("info: plate.cad.ts is your CadScript code: saving the model over it would replace the code"))).toBe(true);
+    expect(host.text("/w/plate.cad.ts")).toBe(BOX);
+    // Saved as a .partzero: the code file is untouched, and the next Save goes to the .partzero without asking.
+    host.nextSave = "/w/plate.partzero";
+    expect(await files.save()).toMatchObject({ saved: true, path: "/w/plate.partzero", format: "partzero" });
+    expect(host.text("/w/plate.cad.ts")).toBe(BOX);
+    expect(doc.getState()).toMatchObject({ path: "/w/plate.partzero", dirty: false });
+    host.nextSave = null;
+    expect(await files.save()).toMatchObject({ saved: true, path: "/w/plate.partzero" });
+    expect(host.saveDialogs).toHaveLength(2);
+  });
+
+  it_("an IR v0 .json opens with a warning, and Save asks instead of rewriting it in the new format", async () => {
+    const { doc, host, files, toasts } = await filesSetup();
+    const cadscript = new InlineCadScriptService();
+    const c = await cadscript.compile(BOX);
+    const v0 = JSON.stringify(c.ir);
+    host.files.set("/w/plate.json", new TextEncoder().encode(v0));
+    await files.loadFile("/w/plate.json");
+    expect(doc.getState().format).toBe("ir-v1");
+    expect(toasts.at(-1)).toMatch(/earlier model format \(IR v0\); it opened as a PartZero model\. Save writes a new PartZero file; plate\.json stays as it is\./);
+    host.nextSave = null;
+    expect(await files.save()).toEqual({ saved: false });
+    expect(host.text("/w/plate.json")).toBe(v0);
+    // The user may still choose the file itself in the dialog: then it is written (their explicit choice).
+    host.nextSave = "/w/plate.json";
+    expect(await files.save()).toMatchObject({ saved: true, path: "/w/plate.json" });
+    expect((JSON.parse(host.text("/w/plate.json")) as { schema: string }).schema).toBe("aicad.ir/1");
+  });
+
+  it_("a text save keeps the rollback marker and colours unsaved, and says so", async () => {
+    const { ir, doc, host, files, toasts } = await filesSetup();
+    doc.load({ path: null, name: "bracket", format: "ir-v1", source: blankDocument("bracket") });
+    await doc.idle();
+    await ir.apply({ op: "addFeature", feature: rect });
+    await ir.apply({ op: "addFeature", feature: { type: "extrude", sketch: "sketch1", distance: 4 } });
+    // The model alone saves clean to .json.
+    expect(await files.saveAs("/w/bracket.json")).toMatchObject({ saved: true, upToDate: true });
+    expect(doc.getState().dirty).toBe(false);
+    await ir.apply({ op: "setAppearance", feature: "extrude1", color: "#e0552b" });
+    await ir.apply({ op: "setRollback", after: "sketch1" });
+    await doc.idle();
+    const r = await files.save();
+    expect(r).toMatchObject({ saved: true, path: "/w/bracket.json", upToDate: false });
+    expect(toasts.at(-1)).toMatch(/^success: Saved bracket\.json \(.*\); the rollback marker and the body colours are kept only in \.partzero files, so they stay unsaved$/);
+    expect((await doc.idle()).dirty).toBe(true);
+    // In a .partzero they are saved.
+    expect(await files.saveAs("/w/bracket.partzero")).toMatchObject({ saved: true, upToDate: true });
+    expect((await doc.idle()).dirty).toBe(false);
   });
 });

@@ -7,10 +7,15 @@
  *   migrated, SPEC-v1 §9.1), and code-only documents (templates, `.cad.ts` files: CadScript v1 first, else CadScript
  *   v0, migrated). A `.partzero` stores the canonical v1 document, the rollback marker (`view.rollbackMarker`) and the
  *   appearance (`annotations/appearance.json`); no code.
+ * - **Converted files are never overwritten by a plain Save.** A `.cad.ts` file or an IR v0 `.json` that opens as an
+ *   IR v1 model says so, and its first Save is a Save As (suggesting a `.partzero`): saving the model back over the
+ *   file would replace the user's code (comments, formatting, the v0 dialect) with generated code, or the v0 file with
+ *   the new format, without a word. The plain text formats hold no rollback marker or colours: a text save records
+ *   only the model as saved, so the host state stays unsaved (and the save says so).
  * - **CadScript / IR v0** (hosts without the IR v1 engine): CadScript source → compiled IR v0, as before.
  */
 import { IR_SCHEMA, safeParseIrDocument, v1 as irV1, type IrDocument } from "@aicad/ir-types";
-import { blankDocument, rolledBack, type HostState } from "@aicad/model-ops";
+import { blankDocument, EMPTY_HOST_STATE, hostStateEqual, rolledBack, type HostState } from "@aicad/model-ops";
 import type { CadScriptService } from "../cadscript/service";
 import { v1ContentKey, type DocFormat, type DocState, type DocStore } from "../doc/doc-store";
 import { namesAsIds } from "../doc/v1/names-as-ids";
@@ -83,12 +88,21 @@ export interface DocumentAdapter {
   snapshot(): Promise<DocumentSnapshot>;
   /** Load a document; returns warnings for the user (e.g. regenerated code). */
   load(request: LoadRequest): Promise<string[]>;
-  /** Load a plain CadScript (`.cad.ts`) or IR JSON (`.json`) file. */
-  loadText(path: string, name: string, text: string): Promise<void>;
+  /** Load a plain CadScript (`.cad.ts`) or IR JSON (`.json`) file; returns warnings for the user (e.g. it opened converted). */
+  loadText(path: string, name: string, text: string): Promise<string[]>;
   /** A new untitled document. */
   loadBlank(name?: string): void;
-  /** The text a plain `.cad.ts` or `.json` save writes (IR JSON needs code without errors), and what it captured. */
-  textFor(format: "cadscript" | "ir-json"): Promise<{ text: string; capture: SaveCapture }>;
+  /**
+   * The text a plain `.cad.ts` or `.json` save writes (IR JSON needs code without errors), and what it captured.
+   * `lost` names what the format cannot hold (an IR v1 model's rollback marker and colours): the capture leaves it
+   * out, so it stays unsaved.
+   */
+  textFor(format: "cadscript" | "ir-json"): Promise<{ text: string; capture: SaveCapture; lost?: string[] }>;
+  /**
+   * Why a plain Save must not write back to the document's own file (it opened converted: a `.cad.ts` or IR v0 file
+   * as an IR v1 model), or null. Save then asks where to save instead (Save As).
+   */
+  saveAsReason?(): string | null;
   /** After `path` was written with `capture`'s content: that content is the saved state (see {@link MarkSavedResult}). */
   markSaved(path: string, name: string, capture: SaveCapture): MarkSavedResult;
   /** Validates `document.json` when a `.partzero` is opened. */
@@ -127,10 +141,20 @@ function parseIr(json: string): IrDocument {
   return r.data;
 }
 
+/** How a file became an IR v1 model it is not (so a Save must not silently rewrite it). */
+type Conversion = "cadscript" | "ir-v0";
+
+function fileName(path: string): string {
+  const i = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  return i >= 0 ? path.slice(i + 1) : path;
+}
+
 /** The adapter for today's store: CadScript source is edited, and compiles to IR v0. */
 export class DocStoreAdapter implements DocumentAdapter {
   private readonly doc: DocStore;
   private readonly cadscript: CadScriptService;
+  /** The loaded document opened converted from its file (see {@link saveAsReason}). */
+  private converted: { docId: number; path: string; kind: Conversion } | null = null;
 
   constructor(doc: DocStore, cadscript: CadScriptService) {
     this.doc = doc;
@@ -186,7 +210,8 @@ export class DocStoreAdapter implements DocumentAdapter {
    * The IR text an IR v1 model opens from, or null when the request is code that compiles neither as CadScript v1
    * nor as CadScript v0 (it then opens as CadScript, errors shown).
    */
-  private async v1Text(request: LoadRequest): Promise<{ text: string; warnings: string[] } | null> {
+  private async v1Text(request: LoadRequest): Promise<{ text: string; warnings: string[]; converted: Conversion | null } | null> {
+    const file = request.path ? fileName(request.path) : null;
     if (request.documentJson !== null) {
       let schema: unknown;
       try {
@@ -194,17 +219,29 @@ export class DocStoreAdapter implements DocumentAdapter {
       } catch (e) {
         throw new Error(`the document is not valid JSON: ${(e as Error).message}`);
       }
-      const warnings = schema === IR_V1_SCHEMA ? [] : ["This document was made for an earlier model format (IR v0); it opened as an IR v1 model and saves in the new format."];
-      return { text: request.documentJson, warnings };
+      if (schema === IR_V1_SCHEMA) return { text: request.documentJson, warnings: [], converted: null };
+      const where = file ? ` Save writes a new PartZero file; ${file} stays as it is.` : " It saves in the new format.";
+      return { text: request.documentJson, warnings: [`This document was made for an earlier model format (IR v0); it opened as a PartZero model.${where}`], converted: "ir-v0" };
     }
-    if (!request.code) return { text: blankDocument(request.name), warnings: [] };
+    if (!request.code) return { text: blankDocument(request.name), warnings: [], converted: null };
     // CadScript v0 compiles to IR v0 (feature ids = the const names), migrated on load; CadScript v1
     // (parameters, holes, …) compiles with the v1 compiler.
+    const warnings = file ? [`${file} opened as a PartZero model. Save writes a new PartZero file; your code in ${file} stays as it is.`] : [];
     const v0 = await this.cadscript.compile(request.code.source);
-    if (v0.ok && v0.ir) return { text: JSON.stringify(namesAsIds(v0.ir)), warnings: [] };
+    if (v0.ok && v0.ir) return { text: JSON.stringify(namesAsIds(v0.ir)), warnings, converted: "cadscript" };
     const v1 = await this.cadscript.compileV1(request.code.source);
-    if (v1.ok && v1.irJson) return { text: v1.irJson, warnings: [] };
+    if (v1.ok && v1.irJson) return { text: v1.irJson, warnings, converted: "cadscript" };
     return null;
+  }
+
+  saveAsReason(): string | null {
+    const c = this.converted;
+    const s = this.doc.getState();
+    if (!c || c.docId !== s.docId || c.path !== s.path) return null;
+    const file = fileName(c.path);
+    return c.kind === "cadscript"
+      ? `${file} is your CadScript code: saving the model over it would replace the code (its comments and formatting) with generated code. Choose where to save the PartZero file.`
+      : `${file} is in the earlier model format (IR v0): saving over it would rewrite it in the new format. Choose where to save the PartZero file.`;
   }
 
   async load(request: LoadRequest): Promise<string[]> {
@@ -220,6 +257,8 @@ export class DocStoreAdapter implements DocumentAdapter {
           ...(request.host ? { host: request.host } : {}),
           ...(base ? { savedV1: { source: base.text, ...(request.recoveredFrom?.base?.host ? { host: request.recoveredFrom.base.host } : {}) } } : {}),
         });
+        // A converted file keeps its path (the title, recent files) but is not written back by a plain Save.
+        this.converted = plan.converted && request.path ? { docId: this.doc.getState().docId, path: request.path, kind: plan.converted } : null;
         const s = await this.doc.idle();
         if (s.engineError && s.model === null) throw new Error(s.engineError);
         return plan.warnings;
@@ -259,7 +298,7 @@ export class DocStoreAdapter implements DocumentAdapter {
     return warnings;
   }
 
-  async loadText(path: string, name: string, text: string): Promise<void> {
+  async loadText(path: string, name: string, text: string): Promise<string[]> {
     if (this.doc.v1Available) {
       const isJson = /\.json$/i.test(path);
       if (isJson) {
@@ -269,9 +308,9 @@ export class DocStoreAdapter implements DocumentAdapter {
           throw new Error(`${name} is not valid JSON: ${(e as Error).message}`);
         }
       }
-      await this.load({ path, name, documentJson: isJson ? text : null, code: isJson ? null : { source: text, matchesDocument: false } });
-      return;
+      return this.load({ path, name, documentJson: isJson ? text : null, code: isJson ? null : { source: text, matchesDocument: false } });
     }
+    this.converted = null;
     if (/\.json$/i.test(path)) {
       let json: unknown;
       try {
@@ -286,21 +325,30 @@ export class DocStoreAdapter implements DocumentAdapter {
     } else {
       this.doc.load({ path, name, format: "cadscript", source: text });
     }
+    return [];
   }
 
   loadBlank(name = "untitled"): void {
+    this.converted = null;
     if (this.doc.v1Available) this.doc.load({ path: null, name, format: "ir-v1", source: blankDocument(name) });
     else this.doc.load({ path: null, name, format: "cadscript", source: BLANK_SOURCE });
   }
 
-  async textFor(format: "cadscript" | "ir-json"): Promise<{ text: string; capture: SaveCapture }> {
+  async textFor(format: "cadscript" | "ir-json"): Promise<{ text: string; capture: SaveCapture; lost?: string[] }> {
     const v = await this.doc.idle();
     if (v.format === "ir-v1" && v.v1) {
-      const capture: SaveCapture = { docId: v.docId, revision: v.revision, content: v1ContentKey(v.source, v.v1.host) };
-      if (format === "ir-json") return { text: v.source.endsWith("\n") ? v.source : `${v.source}\n`, capture };
+      // The text holds the model only: the capture leaves the host state out, so a rollback marker or colours stay
+      // unsaved (the document stays dirty) instead of being recorded as saved and lost.
+      const capture: SaveCapture = { docId: v.docId, revision: v.revision, content: v1ContentKey(v.source, EMPTY_HOST_STATE) };
+      const host = v.v1.host;
+      const lost = hostStateEqual(host, EMPTY_HOST_STATE)
+        ? []
+        : [...(host.rollback !== null ? ["the rollback marker"] : []), ...(Object.keys(host.appearance).length ? ["the body colours"] : [])];
+      const extra = lost.length ? { lost } : {};
+      if (format === "ir-json") return { text: v.source.endsWith("\n") ? v.source : `${v.source}\n`, capture, ...extra };
       const code = await this.cadscript.printV1(v.source);
       if (code === null) throw new Error("This model cannot be written as CadScript; save it as .partzero or .json.");
-      return { text: code, capture };
+      return { text: code, capture, ...extra };
     }
     if (format === "cadscript") {
       const s = this.doc.getState();
@@ -312,6 +360,8 @@ export class DocStoreAdapter implements DocumentAdapter {
 
   markSaved(path: string, name: string, capture: SaveCapture): MarkSavedResult {
     if (this.doc.getState().docId !== capture.docId) return "replaced";
+    // Saved where the user chose: the conversion no longer protects the file it came from.
+    if (this.converted?.docId === capture.docId) this.converted = null;
     this.doc.markSaved({ path, name, format: formatOf(path), savedSource: capture.content });
     return this.doc.getState().dirty ? "changed" : "clean";
   }

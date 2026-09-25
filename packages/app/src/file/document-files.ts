@@ -533,13 +533,16 @@ export class DocumentFiles extends Store<FilesState> {
       await this.loadContents(this.requestFrom(path, name, decoded.contents), decoded.contents, decoded.warnings, false);
     } else {
       const text = await this.deps.host.readText(path);
+      let warnings: string[];
       this.loading++;
       try {
         this.resetExtras();
-        await this.deps.adapter.loadText(path, name, text);
+        warnings = await this.deps.adapter.loadText(path, name, text);
       } finally {
         this.loading--;
       }
+      this.setState({ warnings });
+      for (const w of warnings) this.deps.toast("info", w);
     }
     this.deps.fitView?.();
   }
@@ -592,10 +595,18 @@ export class DocumentFiles extends Store<FilesState> {
     return { entry, bytes, measure: measureMesh(mesh), body: meshToRenderBody(mesh, `ref:${entry.id}`, REFERENCE_TINT) };
   }
 
-  /** Save to the document's file, or ask for one (untitled, or not a format this build writes back). */
+  /**
+   * Save to the document's file, or ask for one: untitled, not a format this build writes back, or a file the
+   * document only opened from (a `.cad.ts` or IR v0 file opened as a PartZero model: writing the model back would
+   * silently replace it, so Save asks where, suggesting a `.partzero`).
+   */
   async save(): Promise<{ saved: boolean; path?: string; format?: SaveFormat }> {
     const path = this.deps.adapter.info().path;
-    if (path && !path.startsWith("download:") && !path.startsWith("browser:")) return this.saveTo(path);
+    if (path && !path.startsWith("download:") && !path.startsWith("browser:")) {
+      const why = this.deps.adapter.saveAsReason?.() ?? null;
+      if (!why) return this.saveTo(path);
+      this.deps.toast("info", why);
+    }
     return this.saveAs();
   }
 
@@ -631,6 +642,7 @@ export class DocumentFiles extends Store<FilesState> {
     let written: number;
     let capture: SaveCapture;
     let references: readonly ReferenceMesh[];
+    let lost: readonly string[] = [];
     if (format === "partzero") {
       const e = await this.encode(true);
       ({ capture, references } = e);
@@ -640,6 +652,7 @@ export class DocumentFiles extends Store<FilesState> {
       references = this.getState().references;
       const t = await this.deps.adapter.textFor(format);
       capture = t.capture;
+      lost = t.lost ?? [];
       const r = await this.deps.host.writeDocument(path, t.text, null);
       written = r.bytes;
       if (references.length > 0) this.deps.toast("info", `Reference meshes are kept only in .partzero files; ${baseName(path)} has the model and its code.`);
@@ -649,7 +662,12 @@ export class DocumentFiles extends Store<FilesState> {
     if (result !== "replaced") this.setState({ extraDirty: this.getState().references !== references });
     this.onDocumentChange();
     const upToDate = result === "clean" && !this.isDirty();
-    this.deps.toast("success", `Saved ${baseName(path)} (${formatBytes(written)})${upToDate ? "" : "; changes made while saving are not in it yet"}`);
+    const note = lost.length
+      ? `; ${lost.join(" and ")} ${lost.length === 1 ? "is" : "are"} kept only in .partzero files, so ${lost.length === 1 ? "it stays" : "they stay"} unsaved`
+      : upToDate
+        ? ""
+        : "; changes made while saving are not in it yet";
+    this.deps.toast("success", `Saved ${baseName(path)} (${formatBytes(written)})${note}`);
     return { saved: true, path, format, bytes: written, upToDate };
   }
 
