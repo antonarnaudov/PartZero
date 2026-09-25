@@ -1,0 +1,19 @@
+packages/desktop/e2e/viewport/section-measure.e2e.ts
+  s_59c0dd2af30db2::t_afcaa00635015f 93-97,102,104,107,111-112,131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "88589faf88ae7214376de199d63ac78e71979622",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
