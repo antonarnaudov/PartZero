@@ -482,7 +482,7 @@ export class AgentService extends Store<AgentState> {
     const seq = ++this.#previewSeq;
     this.#patchReview((r) => ({ preview: { ...r.preview, status: "evaluating", error: null } }));
     try {
-      const res = await this.#deps.engine().evaluate(JSON.stringify(ir));
+      const res = await this.#deps.engine().evaluate(JSON.stringify(ir), this.#deps.doc.displayTessellation);
       if (seq !== this.#previewSeq) return;
       const bodies = res.bodies.map((b) => ({ ...b, color: PREVIEW_TINT }));
       this.#patchReview(() => ({ preview: { status: "ready", bodies, error: null } }));

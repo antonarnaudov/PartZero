@@ -212,6 +212,20 @@ describe("view commands", () => {
     expect(rt.view.getState().display).toBe("wireframe");
   });
 
+  it("asks the document for display tolerances that fit the part's size on screen (round circles)", () => {
+    // The NEMA plate (≈ 85 mm across its bounding sphere) in a 900 × 700 viewport at 1x (Node has
+    // no devicePixelRatio): 0.03 mm wanted → the 0.025 mm step.
+    const doc = harness.services.doc;
+    expect(doc.displayTessellation).toEqual({ chordalDeflection: 0.025, angularDeflection: Math.PI / 18 });
+    // The same plate scaled up 10×: the coarsest step; the angle stays at 10° (36 segments a circle).
+    const big = parseObj(nemaObj).map((b) => ({ ...b, positions: b.positions.map((v) => v * 10) }));
+    rt.setSceneBodies(big);
+    expect(doc.displayTessellation).toEqual({ chordalDeflection: 0.05, angularDeflection: Math.PI / 18 });
+    // Back to the real size: the finer step again.
+    rt.setSceneBodies(parseObj(nemaObj));
+    expect(doc.displayTessellation.chordalDeflection).toBe(0.025);
+  });
+
   it("keeps the view when the same document regenerates", async () => {
     await exec("view.setBodyVisible", { body: BODY, visible: false });
     await exec("view.section", { base: "XY" });

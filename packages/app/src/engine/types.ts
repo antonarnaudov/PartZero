@@ -50,7 +50,7 @@ export interface PickResult {
 /**
  * Print quality (the owner's rule: exported holes must be round): ≈0.01 mm chordal deviation and at
  * most 5° between neighbouring facet normals. Every mesh export (3MF, STL, OBJ) and the printer
- * handoff use it; the viewport keeps its coarser display tolerances.
+ * handoff use it; the viewport uses its own screen-adaptive tolerances (`viewport/display-tessellation.ts`).
  */
 export const PRINT_TESSELLATION = Object.freeze({ chordalDeflection: 0.01, angularDeflection: (5 * Math.PI) / 180 });
 
@@ -79,7 +79,11 @@ export interface ForgeEngine {
   readonly label: string;
   /** Longer description (binary path, backend, reason unavailable). */
   readonly detail: string;
-  evaluate(irJson: string): Promise<EvalResult>;
+  /**
+   * Evaluate and tessellate for display. `tessellation` defaults to the engine's own tolerances;
+   * the document store passes the viewport's (`viewport/display-tessellation.ts`).
+   */
+  evaluate(irJson: string, tessellation?: TessellationOptions): Promise<EvalResult>;
   /** Watertight meshes of every body; `tessellation` defaults to the engine's (use {@link PRINT_TESSELLATION} for files). */
   exportMesh(irJson: string, format: MeshFormat, tessellation?: TessellationOptions): Promise<Uint8Array>;
   /**

@@ -95,7 +95,7 @@ const PREVIEW_TINT: [number, number, number] = [0.33, 0.62, 0.98];
 
 async function previewBodies(services: AppServices, text: string | null, signal: AbortSignal): Promise<PreviewOutcome> {
   if (!text) return { ok: true };
-  const r = await services.engines.active.evaluate(text);
+  const r = await services.engines.active.evaluate(text, services.doc.displayTessellation);
   if (signal.aborted) return { ok: true };
   const report = r.report as unknown as { features: Array<{ status: string; feature: string; error?: { code: string; message: string } }> };
   const failed = report.features[report.features.length - 1];

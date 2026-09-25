@@ -21,8 +21,9 @@
 import type { EvalReport, IrDocument } from "@aicad/ir-types";
 import { EMPTY_HOST_STATE, hostStateEqual, rolledBack, type Approvals, type HostState } from "@aicad/model-ops";
 import type { CadScriptService, CompileOutput } from "../cadscript/service";
-import type { ForgeEngine, PickResult, RenderBody } from "../engine/types";
+import type { ForgeEngine, PickResult, RenderBody, TessellationOptions } from "../engine/types";
 import { Store } from "../store";
+import { DEFAULT_DISPLAY_TESSELLATION, sameTessellation } from "../viewport/display-tessellation";
 import { History, type TransactionOrigin } from "./history";
 import { featureNameOfBody } from "./provenance";
 import type { IrDocStore } from "./v1/ir-doc-store";
@@ -151,6 +152,8 @@ export class DocStore extends Store<DocState> {
   private loadBase: IrDocument | null = null;
   /** An IR v1 document being loaded into the IR store (the store's changes are ignored until it lands). */
   private pendingV1: Promise<void> | null = null;
+  /** The tolerances bodies are tessellated with for display (the viewport sets them, {@link setDisplayTessellation}). */
+  private displayTess: TessellationOptions = { ...DEFAULT_DISPLAY_TESSELLATION };
 
   constructor(deps: DocStoreDeps, initial?: DocDescriptor) {
     const doc = initial ?? { path: null, name: "Untitled", format: "cadscript" as const, source: "" };
@@ -434,6 +437,23 @@ export class DocStore extends Store<DocState> {
     this.schedule(0);
   }
 
+  /** The display tessellation the document's bodies are (or will next be) evaluated with. */
+  get displayTessellation(): TessellationOptions {
+    return { ...this.displayTess };
+  }
+
+  /**
+   * Set the display tessellation (the viewport's screen-adaptive tolerances,
+   * `viewport/display-tessellation.ts`). A change re-evaluates the open document once; the same
+   * tolerances again do nothing. Returns whether they changed.
+   */
+  setDisplayTessellation(t: TessellationOptions): boolean {
+    if (sameTessellation(t, this.displayTess)) return false;
+    this.displayTess = { ...t };
+    if (this.getState().evaluatedIrJson !== null) this.recompute();
+    return true;
+  }
+
   /** Resolves when the pipeline has settled for the current content (an IR v1 document: its store's ops too). */
   async idle(timeoutMs = 60_000): Promise<DocState> {
     const t0 = Date.now();
@@ -512,7 +532,7 @@ export class DocStore extends Store<DocState> {
     this.setState({ phase: "evaluating" });
     const t0 = performanceNow();
     try {
-      const r = await this.deps.engine().evaluate(text);
+      const r = await this.deps.engine().evaluate(text, this.displayTess);
       if (this.isStale(revision, docId)) return;
       this.setState((st) => ({
         report: r.report,
@@ -569,7 +589,7 @@ export class DocStore extends Store<DocState> {
     this.setState({ phase: "evaluating" });
     const t0 = performanceNow();
     try {
-      const r = await this.deps.engine().evaluate(irJson);
+      const r = await this.deps.engine().evaluate(irJson, this.displayTess);
       if (this.isStale(revision, docId)) return;
       this.setState((st) => ({
         report: r.report,

@@ -19,6 +19,7 @@ import { buildTopology, faceTriangles, type SceneTopology } from "../selection/t
 import { isEntity, type BoxMode, type SelectionItem } from "../selection/types";
 import type { HighlightRef, ViewportAdapter } from "./adapter";
 import { displayBodies, effectiveMode, type DisplayMode } from "./display";
+import { displayTessellation } from "./display-tessellation";
 import { faceGeom } from "../measure/geometry";
 import { ManipulatorHost } from "./manipulators/host";
 import {
@@ -175,6 +176,36 @@ export class ViewportRuntime {
   private emitFrame(): void {
     this.cameraRevision++;
     for (const l of [...this.frameListeners]) l();
+    // A resized viewport may need another display tessellation step (checked once it settles).
+    const s = this.adapter?.size();
+    if (s && (s.width !== this.lastSize.width || s.height !== this.lastSize.height)) {
+      this.lastSize = { width: s.width, height: s.height };
+      if (this.tessTimer) clearTimeout(this.tessTimer);
+      this.tessTimer = setTimeout(() => {
+        this.tessTimer = null;
+        this.adaptTessellation();
+      }, 300);
+    }
+  }
+
+  private lastSize = { width: 0, height: 0 };
+  private tessTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Ask the document for the display tessellation this part needs at this viewport size (circles
+   * round at normal zoom, `display-tessellation.ts`); a changed step re-evaluates the document once.
+   */
+  adaptTessellation(): void {
+    const a = this.adapter;
+    const sphere = this.sceneSphere();
+    if (!a || !sphere) return;
+    const { width, height } = a.size();
+    if (width <= 0 || height <= 0) return;
+    const doc = this.app.doc as Partial<Pick<AppServices["doc"], "displayTessellation" | "setDisplayTessellation">>;
+    if (typeof doc.setDisplayTessellation !== "function") return; // a test double without the pipeline
+    const dpr = (globalThis as { devicePixelRatio?: number }).devicePixelRatio ?? 1;
+    const current = doc.displayTessellation?.chordalDeflection;
+    doc.setDisplayTessellation(displayTessellation(2 * sphere.radius, Math.min(width, height), dpr, current));
   }
 
   /** The camera frame for overlays (CSS pixels), or null without a renderer. */
@@ -200,6 +231,7 @@ export class ViewportRuntime {
     this.pushBodies();
     this.selection.resolve(this.topo);
     this.syncHighlights();
+    this.adaptTessellation();
   }
 
   get bodies(): readonly RenderBody[] {

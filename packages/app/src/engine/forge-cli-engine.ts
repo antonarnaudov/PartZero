@@ -24,8 +24,10 @@ export class ForgeCliEngine implements ForgeEngine {
     this.detail = info.detail;
   }
 
-  async evaluate(irJson: string): Promise<EvalResult> {
-    const r = await this.bridge.eval({ irJson, meshes: true });
+  async evaluate(irJson: string, tessellation?: TessellationOptions): Promise<EvalResult> {
+    // The CLI's display export takes the chordal tolerance (its angular one stays the CLI's default).
+    const deflection = tessellation?.chordalDeflection;
+    const r = await this.bridge.eval({ irJson, meshes: true, ...(deflection !== undefined ? { deflection } : {}) });
     if (r.error) throw new EngineError("ENGINE_FAILED", r.error);
     if (r.reportJson === null) {
       throw new EngineError("ENGINE_FAILED", `aicad eval produced no report (exit ${String(r.evalExitCode)}): ${r.stderr.trim()}`);

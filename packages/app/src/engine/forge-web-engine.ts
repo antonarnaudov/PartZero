@@ -61,9 +61,9 @@ export class ForgeWebEngine implements ForgeEngine {
     }
   }
 
-  async evaluate(irJson: string): Promise<EvalResult> {
+  async evaluate(irJson: string, tessellation?: TessellationOptions): Promise<EvalResult> {
     try {
-      return await this.rpc.call<EvalResult>({ type: "evaluate", irJson });
+      return await this.rpc.call<EvalResult>({ type: "evaluate", irJson, ...(tessellation ? { tess: tessellation } : {}) });
     } catch (e) {
       throw new EngineError("ENGINE_FAILED", `forge-web evaluate: ${(e as Error).message}`);
     }
