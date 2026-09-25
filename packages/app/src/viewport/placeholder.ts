@@ -460,6 +460,24 @@ export class PlaceholderViewport implements ViewportAdapter {
           : -(nx * cam.forward[0] + ny * cam.forward[1] + nz * cam.forward[2]);
         // With a section, back faces show through the cut (as caps would).
         if (facing <= 0 && !this.section) continue;
+        if (this.section && (cut[a] || cut[c1] || cut[c2])) {
+          // A triangle crossing the plane: clip it in world space and rasterize the kept part.
+          const poly = clipByPlane(
+            [
+              [p[a * 3]!, p[a * 3 + 1]!, p[a * 3 + 2]!],
+              [p[c1 * 3]!, p[c1 * 3 + 1]!, p[c1 * 3 + 2]!],
+              [p[c2 * 3]!, p[c2 * 3 + 1]!, p[c2 * 3 + 2]!],
+            ],
+            this.section,
+          );
+          const sp = poly.map((q) => cam.project(q));
+          if (sp.some((s) => !s || (perspective && s.depth < near))) continue;
+          for (let k = 1; k + 1 < sp.length; k++) {
+            const s0 = sp[0]!, s1 = sp[k]!, s2 = sp[k + 1]!;
+            rasterTriangle(depth, ids, w, h, s0.x * bufferScale, s0.y * bufferScale, key(s0.depth), s1.x * bufferScale, s1.y * bufferScale, key(s1.depth), s2.x * bufferScale, s2.y * bufferScale, key(s2.depth), triBase + t);
+          }
+          continue;
+        }
         rasterTriangle(depth, ids, w, h, sx[a]!, sy[a]!, sk[a]!, sx[c1]!, sy[c1]!, sk[c1]!, sx[c2]!, sy[c2]!, sk[c2]!, triBase + t);
       }
       triBase += tris;
@@ -474,6 +492,7 @@ export class PlaceholderViewport implements ViewportAdapter {
       body.edges.forEach((e, ei) => {
         const pts = e.points;
         let px = 0, py = 0, pk = 0, pBehind = true, pCut = false;
+        let pq: Vec3 = [0, 0, 0];
         for (let k = 0; k * 3 < pts.length; k++) {
           const q: Vec3 = [pts[k * 3]!, pts[k * 3 + 1]!, pts[k * 3 + 2]!];
           const s = cam.project(q);
@@ -484,12 +503,21 @@ export class PlaceholderViewport implements ViewportAdapter {
             const emit = (x0: number, y0: number, x1: number, y1: number): void => {
               f!.edgeRuns.push({ body: bi, edge: ei, x0, y0, x1, y1 });
             };
-            if (allVisible) emit(px, py, cx, cy);
-            else visibleRuns(f!, px, py, pk, cx, cy, ck, perspective ? tolRel : 0, perspective ? 0 : tolAbs, emit);
+            let [ax, ay, ak, bx, by, bk] = [px, py, pk, cx, cy, ck];
+            if ((pCut || cCut) && this.section) {
+              // A segment crossing the section plane keeps its part on the kept side.
+              const kept = clipByPlane([pq, q], this.section);
+              const s0 = kept[0] ? cam.project(kept[0]) : null;
+              const s1 = kept[1] ? cam.project(kept[1]) : null;
+              if (s0 && s1) [ax, ay, ak, bx, by, bk] = [s0.x, s0.y, key(s0.depth), s1.x, s1.y, key(s1.depth)];
+            }
+            if (allVisible) emit(ax, ay, bx, by);
+            else visibleRuns(f!, ax, ay, ak, bx, by, bk, perspective ? tolRel : 0, perspective ? 0 : tolAbs, emit);
           }
           px = cx;
           py = cy;
           pk = ck;
+          pq = q;
           pBehind = cBehind;
           pCut = cCut;
         }
@@ -698,6 +726,29 @@ function visibleRuns(
 }
 
 // ─── Geometry helpers ────────────────────────────────────────────────────────────────────────
+
+/**
+ * The part of a convex polygon on the kept side of a section plane (Sutherland–Hodgman against
+ * one plane; the side the normal points to is removed).
+ */
+export function clipByPlane(poly: readonly Vec3[], plane: SectionPlane): Vec3[] {
+  const n = plane.normal;
+  const k = dot(n, plane.origin);
+  const d = (q: Vec3): number => dot(n, q) - k;
+  const out: Vec3[] = [];
+  for (let i = 0; i < poly.length; i++) {
+    const cur = poly[i]!;
+    const next = poly[(i + 1) % poly.length]!;
+    const dc = d(cur);
+    const dn = d(next);
+    if (dc <= 0) out.push(cur);
+    if ((dc < 0 && dn > 0) || (dc > 0 && dn < 0)) {
+      const t = dc / (dc - dn);
+      out.push([cur[0] + (next[0] - cur[0]) * t, cur[1] + (next[1] - cur[1]) * t, cur[2] + (next[2] - cur[2]) * t]);
+    }
+  }
+  return out;
+}
 
 function prepare(b: RenderBody, bodyIndex: number, faces: Array<{ body: number; name: string }>, faceIndex: Map<string, number>): PreparedBody {
   const triCount = Math.floor(b.indices.length / 3);

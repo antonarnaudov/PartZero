@@ -29,6 +29,11 @@ const section = async (): Promise<Section | null> => (await L.page.evaluate(() =
 
 test("section: from the menu, move it with the slider, the field and the handle, flip, remove", async () => {
   const { page } = L;
+  // forge-render draws hatched caps; the placeholder shows the inside through the cut.
+  const caps = (await page.getByTestId("viewport").getAttribute("data-renderer")) === "forge-web";
+  const mid = await at(page, [8, -12, 2.5]);
+  const midInside = await at(page, [12.5, -10, 2.5]);
+  const before = await pixels(page);
   await page.getByTestId("section-menu").click();
   await page.locator('[data-section="XY"]').click();
   await expect(page.getByTestId("section-panel")).toBeVisible();
@@ -38,9 +43,9 @@ test("section: from the menu, move it with the slider, the field and the handle,
   expect(s.offset).toBeCloseTo(2.5, 6);
   expect(s.normal).toEqual([0, 0, 1]);
   // The top half is removed: the cut shows the (reddish) section cap at mid-height.
-  const mid = await at(page, [8, -12, 2.5]);
   const cap = (await pixels(page)).at(mid.x, mid.y);
-  expect(cap[0]).toBeGreaterThan(cap[2] + 20);
+  if (caps) expect(cap[0]).toBeGreaterThan(cap[2] + 20);
+  else expect(Math.max(...cap.map((v, i) => Math.abs(v - before.at(mid.x, mid.y)[i]!)))).toBeGreaterThan(8);
   // Typed offset.
   await page.getByTestId("section-offset").fill("1");
   await expect.poll(async () => (await section())!.offset).toBe(1);
@@ -68,9 +73,9 @@ test("section: from the menu, move it with the slider, the field and the handle,
   expect(s.normal[0]).toBeCloseTo(1, 6);
   // The cut at x = 12.5 shows a cap: the pixel just behind the old right face changes colour.
   const img = await pixels(page);
-  const inCut = await at(page, [12.5, -10, 2.5]);
-  const c = img.at(inCut.x, inCut.y);
-  expect(c[0]).toBeGreaterThan(c[2] + 20);
+  const c = img.at(midInside.x, midInside.y);
+  if (caps) expect(c[0]).toBeGreaterThan(c[2] + 20);
+  else expect(Math.max(...c.map((v, i) => Math.abs(v - before.at(midInside.x, midInside.y)[i]!)))).toBeGreaterThan(8);
   await page.keyboard.press("Escape");
   await view(page, { id: "view.clearSection" });
   await expect(page.getByTestId("section-panel")).toHaveCount(0);

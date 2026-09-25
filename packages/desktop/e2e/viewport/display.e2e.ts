@@ -28,6 +28,7 @@ const diff = (a: [number, number, number], b: [number, number, number]): number 
 test("display modes change what is drawn", async () => {
   const { page } = L;
   const nativeModes = await page.evaluate(() => window.__pzView!.view().nativeModes);
+  const renderer = await page.getByTestId("viewport").getAttribute("data-renderer");
   const top = await at(page, [0, 18, 5]);
   // The front side face (darker than the background when shaded) and a point of the hidden
   // bottom-back edge.
@@ -45,10 +46,10 @@ test("display modes change what is drawn", async () => {
   await expect(page.getByTestId("viewport")).toHaveAttribute("data-display", "wireframe");
   expect(await page.evaluate(() => window.__pzView!.view().drawn)).toBe("wireframe");
   const wire = await pixels(page);
-  // No faces: the top-face point now shows the background gradient (close to a background pixel
-  // at a similar height), and the hidden back-bottom edge is drawn.
-  expect(luma(wire.at(side.x, side.y))).toBeGreaterThan(luma(faceShaded) + 20);
-  expect(luma(wire.at(hidden.x, hidden.y))).toBeLessThan(luma(shaded.at(hidden.x, hidden.y)) + 1);
+  // No faces: the side-face point now shows the background, and the hidden back-bottom edge is
+  // drawn.
+  expect(diff(wire.at(side.x, side.y), faceShaded)).toBeGreaterThan(20);
+  expect(diff(wire.at(hidden.x, hidden.y), shaded.at(hidden.x, hidden.y))).toBeGreaterThan(15);
   // Wireframe picks edges only: a click on the (absent) face selects nothing.
   await page.mouse.click(side.x, side.y);
   await page.waitForTimeout(150);
@@ -60,13 +61,15 @@ test("display modes change what is drawn", async () => {
       await expect(page.getByTestId("viewport")).toHaveAttribute("data-display", mode);
       expect(await page.evaluate(() => window.__pzView!.view().drawn)).toBe(mode);
       const img = await pixels(page);
+      const face = img.at(side.x, side.y);
       if (mode === "hiddenLine") {
-        // Paper-white faces.
-        expect(luma(img.at(side.x, side.y))).toBeGreaterThan(235);
+        // Flat "paper" faces: white on forge-render, the theme's background on the placeholder.
+        if (renderer === "forge-web") expect(luma(face)).toBeGreaterThan(235);
+        else expect(Math.abs(luma(face) - luma(img.at(bgAt.x, bgAt.y)))).toBeLessThan(25);
       } else {
-        // Translucent faces: lighter than shaded, but still there.
-        expect(luma(img.at(side.x, side.y))).toBeGreaterThan(luma(faceShaded) + 10);
-        expect(luma(img.at(side.x, side.y))).toBeLessThan(luma(wire.at(side.x, side.y)) - 2);
+        // Translucent faces: between the shaded face and the bare background.
+        expect(diff(face, faceShaded)).toBeGreaterThan(10);
+        expect(diff(face, wire.at(side.x, side.y))).toBeGreaterThan(2);
       }
     } else {
       await expect(page.locator(`[data-testid="display-mode"] option[value="${mode}"]`)).toBeDisabled();

@@ -134,6 +134,18 @@ describe("manipulator drag math", () => {
   });
 });
 
+describe("placeholder section clipping", () => {
+  it("keeps the part of a triangle or segment on the kept side of the plane", async () => {
+    const { clipByPlane } = await import("../src/viewport/placeholder");
+    const plane = { origin: [1, 0, 0] as Vec3, normal: [1, 0, 0] as Vec3 };
+    const tri = clipByPlane([[0, 0, 0], [2, 0, 0], [0, 2, 0]], plane);
+    expect(tri).toEqual([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 2, 0]]);
+    expect(clipByPlane([[2, 0, 0], [3, 0, 0], [2, 1, 0]], plane)).toEqual([]);
+    const seg = clipByPlane([[3, 0, 0], [0, 0, 0]], plane);
+    expect(seg.slice(0, 2)).toEqual([[1, 0, 0], [0, 0, 0]]);
+  });
+});
+
 describe("display modes and body display", () => {
   const body = (name: string): RenderBody => ({
     name,
