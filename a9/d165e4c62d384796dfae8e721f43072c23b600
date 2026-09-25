@@ -1,0 +1,37 @@
+packages/app/src/doc/v1/ir-doc-store.ts
+  s_59c0dd2af30db2::t_29c720accdd06b 296-297,307
+  s_59c0dd2af30db2::t_47a8cd8da50eab 46,48
+  s_59c0dd2af30db2::t_bfb5ace16a0af8 469-470,472
+  s_59c0dd2af30db2::t_01ed463aeadc5a 188-191
+  s_59c0dd2af30db2::t_33b3c283b89486 102-105,107-112
+  s_59c0dd2af30db2::t_8aae9102d04c15 255-256,263-269,271
+  s_59c0dd2af30db2::t_39b649a0d80533 22-28
+  s_59c0dd2af30db2::t_854d04b33c66bf 402,406-407,410,414-452,454
+  s_59c0dd2af30db2::t_5a2623d66c6971 346
+packages/app/test/agent-boundaries.test.ts
+  s_59c0dd2af30db2::t_ebd19f748fd364 1-300
+packages/app/src/agent/ops-host.ts
+  s_59c0dd2af30db2::t_accae1d7031e9a 7-8,33-41
+packages/app/src/commands/commands.ts
+  s_59c0dd2af30db2::t_faacc422833781 25,297-298,310-311,322,331-332
+packages/app/src/commands/ir-commands.ts
+  s_59c0dd2af30db2::t_4daafbf0c8ded5 89-114,120-125,129,139,145-146,157-164,207-209,251-252,266-267,279-280,283-284,360-361,366-367,375,378-380,388,391-393
+packages/app/test/ir-v1-ops.test.ts
+  s_59c0dd2af30db2::t_11af84e7745af1 696-699
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a9d165e4c62d384796dfae8e721f43072c23b600",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
