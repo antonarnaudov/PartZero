@@ -107,6 +107,19 @@ export interface OpsHost {
   report(): Promise<metricsV1.EvalReport>;
   /** The engine's command layer, for read-only queries (dependents, parameter uses). */
   engine(): IrCommandEngine;
+  /**
+   * Optional: undo this origin's last transaction (the live agent's "Ask at each step" when the
+   * user rejects a step). A host that has no undo for its caller leaves it out; the app allows it
+   * inside the agent's own open group only.
+   */
+  undo?(): Promise<boolean> | boolean;
+}
+
+/** The union of two approval sets (ADR 0015 §3). */
+export function mergeApprovals(a: Approvals, b: Approvals): Approvals {
+  const features = [...new Set([...(a.features ?? []), ...(b.features ?? [])])];
+  const params = [...new Set([...(a.params ?? []), ...(b.params ?? [])])];
+  return { ...(features.length ? { features } : {}), ...(params.length ? { params } : {}), ...(a.rollback || b.rollback ? { rollback: true } : {}) };
 }
 
 /** A transaction result as {@link OpsCommit}. */
@@ -151,6 +164,8 @@ export class MemoryOpsHost implements OpsHost {
   /** Parameters this session's own transactions added (it may change them; the user's need approval). */
   private readonly ownParams = new OwnParams();
   private readonly listeners = new Set<(c: OpsCommit & { document: string }) => void>();
+  /** Approvals the host's user gave during the session ({@link MemoryOpsHost.grant}). */
+  private granted: Approvals = {};
 
   private constructor(options: MemoryOpsHostOptions, document: string) {
     this.options = options;
@@ -199,7 +214,7 @@ export class MemoryOpsHost implements OpsHost {
           ...(this.options.failureRule !== undefined ? { failureRule: this.options.failureRule } : {}),
           ...(options.ack ? { ack: options.ack } : {}),
           // Parameters have no author (ADR 0015 §2): those this session added are its own to change.
-          approvals: this.ownParams.approvalsFor(this.options.origin, this.options.approvals),
+          approvals: this.ownParams.approvalsFor(this.options.origin, mergeApprovals(this.options.approvals ?? {}, this.granted)),
         },
         ops,
       );
@@ -216,6 +231,15 @@ export class MemoryOpsHost implements OpsHost {
     });
     this.queue = run.catch(() => undefined);
     return run;
+  }
+
+  /**
+   * Host code only: the user approved these changes to their work (ADR 0015 §3: an answer to the
+   * agent's `request_approval`); later transactions of this session may make them. Agents never
+   * reach this (it is not an op).
+   */
+  grant(approvals: Approvals): void {
+    this.granted = mergeApprovals(this.granted, approvals);
   }
 
   undo(): boolean {
