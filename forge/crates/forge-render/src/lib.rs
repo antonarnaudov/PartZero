@@ -18,6 +18,9 @@
 //!   shaded flat (hatched) at the depth where the view ray meets the plane.
 //! - **Hover / selection** highlights (face tint, thicker coloured edges), resolved by
 //!   provenance name so they survive re-evaluation.
+//! - **Display modes** ([`DisplayMode`]): shaded, shaded with edges, wireframe (edges
+//!   only, hidden ones included, edges-only picking), hidden line (flat paper faces that
+//!   occlude) and X-ray (translucent faces, every edge shows through).
 //!
 //! ## Picking
 //! Face and edge ids go into an `R32Uint` target ([`pick`] documents the encoding); a pick
