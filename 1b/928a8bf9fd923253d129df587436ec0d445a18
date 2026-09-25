@@ -1,0 +1,45 @@
+packages/app/src/sketch/integration.ts
+  s_59c0dd2af30db2::t_a557886cbc1d91 56-74
+  s_59c0dd2af30db2::t_6d7fa4354bef7d 100,131
+packages/app/src/sketch/names.ts
+  s_59c0dd2af30db2::t_c89886bb96f6c9 21-22,25,29-32
+  s_59c0dd2af30db2::t_1499fb934b5635 33
+packages/app/test/sketch/v0-bridge.test.ts
+  s_59c0dd2af30db2::t_782ae6d4ebb9b4 1-32,38-76,78-118,122-141,149-172,174,176-264,266-269
+  s_59c0dd2af30db2::t_c0b7ff49aad676 144-147,173,175
+  s_59c0dd2af30db2::t_b92a5dca6aa77e 33-37,77,265
+  s_59c0dd2af30db2::t_d8681f9d6d3502 119-121,142-143,148
+packages/app/src/sketch/v0-bridge.ts
+  s_59c0dd2af30db2::t_55b4515d86edf1 1-13,15-55,63,66-364
+  s_59c0dd2af30db2::t_f4c84516fe89ba 14,56-62,64-65
+packages/app/src/ui/Timeline.tsx
+  s_59c0dd2af30db2::t_98b7999da9b9d9 10,74
+packages/app/src/ui/sketch/sketch.css
+  s_59c0dd2af30db2::t_71d829d1323042 843-887
+packages/app/src/sketch/controller.ts
+  s_59c0dd2af30db2::t_b92a5dca6aa77e 301-302
+  s_59c0dd2af30db2::t_6d7fa4354bef7d 240-241,385
+  s_59c0dd2af30db2::t_3a9e3f3704efc9 86-87,145-146,180,334,341-343,369-378,386
+packages/app/src/sketch/v0-app.ts
+  s_59c0dd2af30db2::t_4801de94cb1f0e 1-58
+packages/app/src/sketch/commit.ts
+  s_59c0dd2af30db2::t_9a018bbac6709e 40-44,47-51
+packages/app/src/ui/sketch/SketchModeHost.tsx
+  s_59c0dd2af30db2::t_fe9fde992c959b 17-18,362-434,437,440,443-444,459,461,466,468-473,475
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1b928a8bf9fd923253d129df587436ec0d445a18",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
