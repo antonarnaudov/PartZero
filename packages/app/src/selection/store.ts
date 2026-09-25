@@ -66,6 +66,13 @@ export class SelectionStore extends Store<SelectionState> {
     this.commit([]);
   }
 
+  /** Another document was loaded: no items, no hover, no pending "dropped" notice. The filter stays. */
+  reset(): void {
+    const s = this.getState();
+    if (s.items.length === 0 && s.hover === null && s.dropped.length === 0) return;
+    this.setState((st) => ({ items: [], hover: null, dropped: [], revision: st.revision + 1 }));
+  }
+
   has(item: SelectionItem): boolean {
     return this.getState().items.some((it) => sameItem(it, item));
   }

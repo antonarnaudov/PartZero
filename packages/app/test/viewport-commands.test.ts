@@ -185,6 +185,41 @@ describe("view commands", () => {
     expect(adapter.section).toBeNull();
   });
 
+  it("starts another document with a clean view: bodies visible, default colours, no section, no selection", async () => {
+    await exec("view.setDisplayMode", { mode: "wireframe" });
+    await exec("view.setBodyColor", { body: BODY, color: "#d4524a" });
+    await exec("view.section", { base: "XZ" });
+    await exec("selection.set", { items: [{ kind: "face", body: BODY, key: "plate/cap:end" }] });
+    await exec("measure.toggle");
+    await exec("view.setBodyVisible", { body: BODY, visible: false });
+    expect(adapter.bodies).toHaveLength(0);
+    expect(adapter.section).not.toBeNull();
+    expect(rt.measure.getState().open).toBe(true);
+
+    // Same body names as before (a template opened again): nothing carries over by name.
+    harness.services.doc.load({ path: null, name: "again", format: "cadscript", source: BOX });
+    expect(rt.view.getState().bodies).toEqual({});
+    expect(rt.view.getState().section).toBeNull();
+    expect(adapter.section).toBeNull();
+    expect(rt.selection.items).toEqual([]);
+    expect(rt.selection.getState().hover).toBeNull();
+    expect(rt.measure.getState().open).toBe(false);
+    rt.setSceneBodies(parseObj(nemaObj));
+    expect(adapter.bodies).toHaveLength(1);
+    expect(adapter.bodies[0]!.color).toBeUndefined();
+    // Preferences are the user's and stay.
+    expect(rt.view.getState().display).toBe("wireframe");
+  });
+
+  it("keeps the view when the same document regenerates", async () => {
+    await exec("view.setBodyVisible", { body: BODY, visible: false });
+    await exec("view.section", { base: "XY" });
+    harness.services.doc.setSource(`${BOX}\n// edited\n`);
+    await harness.services.doc.idle();
+    expect(rt.view.getState().bodies[BODY]).toMatchObject({ visible: false });
+    expect(rt.view.getState().section).not.toBeNull();
+  });
+
   it("looks at a selected face and zooms to the selection", async () => {
     await exec("selection.set", { items: [{ kind: "face", body: BODY, key: "plate/side:right" }] });
     expect(await exec("view.normalTo")).toMatchObject({ ok: true });

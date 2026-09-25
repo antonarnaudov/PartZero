@@ -160,6 +160,17 @@ export class ViewStore extends Store<ViewState> {
     this.setState({ section });
   }
 
+  /**
+   * Another document was loaded: drop the state that belongs to the previous model (per-body
+   * visibility and colour are keyed by body name, and the section plane's offset was computed
+   * from the old model's centre). The preferences (display mode, toggles, projection) stay.
+   */
+  resetDocumentState(): void {
+    const s = this.getState();
+    if (Object.keys(s.bodies).length === 0 && s.section === null) return;
+    this.setState({ bodies: {}, section: null });
+  }
+
   patchSection(patch: Partial<SectionState>): SectionState | null {
     const cur = this.getState().section;
     if (!cur) return null;

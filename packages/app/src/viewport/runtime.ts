@@ -101,9 +101,16 @@ export class ViewportRuntime {
     );
     // The legacy single selection (timeline, code, Escape) drives the selection model.
     let lastDocSel = app.doc.getState().selection;
+    let lastDocId = app.doc.getState().docId;
     this.unsubs.push(
       app.doc.subscribe(() => {
-        const sel = app.doc.getState().selection;
+        const st = app.doc.getState();
+        // A different document (open, new, template) starts from a clean view.
+        if (st.docId !== lastDocId) {
+          lastDocId = st.docId;
+          this.resetForDocument();
+        }
+        const sel = st.selection;
         if (sel === lastDocSel) return;
         lastDocSel = sel;
         if (sel.origin === "viewport") return;
@@ -118,6 +125,19 @@ export class ViewportRuntime {
         this.syncHighlights();
       }),
     );
+  }
+
+  /**
+   * Another document was loaded: per-body visibility and colours, the section plane, the
+   * selection (and hover), an in-flight handle drag and the Measure panel all belonged to the
+   * previous model. Display preferences (mode, grid, axes, origin, projection) and the selection
+   * filter are the user's and stay.
+   */
+  resetForDocument(): void {
+    this.manipulators.cancelDrag();
+    this.view.resetDocumentState();
+    this.selection.reset();
+    this.measure.setOpen(false);
   }
 
   /** How UI-originated app commands run (`selection.selectEntity` keeps the timeline/code in sync). */
