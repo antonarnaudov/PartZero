@@ -1,0 +1,48 @@
+forge/crates/forge-io/src/step/threads.rs
+  s_59c0dd2af30db2::t_c65bb9dbea89c4 1-51,55-99,106-137
+  s_59c0dd2af30db2::t_a6252915efa9ac 52-54,100-105
+forge/crates/forge-core/src/geom/surface/helicoid.rs
+  s_59c0dd2af30db2::t_40b6e6d2e6c6b9 585-599
+  s_59c0dd2af30db2::t_bbd15c18a391ed 389-432,600
+  s_59c0dd2af30db2::t_5b28fd6a3ee9d8 584,601
+forge/crates/forge-io/src/step/brep.rs
+  s_59c0dd2af30db2::t_c61a7747443a78 242-256,258-266,984-988,995,999-1000,1004-1005,1007-1026,1029,1118,1168
+  s_59c0dd2af30db2::t_20db5dde34d2a3 257
+  s_59c0dd2af30db2::t_a6252915efa9ac 1006
+forge/crates/forge-core/src/geom/nurbs/surface.rs
+  s_59c0dd2af30db2::t_372dc4359939c9 347-358
+forge/crates/forge-core/src/geom/hermite.rs
+  s_59c0dd2af30db2::t_ea099dd529cda7 1-95
+forge/crates/forge-core/src/geom/mod.rs
+  s_59c0dd2af30db2::t_f56d1ff2d6e24e 30
+forge/crates/forge-io/src/step/orient.rs
+  s_59c0dd2af30db2::t_372dc4359939c9 128-130,139-153,216,319
+  s_59c0dd2af30db2::t_a6252915efa9ac 174-181,224-231
+forge/crates/forge-io/src/step/mod.rs
+  s_59c0dd2af30db2::t_a6252915efa9ac 65,298-299,302-303
+  s_59c0dd2af30db2::t_f56d1ff2d6e24e 108,293-297,300-301,304-318
+forge/crates/forge-core/src/geom/helix.rs
+  s_59c0dd2af30db2::t_40b6e6d2e6c6b9 555-574
+  s_59c0dd2af30db2::t_268e609f2462bd 295-313,575
+  s_59c0dd2af30db2::t_a23f69b5d3b092 554,576
+forge/crates/forge-io/tests/step_threads.rs
+  s_59c0dd2af30db2::t_85605c20a7dec2 1-8,10-164,170-175,179-188,190-200,202-207,209-210,217-221
+  s_59c0dd2af30db2::t_f02138dc2e77b1 176-178,189,201,208,211-216
+  s_59c0dd2af30db2::t_a6252915efa9ac 9,165-169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6ac92698dd1c07fb12541839887df617d2120767",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
