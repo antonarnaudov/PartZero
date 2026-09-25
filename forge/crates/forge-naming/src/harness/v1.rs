@@ -92,6 +92,15 @@ pub enum V1Family {
     MultiMember,
     /// Picks and filters over named sources (`extreme`, `largest`, `filter`).
     Pick,
+    /// Phase C, IR v1 models ([`super::ops`]): booleans (a cut that splits a body, a join that
+    /// merges two, a moved tool, a deeper or removed cut).
+    Boolean,
+    /// Phase C: holes (add, move, resize, remove a position, change the kind).
+    Hole,
+    /// Phase C: fillets (add, remove, change the radius).
+    Fillet,
+    /// Phase C: patterns (count up and down, spacing, skip, circular count).
+    Pattern,
 }
 
 impl V1Family {
@@ -107,6 +116,10 @@ impl V1Family {
             V1Family::TwoStep => "(g) two edits, stale capture",
             V1Family::MultiMember => "(h) multi-member",
             V1Family::Pick => "(i) picks over named sources",
+            V1Family::Boolean => "(j) booleans",
+            V1Family::Hole => "(k) holes",
+            V1Family::Fillet => "(l) fillets",
+            V1Family::Pattern => "(m) patterns",
         }
     }
 }
@@ -159,6 +172,8 @@ pub struct V1Report {
     /// `IDENTICAL_MATCH_CONFIDENCE`, and candidates at or above `AUTO_ACCEPT_CONFIDENCE`
     /// (must be 0: only geometry-identical matches reach 0.95).
     pub auto_accept_violations: usize,
+    /// The Phase C families' own counts ([`super::ops`]; empty when they were not run).
+    pub ops: super::ops::OpsCounts,
 }
 
 // ---- scopes ------------------------------------------------------------------------------
@@ -1556,9 +1571,12 @@ fn two_step(rep: &mut V1Report, model: &Model, base_ev: &Evaluated, base_truth: 
     }
 }
 
-/// Run the v1 harness over all spike models.
+/// Run the v1 harness over all spike models, then the Phase C operation families on their
+/// IR v1 models ([`super::ops::run_ops`]).
 pub fn run_v1() -> V1Report {
-    run_v1_models(&models())
+    let mut rep = run_v1_models(&models());
+    rep.ops = super::ops::run_ops(&mut rep);
+    rep
 }
 
 /// A base reference's resolution on its own model must be exact and point at itself.
@@ -1654,8 +1672,14 @@ impl V1Tally {
     }
 }
 
+/// `a / b`, or NaN when nothing was scored: an empty family never passes a rate gate
+/// (`NaN >= x` is false) and renders as `n/a`.
 fn ratio(a: usize, b: usize) -> f64 {
-    if b == 0 { 1.0 } else { a as f64 / b as f64 }
+    if b == 0 {
+        f64::NAN
+    } else {
+        a as f64 / b as f64
+    }
 }
 
 /// Tallies per family.
@@ -1688,25 +1712,147 @@ pub struct V1Criteria {
     pub multi_member: f64,
     /// (i) picks over named sources: correct rate (informational).
     pub pick: f64,
+    /// (j) booleans: correct rate (W4/F1 gate: ≥ 90 %).
+    pub boolean: f64,
+    /// (k) holes: correct rate (≥ 90 %).
+    pub hole: f64,
+    /// (l) fillets: correct rate (≥ 90 %).
+    pub fillet: f64,
+    /// (m) patterns: correct rate (≥ 90 %).
+    pub pattern: f64,
     /// SILENT_WRONG over all families.
     pub silent_wrong: usize,
     /// Identity failures, key problems, `#` in captures, candidates at auto-accept.
     pub invariant_failures: usize,
+    /// The spike families (a)–(i) ran (`false` for `--ops-only`): their gates apply.
+    pub spike_ran: bool,
+    /// Coverage problems ([`coverage_problems`]): a skipped Phase C mutation, a family below its
+    /// minimum mutations or scored references, too few scored blend references, a spike family
+    /// that scored nothing.
+    pub coverage_failures: usize,
 }
 
 impl V1Criteria {
-    /// GO: (a) ≥ 99.9 %, (b) 100 %, (c) ≥ 99 %, renames and parameter edits 100 % exact,
-    /// 0 SILENT_WRONG, and every invariant holds.
+    /// GO: (a) ≥ 99.9 %, (b) 100 %, (c) ≥ 99 %, renames and parameter edits 100 % exact (when
+    /// the spike families ran), the Phase C families (j)–(m) ≥ 90 % correct (the plan's W4
+    /// boolean-family gate, applied to holes, fillets and patterns too), 0 SILENT_WRONG, every
+    /// invariant holds, and nothing passes vacuously: every gated family scored references
+    /// (an empty family's rate is NaN, which fails), no Phase C mutation was skipped, and each
+    /// Phase C family meets its coverage minimums ([`coverage_problems`]).
     pub fn go(&self) -> bool {
-        self.dimension >= 0.999
-            && self.suppress >= 1.0
-            && self.topology >= 0.99
-            && self.rename_curve_exact >= 1.0
-            && self.rename_feature_exact >= 1.0
-            && self.parameter_exact >= 1.0
+        let spike = !self.spike_ran
+            || (self.dimension >= 0.999
+                && self.suppress >= 1.0
+                && self.topology >= 0.99
+                && self.rename_curve_exact >= 1.0
+                && self.rename_feature_exact >= 1.0
+                && self.parameter_exact >= 1.0);
+        spike
+            && self.boolean >= 0.9
+            && self.hole >= 0.9
+            && self.fillet >= 0.9
+            && self.pattern >= 0.9
             && self.silent_wrong == 0
             && self.invariant_failures == 0
+            && self.coverage_failures == 0
     }
+}
+
+/// Why a run's gates would pass vacuously or on too little evidence (must be empty for GO):
+/// - a Phase C mutation skipped because its mutated document was rejected;
+/// - a Phase C family (j)–(m) with fewer than [`super::ops::min_family_mutations`] accepted
+///   mutations or [`super::ops::min_family_scored`] scored references;
+/// - family (l) with fewer than [`super::ops::MIN_BLEND_SCORED`] scored references to blend
+///   entities (fillet and chamfer faces and their edges);
+/// - more than [`super::ops::MAX_DROPPED`] synthesized queries that did not resolve to their own
+///   entity, or [`super::ops::MAX_BROAD`] picks over broad sources (both left unscored);
+/// - when the spike families ran (`rep.models > 0`), a gated spike family (a)–(f) that scored
+///   nothing;
+/// - more than [`super::ops::MAX_UNREFERENCED`] base entities of the Phase C models without a
+///   synthesized query (left unscored: growth would shrink the evidence silently).
+pub fn coverage_problems(rep: &V1Report) -> Vec<String> {
+    use super::ops::{
+        MAX_BROAD, MAX_DROPPED, MAX_UNREFERENCED, MIN_BLEND_SCORED, is_blend_key,
+        min_family_mutations, min_family_scored,
+    };
+    let mut out: Vec<String> = rep
+        .ops
+        .skipped
+        .iter()
+        .map(|s| format!("skipped Phase C mutation {s}"))
+        .collect();
+    let t = tallies(rep);
+    let scored = |f: V1Family| t.get(&f).map_or(0, V1Tally::scored);
+    for f in [
+        V1Family::Boolean,
+        V1Family::Hole,
+        V1Family::Fillet,
+        V1Family::Pattern,
+    ] {
+        let n = rep.mutations.get(&f).copied().unwrap_or(0);
+        if n < min_family_mutations(f) {
+            out.push(format!(
+                "{}: {n} accepted mutations (minimum {})",
+                f.as_str(),
+                min_family_mutations(f)
+            ));
+        }
+        if scored(f) < min_family_scored(f) {
+            out.push(format!(
+                "{}: {} scored references (minimum {})",
+                f.as_str(),
+                scored(f),
+                min_family_scored(f)
+            ));
+        }
+    }
+    let blend = rep
+        .refs
+        .iter()
+        .filter(|r| {
+            r.family == V1Family::Fillet && r.outcome != Outcome::Excluded && is_blend_key(&r.key)
+        })
+        .count();
+    if blend < MIN_BLEND_SCORED {
+        out.push(format!(
+            "{}: {blend} scored references to blend entities (minimum {MIN_BLEND_SCORED})",
+            V1Family::Fillet.as_str()
+        ));
+    }
+    if rep.ops.dropped > MAX_DROPPED {
+        out.push(format!(
+            "{} synthesized queries did not resolve to their own entity (maximum {MAX_DROPPED})",
+            rep.ops.dropped
+        ));
+    }
+    if rep.ops.broad > MAX_BROAD {
+        out.push(format!(
+            "{} synthesized queries pick over broad sources, not scored (maximum {MAX_BROAD})",
+            rep.ops.broad
+        ));
+    }
+    if rep.ops.unreferenced.len() > MAX_UNREFERENCED {
+        out.push(format!(
+            "{} base entities without a synthesized query (maximum {MAX_UNREFERENCED}): {}",
+            rep.ops.unreferenced.len(),
+            rep.ops.unreferenced.join("; ")
+        ));
+    }
+    if rep.models > 0 {
+        for f in [
+            V1Family::Dimension,
+            V1Family::Suppress,
+            V1Family::Topology,
+            V1Family::RenameCurve,
+            V1Family::RenameFeature,
+            V1Family::Parameter,
+        ] {
+            if scored(f) == 0 {
+                out.push(format!("{}: no scored references", f.as_str()));
+            }
+        }
+    }
+    out
 }
 
 /// The criteria of a run.
@@ -1714,6 +1860,8 @@ pub fn criteria_v1(rep: &V1Report) -> V1Criteria {
     let t = tallies(rep);
     let get = |f: V1Family| t.get(&f).copied().unwrap_or_default();
     V1Criteria {
+        spike_ran: rep.models > 0,
+        coverage_failures: coverage_problems(rep).len(),
         dimension: get(V1Family::Dimension).correct_rate(),
         suppress: get(V1Family::Suppress).correct_rate(),
         topology: get(V1Family::Topology).correct_rate(),
@@ -1723,6 +1871,10 @@ pub fn criteria_v1(rep: &V1Report) -> V1Criteria {
         two_step: get(V1Family::TwoStep).correct_rate(),
         multi_member: get(V1Family::MultiMember).correct_rate(),
         pick: get(V1Family::Pick).correct_rate(),
+        boolean: get(V1Family::Boolean).correct_rate(),
+        hole: get(V1Family::Hole).correct_rate(),
+        fillet: get(V1Family::Fillet).correct_rate(),
+        pattern: get(V1Family::Pattern).correct_rate(),
         silent_wrong: t.values().map(|x| x.silent_wrong).sum(),
         invariant_failures: rep.identity_failures.len()
             + rep.key_problems.len()
@@ -1732,7 +1884,11 @@ pub fn criteria_v1(rep: &V1Report) -> V1Criteria {
 }
 
 fn pct(x: f64) -> String {
-    format!("{:.2} %", 100.0 * x)
+    if x.is_nan() {
+        "n/a".into()
+    } else {
+        format!("{:.2} %", 100.0 * x)
+    }
 }
 
 /// The v1 report as Markdown.
@@ -1793,6 +1949,14 @@ pub fn render_v1(rep: &V1Report) -> String {
     ] {
         let _ = writeln!(out, "| {label} | {} | (no gate) |", pct(v));
     }
+    for (label, v) in [
+        ("(j) booleans correct", c.boolean),
+        ("(k) holes correct", c.hole),
+        ("(l) fillets correct", c.fillet),
+        ("(m) patterns correct", c.pattern),
+    ] {
+        let _ = writeln!(out, "| {label} | {} | ≥ 90 % |", pct(v));
+    }
     let _ = writeln!(
         out,
         "| SILENT_WRONG (all families) | {} | 0 |",
@@ -1800,13 +1964,86 @@ pub fn render_v1(rep: &V1Report) -> String {
     );
     let _ = writeln!(
         out,
-        "| invariants (identity {}, keys {}, `#` in captures {}, candidates ≥ 0.95 {}) | {} | 0 |\n",
+        "| invariants (identity {}, keys {}, `#` in captures {}, candidates ≥ 0.95 {}) | {} | 0 |",
         rep.identity_failures.len(),
         rep.key_problems.len(),
         rep.captures_with_index,
         rep.auto_accept_violations,
         c.invariant_failures
     );
+    let blend_scored = rep
+        .refs
+        .iter()
+        .filter(|r| {
+            r.family == V1Family::Fillet
+                && r.outcome != Outcome::Excluded
+                && super::ops::is_blend_key(&r.key)
+        })
+        .count();
+    let families = [
+        V1Family::Boolean,
+        V1Family::Hole,
+        V1Family::Fillet,
+        V1Family::Pattern,
+    ];
+    let _ = writeln!(
+        out,
+        "| coverage (no skipped Phase C mutation; (j)–(m) ≥ {} mutations and ≥ {} scored refs; (l) ≥ {} scored blend refs, now {blend_scored}; ≤ {} dropped and ≤ {} broad queries{}) | {} problems | 0 |\n",
+        families
+            .iter()
+            .map(|f| super::ops::min_family_mutations(*f).to_string())
+            .collect::<Vec<_>>()
+            .join("/"),
+        families
+            .iter()
+            .map(|f| super::ops::min_family_scored(*f).to_string())
+            .collect::<Vec<_>>()
+            .join("/"),
+        super::ops::MIN_BLEND_SCORED,
+        super::ops::MAX_DROPPED,
+        super::ops::MAX_BROAD,
+        if c.spike_ran {
+            "; every gated spike family scored"
+        } else {
+            "; spike families not run"
+        },
+        c.coverage_failures
+    );
+    let problems = coverage_problems(rep);
+    if !problems.is_empty() {
+        let _ = writeln!(out, "Coverage problems:\n");
+        for p in &problems {
+            let _ = writeln!(out, "- {p}");
+        }
+        let _ = writeln!(out);
+    }
+    if rep.ops.models > 0 {
+        let _ = writeln!(
+            out,
+            "Phase C families (j)–(m): {} IR v1 models; references are `tag` features resolved by forge-regen; family (l) covers blend entities through {} authored references (fillet and chamfer faces and their edges, scored); not scored: {} entities without a query (maximum {}, listed below), {} queries that did not resolve to their own entity (maximum {}), {} picks over broad sources (family (i) semantics; maximum {}); {} references rejected statically by a mutated document{}.\n",
+            rep.ops.models,
+            rep.ops.blend,
+            rep.ops.unreferenced.len(),
+            super::ops::MAX_UNREFERENCED,
+            rep.ops.dropped,
+            super::ops::MAX_DROPPED,
+            rep.ops.broad,
+            super::ops::MAX_BROAD,
+            rep.ops.rejected,
+            if rep.ops.skipped.is_empty() {
+                String::new()
+            } else {
+                format!("; skipped mutations: {}", rep.ops.skipped.join("; "))
+            }
+        );
+        if !rep.ops.unreferenced.is_empty() {
+            let _ = writeln!(out, "Entities without a synthesized query (not scored):\n");
+            for k in &rep.ops.unreferenced {
+                let _ = writeln!(out, "- `{k}`");
+            }
+            let _ = writeln!(out);
+        }
+    }
     let _ = writeln!(
         out,
         "| Family | Mutations | Refs | CORRECT | FLAGGED_CORRECTLY | WRONG_BUT_FLAGGED | SILENT_WRONG | Excluded | Correct | Exact |"

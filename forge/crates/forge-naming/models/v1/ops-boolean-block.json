@@ -1,0 +1,190 @@
+{
+  "schema": "aicad.ir/1",
+  "meta": {
+    "name": "ops_boolean_block",
+    "description": "Naming harness (booleans): 80x40x20 block with a 10 mm groove across it, a joined boss, and a bridge joined to it that stops short of a second block"
+  },
+  "parts": [
+    {
+      "id": "p_block",
+      "name": "block",
+      "features": [
+        {
+          "type": "sketch",
+          "id": "f_blockSk",
+          "name": "blockSk",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "body",
+              "center": [
+                0.0,
+                0.0
+              ],
+              "w": 80.0,
+              "h": 40.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_block",
+          "name": "block",
+          "sketch": "f_blockSk",
+          "distance": 20.0
+        },
+        {
+          "type": "sketch",
+          "id": "f_grooveSk",
+          "name": "grooveSk",
+          "plane": {
+            "origin": [
+              0.0,
+              0.0,
+              20.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "x_dir": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "groove",
+              "center": [
+                -10.0,
+                0.0
+              ],
+              "w": 10.0,
+              "h": 50.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_groove",
+          "name": "groove",
+          "sketch": "f_grooveSk",
+          "distance": 10.0,
+          "direction": "reverse",
+          "op": "cut",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "f_block"
+            }
+          }
+        },
+        {
+          "type": "sketch",
+          "id": "f_bossSk",
+          "name": "bossSk",
+          "plane": {
+            "origin": [
+              0.0,
+              0.0,
+              20.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "x_dir": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          },
+          "curves": [
+            {
+              "kind": "circle",
+              "id": "post",
+              "center": [
+                25.0,
+                0.0
+              ],
+              "radius": 6.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_boss",
+          "name": "boss",
+          "sketch": "f_bossSk",
+          "distance": 10.0,
+          "op": "join",
+          "targets": {
+            "kind": "body",
+            "q": {
+              "op": "body",
+              "feature": "f_block"
+            }
+          }
+        },
+        {
+          "type": "sketch",
+          "id": "f_sideSk",
+          "name": "sideSk",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "side",
+              "center": [
+                70.0,
+                0.0
+              ],
+              "w": 30.0,
+              "h": 40.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_side",
+          "name": "side",
+          "sketch": "f_sideSk",
+          "distance": 20.0
+        },
+        {
+          "type": "sketch",
+          "id": "f_bridgeSk",
+          "name": "bridgeSk",
+          "plane": "XY",
+          "curves": [
+            {
+              "kind": "rect",
+              "id": "bridge",
+              "corner": [
+                38.0,
+                -5.0
+              ],
+              "w": 12.0,
+              "h": 10.0
+            }
+          ]
+        },
+        {
+          "type": "extrude",
+          "id": "f_bridge",
+          "name": "bridge",
+          "sketch": "f_bridgeSk",
+          "distance": 5.0,
+          "op": "join",
+          "targets": "all"
+        }
+      ]
+    }
+  ]
+}
