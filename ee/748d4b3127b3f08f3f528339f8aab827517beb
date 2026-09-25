@@ -1,0 +1,50 @@
+forge/crates/forge-regen/tests/v1_golden_hash.rs
+  s_59c0dd2af30db2::t_043820d3459bb1 11-13,33,48,73-77
+  s_59c0dd2af30db2::t_8934600b7e2980 101-107
+forge/crates/forge-regen/src/v1/mod.rs
+  s_59c0dd2af30db2::t_f5a3a3c7463edc 13,29-35,83-86,406-408
+forge/crates/forge-regen/src/v1/blend.rs
+  s_59c0dd2af30db2::t_f5a3a3c7463edc 19-24,26-28,32-33,219-282
+  s_59c0dd2af30db2::t_ec28095248407d 283-285
+forge/crates/forge-cli/src/main.rs
+  s_59c0dd2af30db2::t_a45c94c970be4a 18-21
+forge/crates/forge-cli/tests/cli_v1.rs
+  s_59c0dd2af30db2::t_7fdacdb1fb24d8 265-268,271,278,281-290,327-330,481-484,486,508-510,518-522,525,527
+  s_59c0dd2af30db2::t_6d8a5804996024 492-496,498-503,505-507,511-515,530-535
+forge/crates/forge-regen/tests/v1.rs
+  s_59c0dd2af30db2::t_6d8a5804996024 1090-1091,1106-1110,1128-1131,1133-1134,1155-1160
+  s_59c0dd2af30db2::t_e4a300561bb5d2 934-935
+  s_59c0dd2af30db2::t_ae27855a82018b 1181-1188,1190-1195,1197-1200
+  s_59c0dd2af30db2::t_2d61fea962ddbf 1166-1180,1189,1196,1201
+  s_59c0dd2af30db2::t_9dbc1bcf5eb69a 631-632,655,671,1033,1036-1045,1047,1051,1074-1081,1083-1088,1093-1105,1111-1117,1122-1123,1126-1127,1132,1135-1154,1161-1165,1204-1205,1207-1209,1211-1225
+  s_59c0dd2af30db2::t_c6c35baaf46aa9 1226-1227
+forge/crates/forge-wasm/src/engine.rs
+  s_59c0dd2af30db2::t_6b970cd65368ed 1139-1149,1153,1155-1157,1159
+  s_59c0dd2af30db2::t_6d8a5804996024 1158
+  s_59c0dd2af30db2::t_c7605d4abec9ef 9-10
+  s_59c0dd2af30db2::t_214d0ed69c13e1 1115-1116,1118
+forge/crates/forge-wasm/src/commands_tests.rs
+  s_59c0dd2af30db2::t_77cb46f431a370 1892-1896,1898,1906,1912-1916
+  s_59c0dd2af30db2::t_646d17db5cc030 1934
+  s_59c0dd2af30db2::t_6d8a5804996024 1907-1911
+forge/crates/forge-regen/src/v1/part.rs
+  s_59c0dd2af30db2::t_f5a3a3c7463edc 30-35,44,399
+forge/crates/forge-regen/tests/v1_programs/draft_walls.json
+  s_59c0dd2af30db2::t_d8f61fc5924c66 1-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ee748d4b3127b3f08f3f528339f8aab827517beb",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
