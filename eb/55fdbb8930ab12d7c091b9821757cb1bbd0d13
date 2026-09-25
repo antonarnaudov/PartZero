@@ -1,0 +1,26 @@
+packages/app/src/tools/builtin/modify.ts
+  s_59c0dd2af30db2::t_08a2c4414372bc 621
+  s_59c0dd2af30db2::t_84567c0c3d28ba 530-620,622-668,670,673
+packages/desktop/e2e/feature-tools.e2e.ts
+  s_59c0dd2af30db2::t_97b73a814cf3f0 273-301
+packages/app/test/feature-tools.test.ts
+  s_59c0dd2af30db2::t_02718d7b79cdd9 367-422
+packages/app/test/ir-v1-ops.test.ts
+  s_59c0dd2af30db2::t_6ea45365a52724 446,453,458-459
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "eb55fdbb8930ab12d7c091b9821757cb1bbd0d13",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
