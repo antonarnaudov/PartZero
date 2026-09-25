@@ -245,8 +245,11 @@ interface Remembered {
 export class SketchIntentMemory {
   private readonly byName = new Map<string, Remembered>();
 
+  /** Canonical JSON of the plane and curves (sorted keys: the compiled IR may order them differently). */
   private static geometry(s: V0Sketch): string {
-    return JSON.stringify({ plane: s.plane, curves: s.curves });
+    const canon = (v: unknown): unknown =>
+      Array.isArray(v) ? v.map(canon) : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon((v as Record<string, unknown>)[k])])) : v;
+    return JSON.stringify(canon({ plane: s.plane, curves: s.curves }));
   }
 
   remember(written: V0Sketch, sketch: v1.SketchFeature, params: readonly v1.Parameter[]): void {

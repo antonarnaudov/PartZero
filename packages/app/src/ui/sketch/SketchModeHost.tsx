@@ -488,10 +488,10 @@ export function SketchModeHost(): ReactElement | null {
         <span className="sk-title">
           Sketch <b>{state.sketchName}</b> on {state.plane?.label ?? ""}
         </span>
-        <button type="button" className="ghost-btn" title="Undo in sketch (⌘Z)" disabled={!state.snapshot?.canUndo} onClick={() => sketchMode.undo()}>
+        <button type="button" className="ghost-btn" data-testid="sketch-undo" title="Undo in sketch (⌘Z)" disabled={!state.snapshot?.canUndo} onClick={() => sketchMode.undo()}>
           Undo
         </button>
-        <button type="button" className="ghost-btn" title="Redo in sketch (⌘⇧Z)" disabled={!state.snapshot?.canRedo} onClick={() => sketchMode.redo()}>
+        <button type="button" className="ghost-btn" data-testid="sketch-redo" title="Redo in sketch (⌘⇧Z)" disabled={!state.snapshot?.canRedo} onClick={() => sketchMode.redo()}>
           Redo
         </button>
         <button type="button" className="ghost-btn" title="Fit (F)" onClick={() => sketchMode.fit()}>

@@ -2,10 +2,14 @@
  * Sketch mode end to end in the desktop app (plan §2.7, §5.1): real mouse and keyboard on the
  * sketch overlay — plane picker, rectangle from the origin, dimensions (a number and a new
  * parameter), fully constrained colouring, a circle dragged by its centre, a conflicting dimension
- * made driven, wheel zoom, and Finish handing an IR v1 sketch feature to the commit sink.
+ * made driven, mouse wheel / trackpad / pinch navigation, and Finish putting the sketch in the
+ * open CadScript document: a timeline row, extruded from the Finish offer into a body, reopened
+ * from the timeline with its constraints. Then the XZ plane, undo/redo, trim, Esc unwinding,
+ * Cancel, and a conflicting sketch repaired with one click.
  *
  * Positions come from `window.__pzSketch.client(u, v)` (sketch mm → page pixels); every gesture
- * is a real `page.mouse` / `page.keyboard` event.
+ * is a real `page.mouse` / `page.keyboard` event, except the trackpad and pinch traces, which are
+ * `WheelEvent`s dispatched on the sketch canvas (Playwright's wheel is a notched mouse wheel).
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -38,8 +42,50 @@ interface SketchState {
 
 declare global {
   interface Window {
-    __pzSketch?: { state(): SketchState; client(u: number, v: number): [number, number]; finished(): Array<Record<string, unknown>> };
+    __pzSketch?: {
+      state(): SketchState & { mode: string; sketchName: string; notice: { text: string } | null };
+      client(u: number, v: number): [number, number];
+      finished(): Array<Record<string, unknown>>;
+      mode: { begin(o: unknown): Promise<boolean> };
+    };
   }
+}
+
+interface DocView {
+  features: Array<{ name: string; type: string; status: string | null }>;
+  bbox: { min: [number, number, number]; max: [number, number, number] } | null;
+}
+
+/** The document once compile and evaluation settled (`window.__aicad`, declared in smoke.e2e.ts). */
+async function docView(): Promise<DocView> {
+  return page.evaluate(async () => {
+    const s = (await window.__aicad!.idle()) as unknown as DocView;
+    return JSON.parse(JSON.stringify({ features: s.features, bbox: s.bbox })) as DocView;
+  });
+}
+
+const row = (name: string) => page.locator(`[data-testid="timeline-feature"][data-feature="${name}"]`);
+
+/** Dispatch a trace of wheel events on the sketch canvas (a trackpad or a pinch), 16 ms apart. */
+async function wheelTrace(trace: Array<{ deltaX?: number; deltaY: number; ctrlKey?: boolean; shiftKey?: boolean }>): Promise<void> {
+  const [x, y] = await at(0, 0);
+  await page.evaluate(
+    async ([events, cx, cy]) => {
+      const el = document.querySelector("[data-testid=sketch-canvas]")!;
+      for (const e of events) {
+        el.dispatchEvent(new WheelEvent("wheel", { deltaX: e.deltaX ?? 0, deltaY: e.deltaY, deltaMode: 0, ctrlKey: !!e.ctrlKey, shiftKey: !!e.shiftKey, clientX: cx, clientY: cy, bubbles: true, cancelable: true }));
+        await new Promise((r) => setTimeout(r, 16));
+      }
+    },
+    [trace, x, y] as const,
+  );
+}
+
+/** Open a new sketch on a named plane from the toolbar. */
+async function newSketch(plane: "XY" | "XZ" | "YZ"): Promise<void> {
+  await page.getByTestId("toolbar-sketch").click();
+  await page.getByTestId(`sketch-plane-${plane}`).click();
+  await expect.poll(async () => (await sk()).phase).toBe("active");
 }
 
 async function sk(): Promise<SketchState> {
@@ -167,35 +213,179 @@ test("drags a circle by its centre and resolves a conflicting dimension by makin
   expect(s.snapshot!.ok).toBe(true);
 });
 
-test("zooms with the wheel (mouse) and pans with a shift-scroll (trackpad)", async () => {
+test("zooms with a mouse wheel and a pinch, and pans with two fingers (FD3)", async () => {
   const before = (await sk()).view.scale;
   const [x, y] = await at(25, 15);
   await page.mouse.move(x, y);
   await page.mouse.wheel(0, -300);
   await expect.poll(async () => (await sk()).view.scale).toBeGreaterThan(before);
-  // Shift + scroll pans (FD3: Shift + two-finger pan); the sketch moves with the fingers.
-  const [, ay] = await at(0, 0);
-  await page.keyboard.down("Shift");
-  await page.mouse.wheel(0, 60);
-  await page.keyboard.up("Shift");
-  await expect.poll(async () => (await at(0, 0))[1]).toBeCloseTo(ay - 60, 3);
+  // A two-finger scroll (fractional deltas, horizontal jitter) pans without zooming; the sketch
+  // moves like page content.
+  const scale = (await sk()).view.scale;
+  const [ax, ay] = await at(0, 0);
+  await wheelTrace([{ deltaY: 2.5 }, { deltaX: 0.5, deltaY: 6 }, { deltaY: 12.5 }, { deltaY: 9 }]);
+  await expect.poll(async () => (await at(0, 0))[1]).toBeCloseTo(ay - 30, 3);
+  expect((await at(0, 0))[0]).toBeCloseTo(ax - 0.5, 3);
+  expect((await sk()).view.scale).toBe(scale);
+  // Shift + two fingers pans too; a pinch (ctrl + wheel) zooms in.
+  await wheelTrace([{ deltaY: 3.5, shiftKey: true }]);
+  await expect.poll(async () => (await at(0, 0))[1]).toBeCloseTo(ay - 33.5, 3);
+  await wheelTrace([{ deltaY: -4.5, ctrlKey: true }, { deltaY: -3.25, ctrlKey: true }]);
+  await expect.poll(async () => (await sk()).view.scale).toBeGreaterThan(scale);
+  await page.keyboard.press("f"); // fit again for the next gestures
   expect(navigations.length).toBeLessThanOrEqual(1);
 });
 
-test("finishes into an IR v1 sketch feature with its new parameter", async () => {
+let startFeatures: string[] = [];
+
+test("finishes into the document: a timeline row for the new sketch", async () => {
+  startFeatures = (await docView()).features.map((f) => f.name);
+  expect(startFeatures).not.toContain("sketch1");
   await page.screenshot({ path: screenshotPath("sketch-mode.png", "AICAD_E2E_SKETCH_SCREENSHOT") });
   await page.getByTestId("sketch-finish").click();
   await expect(page.getByTestId("sketch-mode")).toBeHidden();
   const results = await page.evaluate(() => window.__pzSketch!.finished());
   expect(results).toHaveLength(1);
-  const f = results[0] as { mode: string; feature: { type: string; plane: string; curves: unknown[]; constraints: unknown[] }; params: Array<{ name: string }>; check: { ok: boolean; regions: number } };
+  const f = results[0] as { mode: string; feature: { type: string; name: string; plane: string; curves: unknown[]; constraints: unknown[] }; params: Array<{ name: string }>; check: { ok: boolean; regions: number } };
   expect(f.mode).toBe("new");
   expect(f.feature.type).toBe("sketch");
+  expect(f.feature.name).toBe("sketch1");
   expect(f.feature.plane).toBe("XY");
   expect(f.feature.curves).toHaveLength(5);
   expect(f.check.ok).toBe(true);
   expect(f.check.regions).toBe(1);
   expect(f.params.map((p) => p.name)).toEqual(["height"]);
+  // In the model: the timeline shows it, evaluated, and it is selected.
+  await expect(row("sketch1")).toHaveAttribute("data-status", "ok");
+  await expect(row("sketch1")).toHaveClass(/selected/);
+  const doc = await docView();
+  expect(doc.features.map((x) => x.name)).toEqual([...startFeatures, "sketch1"]);
   expect(pageErrors).toEqual([]);
   expect(consoleErrors.filter((e) => /sketch/i.test(e))).toEqual([]);
+});
+
+test("extrudes the finished sketch from the Finish offer into a body", async () => {
+  await expect(page.getByTestId("sketch-extrude-offer")).toBeVisible();
+  await page.getByTestId("sketch-extrude-distance").fill("12");
+  await page.getByTestId("sketch-extrude-run").click();
+  await expect(page.getByTestId("sketch-extrude-offer")).toBeHidden();
+  await expect(row("extrude1")).toHaveAttribute("data-status", "ok");
+  const doc = await docView();
+  expect(doc.features.map((x) => x.name)).toEqual([...startFeatures, "sketch1", "extrude1"]);
+  // The 50 × 30 plate from the origin, 12 high: the model's box reaches it.
+  expect(doc.bbox!.max[0]).toBeCloseTo(50, 6);
+  expect(doc.bbox!.max[1]).toBeCloseTo(30, 6);
+  expect(doc.bbox!.max[2]).toBeCloseTo(12, 6);
+  // ⌘Z in the app takes the extrude back out, ⇧⌘Z puts it back.
+  await page.evaluate(() => window.__aicad!.execute({ id: "edit.undo" }));
+  await expect(row("extrude1")).toHaveCount(0);
+  await page.evaluate(() => window.__aicad!.execute({ id: "edit.redo" }));
+  await expect(row("extrude1")).toHaveAttribute("data-status", "ok");
+});
+
+test("reopens the sketch from the timeline with its constraints, and Cancel changes nothing", async () => {
+  await row("sketch1").dblclick();
+  await expect(page.getByTestId("sketch-mode")).toBeVisible();
+  await expect.poll(async () => (await sk()).phase).toBe("active");
+  const s = await page.evaluate(() => {
+    const x = window.__pzSketch!.state();
+    return JSON.parse(JSON.stringify({ mode: x.mode, name: x.sketchName, constraints: x.snapshot!.constraints })) as { mode: string; name: string; constraints: Array<{ expr?: string; measured?: number }> };
+  });
+  expect(s.mode).toBe("edit");
+  expect(s.name).toBe("sketch1");
+  expect(s.constraints.find((c) => c.expr === "height")!.measured).toBeCloseTo(30, 6);
+  await page.getByTestId("sketch-cancel").click();
+  await expect(page.getByTestId("sketch-mode")).toBeHidden();
+  expect((await docView()).features.map((x) => x.name)).toEqual([...startFeatures, "sketch1", "extrude1"]);
+  expect(await page.evaluate(() => window.__pzSketch!.finished().length)).toBe(1);
+});
+
+test("sketches on XZ, with undo and redo inside the sketch", async () => {
+  await newSketch("XZ");
+  await expect(page.getByTestId("sketch-mode")).toContainText("XZ plane");
+  await page.keyboard.press("c");
+  await click(0, 20);
+  await click(8, 20);
+  await page.keyboard.press("l");
+  await click(-30, 0);
+  await click(-10, 0);
+  await page.keyboard.press("Escape");
+  expect((await sk()).snapshot!.curves.map((c) => c.kind).sort()).toEqual(["circle", "line"]);
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect.poll(async () => (await sk()).snapshot!.curves.map((c) => c.kind)).toEqual(["circle"]);
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect.poll(async () => (await sk()).snapshot!.curves.length).toBe(2);
+  await page.getByTestId("sketch-undo").click();
+  await expect.poll(async () => (await sk()).snapshot!.curves.map((c) => c.kind)).toEqual(["circle"]);
+  await page.getByTestId("sketch-finish").click();
+  await expect(page.getByTestId("sketch-mode")).toBeHidden();
+  await expect(row("sketch2")).toHaveAttribute("data-status", "ok");
+  const f = (await page.evaluate(() => window.__pzSketch!.finished()))[1] as { feature: { name: string; plane: string } };
+  expect(f.feature).toMatchObject({ name: "sketch2", plane: "XZ" });
+  await page.getByTestId("sketch-extrude-close").click();
+  await expect(page.getByTestId("sketch-extrude-offer")).toBeHidden();
+});
+
+test("trims with the mouse, unwinds with Esc, and cancels", async () => {
+  await newSketch("YZ");
+  await page.keyboard.press("l");
+  await page.keyboard.down("Alt"); // no snapping: two free lines
+  await click(-20, 0);
+  await click(20, 0);
+  await page.keyboard.press("Escape");
+  await click(0, -20);
+  await click(0, 20);
+  await page.keyboard.up("Alt");
+  await page.keyboard.press("Escape"); // ends the chain
+  await expect.poll(async () => (await sk()).tool).toBe("line");
+  await page.keyboard.press("Escape"); // leaves the tool
+  await expect.poll(async () => (await sk()).tool).toBe("select");
+  await page.keyboard.press("t");
+  await click(12, 0);
+  const h = (await sk()).snapshot!.curves.find((c) => c.kind === "line" && c.start![1] === 0 && c.end![1] === 0)!;
+  expect(Math.max(h.start![0], h.end![0])).toBeCloseTo(0, 6);
+  // Esc: trim → select; Esc with nothing selected finishes, which an open sketch refuses.
+  await page.keyboard.press("Escape");
+  await expect.poll(async () => (await sk()).tool).toBe("select");
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("sketch-notice")).toContainText("would fail");
+  await expect(page.getByTestId("sketch-mode")).toBeVisible();
+  await page.getByTestId("sketch-cancel").click();
+  await expect(page.getByTestId("sketch-mode")).toBeHidden();
+  expect(await page.evaluate(() => window.__pzSketch!.finished().length)).toBe(2);
+  expect((await docView()).features.map((x) => x.name)).not.toContain("sketch3");
+});
+
+test("repairs a conflicting sketch with one click in the inspector", async () => {
+  // A conflicting constrained sketch, as an agent's sketch_edit could leave one.
+  await page.evaluate(() =>
+    window.__pzSketch!.mode.begin({
+      plane: { ref: "XY", frame: { origin: [0, 0, 0], x: [1, 0, 0], y: [0, 1, 0], normal: [0, 0, 1] }, label: "XY plane" },
+      id: "probe",
+      name: "probe",
+      sketch: {
+        type: "sketch",
+        id: "probe",
+        name: "probe",
+        plane: "XY",
+        curves: [{ kind: "line", id: "l", start: [0, 0], end: [10, 0] }],
+        constraints: [
+          { type: "fix", id: "pin", entity: "l.start" },
+          { type: "horizontal", id: "h", line: "l" },
+          { type: "distance", id: "d1", a: "l.start", b: "l.end", value: 10 },
+          { type: "distance", id: "d2", a: "l.start", b: "l.end", value: 12 },
+        ],
+      },
+    }),
+  );
+  await expect(page.getByTestId("sketch-conflicts")).toBeVisible();
+  await expect(page.getByTestId("sketch-status")).toHaveText(/Conflict/);
+  await page.getByTestId("sketch-remove-d2").click();
+  await expect(page.getByTestId("sketch-conflicts")).toBeHidden();
+  await expect(page.getByTestId("sketch-status")).toHaveText(/Fully constrained/);
+  const s = await sk();
+  expect(s.snapshot!.constraints.map((c) => c.id)).not.toContain("d2");
+  await page.getByTestId("sketch-cancel").click();
+  await expect(page.getByTestId("sketch-mode")).toBeHidden();
+  expect(pageErrors).toEqual([]);
 });
