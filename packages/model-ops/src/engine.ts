@@ -147,6 +147,44 @@ export interface IrCommandEngine {
     probe?: metricsV1.Probe,
   ): Promise<EditResult<AcceptRefCandidateResult>>;
   renameCurve(ir: string, sketchId: string, oldId: string, newId: string): Promise<EditResult<RenameCurveResult>>;
+  /**
+   * `refFor` (FULL-MODELING-PLAN §2.2 "Queries"): a Ref to picked entities, verified by Forge to
+   * resolve to exactly them in the scope of a feature inserted into `part` after `after` (`null`:
+   * at the end of the part), with a fresh capture. Nothing is written. Refusals:
+   * `COMMAND_PICK_NOT_FOUND`, `COMMAND_PICK_AMBIGUOUS`, `COMMAND_REF_NO_QUERY`,
+   * `COMMAND_REF_NOT_EXACT`, `COMMAND_UNKNOWN_PART`, `COMMAND_UNKNOWN_FEATURE`,
+   * `COMMAND_INVALID_ARGUMENT` (`details.pick`: the failing pick), or `ENGINE_UNSUPPORTED` on a
+   * forge-web build without it.
+   */
+  refFor(ir: string, part: string, after: string | null, request: RefForRequest): Promise<RefForResult>;
+}
+
+/** One picked entity (a face, edge or vertex by its render name or report key, a body by its origin). */
+export interface RefPick {
+  kind: "face" | "edge" | "vertex" | "body";
+  /** Its provenance name as the render mesh has it (`e1/edge:{e1/cap:end|e1/side:r.top}`; `#k` for split pieces). */
+  name?: string;
+  /** Its provenance key as the report's members carry it. */
+  key?: string;
+  /** Where it was picked (mm): tells apart entities that share a name, and locates a vertex. */
+  point?: [number, number, number];
+  /** Its body's origin (the report's `parts[].bodies[].origin`): required to pick a body. */
+  body?: { feature: string; member: string; instance?: number[] };
+}
+
+/** What `refFor` makes a Ref for: its kind (an `edge` Ref from faces takes their edges; a `body` Ref from faces or edges, their owner). */
+export interface RefForRequest {
+  kind: "face" | "edge" | "vertex" | "body";
+  picks: RefPick[];
+  /** The declared cardinality to write (default: the field's). */
+  card?: "one" | "some" | "any" | number;
+}
+
+export interface RefForResult {
+  /** The Ref: synthesized query and fresh capture. */
+  ref: v1.Ref;
+  /** What it resolves to, in canonical order. */
+  members: Array<{ key: string; name: string; probe: metricsV1.Probe }>;
 }
 
 /** One problem of a rejected document (`{ code, path, message, details }`, SPEC-v1 §7.2). */
@@ -213,6 +251,8 @@ export interface ForgeWebCommandModule {
     options?: { candidateIndex?: number; probe?: metricsV1.Probe },
   ): unknown;
   renameCurve(ir: string, sketchId: string, oldId: string, newId: string): unknown;
+  /** Optional (forge-web builds before it lack it): `refFor`, the Ref for picked entities. */
+  refFor?(ir: string, part: string, after: string | null, request: RefForRequest): unknown;
   /** Optional: the report without tessellation. */
   report?(ir: string, options?: { reportVersion?: "auto" | "v1" }): unknown;
 }
@@ -231,6 +271,7 @@ export const FORGE_WEB_COMMANDS = [
   "acceptRefProposal",
   "acceptRefCandidate",
   "renameCurve",
+  "refFor",
 ] as const satisfies ReadonlyArray<keyof IrCommandEngine>;
 
 export type ForgeWebCommandName = (typeof FORGE_WEB_COMMANDS)[number];
@@ -288,6 +329,11 @@ export function forgeWebCommandEngine(mod: ForgeWebCommandModule): IrCommandEngi
         }),
       ),
     renameCurve: (ir, sketchId, oldId, newId) => call(() => mod.renameCurve(ir, sketchId, oldId, newId)),
+    refFor: (ir, part, after, request) =>
+      call(() => {
+        if (!mod.refFor) throw new CommandEngineError("ENGINE_UNSUPPORTED", "this @aicad/forge-web build has no refFor; rebuild it");
+        return mod.refFor(ir, part, after, request);
+      }),
   };
 }
 

@@ -12,6 +12,7 @@ export * from "./doc.js";
 export * from "./engine.js";
 export * from "./expr.js";
 export * from "./host.js";
+export * from "./picks.js";
 export * from "./queries.js";
 export * from "./rules.js";
 export * from "./transaction.js";
