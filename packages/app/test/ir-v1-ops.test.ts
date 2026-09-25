@@ -174,6 +174,7 @@ function upgradeStub(): IrCommandEngine {
     acceptRefProposal: unsupported,
     acceptRefCandidate: unsupported,
     renameCurve: unsupported,
+    refFor: unsupported,
   };
 }
 
@@ -234,6 +235,7 @@ function textEngine(writeBack?: (ir: string) => Promise<WriteBackResult>): IrCom
     acceptRefProposal: unsupported,
     acceptRefCandidate: unsupported,
     renameCurve: unsupported,
+    refFor: unsupported,
   };
 }
 

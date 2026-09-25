@@ -14,7 +14,8 @@ import type { AppServices } from "../services";
 import { Store } from "../store";
 import { docDocumentPort, docParamsPort, docSelectionPort } from "./framework/ports";
 import { PanelSession, type CloseReason } from "./framework/session";
-import type { DocumentPort, Enablement, OpsPort, PanelSpec, ParamsPort, SelectionPort, ShellMode, ToolContext, ToolDefinition } from "./framework/types";
+import type { DocumentPort, Enablement, HandlesPort, OpsPort, PanelSpec, ParamsPort, SelectionPort, ShellMode, ToolContext, ToolDefinition } from "./framework/types";
+import { PanelHandles } from "./framework/handles";
 import { featurePropertiesPanel } from "./builtin/features";
 import { appOpsPort } from "./framework/v1-ops";
 import { ToolRegistry } from "./registry";
@@ -57,6 +58,8 @@ export interface ShellPorts {
   document: DocumentPort;
   /** Where tools' ops are applied as one transaction (the IR v1 store's transaction once bound). */
   ops: OpsPort;
+  /** Where panels' manipulator handles are drawn (the viewport's; null: no handles, e.g. headless). */
+  handles: HandlesPort | null;
 }
 
 /** What starting a tool did. */
@@ -113,6 +116,8 @@ export class Shell extends Store<ShellState> {
   private ports: ShellPorts;
   private panelSeq = 1;
   private lastDocId: number;
+  /** The open panel's handles (null: none). */
+  panelHandles: PanelHandles | null = null;
 
   constructor(options: ShellOptions) {
     super({
@@ -138,6 +143,7 @@ export class Shell extends Store<ShellState> {
       params: options.ports?.params ?? docParamsPort(options.services.doc),
       document: options.ports?.document ?? docDocumentPort(options.services.doc),
       ops: options.ports?.ops ?? appOpsPort(options.services, (cmd, source) => this.commands.executeUnknown(cmd, { source })),
+      handles: options.ports?.handles ?? null,
     };
     this.tools.reserveKeys(this.commandKeymap());
     this.lastDocId = options.services.doc.getState().docId;
@@ -319,6 +325,9 @@ export class Shell extends Store<ShellState> {
       },
     });
     opened = session;
+    // Handles bound to the panel's number fields (plan §2.6); they go when the panel closes.
+    if (spec.handles && this.ports.handles) this.panelHandles = new PanelHandles(session, spec, this.ports.handles, this.ports.document);
+    else this.panelHandles = null;
     this.services.ui.setPanel("right", true);
     this.setState((s) => ({ panel: session, activeToolId: toolId, rightTab: "properties", focusTick: s.focusTick + 1 }));
     return session;
@@ -330,6 +339,8 @@ export class Shell extends Store<ShellState> {
 
   private onPanelClosed(_reason: CloseReason, session: PanelSession): void {
     if (this.getState().panel !== session) return;
+    this.panelHandles?.dispose();
+    this.panelHandles = null;
     this.setPreview(null, false);
     // Back to what the code dock showed before (the agent may have opened its proposal meanwhile).
     const codeTab = this.services.agent.getState().codeTab;

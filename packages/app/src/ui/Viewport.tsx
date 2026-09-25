@@ -332,7 +332,7 @@ export function Viewport(): ReactElement {
     (id: OriginId, additive: boolean) => {
       if (!runtime.selection.getState().filter.origin) return;
       const it = { kind: "origin" as const, id };
-      if (additive) runtime.selection.toggle(it);
+      if (additive || runtime.pickForTool === "toggle") runtime.selection.toggle(it);
       else runtime.selectItems([it]);
     },
     [runtime],
@@ -352,7 +352,7 @@ export function Viewport(): ReactElement {
   const onSketchClick = useCallback(
     (sketch: string, additive: boolean) => {
       const it = { kind: "sketch" as const, feature: sketch };
-      if (additive) {
+      if (additive || runtime.pickForTool === "toggle") {
         runtime.selection.toggle(it);
         runtime.syncDocSelection();
       } else runtime.selectItems([it]);

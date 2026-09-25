@@ -137,6 +137,11 @@ function accepts(kinds: readonly SelectionKind[], item: SelectionItem): boolean 
   return kinds.includes(item.kind);
 }
 
+/** A member of a feature's current reference (a re-edited feature's edges, faces, bodies), not a viewport pick. */
+export function isRefMember(item: SelectionItem): boolean {
+  return (item.kind === "face" || item.kind === "edge" || item.kind === "vertex" || item.kind === "body") && item.refMember === true;
+}
+
 /** Plural noun for a selection count: `1 edge`, `3 faces`, `2 items`. */
 export function selectionNoun(kinds: readonly SelectionKind[], n: number): string {
   const names: Partial<Record<SelectionKind, [string, string]>> = {
@@ -358,8 +363,13 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
     if (!field || field.spec.kind !== "selection") return;
     const items = this.selectionPort.items();
     const kinds = field.spec.accepts;
-    const taken = items.filter((s) => accepts(kinds, s));
-    const ignored = items.length - taken.length;
+    // Members of the feature's current reference (a re-edit) are not viewport picks: they stay
+    // until the input is cleared, and new picks add to them.
+    const pinned = (field.value as readonly SelectionItem[]).filter(isRefMember);
+    const picked = items.filter((s) => accepts(kinds, s) && !pinned.some((p) => JSON.stringify(p) === JSON.stringify(s)));
+    const taken = [...pinned, ...picked];
+    const ignored = items.length - picked.length;
+    if (JSON.stringify(taken) === JSON.stringify(field.value) && ignored === field.ignored) return;
     this.setState((s) => ({
       fields: s.fields.map((f) => (f.key === key ? { ...f, value: taken, remoteError: null, ignored } : f)),
       revision: s.revision + 1,
@@ -443,7 +453,11 @@ export class PanelSession extends Store<PanelSessionState> implements PanelSessi
     this.cancelPreview();
     this.checkedRevision = null;
     const state: PanelState = blocked ? "collecting" : this.spec.preview ? "previewing" : "ready";
-    this.setState({ fields: withCross, errors: panelErrors, state, ...(blocked ? { summary: [] } : {}) });
+    // A hidden selection input does not pick: the first visible one does instead.
+    let activeSelectionField = s.activeSelectionField;
+    const active = activeSelectionField === null ? undefined : withCross.find((f) => f.key === activeSelectionField);
+    if (active && !active.visible) activeSelectionField = withCross.find((f) => f.spec.kind === "selection" && f.visible)?.key ?? null;
+    this.setState({ fields: withCross, errors: panelErrors, state, activeSelectionField, ...(blocked ? { summary: [] } : {}) });
     // What the viewport draws meanwhile: nothing for values that don't check; the last preview,
     // marked stale, while the next one runs.
     if (blocked || !this.spec.preview) this.showBodies(null, false);

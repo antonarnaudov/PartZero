@@ -115,7 +115,9 @@ export class ViewportRuntime {
         const sel = st.selection;
         if (sel === lastDocSel) return;
         lastDocSel = sel;
-        if (sel.origin === "viewport") return;
+        // While a tool picks, the timeline adds features to its input (tools/model-selection.ts):
+        // the viewport's picks stay.
+        if (sel.origin === "viewport" || this.pickForTool) return;
         // Esc during a handle drag cancels the drag (C10's Esc layering), not the selection.
         if (!sel.featureId && !sel.entity) {
           if (!this.manipulators.dragging) this.selection.clear();
@@ -467,14 +469,22 @@ export class ViewportRuntime {
     return it;
   }
 
-  /** A click: replace the selection, or toggle the item with `additive` (Shift/⌘). */
+  /**
+   * A tool's selection input is picking (`tools/model-selection.ts`): `toggle` — a click adds or
+   * removes the entity under the cursor without Shift; `replace` (an input that takes one item) —
+   * a click replaces it. Either way a click on empty space keeps the selection.
+   */
+  pickForTool: false | "toggle" | "replace" = false;
+
+  /** A click: replace the selection, or toggle the item with `additive` (Shift/⌘) or while a tool picks. */
   async clickAt(x: number, y: number, additive: boolean): Promise<SelectionItem | null> {
     const it = await this.pickAt(x, y);
+    const toggle = additive || this.pickForTool === "toggle";
     if (!it) {
-      if (!additive) this.selectItems([]);
+      if (!toggle && !this.pickForTool) this.selectItems([]);
       return null;
     }
-    if (additive) {
+    if (toggle) {
       this.selection.toggle(it);
       this.syncDocSelection();
     } else this.selectItems([it]);
@@ -495,7 +505,7 @@ export class ViewportRuntime {
       hidden: this.view.hiddenBodies(),
       ...(options.includeHidden ? { includeHidden: true } : {}),
     });
-    if (options.additive) this.selection.add(items);
+    if (options.additive || this.pickForTool === "toggle") this.selection.add(items);
     else this.selection.set(items);
     this.syncDocSelection();
     return items;

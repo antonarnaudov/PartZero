@@ -81,8 +81,12 @@ export type ShellMode = "model" | "sketch";
  * Model entities carry their provenance key (`plate/cap:end`), never an engine id.
  */
 export type SelectionItem =
-  | { kind: "face" | "edge" | "vertex"; part: string; key: string; body?: string; point?: readonly [number, number, number] }
-  | { kind: "body"; part: string; body: string }
+  /**
+   * `refMember`: a member of a re-edited feature's current reference, by its report key (not a
+   * viewport pick); a selection input keeps it until cleared.
+   */
+  | { kind: "face" | "edge" | "vertex"; part: string; key: string; body?: string; point?: readonly [number, number, number]; label?: string; refMember?: true }
+  | { kind: "body"; part: string; body: string; label?: string; refMember?: true }
   | { kind: "feature" | "datum" | "origin"; feature: string; label?: string }
   | { kind: "sketchCurve" | "sketchPoint"; sketch: string; id: string; sub?: "start" | "end" | "center" | "mid" }
   | { kind: "constraint" | "dimension"; sketch: string; index: number }
@@ -450,6 +454,67 @@ export interface PanelSpec<V extends PanelValues = PanelValues> {
   cancel?(): void;
   /** Delay between the last change and the preview, ms (default 150). */
   previewDelayMs?: number;
+  /**
+   * Manipulator handles bound to number fields (plan §2.6): recomputed after the values or the
+   * document change (debounced like the preview). Each handle's `field` is the number field it
+   * drives: a drag sets that field (so the preview follows), Esc during the drag restores it, and
+   * OK commits it like a typed value. Return `[]` when nothing can be placed yet.
+   */
+  handles?(values: V): readonly PanelHandle[] | Promise<readonly PanelHandle[]>;
+  /**
+   * The feasible range of a number field (Forge's `feasibleRange`), asked **at drag start** so the
+   * handle clamps before it moves and says why it stopped; absent or `null`: unbounded.
+   */
+  feasible?(field: string, values: V): Promise<(FeasibleRange & { reason?: string }) | null>;
+}
+
+/**
+ * A handle a panel shows (plan §2.6): the viewport's `HandleSpec` without `id` and `value`, bound to
+ * the number field `field` (its value is the field's, in mm or degrees).
+ */
+export interface PanelHandle {
+  field: string;
+  kind: "linear" | "pushPull" | "rotate" | "radius";
+  /** Anchor (mm): where value 0 is, or the ring centre (rotate). */
+  origin: readonly [number, number, number];
+  /** Unit direction (linear/pushPull/radius) or rotation axis (rotate). */
+  axis: readonly [number, number, number];
+  /** Rotate only: the direction of angle 0. */
+  ref?: readonly [number, number, number];
+  min?: number;
+  max?: number;
+  limitReason?: string;
+  step?: number;
+  fineStep?: number;
+  label?: string;
+  size?: number;
+}
+
+/** Where a panel's handles are drawn (the viewport's manipulator host; absent in headless hosts). */
+export interface HandlesPort {
+  /** Show handles (replacing any others); `listener` gets `{ id, value, phase, clamped? }`. Returns a remover. */
+  show(handles: readonly PanelHandleSpec[], listener: (change: { id: string; value: number; phase: "start" | "drag" | "end" | "cancel"; clamped?: "min" | "max" }) => void): () => void;
+  /** Change a shown handle (its value, or its range once the feasible range arrives). */
+  update(id: string, patch: Partial<Omit<PanelHandleSpec, "id">>): void;
+  /** A drag is in progress (the panel does not move handles under the pointer). */
+  dragging(): boolean;
+}
+
+/** A handle as the manipulator host takes it (`viewport/manipulators/types.ts` `HandleSpec`). */
+export interface PanelHandleSpec {
+  id: string;
+  kind: PanelHandle["kind"];
+  origin: [number, number, number];
+  axis: [number, number, number];
+  ref?: [number, number, number];
+  value: number;
+  min?: number;
+  max?: number;
+  limitReason?: string;
+  step?: number;
+  fineStep?: number;
+  label?: string;
+  size?: number;
 }
 
 /**

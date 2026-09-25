@@ -8,6 +8,7 @@ import { registerAllTools } from "../../tools/catalog";
 import { createShellCommandRegistry } from "../../tools/commands";
 import type { PanelSpec, ToolDefinition } from "../../tools/framework/types";
 import { ToolRegistry } from "../../tools/registry";
+import { bindToolPicking, manipulatorHandlesPort, modelSelectionPort } from "../../tools/model-selection";
 import { attachShell, Shell } from "../../tools/shell";
 import type { ShellContextValue } from "./context";
 import { registerBuiltinPanels } from "./panel-catalog";
@@ -52,6 +53,10 @@ export function installShell(
   const tools = options.tools ?? new ToolRegistry({ flags: options.flags ?? (() => options.automation) });
   const shell = new Shell({ services, commands, shellCommands, tools });
   attachShell(services, shell);
+  // Tools read the viewport's multi-selection (and the timeline's features), draw their handles on
+  // the viewport, and make the viewport pick for an active selection input.
+  shell.bindPorts({ selection: modelSelectionPort(services), handles: manipulatorHandlesPort(services) });
+  bindToolPicking(shell, services);
   registerAllTools(tools);
   const panels = new PanelRegistry();
   registerBuiltinPanels(panels);
