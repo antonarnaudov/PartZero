@@ -1,0 +1,53 @@
+packages/agent-tools/src/ops.ts
+  s_59c0dd2af30db2::t_81540b435b4ea3 38-40
+  s_59c0dd2af30db2::t_fce0b362e50e48 233
+  s_59c0dd2af30db2::t_e07e9a03ef3718 69-70,75-93,101,104-111,113-114,116,118-132,134-149
+  s_59c0dd2af30db2::t_8c1901cd13bc0d 210,213
+  s_59c0dd2af30db2::t_4c6b31da14ddeb 15-20
+  s_59c0dd2af30db2::t_99fd3c84746abd 196
+  s_59c0dd2af30db2::t_653660d6f61818 166
+  s_59c0dd2af30db2::t_a379abd809a5c3 340,342,346
+  s_59c0dd2af30db2::t_a789067ea93bb8 179
+packages/agent-tools/test/ops-query.test.ts
+  s_59c0dd2af30db2::t_c2b4e35293926e 1-99,101-171
+  s_59c0dd2af30db2::t_e0b99c012b9d8e 100
+packages/agent-tools/test/ops.test.ts
+  s_59c0dd2af30db2::t_de98b7492074c9 46,50,53-54
+  s_59c0dd2af30db2::t_ca843621db222e 76,78,80
+packages/agent-tools/src/ops-playbooks.ts
+  s_59c0dd2af30db2::t_b4c7169bc87a53 1-87,93-96,98,103-185
+  s_59c0dd2af30db2::t_1534c932cc0551 88-92,97,99-102
+packages/agent-tools/src/ops-reference.ts
+  s_59c0dd2af30db2::t_32d8a70ece5419 171
+  s_59c0dd2af30db2::t_e4b912edce8699 114,150,152
+  s_59c0dd2af30db2::t_798887f5dc0034 129-130
+  s_59c0dd2af30db2::t_86e226d18962ce 1-73,84-113,115-128,131-149,151,153-170,172-205
+  s_59c0dd2af30db2::t_704f61480dba33 74-83
+packages/agent-tools/test/forge-engine.ts
+  s_59c0dd2af30db2::t_79b6ef0f44019d 1-19
+packages/agent-tools/src/ops-query.ts
+  s_59c0dd2af30db2::t_85da5582a20fdd 1-77,82-98,100-418
+  s_59c0dd2af30db2::t_f095a1eb040163 78-80
+  s_59c0dd2af30db2::t_9b019bfc694374 81,99
+packages/agent-tools/src/index.ts
+  s_59c0dd2af30db2::t_5dc3345e80ab75 22-24
+packages/agent-tools/test/ops-reference.test.ts
+  s_59c0dd2af30db2::t_800bbc25140d54 1-37,39-43
+  s_59c0dd2af30db2::t_778cb96b7753fd 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9521ce83481cd7f74838744eb7d3921d8ac3e051",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
