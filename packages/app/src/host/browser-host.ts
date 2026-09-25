@@ -16,7 +16,7 @@ export class BrowserHost implements AppHost {
 
   appInfo(): Promise<AppInfo> {
     return Promise.resolve({
-      name: "aicad",
+      name: "PartZero",
       version: "0.0.1",
       electron: "—",
       chrome: navigator.userAgent.match(/Chrome\/([\d.]+)/)?.[1] ?? "—",
@@ -79,7 +79,7 @@ export class BrowserHost implements AppHost {
   }
 
   setDocumentState(state: { title: string; dirty: boolean }): void {
-    document.title = `${state.dirty ? "● " : ""}${state.title} — aicad`;
+    document.title = `${state.dirty ? "● " : ""}${state.title} — PartZero`;
   }
 
   onMenuCommand(): () => void {

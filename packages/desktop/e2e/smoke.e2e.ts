@@ -193,7 +193,7 @@ test("native menu items run commands", async () => {
 
 test("About → Licenses: the MPL-2.0 text, the source notice and the third-party notices ship with the app", async () => {
   await page.evaluate(() => window.__aicad!.execute({ id: "help.about" }));
-  const about = page.getByRole("dialog", { name: "About aicad" });
+  const about = page.getByRole("dialog", { name: "About PartZero" });
   await expect(about.getByTestId("about-source")).toContainText("Source code:");
   await about.getByTestId("about-notices").click();
   const text = about.getByTestId("license-text");
