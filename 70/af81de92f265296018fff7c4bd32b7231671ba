@@ -1,0 +1,29 @@
+packages/agent-tools/src/modeling.ts
+  s_59c0dd2af30db2::t_56719507b40581 1-70
+packages/agent-tools/src/index.ts
+  s_59c0dd2af30db2::t_48f0f6b2399097 21
+packages/agent-tools/test/ops.test.ts
+  s_59c0dd2af30db2::t_48f0f6b2399097 46-48,51,55,58,62,132-160
+  s_59c0dd2af30db2::t_187e4f3466f58f 161-162
+packages/mcp-server/test/ops.test.ts
+  s_59c0dd2af30db2::t_c57ff930c27024 109-116
+packages/agent-tools/src/ops.ts
+  s_59c0dd2af30db2::t_f8b466caa93c0b 276,278,284-285
+  s_59c0dd2af30db2::t_aedcf0aab67578 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "70af81de92f265296018fff7c4bd32b7231671ba",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
