@@ -1,0 +1,31 @@
+packages/app/test/mesh-import.test.ts
+  s_59c0dd2af30db2::t_19b288921e81ac 1-186
+packages/app/src/file/mesh/mesh.ts
+  s_59c0dd2af30db2::t_771e72b280502f 1-214
+packages/app/src/file/mesh/stl.ts
+  s_59c0dd2af30db2::t_6552d0183725e4 1-71
+packages/app/src/file/mesh/obj.ts
+  s_59c0dd2af30db2::t_e398901c14ec78 1-46
+packages/app/src/file/mesh/threemf.ts
+  s_59c0dd2af30db2::t_db20d4785a4190 1-286
+packages/app/src/file/mesh/index.ts
+  s_59c0dd2af30db2::t_7cb9119e4687a6 1-29
+packages/app/src/file/thumbnail.ts
+  s_59c0dd2af30db2::t_c1d1caf37ef649 1-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e586aeddc2ed77f1157ab67003c1c77bab600491",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Anton Arnaudov <70327277+antonarnaudov@users.noreply.github.com>"
+    }
+  }
+}
