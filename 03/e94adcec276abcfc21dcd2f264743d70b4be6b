@@ -1,0 +1,20 @@
+docs/fm/feature-tools.md
+  s_59c0dd2af30db2::t_7205017fe7562a 31-33
+  s_59c0dd2af30db2::t_b35f62a936fb04 1-30,34-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "03e94adcec276abcfc21dcd2f264743d70b4be6b",
+  "prompts": {},
+  "sessions": {
+    "s_59c0dd2af30db2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ca11b6-e37a-494e-95d0-c9e5a1baed9f",
+        "model": "unknown"
+      },
+      "human_author": null
+    }
+  }
+}
